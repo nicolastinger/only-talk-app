@@ -1,0 +1,14 @@
+pub static REDIS_SPLIT: &str = ":";
+pub static REDIS_QUIC_SERVERS: &str = "QUIC:SERVER:";
+pub static SYSTEM: &str = "system";
+
+pub static PING: &str = "ping";
+pub static PONG: &str = "pong";
+
+pub static TALK_API: &str = "https://onlytalk.local:8443";
+
+pub static UDP_SOCKET: &str = "REDACTED_SERVER_IP_1:9562";
+pub static UDP_SOCKET_2: &str = "REDACTED_SERVER_IP_1:9564";
+
+pub static UDP_SOCKET_V6: &str = "[REDACTED_IPV6]:9563";
+pub static UDP_SOCKET_V6_2: &str = "[REDACTED_IPV6]:9565";

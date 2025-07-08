@@ -1,0 +1,25 @@
+export default {
+  back: 'Back',
+  language: 'en-US',
+  'menu.home': 'Home',
+  'menu.access': 'Access',
+  'menu.table': 'CRUD Example',
+  'welcome.title': 'Welcome',
+  'welcome.desc': 'This is a sample project based on Umi',
+  'not-found': 'Not found',
+  signIn: {
+    title: 'Login',
+    username: 'Username',
+    password: 'Password',
+    rememberMe: 'Remember me',
+    forgotPassword: 'Forgot password?',
+    submit: 'Submit',
+    errors: {
+      usernameRequired: 'Please input your Username!',
+      passwordRequired: 'Please input your Password!',
+      networkError: 'Network error!',
+      invalidCredentials: 'Invalid username or password!',
+    },
+    success: 'Login successful!',
+  },
+};

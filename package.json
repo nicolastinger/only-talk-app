@@ -1,0 +1,37 @@
+{
+  "private": true,
+  "author": "黄锦盛 <huang.jinsheng@iwhalecloud.com>",
+  "scripts": {
+    "build": "max build",
+    "dev": "max dev",
+    "format": "prettier --cache --write .",
+    "postinstall": "max setup",
+    "prepare": "husky",
+    "setup": "max setup",
+    "start": "npm run dev",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@ant-design/icons": "5.x",
+    "@ant-design/pro-components": "^2.4.4",
+    "@tauri-apps/api": "^2.5.0",
+    "@umijs/max": "^4.4.11",
+    "antd": "^5.4.0",
+    "dayjs": "^1.11.13",
+    "dva": "^2.4.1",
+    "nanoid": "^5.1.5",
+    "react-markdown": "^10.1.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.0.0-rc.18",
+    "@types/react": "^18.0.33",
+    "@types/react-dom": "^18.0.11",
+    "husky": "^9",
+    "lint-staged": "^13.2.0",
+    "prettier": "^2.8.7",
+    "prettier-plugin-organize-imports": "^3.2.2",
+    "prettier-plugin-packagejson": "^2.4.3",
+    "typescript": "^5.0.3"
+  }
+}

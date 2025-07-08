@@ -1,0 +1,10 @@
+[
+  {
+    "name": "--bg-color",
+    "value": "white"
+  },
+  {
+    "name": "--text-color",
+    "value": "black"
+  }
+]

@@ -1,0 +1,25 @@
+export default {
+  back: '返回',
+  language: '简体中文',
+  'menu.home': '首页',
+  'menu.access': '权限演示',
+  'menu.table': 'CRUD 示例',
+  'welcome.title': '欢迎使用',
+  'welcome.desc': '这是一个基于 Umi 的示例项目',
+  'not-found': '404找不到',
+  signIn: {
+    title: '登 录',
+    username: '用户名',
+    password: '密码',
+    rememberMe: '记住我',
+    forgotPassword: '忘记密码?',
+    submit: '确 认',
+    errors: {
+      usernameRequired: '请输入用户名!',
+      passwordRequired: '请输入密码!',
+      networkError: '网络错误!',
+      invalidCredentials: '用户名或密码错误!',
+    },
+    success: '登陆成功!',
+  },
+};
