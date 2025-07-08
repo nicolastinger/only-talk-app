@@ -43,5 +43,5 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
   const nextLastMessage = nextProps.messages[nextProps.messages.length - 1];
   const prevLastMessage = prevProps.messages[prevProps.messages.length - 1];
 
-  return prevLastMessage.text_msg_raw.nano_id === nextLastMessage.text_msg_raw.nano_id;
+  return prevLastMessage?.text_msg_raw.nano_id === nextLastMessage?.text_msg_raw.nano_id;
 });

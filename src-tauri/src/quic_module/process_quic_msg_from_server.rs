@@ -7,7 +7,7 @@ use crate::utils::global_static_str::SYSTEM;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::APP_HANDLE;
 use anyhow::anyhow;
-use log::{info, warn};
+use log::{error, info, warn};
 use tauri::Emitter;
 
 /// 处理消息
@@ -49,7 +49,14 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             }
             // 收到消息ack
             RECALL_SUCCESS => {
-                process_ack_type(msg).await.expect("处理消息ack失败");
+               match process_ack_type(msg).await {  
+                   Ok(_) => {
+                        info!("处理ack成功");
+                    },
+                   Err(e) => {
+                        error!("处理ack失败 {}", e);
+                    }
+               };
             }
             _ => {
                 warn!("接收到来源之外的消息 {:?}", msg);
