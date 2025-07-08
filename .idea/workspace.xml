@@ -12,7 +12,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="44686b4c-3d0e-4ad9-ae71-ac3158a18706" name="更改" comment="feat: sqlite init, impl local msg ack">
-      <change beforePath="$PROJECT_DIR$/src-tauri/dbData/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/dbData/app.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b5fb8511-f517-42f3-bd01-8b9d621af7c6.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/b5fb8511-f517-42f3-bd01-8b9d621af7c6.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/common_service/chat_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/common_service/chat_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_module/process_quic_msg_from_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_module/process_quic_msg_from_server.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_module/text_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_module/text_quic_client.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/create_table.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/store/create_table.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/text_quic_msg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/text_quic_msg.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/layouts/HomeLayout/ChatsLayout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/layouts/HomeLayout/ChatsLayout/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/Home/Chats/Chat/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Home/Chats/Chat/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/Home/Chats/components/CustomerChatBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Home/Chats/components/CustomerChatBox.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/Home/Chats/components/MessageList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Home/Chats/components/MessageList.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/user/common.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/user/common.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,7 +40,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="master" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -63,34 +74,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
-    &quot;last_opened_file_path&quot;: &quot;I:/code/rust/umi_tauri/src/components/Media&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
-    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
-    &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;org.rust.disableDetachedFileInspectionI:/code/rust/umi_tauri/src-tauri/sqlite/init.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspectionI:/code/rust/umi_tauri/src-tauri/src/vo/text_quic_msg.rs&quot;: &quot;true&quot;,
-    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;I:\\code\\rust\\umi_tauri\\node_modules\\prettier&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;settings.typescriptcompiler&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;I:\\code\\rust\\umi_tauri\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.rust.reset.selective.auto.import": "true",
+    "git-widget-placeholder": "dev__1.0.0",
+    "last_opened_file_path": "I:/code/rust/umi_gitee/rust-tauri-umi",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "pnpm",
+    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "org.rust.disableDetachedFileInspectionI:/code/rust/umi_tauri/src-tauri/sqlite/init.rs": "true",
+    "org.rust.disableDetachedFileInspectionI:/code/rust/umi_tauri/src-tauri/src/vo/text_quic_msg.rs": "true",
+    "prettierjs.PrettierConfiguration.Package": "I:\\code\\rust\\umi_tauri\\node_modules\\prettier",
+    "settings.editor.selected.configurable": "settings.typescriptcompiler",
+    "ts.external.directory.path": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;sqlite&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "sqlite"
     ]
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="I:\code\rust\umi_tauri\src\components\Media" />
@@ -136,6 +147,7 @@
       <workItem from="1751850559584" duration="8525000" />
       <workItem from="1751894813100" duration="5072000" />
       <workItem from="1751945334204" duration="7525000" />
+      <workItem from="1751969747240" duration="8811000" />
     </task>
     <task id="LOCAL-00001" summary="feat: hide private info">
       <option name="closed" value="true" />

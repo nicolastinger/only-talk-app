@@ -1,4 +1,4 @@
-use crate::common_service::chat_service::add_chat_record_to_db;
+use crate::common_service::chat_service::{add_chat_record_to_db, add_local_ack_to_db, query_ack_record_from_db};
 use crate::common_service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::function::front_end::process_p2p_msg;
 use crate::models::p2p_models::P2pInitMsg;
@@ -49,7 +49,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             }
             // 收到消息ack
             RECALL_SUCCESS => {
-                process_ack_type(msg).await?;
+                process_ack_type(msg).await.expect("处理消息ack失败");
             }
             _ => {
                 warn!("接收到来源之外的消息 {:?}", msg);
@@ -65,7 +65,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
     //1.插入数据库
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let payload = serde_json::to_string(&msg)?;
-    add_chat_record_to_db(msg).await?;
+    add_chat_record_to_db(msg, 0i32).await?;
     //2.发送消息给前端
     {
         APP_HANDLE
@@ -81,6 +81,10 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     info!("收到ack消息{:?}", text_quic_msg);
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let payload = serde_json::to_string(&msg)?;
+    //1.查询ack表中该条消息
+    let ack_record = query_ack_record_from_db(&msg.raw).await?;
+    //2.插入数据库
+    add_chat_record_to_db(ack_record, 1).await?;
     // 发送消息给前端
     {
         APP_HANDLE

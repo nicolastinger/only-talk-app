@@ -70,7 +70,7 @@ interface P2pMsg {
 }
 
 interface TextMsgRaw {
-  id: string;
+  nano_id: string;
   text_type: number; //消息类型
   raw: string;
   recv_user: string; //接收用户

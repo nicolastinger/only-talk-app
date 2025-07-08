@@ -12,26 +12,23 @@ const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
   console.log("渲染的MessageListProps", messages)
   return (
     <>
-      {messages.map((message) => {
-        if (message.type === 201){
+      {messages.map((msg) => {
+        let message = msg.text_msg_raw;
+        if (message.text_type === 201){
           return null;
         }
-        if (message.from !== MessageFrom.Mine) {
+        if (msg.from !== MessageFrom.Mine) {
           return (
             <CustomerChatBox
-              id={message.id}
+              key={message.nano_id}
+              from={MessageFrom.System}
+              ack={undefined}
               img={friendIcon}
-              key={message.id}
-              message={message.message}
-              time={message.time}
-              from={MessageFrom.Customer}
-              user={message.user}
-              type={message.type}
-              ack={message.ack}
+              text_msg_raw={message}
             />
           );
         } else {
-          return <MineChatBox key={message.id} msg={message} isAck={message.ack}/>;
+          return <MineChatBox key={message.nano_id} msg={msg} isAck={msg.ack}/>;
         }
       })}
     </>
@@ -46,5 +43,5 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
   const nextLastMessage = nextProps.messages[nextProps.messages.length - 1];
   const prevLastMessage = prevProps.messages[prevProps.messages.length - 1];
 
-  return prevLastMessage?.id === nextLastMessage?.id;
+  return prevLastMessage.text_msg_raw.nano_id === nextLastMessage.text_msg_raw.nano_id;
 });

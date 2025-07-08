@@ -22,10 +22,10 @@ pub async fn create_chat_record_table(pool_sqlite: &SqlitePool) -> Result<(), an
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nano_id TEXT NOT NULL,
             raw TEXT NOT NULL,
-            created_at INTEGER NOT NULL,
+            timestamp INTEGER NOT NULL,
             send_user TEXT NOT NULL,
             recv_user TEXT NOT NULL,
-            msg_type INTEGER NOT NULL DEFAULT 0
+            text_type INTEGER NOT NULL DEFAULT 0
         )"#,
     )
     .execute(pool_sqlite)
@@ -39,7 +39,7 @@ pub async fn create_record_state_table(pool_sqlite: &SqlitePool) -> Result<(), a
         r#"CREATE TABLE IF NOT EXISTS chat_record_state (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nano_id TEXT NOT NULL,
-            created_at INTEGER NOT NULL,
+            timestamp INTEGER NOT NULL,
             send_user TEXT NOT NULL,
             recv_user TEXT NOT NULL,
             state INTEGER NOT NULL DEFAULT 0
@@ -57,10 +57,10 @@ pub async fn create_ack_record_table(pool_sqlite: &SqlitePool) -> Result<(), any
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nano_id TEXT NOT NULL,
             raw TEXT NOT NULL,
-            created_at INTEGER NOT NULL,
+            timestamp INTEGER NOT NULL,
             send_user TEXT NOT NULL,
             recv_user TEXT NOT NULL,
-            msg_type INTEGER NOT NULL DEFAULT 0
+            text_type INTEGER NOT NULL DEFAULT 0
         )"#,
     )
         .execute(pool_sqlite)

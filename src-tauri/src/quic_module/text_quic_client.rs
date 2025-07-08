@@ -8,12 +8,14 @@ use anyhow::anyhow;
 use tauri::Emitter;
 use tokio::sync::{Mutex, RwLock};
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::common_service::chat_service::add_local_ack_to_db;
 use crate::models::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::models::text_msg::MessageType;
 use crate::quic_module::process_quic_msg_from_server::process_msg;
 use crate::quic_module::safe_configuration::configure_client;
 use crate::quic_module::text_msg_service::{generate_text_msg, generate_text_msg_without_nano, get_text_msg};
 use crate::utils::global_static_str::{PING, SYSTEM};
+use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 // 客户端异步函数，尝试与服务器建立QUIC连接
 pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
@@ -186,7 +188,12 @@ pub async fn send_text_msg(msg:String, recv_user: String, nanoid: String) -> Res
         Some(v) => v.clone(),
         None => "".to_string()
     };
+    let ack_raw = msg.clone();
+    let ack_recv = recv_user.clone();
+    let ack_me = sender.clone();
     let raw: Vec<u8> = Vec::from(msg);
+    let ack_id = nanoid.clone();
+    
     let test_msg = generate_text_msg_without_nano(
         MessageType::Text as u16,
         raw,
@@ -194,6 +201,17 @@ pub async fn send_text_msg(msg:String, recv_user: String, nanoid: String) -> Res
         sender,
         nanoid
     ).map_err(|e| e.to_string())?;
+    
+    let text_msg_vo = TextQuicMsgVo {
+        nano_id: ack_id,
+        text_type: MessageType::Text as u16,
+        raw: ack_raw,
+        recv_user: ack_recv,
+        send_user: ack_me,
+        timestamp: get_now_time_stamp_as_millis().map_err(|e| e.to_string())?,
+    };
+    
+    add_local_ack_to_db(text_msg_vo).await.map_err(|e| e.to_string())?;
 
     let send_stream =
         {

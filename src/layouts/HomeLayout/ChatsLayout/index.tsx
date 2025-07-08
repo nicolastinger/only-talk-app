@@ -35,11 +35,7 @@ const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
   };
 
   const setCurrentFriend = async (friendInfo: FriendInfo) => {
-    const map: Map<string, string> = new Map();
-    map.set('current_friend', JSON.stringify(friendInfo));
     try {
-      const data: string = await invoke('add_user_map', { map });
-      console.log('用户信息', data);
       routeToChat(friendInfo.uuid);
     } catch (err) {
       console.log(err);

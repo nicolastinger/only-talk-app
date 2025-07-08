@@ -499,7 +499,7 @@
     </routine>
     <schema id="191" parent="1" name="main">
       <Current>1</Current>
-      <LastIntrospectionLocalTimestamp>2025-07-06.02:22:33</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-07-08.13:18:09</LastIntrospectionLocalTimestamp>
     </schema>
     <argument id="192" parent="16">
       <ArgumentDirection>R</ArgumentDirection>
@@ -1590,86 +1590,168 @@
     <argument id="554" parent="190">
       <Position>1</Position>
     </argument>
-    <table id="555" parent="191" name="chat_record_state"/>
-    <table id="556" parent="191" name="sqlite_master">
+    <table id="555" parent="191" name="chat_record"/>
+    <table id="556" parent="191" name="chat_record_ack"/>
+    <table id="557" parent="191" name="chat_record_state"/>
+    <table id="558" parent="191" name="sqlite_master">
       <System>1</System>
     </table>
-    <table id="557" parent="191" name="sqlite_sequence">
+    <table id="559" parent="191" name="sqlite_sequence">
       <System>1</System>
     </table>
-    <table id="558" parent="191" name="users"/>
-    <column id="559" parent="555" name="id">
+    <table id="560" parent="191" name="users"/>
+    <column id="561" parent="555" name="id">
       <AutoIncrement>1</AutoIncrement>
       <Position>1</Position>
       <StoredType>INTEGER|0s</StoredType>
     </column>
-    <column id="560" parent="555" name="nano_id">
+    <column id="562" parent="555" name="nano_id">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="561" parent="555" name="created_at">
+    <column id="563" parent="555" name="raw">
       <NotNull>1</NotNull>
       <Position>3</Position>
-      <StoredType>INTEGER|0s</StoredType>
-    </column>
-    <column id="562" parent="555" name="send_user">
-      <NotNull>1</NotNull>
-      <Position>4</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="563" parent="555" name="recv_user">
+    <column id="564" parent="555" name="timestamp">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>INTEGER|0s</StoredType>
+    </column>
+    <column id="565" parent="555" name="send_user">
       <NotNull>1</NotNull>
       <Position>5</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="564" parent="555" name="state">
+    <column id="566" parent="555" name="recv_user">
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="567" parent="555" name="text_type">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>INTEGER|0s</StoredType>
+    </column>
+    <key id="568" parent="555">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="569" parent="556" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <Position>1</Position>
+      <StoredType>INTEGER|0s</StoredType>
+    </column>
+    <column id="570" parent="556" name="nano_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="571" parent="556" name="raw">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="572" parent="556" name="timestamp">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>INTEGER|0s</StoredType>
+    </column>
+    <column id="573" parent="556" name="send_user">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="574" parent="556" name="recv_user">
+      <NotNull>1</NotNull>
+      <Position>6</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="575" parent="556" name="text_type">
+      <DefaultExpression>0</DefaultExpression>
+      <NotNull>1</NotNull>
+      <Position>7</Position>
+      <StoredType>INTEGER|0s</StoredType>
+    </column>
+    <key id="576" parent="556">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="577" parent="557" name="id">
+      <AutoIncrement>1</AutoIncrement>
+      <Position>1</Position>
+      <StoredType>INTEGER|0s</StoredType>
+    </column>
+    <column id="578" parent="557" name="nano_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="579" parent="557" name="timestamp">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>INTEGER|0s</StoredType>
+    </column>
+    <column id="580" parent="557" name="send_user">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="581" parent="557" name="recv_user">
+      <NotNull>1</NotNull>
+      <Position>5</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="582" parent="557" name="state">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>6</Position>
       <StoredType>INTEGER|0s</StoredType>
     </column>
-    <key id="565" parent="555">
+    <key id="583" parent="557">
       <ColNames>id</ColNames>
       <Primary>1</Primary>
     </key>
-    <column id="566" parent="556" name="type">
+    <column id="584" parent="558" name="type">
       <Position>1</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="567" parent="556" name="name">
+    <column id="585" parent="558" name="name">
       <Position>2</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="568" parent="556" name="tbl_name">
+    <column id="586" parent="558" name="tbl_name">
       <Position>3</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="569" parent="556" name="rootpage">
+    <column id="587" parent="558" name="rootpage">
       <Position>4</Position>
       <StoredType>INT|0s</StoredType>
     </column>
-    <column id="570" parent="556" name="sql">
+    <column id="588" parent="558" name="sql">
       <Position>5</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="571" parent="557" name="name">
+    <column id="589" parent="559" name="name">
       <Position>1</Position>
     </column>
-    <column id="572" parent="557" name="seq">
+    <column id="590" parent="559" name="seq">
       <Position>2</Position>
     </column>
-    <column id="573" parent="558" name="id">
+    <column id="591" parent="560" name="id">
       <AutoIncrement>1</AutoIncrement>
       <Position>1</Position>
       <StoredType>INTEGER|0s</StoredType>
     </column>
-    <column id="574" parent="558" name="name">
+    <column id="592" parent="560" name="name">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <key id="575" parent="558">
+    <key id="593" parent="560">
       <ColNames>id</ColNames>
       <Primary>1</Primary>
     </key>

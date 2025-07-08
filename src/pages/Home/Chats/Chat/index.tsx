@@ -15,9 +15,8 @@ const ChatPage: React.FC = () => {
   const [currentFriend, setCurrentFriend] = useState<FriendInfo>();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const account = params.get('currentFriend') || '';
+  const friendUuid = params.get('currentFriend') || '';
 
-  const [friendUuid, setFriendUuid] = useState<string>('');
   const { textMessage } = useMessageApi(friendUuid);
 
   // 接收到外部消息
@@ -56,10 +55,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    initCurrentFriend(account);
-  }, [account]);
-
   const initCurrentFriend = async (account: string) => {
     try {
       const data: string = await invoke('get_user_map', {
@@ -78,7 +73,6 @@ const ChatPage: React.FC = () => {
         if (data != null) {
           const dataStr: string = data.data;
           console.log('data', dataStr);
-          setFriendUuid(dataStr);
         }
       } else {
         console.log('error', friendUuidRes);
