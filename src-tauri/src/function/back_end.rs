@@ -5,7 +5,11 @@ use crate::utils::global_static_str::{ UDP_SOCKET};
 use crate::{ GLOBAL_QUIC_USER_INFO};
 use std::collections::HashMap;
 use log::info;
+use crate::models::Page;
+use crate::models::text_msg::TextQuicMsg;
 use crate::quic_module::p2p_quic_service::LOG_SENDER;
+use crate::store::chat_record_db::get_chat_record_from_db;
+use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 增加持久化数据
 #[tauri::command]
@@ -99,4 +103,10 @@ pub async fn send_video_frame(frame_data: Vec<u8>, uuid: String) -> Result<(), S
     }
     info!("发送完成");
     Ok(())
+}
+
+/// 获取本地的聊天数据
+#[tauri::command]
+pub async fn get_chat_record_from_store(text_quic_msg: TextQuicMsgVo, page: Page) -> Result<Vec<TextQuicMsgVo>, String> {
+    Ok(get_chat_record_from_db(text_quic_msg, page).await.map_err(|e| e.to_string())?)
 }

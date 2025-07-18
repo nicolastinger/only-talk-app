@@ -63,7 +63,6 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             }
         }
     }
-
     Ok(())
 }
 
