@@ -41,22 +41,22 @@ pub async fn init_sqlite() -> Result<(), anyhow::Error> {
         init_ddl(pool_sqlite).await?;
     }
 
-    // 插入数据
-    sqlx::query("INSERT INTO users (name) VALUES (?1)")
-        .bind("Alice")
-        .execute(pool_arc.as_ref())
-        .await?;
-
-    // 查询数据
-    let rows = sqlx::query("SELECT id, name FROM users")
-        .fetch_all(pool_arc.as_ref())
-        .await?;
-    
-    for row in rows {
-        let id: i64 = row.get("id");
-        let name: String = row.get("name");
-        println!("User: {{ id: {}, name: {} }}", id, name);
-    }
+    // // 插入数据
+    // sqlx::query("INSERT INTO users (name) VALUES (?1)")
+    //     .bind("Alice")
+    //     .execute(pool_arc.as_ref())
+    //     .await?;
+    // 
+    // // 查询数据
+    // let rows = sqlx::query("SELECT id, name FROM users")
+    //     .fetch_all(pool_arc.as_ref())
+    //     .await?;
+    // 
+    // for row in rows {
+    //     let id: i64 = row.get("id");
+    //     let name: String = row.get("name");
+    //     println!("User: {{ id: {}, name: {} }}", id, name);
+    // }
     Ok(())
 }
 
