@@ -34,7 +34,7 @@ pub struct HeadMsg {
 //文本信息消息体
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextQuicMsg {
-    pub id: String,
+    pub nano_id: String,
     pub text_type: u16,  //消息类型
     pub raw: Vec<u8>,  //二进制数据
     pub recv_user: String,  //接收用户

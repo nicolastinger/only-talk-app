@@ -23,7 +23,7 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
     if (!message.trim()) return;
 
     let text_msg_raw: TextMsgRaw = {
-      id: nanoid(),
+      nano_id: nanoid(),
       text_type: 1,
       raw: message,
       recv_user: friendUuid,
@@ -36,7 +36,7 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
       ack: false,
     };
     try {
-      await invoke('send_text_msg', { msg: message, recvUser: friendUuid, nanoid: text_msg_raw.id });
+      await invoke('send_text_msg', { msg: message, recvUser: friendUuid, nanoid: text_msg_raw.nano_id });
       onMessageSent(JSON.stringify(temp));
       setMessage('');
     } catch (e) {

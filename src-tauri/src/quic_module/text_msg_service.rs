@@ -16,7 +16,7 @@ pub fn generate_text_msg(
 ) -> anyhow::Result<Vec<u8>> {
     let now = get_now_time_stamp_as_millis().unwrap_or_else(|_| -99999999999);
     let text_quic_msg = TextQuicMsg {
-        id: nanoid!(),
+        nano_id: nanoid!(),
         text_type,
         raw,
         recv_user,
@@ -32,11 +32,11 @@ pub fn generate_text_msg_without_nano(
     raw: Vec<u8>,
     recv_user: String,
     send_user: String,
-    nanoid: String,
+    nano_id: String,
 ) -> anyhow::Result<Vec<u8>> {
     let now = get_now_time_stamp_as_millis().unwrap_or_else(|_| -99999999999);
     let text_quic_msg = TextQuicMsg {
-        id: nanoid,
+        nano_id,
         text_type,
         raw,
         recv_user,

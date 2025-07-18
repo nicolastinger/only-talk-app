@@ -17,7 +17,7 @@ impl TextQuicMsgVo {
     pub fn from(text_quic_msg: TextQuicMsg) -> Result<TextQuicMsgVo, anyhow::Error> {
         let raw = String::from_utf8(text_quic_msg.raw)?;
         Ok(TextQuicMsgVo {
-            nano_id: text_quic_msg.id,
+            nano_id: text_quic_msg.nano_id,
             text_type: text_quic_msg.text_type,
             raw,
             recv_user: text_quic_msg.recv_user,
