@@ -73,7 +73,7 @@ pub async fn create_ack_record_table(pool_sqlite: &SqlitePool) -> Result<(), any
 /// 创建消息会话表
 pub async fn create_chat_session_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS chat_record_ack (
+        r#"CREATE TABLE IF NOT EXISTS chat_session (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nano_id TEXT NOT NULL,
             timestamp INTEGER NOT NULL,
@@ -84,7 +84,8 @@ pub async fn create_chat_session_table(pool_sqlite: &SqlitePool) -> Result<(), a
             last_message TEXT NOT NULL,
             is_show INTEGER NOT NULL DEFAULT 1,
             is_top INTEGER NOT NULL DEFAULT 0,
-            session_type INTEGER NOT NULL DEFAULT 0
+            session_type INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(nano_id, recv_user)
         )"#,
     )
         .execute(pool_sqlite)
@@ -128,7 +129,7 @@ pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow:
             is_block INTEGER NOT NULL DEFAULT 0,
             is_mute INTEGER NOT NULL DEFAULT 0,
             is_top INTEGER NOT NULL DEFAULT 0,
-            is_show INTEGER NOT NULL DEFAULT 1,
+            is_show INTEGER NOT NULL DEFAULT 1
         )"#,
     )
         .execute(pool_sqlite)

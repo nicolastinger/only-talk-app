@@ -5,6 +5,7 @@ pub mod quic_connection;
 pub mod text_msg;
 pub mod user;
 pub(crate) mod p2p_models;
+pub mod chat_session;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {
