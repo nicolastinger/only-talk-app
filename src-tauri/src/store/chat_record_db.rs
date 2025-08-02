@@ -18,3 +18,18 @@ pub async fn get_chat_record_from_db(text_quic_msg: TextQuicMsgVo,page: Page) ->
         .await?;
     Ok(record)
 }
+
+/// 插入聊天记录
+pub async fn insert_chat_record(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let record = sqlx::query(r#"INSERT INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
+        .bind(text_quic_msg.nano_id)
+        .bind(text_quic_msg.raw)
+        .bind(text_quic_msg.timestamp)
+        .bind(text_quic_msg.send_user)
+        .bind(text_quic_msg.recv_user)
+        .bind(text_quic_msg.text_type)
+        .execute(&pool_sqlite)
+        .await?;
+        Ok(())
+} 

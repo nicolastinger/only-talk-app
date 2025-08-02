@@ -25,4 +25,21 @@ impl TextQuicMsgVo {
             timestamp: text_quic_msg.timestamp
         })
     }
+
+    pub fn from_vec(text_quic_msg: Vec<TextQuicMsg>) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+        let mut text_quic_msg_vo = Vec::new();
+        for text_quic_msg in text_quic_msg.into_iter() {
+            let raw = String::from_utf8(text_quic_msg.raw)?;
+            let temp = TextQuicMsgVo {
+                nano_id: text_quic_msg.nano_id,
+                text_type: text_quic_msg.text_type,
+                raw,
+                recv_user: text_quic_msg.recv_user,
+                send_user: text_quic_msg.send_user,
+                timestamp: text_quic_msg.timestamp,
+            };
+            text_quic_msg_vo.push(temp);
+        }
+        Ok(text_quic_msg_vo)
+    }
 }

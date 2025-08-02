@@ -7,7 +7,9 @@ use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::{models::user::SignInResult, GLOBAL_QUIC_USER_INFO};
+use crate::common_service::user_service::user_login;
 use crate::quic_module::text_quic_client::run_client;
+use crate::utils::global_static_str::QUIC_SERVER_ADDR;
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiResponse {
@@ -103,16 +105,7 @@ pub async fn sign_in(url: String, mut body: HashMap<String, String>) -> Result<A
         info!("uuid: {:?}", uuid);
         GLOBAL_QUIC_USER_INFO.write().await.insert("uuid".to_string(), uuid);
     }
-    //let addr = "127.0.0.1:4433".parse().unwrap();
-    let addr = "REDACTED_SERVER_IP_1:4433".parse().unwrap();
-    tokio::spawn(async move{
-        info!("开始执行异步函数");
-        match run_client(addr).await  {
-            Ok(_) => {},
-            Err(e) => {
-                error!("创建text的quic客户端失败 {:?}", e);
-            }
-        }
-    });
+
+    user_login().await.map_err(|e| e.to_string())?;
     Ok(ApiResponse { status, body: response_body })
 }
