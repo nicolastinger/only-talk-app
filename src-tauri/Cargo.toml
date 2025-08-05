@@ -42,3 +42,4 @@ crc-catalog = "2.0"  # 可选，用于预置标准CRC算法
 sqlx = { version = "=0.8.1", features = ["sqlite", "runtime-tokio", "macros"] }
 rusqlite = "=0.32.1"
 rcgen = "0.11.3"
+webpki-roots = "1.0.2"

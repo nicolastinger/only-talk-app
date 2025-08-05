@@ -9,7 +9,7 @@ interface MessageListProps {
 }
 
 const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
-  console.log("渲染的MessageListProps", messages)
+
   return (
     <>
       {messages.map((msg) => {

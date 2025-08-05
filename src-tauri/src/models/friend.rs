@@ -1,0 +1,15 @@
+pub struct Friend {
+    pub id: i64,
+    pub timestamp: i64,
+    pub friend_id: String,
+    pub friend_account: String,
+    pub friend_name: String,
+    pub friend_icon: String,
+    pub friend_status: i32,
+    pub me: String,
+    pub is_deleted: i32,
+    pub is_block: i32,
+    pub is_mute: i32,
+    pub is_top: i32,
+    pub is_show: i32,
+}

@@ -71,8 +71,8 @@ pub async fn get_unread_message()-> Result<(), anyhow::Error>{
         //保存未读消息
         match insert_chat_record(&text_quic_msg).await {
             Ok(_) => {},
-            Err(e) => {
-                error!("保存未读消息失败 {:?}", e);
+            Err(_) => {
+                continue;
             }
         }
         let user = match text_quic_msg.recv_user == uuid {

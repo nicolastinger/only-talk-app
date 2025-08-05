@@ -1,5 +1,8 @@
 use anyhow::anyhow;
+use crate::GLOBAL_QUIC_USER_INFO;
+use crate::store::chat_record_db::get_chat_session;
 use crate::store::init_db::GLOBAL_SQL_POOL;
+use crate::vo::chat_session_vo::ChatSessionVo;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 添加聊天记录到数据库
@@ -51,4 +54,10 @@ pub async fn query_ack_record_from_db(nanoid: &String) -> Result<TextQuicMsgVo, 
         .fetch_one(pool_sqlite)
         .await?;
     Ok(record)
+}
+
+/// 获取会话列表
+pub async fn get_chat_session_from_db() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
+    let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
+    Ok(get_chat_session(uuid).await?)
 }

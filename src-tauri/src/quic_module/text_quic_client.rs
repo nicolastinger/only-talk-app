@@ -9,12 +9,15 @@ use tauri::Emitter;
 use tokio::sync::{Mutex, RwLock};
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use crate::common_service::chat_service::add_local_ack_to_db;
+use crate::models::chat_session::ChatSession;
 use crate::models::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::models::text_msg::MessageType;
 use crate::quic_module::process_quic_msg_from_server::process_msg;
 use crate::quic_module::safe_configuration::configure_client;
 use crate::quic_module::text_msg_service::{generate_text_msg, generate_text_msg_without_nano, get_text_msg};
+use crate::store::chat_record_db::{update_chat_session_local};
 use crate::utils::global_static_str::{PING, SYSTEM};
+use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 // 客户端异步函数，尝试与服务器建立QUIC连接
@@ -189,10 +192,14 @@ pub async fn send_text_msg(msg:String, recv_user: String, nanoid: String) -> Res
         None => "".to_string()
     };
     let ack_raw = msg.clone();
+    let unread_raw = msg.clone();
     let ack_recv = recv_user.clone();
+    let unread_recv = ack_recv.clone();
     let ack_me = sender.clone();
+    let unread_me = sender.clone();
     let raw: Vec<u8> = Vec::from(msg);
     let ack_id = nanoid.clone();
+    let unread_id = nanoid.clone();
     
     let test_msg = generate_text_msg_without_nano(
         MessageType::Text as u16,
@@ -201,17 +208,46 @@ pub async fn send_text_msg(msg:String, recv_user: String, nanoid: String) -> Res
         sender,
         nanoid
     ).map_err(|e| e.to_string())?;
-    
+
+    let now = get_now_time_stamp_as_millis().map_err(|e| e.to_string())?;
     let text_msg_vo = TextQuicMsgVo {
         nano_id: ack_id,
         text_type: MessageType::Text as u16,
         raw: ack_raw,
         recv_user: ack_recv,
         send_user: ack_me,
-        timestamp: get_now_time_stamp_as_millis().map_err(|e| e.to_string())?,
+        timestamp: now,
     };
     
     add_local_ack_to_db(text_msg_vo).await.map_err(|e| e.to_string())?;
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: unread_id,
+        timestamp: now,
+        text_type: MessageType::Text as u16,
+        unread_count: 0,
+        last_message: unread_raw,
+        recv_user: unread_me,
+        send_user: unread_recv,
+        session_type: 1,
+        is_show: 1,
+        is_top: 0,
+    };
+
+    update_chat_session_local(&chat_session).await.map_err(|e| e.to_string())?;
+
+    //发送会话消息给前端
+    let chat_session_event = ChatSessionEvent {
+        r#type: 0,
+        data: ChatSessionVo::from(chat_session).map_err(|e| e.to_string())?
+    };
+    let payload = serde_json::to_string(&chat_session_event).map_err(|e| e.to_string())?;
+    {
+        APP_HANDLE
+            .get()
+            .ok_or("获取app失败".to_string())?
+            .emit("chat_session", payload).map_err(|e| e.to_string())?;
+    }
 
     let send_stream =
         {

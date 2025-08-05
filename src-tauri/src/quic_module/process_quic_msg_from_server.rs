@@ -9,6 +9,9 @@ use crate::APP_HANDLE;
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
+use crate::models::chat_session::ChatSession;
+use crate::store::chat_record_db::{update_chat_session, update_chat_session_local};
+use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -68,16 +71,50 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
 
 /// 处理纯文本消息
 async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
-    //1.插入数据库
+    //1.更新会话列表
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: msg.nano_id.clone(),
+        timestamp: msg.timestamp,
+        text_type: msg.text_type,
+        unread_count: 1,
+        last_message: msg.raw.clone(),
+        recv_user: msg.recv_user.clone(),
+        send_user: msg.send_user.clone(),
+        session_type: 0,
+        is_show: 0,
+        is_top: 0
+    };
+    update_session_list(chat_session).await?;
     let payload = serde_json::to_string(&msg)?;
-    add_chat_record_to_db(msg, 0i32).await?;
     //2.发送消息给前端
     {
         APP_HANDLE
             .get()
             .ok_or(anyhow!("获取app失败"))?
             .emit("text_message", payload)?;
+    }
+    //3.插入数据库
+    add_chat_record_to_db(msg, 0i32).await?;
+    Ok(())
+}
+
+// 更新会话列表
+pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow::Error> {
+    update_chat_session(&chat_session).await?;
+
+    //发送会话消息给前端
+    let chat_session_event = ChatSessionEvent {
+        r#type: 0,
+        data: ChatSessionVo::from(chat_session)?
+    };
+    let payload = serde_json::to_string(&chat_session_event)?;
+    {
+        APP_HANDLE
+            .get()
+            .ok_or(anyhow!("获取app失败"))?
+            .emit("chat_session", payload)?;
     }
     Ok(())
 }

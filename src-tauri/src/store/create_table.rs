@@ -85,7 +85,7 @@ pub async fn create_chat_session_table(pool_sqlite: &SqlitePool) -> Result<(), a
             is_show INTEGER NOT NULL DEFAULT 1,
             is_top INTEGER NOT NULL DEFAULT 0,
             session_type INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(nano_id, recv_user)
+            UNIQUE(send_user, recv_user)
         )"#,
     )
         .execute(pool_sqlite)
@@ -123,8 +123,9 @@ pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow:
             friend_id TEXT NOT NULL,
             friend_account TEXT NOT NULL,
             friend_name TEXT NOT NULL,
-            friend_avatar TEXT NOT NULL,
+            friend_icon TEXT NOT NULL,
             friend_status INTEGER NOT NULL DEFAULT 0,
+            me TEXT NOT NULL,
             is_deleted INTEGER NOT NULL DEFAULT 0,
             is_block INTEGER NOT NULL DEFAULT 0,
             is_mute INTEGER NOT NULL DEFAULT 0,

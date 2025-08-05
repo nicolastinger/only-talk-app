@@ -4,13 +4,15 @@ import dayjs from 'dayjs';
 import styles from './styles/MessageBox.less';
 
 const MessageBox = (props: MessageQueueProps) => {
-  const { message, title, time, img } = props;
+  const { message, title, time, img, count } = props;
+
+  console.log('message', img);
 
   const timeStr = dayjs(time).format('HH:mm:ss');
   return (
     <div className={styles.container}>
       <div className={styles.left}>
-        <Badge count={5}>
+        <Badge count={count}>
           <img src={img || ''} className={styles.imgItem} alt="123" />
         </Badge>
       </div>
