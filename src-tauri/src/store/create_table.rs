@@ -44,7 +44,7 @@ pub async fn create_record_state_table(pool_sqlite: &SqlitePool) -> Result<(), a
             timestamp INTEGER NOT NULL,
             send_user TEXT NOT NULL,
             recv_user TEXT NOT NULL,
-            state INTEGER NOT NULL DEFAULT 0
+            UNIQUE(send_user, recv_user)
         )"#,
     )
     .execute(pool_sqlite)
@@ -119,18 +119,22 @@ pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow:
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS friend (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
             friend_id TEXT NOT NULL,
             friend_account TEXT NOT NULL,
             friend_name TEXT NOT NULL,
             friend_icon TEXT NOT NULL,
+            friend_info TEXT NOT NULL,
             friend_status INTEGER NOT NULL DEFAULT 0,
             me TEXT NOT NULL,
-            is_deleted INTEGER NOT NULL DEFAULT 0,
+            is_del INTEGER NOT NULL DEFAULT 0,
             is_block INTEGER NOT NULL DEFAULT 0,
             is_mute INTEGER NOT NULL DEFAULT 0,
             is_top INTEGER NOT NULL DEFAULT 0,
-            is_show INTEGER NOT NULL DEFAULT 1
+            is_show INTEGER NOT NULL DEFAULT 1,
+            version INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(friend_id, me)
         )"#,
     )
         .execute(pool_sqlite)

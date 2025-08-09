@@ -1,4 +1,4 @@
-use crate::common_service::chat_service::{add_chat_record_to_db, add_local_ack_to_db, query_ack_record_from_db};
+use crate::common_service::chat_service::{query_ack_record_from_db};
 use crate::common_service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::function::front_end::process_p2p_msg;
 use crate::models::p2p_models::P2pInitMsg;
@@ -10,7 +10,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
 use crate::models::chat_session::ChatSession;
-use crate::store::chat_record_db::{update_chat_session, update_chat_session_local};
+use crate::store::chat_record_db::{insert_chat_record, update_chat_session, update_chat_session_local};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 
 /// 处理消息
@@ -96,7 +96,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
             .emit("text_message", payload)?;
     }
     //3.插入数据库
-    add_chat_record_to_db(msg, 0i32).await?;
+    insert_chat_record(&msg).await?;
     Ok(())
 }
 
@@ -106,7 +106,7 @@ pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow
 
     //发送会话消息给前端
     let chat_session_event = ChatSessionEvent {
-        r#type: 0,
+        r#type: 1,
         data: ChatSessionVo::from(chat_session)?
     };
     let payload = serde_json::to_string(&chat_session_event)?;
@@ -127,7 +127,7 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     //1.查询ack表中该条消息
     let ack_record = query_ack_record_from_db(&msg.raw).await?;
     //2.插入数据库
-    add_chat_record_to_db(ack_record, 1).await?;
+    insert_chat_record(&ack_record).await?;
     // 发送消息给前端
     {
         APP_HANDLE

@@ -8,14 +8,13 @@ use anyhow::anyhow;
 use tauri::Emitter;
 use tokio::sync::{Mutex, RwLock};
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use crate::common_service::chat_service::add_local_ack_to_db;
 use crate::models::chat_session::ChatSession;
 use crate::models::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::models::text_msg::MessageType;
 use crate::quic_module::process_quic_msg_from_server::process_msg;
 use crate::quic_module::safe_configuration::configure_client;
 use crate::quic_module::text_msg_service::{generate_text_msg, generate_text_msg_without_nano, get_text_msg};
-use crate::store::chat_record_db::{update_chat_session_local};
+use crate::store::chat_record_db::insert_local_ack_to_db;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -219,7 +218,7 @@ pub async fn send_text_msg(msg:String, recv_user: String, nanoid: String) -> Res
         timestamp: now,
     };
     
-    add_local_ack_to_db(text_msg_vo).await.map_err(|e| e.to_string())?;
+    insert_local_ack_to_db(text_msg_vo).await.map_err(|e| e.to_string())?;
     let chat_session = ChatSession {
         id: 0,
         nano_id: unread_id,
@@ -234,20 +233,7 @@ pub async fn send_text_msg(msg:String, recv_user: String, nanoid: String) -> Res
         is_top: 0,
     };
 
-    update_chat_session_local(&chat_session).await.map_err(|e| e.to_string())?;
-
-    //发送会话消息给前端
-    let chat_session_event = ChatSessionEvent {
-        r#type: 0,
-        data: ChatSessionVo::from(chat_session).map_err(|e| e.to_string())?
-    };
-    let payload = serde_json::to_string(&chat_session_event).map_err(|e| e.to_string())?;
-    {
-        APP_HANDLE
-            .get()
-            .ok_or("获取app失败".to_string())?
-            .emit("chat_session", payload).map_err(|e| e.to_string())?;
-    }
+    update_chat_session(chat_session).await.map_err(|e| e.to_string())?;
 
     let send_stream =
         {
@@ -256,4 +242,22 @@ pub async fn send_text_msg(msg:String, recv_user: String, nanoid: String) -> Res
         };
 
     send_msg(test_msg, send_stream.clone()).await.map_err(|e| e.to_string())
+}
+
+async fn update_chat_session(chat_session: ChatSession)-> Result<(), anyhow::Error>{
+    crate::store::chat_record_db::update_chat_session_local(&chat_session).await?;
+
+    //发送会话消息给前端
+    let chat_session_event = ChatSessionEvent {
+        r#type: 0,
+        data: ChatSessionVo::from(chat_session)?
+    };
+    let payload = serde_json::to_string(&chat_session_event)?;
+    {
+        APP_HANDLE
+            .get()
+            .ok_or(anyhow!("获取app失败"))?
+            .emit("chat_session", payload)?;
+    }
+    Ok(())
 }

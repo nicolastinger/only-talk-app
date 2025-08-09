@@ -17,8 +17,16 @@ const MessageBox = (props: MessageQueueProps) => {
         </Badge>
       </div>
       <div className={styles.center}>
-        <div className={styles.centerTitle}>{title}</div>
-        <div className={styles.centerText}>{message}</div>
+        <div className={styles.centerTitle}>
+          <div className={styles.titleText}>
+            {title}
+          </div>
+        </div>
+        <div className={styles.centerText}>
+          <div className={styles.msgText}>
+            {message}
+          </div>
+        </div>
       </div>
       <div className={styles.end}>
         <div className={styles.endTime}>{timeStr}</div>

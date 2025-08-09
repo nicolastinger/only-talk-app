@@ -43,3 +43,4 @@ sqlx = { version = "=0.8.1", features = ["sqlite", "runtime-tokio", "macros"] }
 rusqlite = "=0.32.1"
 rcgen = "0.11.3"
 webpki-roots = "1.0.2"
+uuid = { version = "1.11.0", features = ["v4", "v7"] }

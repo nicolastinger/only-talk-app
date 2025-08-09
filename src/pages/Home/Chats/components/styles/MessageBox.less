@@ -1,7 +1,7 @@
 .container {
   width: 100%;
   min-width: 160px;
-  height: 80px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -14,8 +14,8 @@
 }
 
 .left {
-  width: 80px;
-  height: 80px;
+  width: 68px;
+  height: 100%;
   padding: 16px;
 }
 
@@ -27,7 +27,7 @@
 }
 
 .center {
-  width: calc(100% - 160px);
+  width: calc(100% - 148px);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -37,19 +37,31 @@
 .centerTitle {
   width: 100%;
   font-size: 1rem;
-  display: flex;
+  height: 50%;
   color: var(--color-white-02);
   align-items: flex-end;
-  flex: 1;
+}
+.titleText {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
 }
 
 .centerText {
   width: 100%;
-  flex: 1;
+  height: 50%;
   font-size: 0.8rem;
   color: var(--color-white-07);
-  display: flex;
   align-items: flex-start;
+}
+
+.msgText {
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 
 .end {
@@ -61,6 +73,6 @@
 }
 
 .endTime {
-  font-size: 0.8rem;
+  font-size: 0.6rem;
   color: var(--color-white-07);
 }

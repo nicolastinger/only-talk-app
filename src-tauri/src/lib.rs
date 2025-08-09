@@ -15,6 +15,7 @@ mod network;
 mod store;
 mod utils;
 mod vo;
+mod dto;
 
 use crate::function::back_end::{add_user_map, get_chat_record_from_store, get_chat_session_from_store, get_user_map, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_video_frame};
 use crate::network::http_utils::{get_request, post_request, sign_in};

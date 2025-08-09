@@ -105,6 +105,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-opener",
  "tokio",
+ "uuid",
  "webpki-roots",
  "windows 0.58.0",
 ]
