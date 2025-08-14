@@ -2,6 +2,7 @@
 
 use anyhow::anyhow;
 use log::{error, info};
+use crate::common_service::user_service::get_user_info;
 use crate::models::chat_record_read::ChatRecordRead;
 use crate::models::chat_session::ChatSession;
 use crate::models::friend::Friend;
@@ -90,6 +91,11 @@ pub async fn update_chat_session(chat_session: &ChatSession) -> Result<(), anyho
 
 /// 本地更新会话
 pub async fn update_chat_session_local(chat_session: &ChatSession) -> Result<(), anyhow::Error> {
+    let me = get_user_info(&"uuid".to_string()).await?;
+    let send_user = match chat_session.send_user == me {
+        true => chat_session.recv_user.clone(),
+        false => chat_session.send_user.clone()
+    };
     let pool_sqlite = get_db_client().await?;
     // 执行更新
     sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = ?4, last_message = ?5 WHERE send_user = ?6 and recv_user = ?7"#)
@@ -98,8 +104,8 @@ pub async fn update_chat_session_local(chat_session: &ChatSession) -> Result<(),
         .bind(chat_session.text_type)
         .bind(chat_session.unread_count)
         .bind(&chat_session.last_message)
-        .bind(&chat_session.send_user)
-        .bind(&chat_session.recv_user)
+        .bind(&send_user)
+        .bind(&me)
         .execute(&pool_sqlite)
         .await?;
     Ok(())

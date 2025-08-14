@@ -1,4 +1,4 @@
-use crate::common_service::chat_service::{query_ack_record_from_db};
+use crate::common_service::chat_service::{clear_chat_session, query_ack_record_from_db};
 use crate::common_service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::function::front_end::process_p2p_msg;
 use crate::models::p2p_models::P2pInitMsg;
@@ -10,7 +10,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
 use crate::models::chat_session::ChatSession;
-use crate::store::chat_record_db::{insert_chat_record, update_chat_session, update_chat_session_local};
+use crate::store::chat_record_db::{insert_chat_record, update_chat_session};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 
 /// 处理消息
@@ -137,5 +137,20 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
             .ok_or(anyhow!("获取app失败"))?
             .emit("text_message", payload)?;
     }
+    // 清除未读计数
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: ack_record.nano_id,
+        timestamp: ack_record.timestamp,
+        text_type: ack_record.text_type,
+        unread_count: 0,
+        last_message: ack_record.raw,
+        recv_user: ack_record.recv_user,
+        send_user: ack_record.send_user,
+        session_type: 1,
+        is_show: 1,
+        is_top: 0,
+    };
+    clear_chat_session(chat_session).await?;
     Ok(())
 }

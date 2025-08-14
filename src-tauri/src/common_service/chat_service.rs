@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
 use crate::models::chat_record_read::ChatRecordRead;
 use crate::models::chat_session::ChatSession;
-use crate::store::chat_record_db::{query_chat_session, update_last_read_msg};
+use crate::store::chat_record_db::{query_chat_session, update_chat_session_local, update_last_read_msg};
 use crate::store::init_db::GLOBAL_SQL_POOL;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -31,7 +31,7 @@ pub async fn get_chat_session_from_db() -> Result<Vec<ChatSessionVo>, anyhow::Er
 
 /// 本地清空已读消息计数
 pub async fn clear_chat_session(chat_session: ChatSession)-> Result<(), anyhow::Error>{
-    crate::store::chat_record_db::update_chat_session_local(&chat_session).await?;
+    update_chat_session_local(&chat_session).await?;
 
     //发送会话消息给前端
     let chat_session_event = ChatSessionEvent {

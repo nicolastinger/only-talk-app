@@ -133,14 +133,10 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
     
     let msg = text_quic_msg.raw;
     let ack_raw = msg.clone();
-    let unread_raw = msg.clone();
     let ack_recv = text_quic_msg.recv_user.clone().clone();
-    let unread_recv = ack_recv.clone();
     let ack_me = sender.clone();
-    let unread_me = sender.clone();
     let raw: Vec<u8> = Vec::from(msg);
     let ack_id = text_quic_msg.nano_id.clone();
-    let unread_id = text_quic_msg.nano_id.clone();
     
     // 插入本地ack
     let text_msg_vo = TextQuicMsgVo {
@@ -152,22 +148,6 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
         timestamp: now,
     };
     insert_local_ack_to_db(text_msg_vo).await.map_err(|e| e.to_string())?;
-    
-    // 清除未读计数
-    let chat_session = ChatSession {
-        id: 0,
-        nano_id: unread_id,
-        timestamp: now,
-        text_type: text_quic_msg.text_type,
-        unread_count: 0,
-        last_message: unread_raw,
-        recv_user: unread_me,
-        send_user: unread_recv,
-        session_type: 1,
-        is_show: 1,
-        is_top: 0,
-    };
-    clear_chat_session(chat_session).await.map_err(|e| e.to_string())?;
 
     // 发送消息
     let test_msg = generate_text_msg_without_nano(
