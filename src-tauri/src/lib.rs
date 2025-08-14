@@ -17,12 +17,11 @@ mod utils;
 mod vo;
 mod dto;
 
-use crate::function::back_end::{add_user_map, get_chat_record_from_store, get_chat_session_from_store, get_user_map, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_video_frame};
+use crate::function::back_end::{add_user_map, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_user_map, mark_read, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
 use crate::network::http_utils::{get_request, post_request, sign_in};
 use crate::quic_module::p2p_stream_quic_server::{
     udp_port_forward_ipv6
 };
-use crate::quic_module::text_quic_client::send_text_msg;
 use crate::utils::global_static_str::{UDP_SOCKET_V6};
 use models::quic_connection::QuicConnection;
 use store::init_db::init_sqlite;
@@ -84,7 +83,9 @@ pub fn run() {
             send_p2p_video_config,
             send_p2p_video_frame,
             get_chat_record_from_store,
-            get_chat_session_from_store
+            get_chat_session_from_store,
+            get_friend_info,
+            mark_read
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

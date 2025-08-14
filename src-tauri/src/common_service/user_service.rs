@@ -201,9 +201,11 @@ pub async fn start_read_task()-> Result<(), anyhow::Error>{
                     };
                     read_record_vec.push(read_record);
                 }
+                
+                info!("发送已读消息 {:?}", read_record_vec);
 
                 match post_request(format!("{}/msg/add_read_chat_record", TALK_API), serde_json::to_string(&read_record_vec).expect("序列化已读消息失败")).await  {
-                    Ok(_) => {},
+                    Ok(m) => {info!("发送已读消息成功 {:?}", m.body)},
                     Err(e) => {
                         error!("发送已读消息失败 {:?}", e);
                     }

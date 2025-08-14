@@ -36,7 +36,7 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
       ack: false,
     };
     try {
-      await invoke('send_text_msg', { msg: message, recvUser: friendUuid, nanoid: text_msg_raw.nano_id });
+      await invoke('send_text_msg', { textQuicMsg: text_msg_raw });
       onMessageSent(JSON.stringify(temp));
       setMessage('');
     } catch (e) {

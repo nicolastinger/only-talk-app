@@ -4,7 +4,7 @@ use crate::network::http_utils::post;
 use crate::quic_module::p2p_quic_service::get_sender;
 use crate::quic_module::p2p_stream_quic_client::run_client;
 use crate::quic_module::p2p_stream_quic_server::{
-    get_user_address_info, run_server, udp_p2p_port_forward, udp_port_forward,
+    get_user_address_info, run_server, udp_port_forward,
     udp_port_forward_ipv6,
 };
 use crate::quic_module::text_msg_service::generate_text_msg;
@@ -21,7 +21,6 @@ use std::io;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
 use std::time::Duration;
 use tauri::Emitter;
-use tokio::io::AsyncWriteExt;
 use crate::common_service::user_service::get_user_info;
 
 /// 获取10000以上首个可用UDP端口
@@ -42,7 +41,7 @@ fn is_udp_port_available(port: u16) -> io::Result<bool> {
 /// 发送p2p初始化信息
 pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error> {
     let (sender, request_token) = {
-        let mut guard = GLOBAL_QUIC_USER_INFO.read().await;
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
         let sender = guard.get("uuid").ok_or(anyhow!("no sender"))?.clone();
         // 请求标识符
         let request_token = nanoid!();
@@ -120,7 +119,7 @@ pub async fn reject_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
 /// 接受用户的p2p请求
 pub async fn access_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Error> {
     let uuid = {
-        let mut guard = GLOBAL_QUIC_USER_INFO.read().await;
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
         let uuid = guard.get("uuid").ok_or(anyhow!("no uuid"))?;
         uuid.clone()
     };

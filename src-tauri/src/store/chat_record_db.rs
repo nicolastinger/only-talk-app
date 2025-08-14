@@ -24,6 +24,18 @@ pub async fn query_chat_record_from_db(text_quic_msg: TextQuicMsgVo,page: Page) 
     Ok(record)
 }
 
+/// 根据id获取聊天记录
+pub async fn query_chat_record_by_id_from_db(id: &String, uuid: &String) -> Result<TextQuicMsgVo, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE nano_id = ? and (send_user = ? OR recv_user = ?)"#)
+        .bind(id)
+        .bind(uuid)
+        .bind(uuid)
+        .fetch_one(&pool_sqlite)
+        .await?;
+    Ok(record)
+}
+
 /// 插入聊天记录
 pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
@@ -208,6 +220,17 @@ pub async fn query_friend_info(uuid: &String) -> Result<Vec<Friend>, anyhow::Err
     let record = sqlx::query_as::<_, Friend>(r#"select * from friend where me = ?1"#)
         .bind(uuid)
         .fetch_all(&pool_sqlite)
+        .await?;
+    Ok(record)
+}
+
+/// 获取单条好友信息
+pub async fn query_friend_info_by_id(uuid: &String, friend_id: &String) -> Result<Friend, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let record = sqlx::query_as::<_, Friend>(r#"select * from friend where me = ?1 and friend_id = ?2 limit 1"#)
+        .bind(uuid)
+        .bind(friend_id)
+        .fetch_one(&pool_sqlite)
         .await?;
     Ok(record)
 }

@@ -2,15 +2,20 @@ use crate::common_service::p2p_service::{access_p2p_request, find_available_udp_
 use crate::models::p2p_models::{P2pInitMsg, P2pVideoData};
 use crate::quic_module::udp_utils::send_udp_ping_msg;
 use crate::utils::global_static_str::{ UDP_SOCKET};
-use crate::{ GLOBAL_QUIC_USER_INFO};
+use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use std::collections::HashMap;
 use log::info;
-use crate::common_service::chat_service::get_chat_session_from_db;
+use crate::common_service::chat_service::{clear_chat_session, get_chat_session_from_db, send_msg, update_last_read_msg_from_db};
+use crate::common_service::user_service::get_user_info;
+use crate::models::chat_session::ChatSession;
+use crate::models::friend::Friend;
 use crate::models::Page;
-use crate::models::text_msg::TextQuicMsg;
 use crate::quic_module::p2p_quic_service::LOG_SENDER;
-use crate::store::chat_record_db::query_chat_record_from_db;
+use crate::quic_module::text_msg_service::generate_text_msg_without_nano;
+use crate::store::chat_record_db::{insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db, query_friend_info_by_id};
+use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::ChatSessionVo;
+use crate::vo::friend_vo::FriendVo;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 增加持久化数据
@@ -117,4 +122,89 @@ pub async fn get_chat_record_from_store(text_quic_msg: TextQuicMsgVo, page: Page
 #[tauri::command]
 pub async fn get_chat_session_from_store() -> Result<Vec<ChatSessionVo>, String> {
     Ok(get_chat_session_from_db().await.map_err(|e| e.to_string())?)
+}
+
+/// 发送文本消息
+#[tauri::command]
+pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
+    let me = GLOBAL_QUIC_USER_INFO.read().await;
+    let sender = me.get("uuid").ok_or("获取用户信息失败")?.clone();
+    let now = get_now_time_stamp_as_millis().map_err(|e| e.to_string())?;
+    
+    let msg = text_quic_msg.raw;
+    let ack_raw = msg.clone();
+    let unread_raw = msg.clone();
+    let ack_recv = text_quic_msg.recv_user.clone().clone();
+    let unread_recv = ack_recv.clone();
+    let ack_me = sender.clone();
+    let unread_me = sender.clone();
+    let raw: Vec<u8> = Vec::from(msg);
+    let ack_id = text_quic_msg.nano_id.clone();
+    let unread_id = text_quic_msg.nano_id.clone();
+    
+    // 插入本地ack
+    let text_msg_vo = TextQuicMsgVo {
+        nano_id: ack_id,
+        text_type: text_quic_msg.text_type,
+        raw: ack_raw,
+        recv_user: ack_recv,
+        send_user: ack_me,
+        timestamp: now,
+    };
+    insert_local_ack_to_db(text_msg_vo).await.map_err(|e| e.to_string())?;
+    
+    // 清除未读计数
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: unread_id,
+        timestamp: now,
+        text_type: text_quic_msg.text_type,
+        unread_count: 0,
+        last_message: unread_raw,
+        recv_user: unread_me,
+        send_user: unread_recv,
+        session_type: 1,
+        is_show: 1,
+        is_top: 0,
+    };
+    clear_chat_session(chat_session).await.map_err(|e| e.to_string())?;
+
+    // 发送消息
+    let test_msg = generate_text_msg_without_nano(
+        text_quic_msg.text_type,
+        raw,
+        text_quic_msg.recv_user.clone(),
+        sender,
+        text_quic_msg.nano_id.clone()
+    ).map_err(|e| e.to_string())?;
+    let send_stream =
+        {
+            let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+            server_book.get("SERVER_TEXT").unwrap().send_stream.clone()
+        };
+
+    send_msg(test_msg, send_stream.clone()).await.map_err(|e| e.to_string())
+}
+
+/// 查询当前好友信息
+#[tauri::command]
+pub async fn get_friend_info(friend_uuid: String) -> Result<FriendVo, String> {
+    let me = get_user_info(&"uuid".to_string()).await.map_err(|e| e.to_string())?;
+    let friend = query_friend_info_by_id(&me, &friend_uuid).await.map_err(|e| e.to_string())?;
+    let friend_vo = FriendVo::from(friend);
+    Ok(friend_vo)
+}
+
+/// 已读当前记录
+#[tauri::command]
+pub async fn mark_read(text_quic_msg_vec: Vec<String>) -> Result<(), String> {
+    let me = get_user_info(&"uuid".to_string()).await.map_err(|e| e.to_string())?;
+    let mut last_msg_vec: Vec<TextQuicMsgVo> = vec![];
+    for item in text_quic_msg_vec {
+        let text_quic_msg = query_chat_record_by_id_from_db(&item, &me).await.map_err(|e| e.to_string())?;
+        last_msg_vec.push(text_quic_msg);
+    }
+
+    update_last_read_msg_from_db(last_msg_vec).await.map_err(|e| e.to_string())?;
+    Ok(())
 }

@@ -18,4 +18,18 @@ interface ChatSessionEvent {
   data: ChatSessionVo;
 }
 
-export { ChatSessionVo, ChatSessionEvent }
+interface FriendVo {
+  timestamp: number,
+    friend_id: string,
+    friend_account: string,
+    friend_name: string,
+    friend_icon: string,
+    friend_status: number,
+    is_del: boolean,
+    is_block: number,
+    is_mute: number,
+    is_top: number,
+    is_show: number,
+}
+
+export { ChatSessionVo, ChatSessionEvent, FriendVo }

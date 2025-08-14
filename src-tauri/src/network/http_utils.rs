@@ -37,7 +37,10 @@ pub async fn post_request(url: String, body: String) -> Result<ApiResponse, Stri
     let mut headers = HeaderMap::new();
     headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
 
-    let response = client.post(&url).json(&body).headers(headers).send().await.map_err(|e| e.to_string())?;
+    // 解析body为JSON值，如果解析失败则将其作为字符串值处理
+    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
+    
+    let response = client.post(&url).json(&json_body).headers(headers).send().await.map_err(|e| e.to_string())?;
     
 
     let status = response.status().as_u16();

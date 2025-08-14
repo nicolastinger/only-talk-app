@@ -45,6 +45,7 @@ interface FriendInfo {
 }
 
 interface UserInfo {
+  uuid?: string;
   username?: string;
   account?: string;
   icon?: string;

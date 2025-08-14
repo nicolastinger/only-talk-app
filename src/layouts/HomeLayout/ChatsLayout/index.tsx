@@ -8,12 +8,16 @@ import React, { useEffect } from 'react';
 import styles from './index.less';
 import { ChatSessionVo } from '@/types/backend/vo';
 import useChatSession from '@/hooks/useChatSession';
+import { useBearStore } from '@/store/store';
 
 const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>([]);
 
+  const { userInfo } = useBearStore();
   const { chatSessionEvent } = useChatSession();
-  const routeToChat = (uuid: string) => {
+  const routeToChat = (item: ChatSessionVo) => {
+    console.log('userInfo', userInfo, item)
+    let uuid = item.send_user === userInfo?.uuid ? item.recv_user : item.send_user;
     history.push('/home/chats/chat?currentFriend=' + uuid);
   };
 
@@ -23,9 +27,25 @@ const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
       if (!chatSessionEvent?.data) {
         return prevList;
       }
+      console.log('prevList', prevList)
 
-      const index = prevList.findIndex(item => item.send_user === chatSessionEvent.data.send_user);
+      const index = prevList.findIndex(item => {
+        if (
+          item.send_user === chatSessionEvent.data.send_user &&
+          item.recv_user === chatSessionEvent.data.recv_user
+        ) {
+          return true;
+        } else if (
+          item.send_user === chatSessionEvent.data.recv_user &&
+          item.recv_user === chatSessionEvent.data.send_user
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      });
 
+      console.log('index', index)
       // 创建新的数组，避免直接修改原数组
       const newList = [...prevList];
 
@@ -95,7 +115,7 @@ const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
         <div className={styles.item} key="chat">
           {chatSessionList.map((item: ChatSessionVo) => {
             return (
-              <div key={item.send_user} onClick={() => routeToChat(item.send_user)}>
+              <div key={item.nano_id} onClick={() => routeToChat(item)}>
                 <Message
                   message={item.last_message}
                   img={item.friend_icon}

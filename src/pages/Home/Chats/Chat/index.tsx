@@ -1,7 +1,7 @@
-import { SYSTEM_ACCOUNT, TALK_API } from '@/constants';
+import { SYSTEM_ACCOUNT } from '@/constants';
 import useMessageApi from '@/hooks/useMessageApi';
-import { HttpResponse, ResponseData } from '@/types/backend/httpRust';
-import { ChatMessage, FriendInfo, MessageFrom, TextMsgRaw } from '@/types/user/common';
+import { ResponseData } from '@/types/backend/httpRust';
+import { ChatMessage, MessageFrom, TextMsgRaw } from '@/types/user/common';
 import { invoke } from '@tauri-apps/api/core';
 import { useLocation } from '@umijs/max';
 import React, { useEffect, useState } from 'react';
@@ -10,10 +10,11 @@ import MessageList from '../components/MessageList';
 import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
 import { Page } from '@/types/backend';
+import { FriendVo } from '@/types/backend/vo';
 
 const ChatPage: React.FC = () => {
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
-  const [currentFriend, setCurrentFriend] = useState<FriendInfo>();
+  const [currentFriend, setCurrentFriend] = useState<FriendVo>();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendUuid = params.get('currentFriend') || '';
@@ -25,10 +26,64 @@ const ChatPage: React.FC = () => {
     initUserInfo()
   }, []);
 
+  // 更新已读记录
+  useEffect(() => {
+    let last_time = 0;
+    if (messageList.length > 1) {
+      let last_message: string = ""
+      for (let i = 0; i < messageList.length; i++){
+        let last_record: ChatMessage = messageList[i];
+        if (last_record.from === MessageFrom.System) {
+          continue;
+        }
+        if (last_record.text_msg_raw.timestamp > last_time) {
+          last_time = last_record.text_msg_raw.timestamp;
+          last_message = last_record.text_msg_raw.nano_id;
+        }
+      }
+      if (last_message !== ""){
+        // 消息已读
+        markRead(last_message);
+      }
+      // 会话更新
+
+    }
+  }, [messageList])
+
   // 获取聊天记录
   useEffect(() => {
     getChatRecordFromStore(meUuid, friendUuid);
+    getFriendInfo(friendUuid);
   }, [meUuid, friendUuid]);
+
+  // 已读当前会话聊天记录
+  const markRead = async (last_read_record: string) => {
+    try {
+      let lastList = [] as string[];
+      if (last_read_record) {
+        lastList.push(last_read_record);
+      }
+      const data: ResponseData = await invoke('mark_read', {
+        textQuicMsgVec: lastList
+      });
+      console.log('已读', data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  // 获取好友信息
+  const getFriendInfo = async (friendUuid: string) => {
+    try {
+      const data: FriendVo = await invoke('get_friend_info', {
+        friendUuid
+      });
+      console.log('好友信息', data);
+      setCurrentFriend(data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const getChatRecordFromStore = async (meUuid: string, friendUuid: string) => {
     try {
@@ -44,7 +99,10 @@ const ChatPage: React.FC = () => {
         textQuicMsg:  textRawText,
         page
       });
-      console.log('textRawText', data)
+      if (data.length === 0) {
+        return;
+      }
+
       let chatMessages: ChatMessage[] = data.map((item) => {
         let from = item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;
         const temp: ChatMessage = {
@@ -120,13 +178,13 @@ const ChatPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <ChatTopBar title={currentFriend?.username || ''} />
+        <ChatTopBar title={currentFriend?.friend_name || ''} />
       </div>
       <div className={styles.mainContainer}>
         <div className={styles.messageContainer}>
           <MessageList
             messages={messageList}
-            friendIcon={currentFriend?.icon}
+            friendIcon={currentFriend?.friend_icon}
           />
           <div id="anchor"></div>
         </div>
