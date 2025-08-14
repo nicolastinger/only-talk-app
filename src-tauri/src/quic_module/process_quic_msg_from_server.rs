@@ -125,7 +125,9 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let payload = serde_json::to_string(&msg)?;
     //1.查询ack表中该条消息
-    let ack_record = query_ack_record_from_db(&msg.raw).await?;
+    let mut ack_record = query_ack_record_from_db(&msg.raw).await?;
+    ack_record.nano_id = msg.nano_id;
+    ack_record.timestamp = msg.timestamp;
     //2.插入数据库
     insert_chat_record(&ack_record).await?;
     // 发送消息给前端
