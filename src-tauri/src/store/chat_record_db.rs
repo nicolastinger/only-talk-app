@@ -16,7 +16,7 @@ use crate::vo::text_quic_msg::TextQuicMsgVo;
 /// 分页获取聊天记录
 pub async fn query_chat_record_from_db(text_quic_msg: TextQuicMsgVo,page: Page) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by timestamp asc"#)
         .bind(text_quic_msg.send_user)
         .bind(text_quic_msg.recv_user)
         .fetch_all(&pool_sqlite)
