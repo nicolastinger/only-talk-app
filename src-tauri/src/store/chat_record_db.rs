@@ -55,6 +55,11 @@ pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), any
 /// 会话消息更新
 pub async fn update_chat_session(chat_session: &ChatSession) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
+    let me = get_user_info(&"uuid".to_string()).await?;
+    let send_user = match chat_session.send_user == me {
+        true => chat_session.recv_user.clone(),
+        false => chat_session.send_user.clone()
+    };
     // 执行更新
     let res = sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = unread_count + ?4, last_message = ?5 WHERE send_user = ?6 and recv_user = ?7"#)
         .bind(&chat_session.nano_id)
@@ -62,8 +67,8 @@ pub async fn update_chat_session(chat_session: &ChatSession) -> Result<(), anyho
         .bind(chat_session.text_type)
         .bind(chat_session.unread_count)
         .bind(&chat_session.last_message)
-        .bind(&chat_session.send_user)
-        .bind(&chat_session.recv_user)
+        .bind(&send_user)
+        .bind(&me)
         .execute(&pool_sqlite)
         .await?;
     info!("更新会话成功: {}", res.rows_affected());
@@ -75,8 +80,8 @@ pub async fn update_chat_session(chat_session: &ChatSession) -> Result<(), anyho
             .bind(chat_session.text_type)
             .bind(chat_session.unread_count)
             .bind(&chat_session.last_message)
-            .bind(&chat_session.send_user)
-            .bind(&chat_session.recv_user)
+            .bind(&send_user)
+            .bind(&me)
             .bind(chat_session.session_type)
             .bind(chat_session.is_show)
             .bind(chat_session.is_top)

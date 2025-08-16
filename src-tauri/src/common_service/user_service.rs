@@ -20,7 +20,7 @@ use crate::vo::text_quic_msg::TextQuicMsgVo;
 /// 用户登录执行操作
 pub async fn user_login()-> Result<(), anyhow::Error>{
     //1、获取好友列表
-    get_friend_list().await.unwrap_or_else(|e| { error!("获取好友列表失败 {:?}", e); });
+    update_friend_list().await.unwrap_or_else(|e| { error!("获取好友列表失败 {:?}", e); });
     //2、获取未读消息
     get_unread_message().await.unwrap_or_else(|e| { error!("获取未读消息失败 {:?}", e)});
     //3、获取好友请求信息
@@ -57,7 +57,7 @@ pub async fn insert_user_info(key: &String, value: &String)-> Result<(), anyhow:
 }
 
 /// 获取好友列表
-pub async fn get_friend_list()-> Result<(), anyhow::Error>{
+pub async fn update_friend_list()-> Result<(), anyhow::Error>{
     // 获取本地最新update的好友
     let uuid = get_user_info(&"uuid".to_string()).await?;
     let res = query_friend_info(&uuid).await?;
