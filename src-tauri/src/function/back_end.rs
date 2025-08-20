@@ -12,7 +12,7 @@ use crate::models::friend::Friend;
 use crate::models::Page;
 use crate::quic_module::p2p_quic_service::LOG_SENDER;
 use crate::quic_module::text_msg_service::generate_text_msg_without_nano;
-use crate::store::chat_record_db::{insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db, query_friend_info_by_id};
+use crate::store::chat_record_db::{insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db, query_friend_info, query_friend_info_by_id};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::ChatSessionVo;
 use crate::vo::friend_vo::FriendVo;
@@ -173,6 +173,19 @@ pub async fn get_friend_info(friend_uuid: String) -> Result<FriendVo, String> {
     let friend = query_friend_info_by_id(&me, &friend_uuid).await.map_err(|e| e.to_string())?;
     let friend_vo = FriendVo::from(friend);
     Ok(friend_vo)
+}
+
+/// 查询好友列表
+#[tauri::command]
+pub async fn get_friend_list() -> Result<Vec<FriendVo>, String> {
+    let me = get_user_info(&"uuid".to_string()).await.map_err(|e| e.to_string())?;
+    let friends = query_friend_info(&me).await.map_err(|e| e.to_string())?;
+    let mut friend_vec = vec![];
+    for friend in friends {
+        let friend_vo = FriendVo::from(friend);
+        friend_vec.push(friend_vo);
+    }
+    Ok(friend_vec)
 }
 
 /// 已读当前记录

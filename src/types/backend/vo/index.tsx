@@ -19,7 +19,7 @@ interface ChatSessionEvent {
 }
 
 interface FriendVo {
-  timestamp: number,
+    timestamp: number,
     friend_id: string,
     friend_account: string,
     friend_name: string,

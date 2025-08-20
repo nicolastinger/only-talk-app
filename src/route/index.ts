@@ -22,7 +22,7 @@ const routes = [
             component: '@/layouts/HomeLayout/ChatsLayout',
             routes: [
               {
-                path: 'chats',
+                path: '',
                 redirect: 'dashboard',
               },
               {
@@ -34,13 +34,25 @@ const routes = [
                 name: 'menu.chats.dashboard',
                 path: 'dashboard',
                 component: './Home/Chats/Dashboard',
-              },
-              {
-                path: 'contacts',
-                component: './Home/Contacts',
-              },
+              }
             ],
           },
+          {
+            name: 'menu.contacts',
+            path: 'contacts',
+            component: '@/layouts/HomeLayout/ContactsLayout',
+            routes: [
+              {
+                path: '',
+                redirect: 'dashboard',
+              },
+              {
+                name: 'menu.contacts.dashboard',
+                path: 'dashboard',
+                component: './Home/Contacts/components/Dashboard',
+              }
+            ]
+          }
         ],
       },
       {
