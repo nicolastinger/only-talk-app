@@ -5,7 +5,7 @@ use crate::utils::global_static_str::{ UDP_SOCKET};
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use std::collections::HashMap;
 use log::info;
-use crate::common_service::chat_service::{clear_chat_session, get_chat_session_from_db, send_msg, update_last_read_msg_from_db};
+use crate::common_service::chat_service::{clear_chat_session, create_chat_session_service, get_chat_session_from_db, send_msg, update_last_read_msg_from_db};
 use crate::common_service::user_service::get_user_info;
 use crate::models::chat_session::ChatSession;
 use crate::models::friend::Friend;
@@ -200,4 +200,10 @@ pub async fn mark_read(text_quic_msg_vec: Vec<String>) -> Result<(), String> {
 
     update_last_read_msg_from_db(last_msg_vec).await.map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// 创建一个聊天窗口
+#[tauri::command]
+pub async fn create_chat_session(friend_uuid: String) -> Result<(), String> {
+    Ok(create_chat_session_service(friend_uuid).await.map_err(|e| e.to_string())?)
 }

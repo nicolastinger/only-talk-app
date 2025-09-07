@@ -50,6 +50,11 @@ const routes = [
                 name: 'menu.contacts.dashboard',
                 path: 'dashboard',
                 component: './Home/Contacts/components/Dashboard',
+              },
+              {
+                name: 'menu.contacts.friend',
+                path: 'friend',
+                component: './Home/Contacts',
               }
             ]
           }

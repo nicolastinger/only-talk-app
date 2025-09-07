@@ -1,7 +1,4 @@
 import Message from '@/pages/Home/Chats/components/MessageBox';
-import { get_friend_list } from '@/services/userService';
-import { ResponseData } from '@/types/backend/httpRust';
-import { FriendInfo } from '@/types/user/common';
 import { invoke } from '@tauri-apps/api/core';
 import { history, Outlet } from '@umijs/max';
 import React, { useEffect } from 'react';

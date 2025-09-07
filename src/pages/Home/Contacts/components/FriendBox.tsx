@@ -1,12 +1,13 @@
-import { FriendQueueProps } from '@/types/user/common';
 import { Badge } from 'antd';
 import styles from './styles/FriendBox.less';
 import { FriendVo } from '@/types/backend/vo';
+import { history } from '@umijs/max';
 
 const FriendBox = (props: {friend: FriendVo}) => {
   const { friend_name, friend_id, friend_icon,  } = props.friend;
 
   const routeToFriendInfo = () => {
+    history.push('/home/contacts/friend?friendId=' + friend_id);
     console.log('朋友账号', friend_id);
   };
 

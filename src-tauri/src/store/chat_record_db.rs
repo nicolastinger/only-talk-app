@@ -103,12 +103,14 @@ pub async fn update_chat_session_local(chat_session: &ChatSession) -> Result<(),
     };
     let pool_sqlite = get_db_client().await?;
     // 执行更新
-    sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = ?4, last_message = ?5 WHERE send_user = ?6 and recv_user = ?7"#)
+    sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = ?4, last_message = ?5, is_show = ?6, is_top = ?7 WHERE send_user = ?8 and recv_user = ?9"#)
         .bind(&chat_session.nano_id)
         .bind(chat_session.timestamp)
         .bind(chat_session.text_type)
         .bind(chat_session.unread_count)
         .bind(&chat_session.last_message)
+        .bind(chat_session.is_show)
+        .bind(chat_session.is_top)
         .bind(&send_user)
         .bind(&me)
         .execute(&pool_sqlite)

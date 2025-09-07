@@ -4,10 +4,12 @@ use quinn::SendStream;
 use tauri::Emitter;
 use tokio::sync::RwLock;
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
+use crate::function::back_end::get_user_map;
 use crate::models::chat_record_read::ChatRecordRead;
 use crate::models::chat_session::ChatSession;
-use crate::store::chat_record_db::{query_chat_session, update_chat_session_local, update_last_read_msg};
+use crate::store::chat_record_db::{query_chat_session, update_chat_session, update_chat_session_local, update_last_read_msg};
 use crate::store::init_db::GLOBAL_SQL_POOL;
+use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
@@ -63,7 +65,7 @@ pub async fn send_msg(
 
 /// 更新已读消息
 pub async fn update_last_read_msg_from_db(last_msg_vec: Vec<TextQuicMsgVo>) -> Result<(), anyhow::Error> {
-    let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
+    let uuid = get_user_map("uuid".to_string()).await.map_err(|e| anyhow!(e))?;
     for item in last_msg_vec {
         let chat_record_read = ChatRecordRead {
             id: 0,
@@ -93,5 +95,39 @@ pub async fn update_last_read_msg_from_db(last_msg_vec: Vec<TextQuicMsgVo>) -> R
         };
         clear_chat_session(chat_session).await?;
     }
+    Ok(())
+}
+
+/// 创建会话窗口
+pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyhow::Error> {
+    // 获取当前用户
+    let me = get_user_map("uuid".to_string()).await.map_err(|e| anyhow!(e))?;
+
+    // 查询是否存在会话
+    let chat_session = query_chat_session(&me).await?;
+    for mut item in chat_session {
+        if item.send_user == friend_uuid {
+            // 存在会话
+            item.is_show = 1;
+            let chat_session = ChatSession::from(item)?;
+            update_chat_session_local(&chat_session).await?;
+            return Ok(());
+        }
+    }
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: nanoid::nanoid!(),
+        timestamp: get_now_time_stamp_as_millis()?,
+        text_type: 0,
+        unread_count: 0,
+        last_message: "".to_string(),
+        recv_user: me,
+        send_user: friend_uuid,
+        session_type: 1,
+        is_show: 1,
+        is_top: 0,
+    };
+    // 创建会话窗口
+    update_chat_session(&chat_session).await?;
     Ok(())
 }
