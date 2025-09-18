@@ -20,6 +20,7 @@ pub enum MessageType {
     RecallFailure = 202,
     P2pUserServer = 203,  //作为p2p服务端发起
     P2pUserClient = 204,  //作为p2p客户端
+    System = 10001  // 系统消息
 }
 
 //头部消息

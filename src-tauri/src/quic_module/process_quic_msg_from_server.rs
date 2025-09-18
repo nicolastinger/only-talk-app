@@ -21,6 +21,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
     const P2P_USER_SERVER: u16 = MessageType::P2pUserServer as u16;
     const P2P_USER_CLIENT: u16 = MessageType::P2pUserClient as u16;
     const RECALL_SUCCESS: u16 = MessageType::RecallSuccess as u16;
+    const SYSTEM_TYPE: u16 = MessageType::System as u16;
     for msg in text_vec {
         match msg.text_type {
             // 纯文本
@@ -60,6 +61,9 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                         error!("处理ack失败 {}", e);
                     }
                };
+            }
+            SYSTEM_TYPE => {
+                info!("接收到系统通知 {:?}", msg);
             }
             _ => {
                 warn!("接收到来源之外的消息 {:?}", msg);
