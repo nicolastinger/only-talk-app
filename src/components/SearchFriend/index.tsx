@@ -1,7 +1,7 @@
 import { add_friend, search_user_by_account } from '@/services/userService';
 import { FriendRequestInfoDTO } from '@/types/friend';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import { Avatar, Button, Form, Input, List, message } from 'antd';
+import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
 import { useState } from 'react';
 import styles from './index.less';
 import { UserInfo } from '@/types/user/common';
@@ -10,6 +10,9 @@ const SearchFriend = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UserInfo[]>([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ userId: string; username: string } | null>(null);
+  const [requestMessage, setRequestMessage] = useState('');
   const intl = useIntl();
 
   const handleSearch = async (values: { searchKey: string }) => {
@@ -28,11 +31,25 @@ const SearchFriend = () => {
     setLoading(false);
   };
 
-  const handleAddFriend = async (userId: string, username: string) => {
+  const showModal = (userId: string, username: string) => {
+    setCurrentUser({ userId, username });
+    setRequestMessage(`我是`);
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    setCurrentUser(null);
+    setRequestMessage('');
+  };
+
+  const handleAddFriend = async () => {
+    if (!currentUser) return;
+
     const friendData: FriendRequestInfoDTO = {
-      request_message: '我是' + username,
+      request_message: requestMessage,
       accept_message: '',
-      request_user: userId,
+      request_user: currentUser.userId,
       accept_user: '',
       add_type: 'search',
       version: 0,
@@ -42,7 +59,8 @@ const SearchFriend = () => {
     try {
       const result = await add_friend(friendData);
       if (result.isSuccess) {
-        message.success(`已发送好友请求给 ${username}`);
+        message.success(`已发送好友请求给 ${currentUser.username}`);
+        handleCancel();
       } else {
         message.error('发送好友请求失败');
       }
@@ -99,7 +117,7 @@ const SearchFriend = () => {
                 actions={[
                   <Button
                     type="primary"
-                    onClick={() => handleAddFriend(item.uuid || "", item.username || "")}
+                    onClick={() => showModal(item.uuid || "", item.username || "")}
                   >
                     添加好友
                   </Button>,
@@ -120,6 +138,32 @@ const SearchFriend = () => {
         )}
       </div>
       <div className={styles.footer}></div>
+
+      <Modal
+        title="添加好友申请"
+        open={isModalVisible}
+        onOk={handleAddFriend}
+        onCancel={handleCancel}
+        okText="发送申请"
+        cancelText="取消"
+      >
+        {currentUser && (
+          <div style={{ marginBottom: 16 }}>
+            <p>发送好友申请给: <strong>{currentUser.username}</strong></p>
+          </div>
+        )}
+        <Form.Item
+          label="申请说明"
+          required
+        >
+          <Input.TextArea
+            value={requestMessage}
+            onChange={(e) => setRequestMessage(e.target.value)}
+            rows={4}
+            placeholder="请输入好友申请说明"
+          />
+        </Form.Item>
+      </Modal>
     </div>
   );
 };
