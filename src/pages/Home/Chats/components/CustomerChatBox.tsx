@@ -3,7 +3,10 @@ import React from 'react';
 import styles from './styles/CustomerChatBox.less';
 
 const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
-  const { text_msg_raw: { raw, text_type }, img } = props;
+  const {
+    text_msg_raw: { raw, text_type },
+    img,
+  } = props;
   return (
     <div className={styles.container}>
       <div className={styles.userIcon}>

@@ -18,6 +18,8 @@ import { useIntl } from '@umijs/max';
 import { Avatar, Button, Checkbox, Input, message, Modal } from 'antd';
 import React, { useState } from 'react';
 import styles from './index.less';
+import { history } from '@umijs/max';
+import { useWindowDrag } from '@/hooks';
 
 const AVATAR_URL =
   'https://ss2.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=16890549,1598107895&fm=253&gp=0.jpg';
@@ -30,11 +32,17 @@ const LoginPage: React.FC = () => {
   const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [privacyContent, setPrivacyContent] = useState('');
   const intl = useIntl();
+  const dragRef = useWindowDrag();
 
   // 关闭窗口
   const closeWindow = async () => {
     const currentWindow = Window.getCurrent();
     await currentWindow.close();
+  };
+
+  // 跳转到注册页面
+  const goToSignUp = async () => {
+    history.push('/signUp');
   };
 
   const fetchData = async (account: string, password: string) => {
@@ -61,7 +69,7 @@ const LoginPage: React.FC = () => {
           x: 200,
           y: 200,
         };
-        await openNewWindow('主页', webviewOptions, Window.getCurrent());
+        await openNewWindow(intl.formatMessage({ id: 'menu.home' }), webviewOptions, Window.getCurrent());
       } else {
         messageApi.error(
           <FormattedMessage id="signIn.errors.invalidCredentials" />,
@@ -76,9 +84,10 @@ const LoginPage: React.FC = () => {
               <FormattedMessage id="signIn.errors.invalidCredentials" />,
             );
           }
-        }
-        catch (e) {
-          messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
+        } catch (e) {
+          messageApi.error(
+            <FormattedMessage id="signIn.errors.networkError" />,
+          );
         }
       } else {
         messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
@@ -118,7 +127,7 @@ const LoginPage: React.FC = () => {
           <CloseOutlined />
         </div>
       </div>
-      <div className={styles.content}>
+      <div className={styles.content} ref={dragRef}>
         <div className={styles.langSwitcher}>
           <LanguageSwitcher />
         </div>
@@ -153,21 +162,21 @@ const LoginPage: React.FC = () => {
               style={{ marginRight: 8 }}
             />
             <span>
-              已阅读并同意
+              <FormattedMessage id="signIn.agreement" />
               <a
                 href="#"
                 className={styles.highlight}
                 onClick={openPrivacyModal}
               >
-                服务协议
+                <FormattedMessage id="signIn.termsOfService" />
               </a>
-              和
+              <FormattedMessage id="signIn.and" defaultMessage="和" />
               <a
                 href="#"
                 className={styles.highlight}
                 onClick={openPrivacyModal}
               >
-                隐私保护指引
+                <FormattedMessage id="signIn.privacyPolicy" />
               </a>
             </span>
           </div>
@@ -185,8 +194,12 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className={styles.bottomOptions}>
-          <span className={styles.highlight}>忘记密码</span>
-          <span className={styles.highlight}>注册账号</span>
+          <span className={styles.highlight}>
+            <FormattedMessage id="signIn.forgotPassword" />
+          </span>
+          <span className={styles.highlight} onClick={goToSignUp}>
+            <FormattedMessage id="signUp.title" />
+          </span>
         </div>
       </div>
       <Modal
@@ -198,10 +211,10 @@ const LoginPage: React.FC = () => {
         className={styles.scrollbarHidden}
         footer={[
           <Button key="close" onClick={closePrivacyModal}>
-            关闭
+            <FormattedMessage id="signIn.close" />
           </Button>,
           <Button key="ok" type="primary" onClick={closePrivacyModal}>
-            确认
+            <FormattedMessage id="signIn.confirm" />
           </Button>,
         ]}
         width={'100%'}

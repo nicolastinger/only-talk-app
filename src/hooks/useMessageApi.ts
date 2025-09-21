@@ -14,8 +14,8 @@ const useMessageApi = (targetAccount: string | null) => {
         // 监听某个账号
         if (targetAccount !== null) {
           const text = JSON.parse(event.payload) as TextMsgRaw;
-          if (text.send_user === targetAccount || text.send_user === "system"){
-             setTextMessage(text);
+          if (text.send_user === targetAccount || text.send_user === 'system') {
+            setTextMessage(text);
           }
         } else {
           // TODO 监听全局服务器发送的quic消息处理
@@ -33,4 +33,4 @@ const useMessageApi = (targetAccount: string | null) => {
   return useMemo(() => ({ textMessage }), [textMessage]);
 };
 
-export default useMessageApi;
+export { useMessageApi };

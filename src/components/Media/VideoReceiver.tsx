@@ -40,24 +40,24 @@ const VideoReceiver = () => {
 
           // 开始信号
           if (!initFlag && event.payload.length === 7) {
-            console.log('初始化信息', event.payload)
-            const isSignal = event.payload.find((item) => item === 1)
-            if (isSignal === undefined){
+            console.log('初始化信息', event.payload);
+            const isSignal = event.payload.find((item) => item === 1);
+            if (isSignal === undefined) {
               console.log('收到开始信号，开始接收视频数据');
               initFlag = true;
-              setIsReceiving(true)
+              setIsReceiving(true);
               return;
             }
           }
 
           // 结束信号
           if (initFlag && event.payload.length === 8) {
-            const isSignal = event.payload.find((item) => item === 1)
-            if (isSignal === undefined){
-              console.log("收到停止信号，停止接收视频数据");
+            const isSignal = event.payload.find((item) => item === 1);
+            if (isSignal === undefined) {
+              console.log('收到停止信号，停止接收视频数据');
               // 重置状态，准备接收下一次开始信号
-              setIsReceiving(false)
-              setRestart(prevState => prevState + 1)
+              setIsReceiving(false);
+              setRestart((prevState) => prevState + 1);
               return;
             }
           }

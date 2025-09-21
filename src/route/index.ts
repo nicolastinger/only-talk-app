@@ -34,7 +34,7 @@ const routes = [
                 name: 'menu.chats.dashboard',
                 path: 'dashboard',
                 component: './Home/Chats/Dashboard',
-              }
+              },
             ],
           },
           {
@@ -55,9 +55,9 @@ const routes = [
                 name: 'menu.contacts.friend',
                 path: 'friend',
                 component: './Home/Contacts',
-              }
-            ]
-          }
+              },
+            ],
+          },
         ],
       },
       {
@@ -70,6 +70,11 @@ const routes = [
         path: '/signIn',
         component: './Sign/SignIn',
       },
+      {
+        name: 'menu.signUp',
+        path: '/signUp',
+        component: './Sign/SignUp',
+      }
     ],
   },
   {
@@ -79,6 +84,10 @@ const routes = [
   {
     path: '/media/videoCall',
     component: './Media/VideoCall',
+  },
+  {
+    path: '/search/friend',
+    component: './Search/Friend',
   },
   {
     path: '/*',

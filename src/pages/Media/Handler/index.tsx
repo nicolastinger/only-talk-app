@@ -1,3 +1,4 @@
+import { openNewWindow } from '@/components/Window/OpenWindow';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { HttpResponse } from '@/types/backend/httpRust';
@@ -5,23 +6,21 @@ import { FriendInfo, P2pInitMsg } from '@/types/user/common';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
+import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Button } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
-import {
-  openNewWindow,
-  openNewWindowWithoutClose,
-} from '@/components/Window/OpenWindow';
-import { WebviewOptions } from '@tauri-apps/api/webview';
 
 //用户视频接收处理组件
 const MediaPage: React.FC = () => {
   const setRequestMediaMsg = useBearStore((state) => state.setRequestMediaMsg);
   const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);
 
-  console.log("requestMediaMsg", requestMediaMsg);
+  console.log('requestMediaMsg', requestMediaMsg);
   const [userInfo, setUserInfo] = useState<FriendInfo>();
-  const [localP2pInitMsg, setLocalP2pInitMsg] = useState<P2pInitMsg | null>(null);
+  const [localP2pInitMsg, setLocalP2pInitMsg] = useState<P2pInitMsg | null>(
+    null,
+  );
   const [localMediaType, setLocalMediaType] = useState<number>(0);
 
   const currentWindow = window.getCurrentWindow();
@@ -31,7 +30,7 @@ const MediaPage: React.FC = () => {
     const urlParams = new URLSearchParams(location.search);
     const p2pInitMsgParam = urlParams.get('p2pInitMsg');
     const mediaTypeParam = urlParams.get('mediaType');
-    
+
     if (p2pInitMsgParam) {
       try {
         const p2pInitMsg = JSON.parse(p2pInitMsgParam) as P2pInitMsg;
@@ -41,7 +40,7 @@ const MediaPage: React.FC = () => {
         console.error('解析URL参数失败:', e);
       }
     }
-    
+
     if (mediaTypeParam) {
       setLocalMediaType(parseInt(mediaTypeParam));
     }
@@ -52,20 +51,20 @@ const MediaPage: React.FC = () => {
     // 优先使用本地状态，如果没有则使用store中的状态
     let p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;
 
-    p2pInitMsg.accept = true
+    p2pInitMsg.accept = true;
     try {
       const response: HttpResponse = await invoke('process_init_p2p_request', {
         p2pInitMsg: JSON.stringify(p2pInitMsg),
       });
       console.log('response', response);
       const webviewOptions: WebviewOptions = {
-        url: '/media/videoCall?friendId='+p2pInitMsg.request_uuid,
+        url: '/media/videoCall?friendId=' + p2pInitMsg.request_uuid,
         height: 600,
         width: 800,
         x: 0,
         y: 0,
       };
-      await openNewWindow("视频通话",webviewOptions, currentWindow)
+      await openNewWindow('视频通话', webviewOptions, currentWindow);
     } catch (e) {
       console.log('处理请求失败', e);
     }
@@ -80,7 +79,7 @@ const MediaPage: React.FC = () => {
   useEffect(() => {
     // 监听requestMediaMsg的变化（作为备用）
     console.log('Handler组件接收到新的requestMediaMsg:', requestMediaMsg);
-    
+
     // TODO获取好友信息
     // 这里可以根据requestMediaMsg中的信息来获取好友信息
     const p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;

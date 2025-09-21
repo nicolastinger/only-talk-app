@@ -1,6 +1,6 @@
+import { VideoConfig } from '@/types/p2p';
 import { RequestMediaMsg, UserInfo } from '@/types/user/common';
 import { create } from 'zustand';
-import { VideoConfig } from '@/types/p2p';
 
 interface BearState {
   bears: number;
@@ -43,7 +43,8 @@ export const useBearStore = create<BearState>()((set) => ({
     encode: 'video/webm;codecs=vp8',
     bitrate: 1000000,
   },
-  setVideoConfig: (videoConfig: VideoConfig)=> set({ videoConfig: videoConfig }),
+  setVideoConfig: (videoConfig: VideoConfig) =>
+    set({ videoConfig: videoConfig }),
   setRequestMediaMsg: (requestMediaMsg: RequestMediaMsg) =>
     set({ requestMediaMsg: requestMediaMsg }),
 }));

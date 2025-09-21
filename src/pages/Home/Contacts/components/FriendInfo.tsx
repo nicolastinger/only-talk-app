@@ -1,10 +1,10 @@
-import styles from './styles/FriendInfo.less'
-import { useEffect, useState } from 'react';
 import { get_friend_info } from '@/services/userService';
 import { FriendVo } from '@/types/backend/vo';
-import { Button } from "antd";
 import { invoke } from '@tauri-apps/api/core';
 import { history } from '@umijs/max';
+import { Button } from 'antd';
+import { useEffect, useState } from 'react';
+import styles from './styles/FriendInfo.less';
 
 const FriendInfo = (props: { uuid: string }) => {
   const { uuid } = props;
@@ -27,9 +27,9 @@ const FriendInfo = (props: { uuid: string }) => {
 
   const routeToChat = async () => {
     try {
-      const res = await invoke('create_chat_session', {friendUuid: uuid})
+      const res = await invoke('create_chat_session', { friendUuid: uuid });
       console.log('res', res);
-      history.push('/home/chats/chat?currentFriend=' + uuid)
+      history.push('/home/chats/chat?currentFriend=' + uuid);
     } catch (err) {
       console.log(err);
     }

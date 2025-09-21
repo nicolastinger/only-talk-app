@@ -32,7 +32,7 @@ const openNewWindow = async (
 const openNewWindowWithoutClose = async (
   label: string,
   window: WebviewOptions,
-  config: WindowOptions
+  config: WindowOptions,
 ) => {
   const newWindow = new WebviewWindow(label, {
     ...window,

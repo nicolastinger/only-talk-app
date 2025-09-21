@@ -1,8 +1,8 @@
-import styles from './styles/FriendList.less';
-import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { FriendVo } from '@/types/backend/vo';
 import FriendBox from '@/pages/Home/Contacts/components/FriendBox';
+import { FriendVo } from '@/types/backend/vo';
+import { invoke } from '@tauri-apps/api/core';
+import { useEffect, useState } from 'react';
+import styles from './styles/FriendList.less';
 
 const FriendList = () => {
   const [friends, setFriends] = useState<FriendVo[]>([]);
@@ -16,19 +16,19 @@ const FriendList = () => {
       const friendQueue: FriendVo[] = await invoke('get_friend_list');
       console.log('朋友列表', friendQueue);
       setFriends(friendQueue);
-    }catch (error) {
+    } catch (error) {
       console.error(error);
     }
-  }
+  };
   return (
     <div className={styles.container}>
-      {friends.length > 0 ? (
-        friends.map((friend) => (
-          <div key={friend.friend_id}>
-            <FriendBox key={friend.friend_id } friend={friend}></FriendBox>
-          </div>
-        ))
-      ): null}
+      {friends.length > 0
+        ? friends.map((friend) => (
+            <div key={friend.friend_id}>
+              <FriendBox key={friend.friend_id} friend={friend}></FriendBox>
+            </div>
+          ))
+        : null}
     </div>
   );
 };

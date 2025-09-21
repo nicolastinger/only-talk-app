@@ -18,14 +18,10 @@ const MessageBox = (props: MessageQueueProps) => {
       </div>
       <div className={styles.center}>
         <div className={styles.centerTitle}>
-          <div className={styles.titleText}>
-            {title}
-          </div>
+          <div className={styles.titleText}>{title}</div>
         </div>
         <div className={styles.centerText}>
-          <div className={styles.msgText}>
-            {message}
-          </div>
+          <div className={styles.msgText}>{message}</div>
         </div>
       </div>
       <div className={styles.end}>

@@ -1,32 +1,35 @@
+import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
+import { useBearStore } from '@/store/store';
+import { ChatSessionVo } from '@/types/backend/vo';
 import { invoke } from '@tauri-apps/api/core';
 import { history, Outlet } from '@umijs/max';
 import React, { useEffect } from 'react';
 import styles from './index.less';
-import { ChatSessionVo } from '@/types/backend/vo';
-import useChatSession from '@/hooks/useChatSession';
-import { useBearStore } from '@/store/store';
 
 const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
-  const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>([]);
+  const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
+    [],
+  );
 
   const { userInfo } = useBearStore();
   const { chatSessionEvent } = useChatSession();
   const routeToChat = (item: ChatSessionVo) => {
-    console.log('userInfo', userInfo, item)
-    let uuid = item.send_user === userInfo?.uuid ? item.recv_user : item.send_user;
+    console.log('userInfo', userInfo, item);
+    let uuid =
+      item.send_user === userInfo?.uuid ? item.recv_user : item.send_user;
     history.push('/home/chats/chat?currentFriend=' + uuid);
   };
 
   useEffect(() => {
-    console.log('本次chatSessionEvent', chatSessionEvent)
-    setChatSessionList(prevList => {
+    console.log('本次chatSessionEvent', chatSessionEvent);
+    setChatSessionList((prevList) => {
       if (!chatSessionEvent?.data) {
         return prevList;
       }
-      console.log('prevList', prevList)
+      console.log('prevList', prevList);
 
-      const index = prevList.findIndex(item => {
+      const index = prevList.findIndex((item) => {
         if (
           item.send_user === chatSessionEvent.data.send_user &&
           item.recv_user === chatSessionEvent.data.recv_user
@@ -42,7 +45,7 @@ const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
         }
       });
 
-      console.log('index', index)
+      console.log('index', index);
       // 创建新的数组，避免直接修改原数组
       const newList = [...prevList];
 
@@ -84,24 +87,26 @@ const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
 
       return newList;
     });
-  }, [chatSessionEvent])
+  }, [chatSessionEvent]);
 
   useEffect(() => {
     get_chat_session();
   }, []);
 
   useEffect(() => {
-    console.log('chatSessionList', chatSessionList)
-  }, [chatSessionList])
+    console.log('chatSessionList', chatSessionList);
+  }, [chatSessionList]);
 
   const get_chat_session = async () => {
     try {
-      const res = await invoke('get_chat_session_from_store', {}) as ChatSessionVo[];
+      const res = (await invoke(
+        'get_chat_session_from_store',
+        {},
+      )) as ChatSessionVo[];
       console.log('get_chat_session', res);
-      setChatSessionList(res)
-    }
-    catch (e) {
-      console.log(e)
+      setChatSessionList(res);
+    } catch (e) {
+      console.log(e);
     }
   };
 

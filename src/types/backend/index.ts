@@ -4,4 +4,4 @@ interface Page {
   total?: number;
 }
 
-export {Page}
+export { Page };

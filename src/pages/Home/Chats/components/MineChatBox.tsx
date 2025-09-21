@@ -1,17 +1,22 @@
+import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { ChatMessage } from '@/types/user/common';
 import React, { useEffect, useRef } from 'react';
 import styles from './styles/MineChatBox.less';
-import { DEFAULT_ICON } from '@/constants';
-import {TextBox} from './TextBox'
+import { TextBox } from './TextBox';
 
 type MineChatBoxProps = {
-  msg: ChatMessage,
-  isAck: boolean | undefined
+  msg: ChatMessage;
+  isAck: boolean | undefined;
 };
 
 const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
-  const { msg: { text_msg_raw: { raw, text_type} }, isAck = true } = props;
+  const {
+    msg: {
+      text_msg_raw: { raw, text_type },
+    },
+    isAck = true,
+  } = props;
 
   const userInfo = useBearStore((state) => state.userInfo);
   // 初始化ackFlag
@@ -57,11 +62,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   };
 
   const renderAck = () => {
-    return (
-      <div>
-        {ackFlag === 1 && <div>发送失败</div>}
-      </div>
-    )
+    return <div>{ackFlag === 1 && <div>发送失败</div>}</div>;
   };
 
   return (

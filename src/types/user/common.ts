@@ -25,7 +25,7 @@ interface ChatMessage {
   from: MessageFrom;
   ack: boolean | undefined;
   img?: string;
-  text_msg_raw: TextMsgRaw
+  text_msg_raw: TextMsgRaw;
 }
 
 export enum MessageFrom {
@@ -37,11 +37,19 @@ export enum MessageFrom {
 }
 
 interface FriendInfo {
-  uuid: string,
+  uuid: string;
   account: string;
   username: string;
   icon: string;
   info: string;
+}
+
+interface BasicUser {
+  uuid?: string;
+  username?: string;
+  account?: string;
+  icon?: string;
+  password?: string;
 }
 
 interface UserInfo {
@@ -66,8 +74,8 @@ interface UserInfo {
 }
 
 interface P2pMsg {
-  type: number;  //指定处理逻辑
-  raw: string;  //json序列化对象
+  type: number; //指定处理逻辑
+  raw: string; //json序列化对象
 }
 
 interface TextMsgRaw {
@@ -105,8 +113,9 @@ export type {
   LayoutBtnProps,
   MessageQueueProps,
   P2pInitMsg,
+  P2pMsg,
   RequestMediaMsg,
   TextMsgRaw,
   UserInfo,
-  P2pMsg
+  BasicUser
 };

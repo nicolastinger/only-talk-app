@@ -36,7 +36,7 @@ const HomeLayout = () => {
     try {
       const res: HttpResponse = await invoke('post_request', {
         url: TALK_API + '/user/me',
-        body: "",
+        body: '',
       });
       const data: ResponseData = JSON.parse(res.body);
       const userInfo: UserInfo = data.data;

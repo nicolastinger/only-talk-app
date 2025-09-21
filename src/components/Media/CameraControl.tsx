@@ -1,8 +1,7 @@
+import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './style/CameraControl.module.css';
-import { VideoConfig } from '@/types/p2p';
-import { useBearStore } from '@/store/store';
 
 interface CameraControlProps {
   onStreamReady?: (stream: MediaStream) => void;
@@ -14,7 +13,12 @@ interface CameraControlProps {
 
 const CameraControl = React.forwardRef(
   (
-    { onStreamReady, isReceiver = false, remoteStream, uuid }: CameraControlProps,
+    {
+      onStreamReady,
+      isReceiver = false,
+      remoteStream,
+      uuid,
+    }: CameraControlProps,
     ref,
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,10 +43,13 @@ const CameraControl = React.forwardRef(
     }));
 
     useEffect(() => {
-      console.log('videoConfig', videoConfig, uuid)
+      console.log('videoConfig', videoConfig, uuid);
       // 发送视频配置
-      invoke('send_p2p_video_config', {videoConfig: JSON.stringify(videoConfig), uuid: uuid})
-    },[videoConfig])
+      invoke('send_p2p_video_config', {
+        videoConfig: JSON.stringify(videoConfig),
+        uuid: uuid,
+      });
+    }, [videoConfig]);
 
     // 获取可用的摄像头设备
     const getAvailableCameras = async () => {
@@ -69,7 +76,7 @@ const CameraControl = React.forwardRef(
         let startBuffer = new ArrayBuffer(7);
         await invoke('send_video_frame', {
           frameData: Array.from(new Uint8Array(startBuffer)),
-          uuid
+          uuid,
         });
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -125,7 +132,7 @@ const CameraControl = React.forwardRef(
                   // 发送到 Rust 后端
                   await invoke('send_video_frame', {
                     frameData: Array.from(new Uint8Array(arrayBuffer)),
-                    uuid
+                    uuid,
                   });
                 } catch (err) {
                   console.error('发送视频帧失败:', err);
@@ -155,7 +162,7 @@ const CameraControl = React.forwardRef(
         let startBuffer = new ArrayBuffer(8);
         invoke('send_video_frame', {
           frameData: Array.from(new Uint8Array(startBuffer)),
-          uuid
+          uuid,
         });
         stream.getTracks().forEach((track) => track.stop());
         if (videoRef.current) {

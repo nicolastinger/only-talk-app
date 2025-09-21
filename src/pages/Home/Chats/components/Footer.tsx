@@ -1,10 +1,10 @@
+import { ChatMessage, MessageFrom, TextMsgRaw } from '@/types/user/common';
 import { SmileOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Button, Input } from 'antd';
+import { nanoid } from 'nanoid';
 import React, { useState } from 'react';
 import styles from './styles/Footer.less';
-import { ChatMessage, MessageFrom, TextMsgRaw } from '@/types/user/common';
-import { nanoid } from 'nanoid';
 
 const { TextArea } = Input;
 

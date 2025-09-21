@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import { useLocation } from '@@/exports';
+import { useEffect } from 'react';
 import FriendInfo from './components/FriendInfo';
 import styles from './index.less';
-import { useLocation } from '@@/exports';
 
 const ContactsPage = () => {
   const location = useLocation();
@@ -9,7 +9,7 @@ const ContactsPage = () => {
   const friendUuid = params.get('friendId') || '';
   useEffect(() => {
     console.log('friendUuid', friendUuid);
-  }, [friendUuid])
+  }, [friendUuid]);
 
   return (
     <div className={styles.container}>

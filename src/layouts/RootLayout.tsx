@@ -1,4 +1,4 @@
-import useP2pMessageApi from '@/hooks/useP2pMessageApi';
+import { useP2pMessageApi } from '@/hooks/useP2pMessageApi';
 import { Outlet, useIntl } from '@umijs/max';
 import styles from './styles/RootLayout.less';
 

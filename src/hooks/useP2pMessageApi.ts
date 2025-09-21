@@ -3,8 +3,8 @@ import { useBearStore } from '@/store/store';
 import { P2pInitMsg, P2pMsg } from '@/types/user/common';
 import { listen } from '@tauri-apps/api/event';
 import { WebviewOptions } from '@tauri-apps/api/webview';
-import { useEffect, useMemo, useState } from 'react';
 import type { WindowOptions } from '@tauri-apps/api/window';
+import { useEffect, useMemo, useState } from 'react';
 
 // TODO p2p通信后续不再默认视频通话，支持文本表情图片文件等
 // 接受到p2p请求，打开视频接收组件，
@@ -32,9 +32,7 @@ const openMessageHandler = async (p2pInitMsg: P2pInitMsg) => {
     height: labelHeight,
     width: labelWidth,
   };
-  const config: WindowOptions = {
-
-  }
+  const config: WindowOptions = {};
   await openNewWindowWithoutClose('音视频处理窗口', webviewOptions, config);
 };
 
@@ -46,7 +44,7 @@ const openP2pVideoHandler = async (uuid: string, callType: number) => {
     callType: callType.toString(),
   });
 
-  console.log("打开新窗口:", urlParams);
+  console.log('打开新窗口:', urlParams);
   const webviewOptions: WebviewOptions = {
     x: 0,
     y: 0,
@@ -55,7 +53,7 @@ const openP2pVideoHandler = async (uuid: string, callType: number) => {
     width: 1280,
   };
   const config: WindowOptions = {
-    center: true
+    center: true,
   };
   await openNewWindowWithoutClose('音视频处理窗口', webviewOptions, config);
 };
@@ -119,4 +117,4 @@ const useP2pMessageApi = () => {
   return useMemo(() => ({ state }), [state]);
 };
 
-export default useP2pMessageApi;
+export { useP2pMessageApi };

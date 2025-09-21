@@ -8,4 +8,4 @@ interface VideoConfig {
   bitrate: number;
 }
 
-export { VideoConfig }
+export { VideoConfig };

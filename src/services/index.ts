@@ -2,7 +2,11 @@ import { RustResponse } from '@/types/backend/httpRust';
 import { invoke } from '@tauri-apps/api/core';
 import { notification } from 'antd'; // 导入通知组件
 
-const invoke_rust = async(method: string, url: string, body: string): Promise<RustResponse> =>{
+const invoke_rust = async (
+  method: string,
+  url: string,
+  body: string,
+): Promise<RustResponse> => {
   let res: RustResponse = {
     isSuccess: false,
     error: '',
@@ -16,7 +20,7 @@ const invoke_rust = async(method: string, url: string, body: string): Promise<Ru
       url,
       body,
     });
-    res.isSuccess = true
+    res.isSuccess = true;
   } catch (e) {
     console.log('网络请求失败', e);
     res.error = JSON.stringify(e);
@@ -29,6 +33,6 @@ const invoke_rust = async(method: string, url: string, body: string): Promise<Ru
     });
   }
   return res;
-}
+};
 
-export { invoke_rust }
+export { invoke_rust };

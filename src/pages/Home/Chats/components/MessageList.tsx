@@ -1,7 +1,7 @@
 import { ChatMessage, MessageFrom } from '@/types/user/common';
 import React from 'react';
 import CustomerChatBox from './CustomerChatBox';
-import  MineChatBox  from './MineChatBox';
+import MineChatBox from './MineChatBox';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -9,12 +9,11 @@ interface MessageListProps {
 }
 
 const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
-
   return (
     <>
       {messages.map((msg) => {
         let message = msg.text_msg_raw;
-        if (message.text_type === 201){
+        if (message.text_type === 201) {
           return null;
         }
         if (msg.from !== MessageFrom.Mine) {
@@ -28,7 +27,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
             />
           );
         } else {
-          return <MineChatBox key={message.nano_id} msg={msg} isAck={msg.ack}/>;
+          return (
+            <MineChatBox key={message.nano_id} msg={msg} isAck={msg.ack} />
+          );
         }
       })}
     </>
@@ -43,5 +44,8 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
   const nextLastMessage = nextProps.messages[nextProps.messages.length - 1];
   const prevLastMessage = prevProps.messages[prevProps.messages.length - 1];
 
-  return prevLastMessage?.text_msg_raw.nano_id === nextLastMessage?.text_msg_raw.nano_id;
+  return (
+    prevLastMessage?.text_msg_raw.nano_id ===
+    nextLastMessage?.text_msg_raw.nano_id
+  );
 });

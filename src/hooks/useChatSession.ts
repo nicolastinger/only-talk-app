@@ -1,7 +1,6 @@
-import { TextMsgRaw } from '@/types/user/common';
-import { listen } from '@tauri-apps/api/event';
-import { useEffect, useMemo, useState } from 'react';
 import { ChatSessionEvent } from '@/types/backend/vo';
+import { listen } from '@tauri-apps/api/event';
+import { useEffect, useState } from 'react';
 
 // 监听会话信息
 const useChatSession = () => {
@@ -14,10 +13,12 @@ const useChatSession = () => {
       unlisten = await listen<string>('chat_session', (event) => {
         // 监听会话信息
         try {
-          const chatSessionEvent = JSON.parse(event.payload) as ChatSessionEvent;
+          const chatSessionEvent = JSON.parse(
+            event.payload,
+          ) as ChatSessionEvent;
           console.log('chatSessionEvent', chatSessionEvent);
           setChatSessionEvent(chatSessionEvent);
-        }catch (e) {
+        } catch (e) {
           console.log('接受信息错误', e);
         }
       });
@@ -33,4 +34,4 @@ const useChatSession = () => {
   return { chatSessionEvent };
 };
 
-export default useChatSession;
+export { useChatSession };

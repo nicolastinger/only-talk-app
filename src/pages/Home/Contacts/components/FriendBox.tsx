@@ -1,10 +1,10 @@
-import { Badge } from 'antd';
-import styles from './styles/FriendBox.less';
 import { FriendVo } from '@/types/backend/vo';
 import { history } from '@umijs/max';
+import { Badge } from 'antd';
+import styles from './styles/FriendBox.less';
 
-const FriendBox = (props: {friend: FriendVo}) => {
-  const { friend_name, friend_id, friend_icon,  } = props.friend;
+const FriendBox = (props: { friend: FriendVo }) => {
+  const { friend_name, friend_id, friend_icon } = props.friend;
 
   const routeToFriendInfo = () => {
     history.push('/home/contacts/friend?friendId=' + friend_id);
