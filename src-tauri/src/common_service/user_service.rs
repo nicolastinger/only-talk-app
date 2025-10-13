@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use anyhow::anyhow;
 use log::{error, info};
 use uuid::Uuid;
@@ -11,7 +12,8 @@ use crate::models::text_msg::TextQuicMsg;
 use crate::network::http_utils::post_request;
 use crate::quic_module::text_quic_client::run_client;
 use crate::store::chat_record_db::{insert_chat_record, query_friend_info, query_last_read_msg, update_chat_session, update_friend_info};
-use crate::utils::global_static_str::{QUIC_SERVER_ADDR, TALK_API};
+use crate::utils::dns::resolve_ipv4;
+use crate::utils::global_static_str::{DOMAIN_NAME, QUIC_SERVER_ADDR, TALK_API};
 use crate::vo::friend_vo::FriendListVO;
 use crate::vo::http_response::Response;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -27,11 +29,10 @@ pub async fn user_login()-> Result<(), anyhow::Error>{
     
     //4、启动定时已读任务
     start_read_task().await?;
-
     //启动quic服务
-    let addr = QUIC_SERVER_ADDR.parse()?;
+    let addr = resolve_ipv4(DOMAIN_NAME, 4433).await?;
     tokio::spawn(async move{
-        match run_client(addr).await  {
+        match run_client(SocketAddr::from(addr)).await  {
             Ok(_) => {},
             Err(e) => {
                 error!("创建quic客户端失败 {:?}", e);

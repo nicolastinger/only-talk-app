@@ -9,6 +9,7 @@ pub async fn init_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
     create_chat_session_table(pool_sqlite).await?;
     create_file_local_map_table(pool_sqlite).await?;
     create_friend_table(pool_sqlite).await?;
+    create_system_notification_table(pool_sqlite).await?;
     {
         // 本地存储初始化成功
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
@@ -135,6 +136,26 @@ pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow:
             is_show INTEGER NOT NULL DEFAULT 1,
             version INTEGER NOT NULL DEFAULT 0,
             UNIQUE(friend_id, me)
+        )"#,
+    )
+        .execute(pool_sqlite)
+        .await?;
+    Ok(())
+}
+
+/// 创建系统通知消息表
+pub async fn create_system_notification_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS system_notification (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nano_id TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            timestamp INTEGER NOT NULL,
+            is_read INTEGER NOT NULL DEFAULT 0,
+            is_deleted INTEGER NOT NULL DEFAULT 0,
+            priority INTEGER NOT NULL DEFAULT 0,
+            category TEXT NOT NULL DEFAULT 'general'
         )"#,
     )
         .execute(pool_sqlite)

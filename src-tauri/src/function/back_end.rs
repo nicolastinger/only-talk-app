@@ -17,6 +17,7 @@ use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::ChatSessionVo;
 use crate::vo::friend_vo::FriendVo;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
+use crate::store::system_notification_db::{get_notification_list, get_unread_notification_count, get_unread_notifications, mark_notification_as_deleted, mark_notification_as_read, SystemNotification};
 
 /// 增加持久化数据
 #[tauri::command]
@@ -206,4 +207,34 @@ pub async fn mark_read(text_quic_msg_vec: Vec<String>) -> Result<(), String> {
 #[tauri::command]
 pub async fn create_chat_session(friend_uuid: String) -> Result<(), String> {
     Ok(create_chat_session_service(friend_uuid).await.map_err(|e| e.to_string())?)
+}
+
+/// 获取未读系统通知数量
+#[tauri::command]
+pub async fn get_unread_system_notification_count() -> Result<i64, String> {
+    Ok(get_unread_notification_count().await.map_err(|e| e.to_string())?)
+}
+
+/// 获取系统通知列表
+#[tauri::command]
+pub async fn get_system_notification_list(page: i64, page_size: i64) -> Result<Vec<SystemNotification>, String> {
+    Ok(get_notification_list(page, page_size).await.map_err(|e| e.to_string())?)
+}
+
+/// 标记系统通知为已读
+#[tauri::command]
+pub async fn mark_system_notification_as_read(nano_id: String) -> Result<(), String> {
+    Ok(mark_notification_as_read(&nano_id).await.map_err(|e| e.to_string())?)
+}
+
+/// 标记系统通知为已删除
+#[tauri::command]
+pub async fn mark_system_notification_as_deleted(nano_id: String) -> Result<(), String> {
+    Ok(mark_notification_as_deleted(&nano_id).await.map_err(|e| e.to_string())?)
+}
+
+/// 获取所有未读系统通知
+#[tauri::command]
+pub async fn get_unread_system_notifications() -> Result<Vec<SystemNotification>, String> {
+    Ok(get_unread_notifications().await.map_err(|e| e.to_string())?)
 }

@@ -12,6 +12,8 @@ use tauri::Emitter;
 use crate::models::chat_session::ChatSession;
 use crate::store::chat_record_db::{insert_chat_record, update_chat_session};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
+use crate::store::system_notification_db::{SystemNotification, insert_system_notification};
+use crate::utils::global_static_str::{USER_ADD_FRIEND, USER_PROCESS_FRIEND};
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -64,6 +66,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             }
             SYSTEM_TYPE => {
                 info!("接收到系统通知 {:?}", msg);
+                emit_system_message(msg).await?;
             }
             _ => {
                 warn!("接收到来源之外的消息 {:?}", msg);
@@ -156,5 +159,46 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         is_top: 0,
     };
     clear_chat_session(chat_session).await?;
+    Ok(())
+}
+
+// 发送系统信息给前端
+async fn emit_system_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let payload = serde_json::to_string(&msg)?;
+    info!("接收到系统信息 {:?}", msg);
+    let mut title = "系统通知".to_string();
+    
+    // 使用 if-else 来匹配消息类型
+    if msg.raw == *USER_ADD_FRIEND {
+        info!("接收到添加好友信息 {:?}", msg);
+        title = "申请好友通知".to_string();
+    } else if msg.raw == *USER_PROCESS_FRIEND {
+        info!("接收到处理好友信息 {:?}", msg);
+        title = "处理好友通知".to_string();
+    } else {
+        warn!("接收到来源之外的系统信息 {:?}", msg);
+        // JSON信息体
+        let json = serde_json::from_str::<serde_json::Value>(&msg.raw)?;
+    }
+
+    // 保存系统通知到数据库
+    let system_notification = SystemNotification::new(
+        msg.nano_id.clone(),
+        title,
+        msg.raw.clone(),
+        msg.timestamp,
+    );
+    
+    if let Err(e) = insert_system_notification(&system_notification).await {
+        error!("保存系统通知到数据库失败: {:?}", e);
+    }
+    
+    {
+        APP_HANDLE
+            .get()
+            .ok_or(anyhow!("获取app失败"))?
+            .emit("system_message", payload)?;
+    }
     Ok(())
 }
