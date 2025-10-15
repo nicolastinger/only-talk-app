@@ -1,5 +1,5 @@
 use tauri::{generate_handler, AppHandle};
-mod quic_module;
+mod quic_service;
 use crc::Crc;
 use fast_log::Config;
 use lazy_static::lazy_static;
@@ -8,22 +8,22 @@ use std::collections::HashMap;
 use std::net::SocketAddrV6;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
-mod common_service;
+mod domain_service;
+mod domain_object;
 mod function;
-mod models;
-mod network;
+mod entity;
 mod store;
 pub mod utils;
 mod vo;
 mod dto;
 
 use crate::function::back_end::{add_user_map, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_friend_list, get_system_notification_list, get_unread_system_notification_count, get_unread_system_notifications, get_user_map, mark_read, mark_system_notification_as_deleted, mark_system_notification_as_read, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
-use crate::network::http_utils::{get_request, post_request, sign_in};
-use crate::quic_module::p2p_stream_quic_server::{
+use utils::http_utils::{get_request, post_request, sign_in};
+use crate::quic_service::p2p_stream_quic_server::{
     udp_port_forward_ipv6
 };
 use crate::utils::global_static_str::{UDP_SOCKET_V6};
-use models::quic_connection::QuicConnection;
+use entity::quic_connection::QuicConnection;
 use store::init_db::init_sqlite;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();

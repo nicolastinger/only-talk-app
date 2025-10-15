@@ -2,8 +2,8 @@ use anyhow::anyhow;
 use log::{error, info};
 use tauri::Emitter;
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
-use crate::common_service::p2p_service::check_user_ip_type;
-use crate::models::p2p_models::{P2pInitMsg, P2pMsg};
+use crate::domain_service::p2p_service::check_user_ip_type;
+use crate::entity::p2p_models::{P2pInitMsg, P2pMsg};
 
 /// 接收p2p连接请求，向前端发起p2p建立请求
 pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Error> {

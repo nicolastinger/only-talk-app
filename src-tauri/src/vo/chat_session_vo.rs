@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use crate::models::chat_session::ChatSession;
+use crate::entity::chat_session::ChatSession;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatSessionVo {

@@ -1,4 +1,4 @@
-use crate::quic_module::p2p_stream_quic_server::{run_server, udp_port_forward};
+use crate::quic_service::p2p_stream_quic_server::{run_server, udp_port_forward};
 use crate::GLOBAL_QUIC_USER_INFO;
 use anyhow::anyhow;
 use log::{error, info, warn};

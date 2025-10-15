@@ -2,12 +2,12 @@
 
 use anyhow::anyhow;
 use log::{error, info};
-use crate::common_service::user_service::get_user_info;
-use crate::models::chat_record_read::ChatRecordRead;
-use crate::models::chat_session::ChatSession;
-use crate::models::friend::Friend;
-use crate::models::Page;
-use crate::models::text_msg::TextQuicMsg;
+use crate::domain_service::user_service::get_user_info;
+use crate::entity::chat_record_read::ChatRecordRead;
+use crate::entity::chat_session::ChatSession;
+use crate::entity::friend::Friend;
+use crate::entity::Page;
+use crate::entity::text_msg::TextQuicMsg;
 use crate::store::create_table::init_ddl;
 use crate::store::get_db_client;
 use crate::store::init_db::GLOBAL_SQL_POOL;

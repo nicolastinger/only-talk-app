@@ -1,13 +1,13 @@
-use crate::models::p2p_models::{P2pInitMsg, P2pMsg, P2pMsgType, P2pVideoConfig, UserAddressInfo};
-use crate::models::text_msg::{MessageType, TextQuicMsg};
-use crate::network::http_utils::post;
-use crate::quic_module::p2p_quic_service::get_sender;
-use crate::quic_module::p2p_stream_quic_client::run_client;
-use crate::quic_module::p2p_stream_quic_server::{
+use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pMsgType, P2pVideoConfig, UserAddressInfo};
+use crate::entity::text_msg::{MessageType, TextQuicMsg};
+use crate::utils::http_utils::post;
+use crate::quic_service::p2p_quic_service::get_sender;
+use crate::quic_service::p2p_stream_quic_client::run_client;
+use crate::quic_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward,
     udp_port_forward_ipv6,
 };
-use crate::quic_module::text_msg_service::generate_text_msg;
+use crate::quic_service::text_msg_service::generate_text_msg;
 use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };
@@ -21,7 +21,7 @@ use std::io;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
 use std::time::Duration;
 use tauri::Emitter;
-use crate::common_service::user_service::get_user_info;
+use crate::domain_service::user_service::get_user_info;
 
 /// 获取10000以上首个可用UDP端口
 pub fn find_available_udp_port(start_port: u16) -> Option<u16> {

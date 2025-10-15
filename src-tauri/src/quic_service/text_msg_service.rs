@@ -3,7 +3,7 @@ use anyhow::anyhow;
 use log::{error};
 use nanoid::nanoid;
 use tokio::sync::{Mutex, MutexGuard};
-use crate::models::text_msg::{HeadMsg, MessageType, TextMsg, TextQuicMsg};
+use crate::entity::text_msg::{HeadMsg, MessageType, TextMsg, TextQuicMsg};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::X25;
 

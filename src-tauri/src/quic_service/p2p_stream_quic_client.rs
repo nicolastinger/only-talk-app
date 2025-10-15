@@ -10,11 +10,11 @@ use lazy_static::lazy_static;
 use rustls::{Certificate, PrivateKey, ClientConfig as RustlsClientConfig};
 use tokio::sync::{Mutex, RwLock};
 use crate::GLOBAL_QUIC_USER_INFO;
-use crate::models::quic_connection::ConnectionType;
-use crate::models::text_msg::MessageType;
-use crate::quic_module::models::TargetSendStream;
-use crate::quic_module::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
-use crate::quic_module::text_msg_service::generate_text_msg;
+use crate::entity::quic_connection::ConnectionType;
+use crate::entity::text_msg::MessageType;
+use crate::quic_service::models::TargetSendStream;
+use crate::quic_service::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
+use crate::quic_service::text_msg_service::generate_text_msg;
 use crate::utils::global_static_str::{PING, SYSTEM};
 
 

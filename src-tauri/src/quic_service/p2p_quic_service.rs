@@ -10,12 +10,12 @@ use tokio::io::AsyncReadExt;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio::sync::mpsc::Sender;
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
-use crate::common_service::user_service::insert_user_info;
-use crate::models::p2p_models::{P2pVideoConfig, P2pVideoData};
-use crate::models::quic_connection::ConnectionType;
-use crate::models::text_msg::{MessageType, TextQuicMsg};
-use crate::quic_module::models::TargetSendStream;
-use crate::quic_module::text_msg_service::{generate_text_msg, get_text_msg};
+use crate::domain_service::user_service::insert_user_info;
+use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData};
+use crate::entity::quic_connection::ConnectionType;
+use crate::entity::text_msg::{MessageType, TextQuicMsg};
+use crate::quic_service::models::TargetSendStream;
+use crate::quic_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::utils::global_static_str::{PING, SYSTEM};
 
 lazy_static! {

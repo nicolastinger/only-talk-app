@@ -6,9 +6,9 @@ use reqwest::{Client, Response, Url};
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::{models::user::SignInResult, GLOBAL_QUIC_USER_INFO};
-use crate::common_service::user_service::user_login;
-use crate::quic_module::text_quic_client::run_client;
+use crate::{entity::user::SignInResult, GLOBAL_QUIC_USER_INFO};
+use crate::domain_service::user_service::user_login;
+use crate::quic_service::text_quic_client::run_client;
 use crate::utils::global_static_str::QUIC_SERVER_ADDR;
 
 #[derive(Serialize, Deserialize)]
@@ -87,7 +87,6 @@ pub async fn sign_in(url: String, mut body: HashMap<String, String>) -> Result<A
     let port = parsed.port_or_known_default().unwrap_or(8443);
     let me_url = format!("https://{}:{}/user/me", &domain, &port);
 
-    info!("sign_in result: {:?}", sign_in_result);
     {
         GLOBAL_QUIC_USER_INFO.write().await.insert("token".to_string(), sign_in_result.data);
         GLOBAL_QUIC_USER_INFO.write().await.insert("account".to_string(), body.remove("account").unwrap_or(String::new()));
@@ -95,17 +94,9 @@ pub async fn sign_in(url: String, mut body: HashMap<String, String>) -> Result<A
     info!("me_url: {:?}", me_url);
     let me_res = post_request(me_url, String::new()).await?;
     if me_res.status == 200 {
-        let cleaned = me_res.body
-            .replace("\\n", "")  // 去除 \n
-            .replace("\\t", "")  // 去除 \t
-            .replace("\\\"", "\""); // 将 \" 还原为 "
-        let v: Value = serde_json::from_str(&cleaned).map_err(|x| "解析用户信息失败".to_string())?;
-
-
-        // 通过路径直接获取 UUID
-        let uuid = v["data"]["uuid"].as_str().unwrap().to_string();
-
-        info!("uuid: {:?}", uuid);
+        let res: Value = serde_json::from_str(&me_res.body).map_err(|x| "解析用户信息失败".to_string())?;
+        let data = res["data"].as_object().ok_or("me_res.body 不是 JSON 对象")?;
+        let uuid = data["uuid"].as_str().ok_or("me_res.body 缺少 uuid 字段")?.to_string();
         GLOBAL_QUIC_USER_INFO.write().await.insert("uuid".to_string(), uuid);
     }
 

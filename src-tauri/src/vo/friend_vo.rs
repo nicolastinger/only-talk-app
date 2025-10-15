@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::models::friend::Friend;
+use crate::entity::friend::Friend;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FriendVo {
@@ -34,7 +34,7 @@ impl From<Friend> for FriendVo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FriendListVO {
     pub uuid: String,
     pub account: String,

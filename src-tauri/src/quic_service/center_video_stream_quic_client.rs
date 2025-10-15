@@ -3,7 +3,7 @@ use quinn::{Endpoint};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::{Mutex};
-use crate::quic_module::safe_configuration::configure_client;
+use crate::quic_service::safe_configuration::configure_client;
 
 /// 中央服务器转发视频流数据
 pub async fn run_video_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
