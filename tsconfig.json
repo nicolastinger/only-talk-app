@@ -1,6 +1,3 @@
 {
-  "compilerOptions": {
-    "ignoreDeprecations": "6.0"
-  },
   "extends": "./src/.umi/tsconfig.json"
 }

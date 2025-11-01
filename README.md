@@ -5,6 +5,7 @@
 这是一个基于 `@umijs/max` 和 Tauri 的桌面端应用项目，结合了前端 React 技术栈和 Rust 后端能力。该项目实现了聊天、媒体处理、P2P 通信等功能。
 
 主要技术栈：
+
 - 前端框架：Umi Max (基于 React)
 - UI 组件库：Ant Design
 - 状态管理：Zustand
@@ -19,7 +20,7 @@
 - **Node.js**: >= 14.x (推荐使用 LTS 版本)
 - **pnpm**: >= 7.x
 - **Rust**: >= 1.70 (通过 rustup 安装)
-- **操作系统**: 
+- **操作系统**:
   - Windows 10+/macOS 10.14+/Linux (前端开发)
   - Windows 10+ (Tauri 桌面应用构建)
 
