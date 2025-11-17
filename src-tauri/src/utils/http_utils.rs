@@ -7,7 +7,7 @@ use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::{entity::user::SignInResult, GLOBAL_QUIC_USER_INFO};
-use crate::domain_service::user_service::user_login;
+use crate::service::user_service::user_login;
 use crate::quic_service::text_quic_client::run_client;
 use crate::utils::global_static_str::QUIC_SERVER_ADDR;
 

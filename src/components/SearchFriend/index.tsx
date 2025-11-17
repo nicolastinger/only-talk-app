@@ -5,13 +5,17 @@ import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
 import { useState } from 'react';
 import styles from './index.less';
 import { UserInfo } from '@/types/user/common';
+import { invoke } from '@tauri-apps/api/core';
 
 const SearchFriend = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UserInfo[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ userId: string; username: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    userId: string;
+    username: string;
+  } | null>(null);
   const [requestMessage, setRequestMessage] = useState('');
   const intl = useIntl();
 
@@ -20,9 +24,9 @@ const SearchFriend = () => {
     try {
       let result = await search_user_by_account(values.searchKey);
       console.log(result);
-      if (result.isSuccess && result.res.status === 200){
+      if (result.netSuccess && result.res.status === 200) {
         const data = JSON.parse(result.res.body);
-        const users: UserInfo = data.data
+        const users: UserInfo = data.data;
         setResults([users]);
       }
     } catch (error) {
@@ -46,19 +50,22 @@ const SearchFriend = () => {
   const handleAddFriend = async () => {
     if (!currentUser) return;
 
-    const friendData: FriendRequestInfoDTO = {
-      request_message: requestMessage,
-      accept_message: '',
-      request_user: currentUser.userId,
-      accept_user: '',
-      add_type: 'search',
-      version: 0,
-      accept_status: 0,
-    };
-
     try {
+      let me = (await invoke('get_user_map', { key: 'uuid' })) as string;
+
+      const friendData: FriendRequestInfoDTO = {
+        request_message: requestMessage,
+        accept_message: '',
+        request_user: me,
+        accept_user: currentUser.userId,
+        add_type: 'search',
+        version: 0,
+        accept_status: 0,
+      };
+
       const result = await add_friend(friendData);
-      if (result.isSuccess) {
+      console.log('请求结果', result);
+      if (result.netSuccess && result.res.status === 204) {
         message.success(`已发送好友请求给 ${currentUser.username}`);
         handleCancel();
       } else {
@@ -117,7 +124,9 @@ const SearchFriend = () => {
                 actions={[
                   <Button
                     type="primary"
-                    onClick={() => showModal(item.uuid || "", item.username || "")}
+                    onClick={() =>
+                      showModal(item.uuid || '', item.username || '')
+                    }
                   >
                     添加好友
                   </Button>,
@@ -149,13 +158,12 @@ const SearchFriend = () => {
       >
         {currentUser && (
           <div style={{ marginBottom: 16 }}>
-            <p>发送好友申请给: <strong>{currentUser.username}</strong></p>
+            <p>
+              发送好友申请给: <strong>{currentUser.username}</strong>
+            </p>
           </div>
         )}
-        <Form.Item
-          label="申请说明"
-          required
-        >
+        <Form.Item label="申请说明" required>
           <Input.TextArea
             value={requestMessage}
             onChange={(e) => setRequestMessage(e.target.value)}

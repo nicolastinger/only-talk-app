@@ -18,6 +18,8 @@ const LeftAside = () => {
     [],
   );
   const userInfo = useBearStore((state) => state.userInfo);
+
+  const menuUnread = useBearStore((state) => state.menuUnread);
   const routeToPage = async (url: string) => {
     setTopBtnList((prev) => {
       // 创建新数组保持不可变性
@@ -53,12 +55,14 @@ const LeftAside = () => {
         url: '/home/chats',
         active: true,
         icon: <MessageOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: menuUnread.chats,
       },
       {
         text: '朋友列表',
         url: '/home/contacts',
         active: false,
         icon: <UserOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: menuUnread.contacts,
       },
     ]);
 
@@ -68,8 +72,42 @@ const LeftAside = () => {
         url: '/home/settings',
         active: false,
         icon: <SettingOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: menuUnread.settings,
       },
     ]);
+  }, [menuUnread]);
+
+  // 监听路由变化，更新按钮激活状态
+  useEffect(() => {
+    // 获取当前路径
+    const updateActiveButton = () => {
+      const currentPath = history.location.pathname;
+      
+      // 更新顶部按钮列表的激活状态
+      setTopBtnList((prev) => 
+        prev.map((item) => ({
+          ...item,
+          active: currentPath === item.url || currentPath.startsWith(item.url + '/')
+        }))
+      );
+      
+      // 更新底部按钮列表的激活状态
+      setBottomBtnList((prev) => 
+        prev.map((item) => ({
+          ...item,
+          active: currentPath === item.url || currentPath.startsWith(item.url + '/')
+        }))
+      );
+    };
+
+    // 初始更新一次
+    updateActiveButton();
+    
+    // 监听路由变化
+    const unlisten = history.listen(updateActiveButton);
+    
+    // 清理函数
+    return () => unlisten();
   }, []);
   const renderBtn = (value: LayoutBtnProps[]) => {
     return (
@@ -83,6 +121,7 @@ const LeftAside = () => {
             {LayoutBtn({
               icon: item.icon,
               text: '',
+              unreadCount: item.unreadCount,
               url: item.url,
               active: item.active,
             })}

@@ -103,7 +103,7 @@ pub async fn create_file_local_map_table(pool_sqlite: &SqlitePool) -> Result<(),
             timestamp INTEGER NOT NULL,
             file_id TEXT NOT NULL,
             original_file_name TEXT NOT NULL,
-            orignal_file_path TEXT NOT NULL,
+            original_file_path TEXT NOT NULL,
             file_type INTEGER NOT NULL DEFAULT 0,
             local_file_path TEXT NOT NULL,
             local_file_name TEXT NOT NULL,
@@ -147,18 +147,37 @@ pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow:
 pub async fn create_system_notification_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS system_notification (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nano_id TEXT NOT NULL UNIQUE,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            timestamp INTEGER NOT NULL,
-            is_read INTEGER NOT NULL DEFAULT 0,
-            is_deleted INTEGER NOT NULL DEFAULT 0,
-            priority INTEGER NOT NULL DEFAULT 0,
-            category TEXT NOT NULL DEFAULT 'general'
+            id TEXT PRIMARY KEY,
+            title TEXT,
+            content TEXT,
+            created_at INTEGER,
+            content_type INTEGER,
+            user_id TEXT,
+            biz_id TEXT,
+            is_read INTEGER,
+            level1 INTEGER,
+            level2 INTEGER,
+            level3 INTEGER,
+            level4 INTEGER,
+            unread_count INTEGER,
+            priority INTEGER NOT NULL DEFAULT 0
         )"#,
     )
         .execute(pool_sqlite)
         .await?;
+        
+    // 创建索引
+    sqlx::query(
+        r#"CREATE INDEX IF NOT EXISTS idx_system_notification_user_id_created_at ON system_notification(user_id, created_at)"#
+    )
+    .execute(pool_sqlite)
+    .await?;
+    
+    sqlx::query(
+        r#"CREATE INDEX IF NOT EXISTS idx_system_notification_is_read ON system_notification(is_read)"#
+    )
+    .execute(pool_sqlite)
+    .await?;
+    
     Ok(())
 }

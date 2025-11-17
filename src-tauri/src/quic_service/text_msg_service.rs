@@ -3,7 +3,8 @@ use anyhow::anyhow;
 use log::{error};
 use nanoid::nanoid;
 use tokio::sync::{Mutex, MutexGuard};
-use crate::entity::text_msg::{HeadMsg, MessageType, TextMsg, TextQuicMsg};
+use crate::entity::text_msg::{HeadMsg, TextMsg, TextQuicMsg};
+use crate::utils::message_types::MSG_TYPE_TEXT;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::X25;
 
@@ -53,7 +54,7 @@ fn build_text(text_quic_msg: TextQuicMsg)-> anyhow::Result<Vec<u8>> {
         version: 1,
         crc,
         body_len: meta_data.len() as u32, // 消息体长度
-        message_type: MessageType::Text as u16                  // 消息类型
+        message_type: MSG_TYPE_TEXT                  // 消息类型
     };
 
     build_text_msg(&head_msg, &text_quic_msg)

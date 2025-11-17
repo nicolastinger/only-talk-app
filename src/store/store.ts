@@ -1,5 +1,6 @@
 import { VideoConfig } from '@/types/p2p';
 import { RequestMediaMsg, UserInfo } from '@/types/user/common';
+import { UnreadCount } from '@/types/menu';
 import { create } from 'zustand';
 
 interface BearState {
@@ -13,6 +14,10 @@ interface BearState {
   setRequestMediaMsg: (requestMediaMsg: RequestMediaMsg) => void;
   videoConfig: VideoConfig;
   setVideoConfig: (videoConfig: VideoConfig) => void;
+  menuUnread: UnreadCount;
+  setMenuUnread: (menuUnread: UnreadCount) => void;
+  isLogin: boolean;
+  setIsLogin: (isLogin: boolean) => void;
 }
 
 export const useBearStore = create<BearState>()((set) => ({
@@ -47,4 +52,15 @@ export const useBearStore = create<BearState>()((set) => ({
     set({ videoConfig: videoConfig }),
   setRequestMediaMsg: (requestMediaMsg: RequestMediaMsg) =>
     set({ requestMediaMsg: requestMediaMsg }),
+  menuUnread: {
+    chats: 0,
+    contacts: 0,
+    groups: 0,
+    system: 0,
+    settings: 0,
+  },
+  isLogin: false,
+  setIsLogin: (isLogin: boolean) => set({ isLogin: isLogin }),
+  setMenuUnread: (menuUnread: UnreadCount) =>
+    set({ menuUnread: menuUnread }),
 }));

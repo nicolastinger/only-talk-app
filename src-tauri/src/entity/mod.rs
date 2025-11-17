@@ -8,6 +8,7 @@ pub(crate) mod p2p_models;
 pub mod chat_session;
 pub mod friend;
 pub mod chat_record_read;
+pub mod system_notification;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {

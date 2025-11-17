@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use log::{error, info};
 use tauri::Emitter;
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
-use crate::domain_service::p2p_service::check_user_ip_type;
+use crate::service::p2p_service::check_user_ip_type;
 use crate::entity::p2p_models::{P2pInitMsg, P2pMsg};
 
 /// 接收p2p连接请求，向前端发起p2p建立请求
@@ -33,7 +33,7 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
                         }
                     }
                 }
-                // 用户拒绝通话
+                // 用户拒绝建立连接
                 false => {
                     let p2p_msg = P2pMsg{
                         r#type: 104,
@@ -58,5 +58,12 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
             error!("发错人了")
         }
     }
+    Ok(())
+}
+
+/// 发送通知信息给前端
+pub fn send_notify_msg(msg: &String) -> Result<(), anyhow::Error>{
+    APP_HANDLE.get().ok_or(anyhow!("无法获取app"))?
+        .emit("listen_notify_msg", msg)?;
     Ok(())
 }

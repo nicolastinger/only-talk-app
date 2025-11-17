@@ -10,11 +10,16 @@ import { Window } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
 import { useEffect } from 'react';
 import styles from './index.less';
+import { useSystemNotify } from '@/hooks/useSystemNotify';
 
 const HomeLayout = () => {
   const setUserInfo = useBearStore((state) => state.setUserInfo);
+  const userInfo = useBearStore((state) => state.userInfo);
+  const isLogin = useBearStore((state) => state.isLogin);
 
-  console.log('home');
+  // 使用系统通知hook
+  useSystemNotify(userInfo?.uuid || '');
+
   // 最小化
   const minimizeWindow = async () => {
     const currentWindow = Window.getCurrent();

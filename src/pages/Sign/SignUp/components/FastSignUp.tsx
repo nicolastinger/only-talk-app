@@ -20,7 +20,7 @@ const FastSignUp: React.FC = () => {
     };
     let res = await sign_up(useInfo)
     console.log(res);
-    if (res.isSuccess && res.res.status === 200) {
+    if (res.netSuccess && res.res.status === 200) {
       message.success("注册成功");
     } else {
       message.error("注册失败");

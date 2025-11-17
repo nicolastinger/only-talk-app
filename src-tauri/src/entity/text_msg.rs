@@ -5,24 +5,6 @@ pub trait TextMsg {
     fn get_bytes(&self) -> anyhow::Result<Vec<u8>>;
 }
 
-#[repr(u16)]
-pub enum MessageType {
-    Text = 1,
-    Image = 2,
-    File = 3,
-    P2P = 4,
-    P2PVideoCall = 5,
-    P2pVideoData = 6,
-    P2pVideoConfig = 7,
-
-    Ping = 99,
-    RecallSuccess = 201,
-    RecallFailure = 202,
-    P2pUserServer = 203,  //作为p2p服务端发起
-    P2pUserClient = 204,  //作为p2p客户端
-    System = 10001  // 系统消息
-}
-
 //头部消息
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HeadMsg {

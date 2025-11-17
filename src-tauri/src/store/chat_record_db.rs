@@ -2,7 +2,7 @@
 
 use anyhow::anyhow;
 use log::{error, info};
-use crate::domain_service::user_service::get_user_info;
+use crate::service::user_service::get_user_info;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
 use crate::entity::friend::Friend;

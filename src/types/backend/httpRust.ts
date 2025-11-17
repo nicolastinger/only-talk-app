@@ -1,5 +1,5 @@
 interface RustResponse {
-  isSuccess: boolean;
+  netSuccess: boolean;
   error?: string;
   res: HttpResponse;
 }
@@ -15,4 +15,4 @@ interface ResponseData {
   message: string;
 }
 
-export type { HttpResponse, ResponseData, RustResponse };
+export type { HttpResponse, ResponseData, RustResponse};

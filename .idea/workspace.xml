@@ -11,23 +11,67 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="44686b4c-3d0e-4ad9-ae71-ac3158a18706" name="更改" comment="feat: 增加用户ack信息本地存储">
-      <change afterPath="$PROJECT_DIR$/src-tauri/src/store/chat_record_db.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/types/backend/index.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/types/backend/record.ts" afterDir="false" />
+    <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/mod.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src-tauri/src/utils/message_types.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/hooks/useSystemNotify.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/types/backend/system/index.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/types/menu/index.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b5fb8511-f517-42f3-bd01-8b9d621af7c6.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b5fb8511-f517-42f3-bd01-8b9d621af7c6/storage_v2/_src_/schema/main.uQUzAA.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/project.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/function/back_end.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/function/back_end.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_object/mod.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_object/user_aggregate.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/chat_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/p2p_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/p2p_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/user_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/function/back_end.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/controller/api_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/function/front_end.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/emit_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/function/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/controller/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/models/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/models/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_module/process_quic_msg_from_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_module/process_quic_msg_from_server.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_quic_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_quic_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_client.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_server.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/process_quic_msg_from_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/process_quic_msg_from_server.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/text_msg_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/text_msg_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/text_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/text_quic_client.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/chat_record_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/store/chat_record_db.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/create_table.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/store/create_table.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/store/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/store/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/Home/Chats/Chat/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Home/Chats/Chat/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/system_notification_db.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/http_utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/http_utils.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Button/LayoutBtn.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Button/LayoutBtn.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Button/style/index.less" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Button/style/index.less" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/LeftAside/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/LeftAside/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/SearchFriend/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/SearchFriend/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/constants/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/global.less" beforeDir="false" afterPath="$PROJECT_DIR$/src/global.less" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/layouts/HomeLayout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/layouts/HomeLayout/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/Sign/SignUp/components/FastSignUp.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Sign/SignUp/components/FastSignUp.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/userService/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/userService/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/store/store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/store/store.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/backend/httpRust.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/backend/httpRust.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/user/common.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/user/common.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DatabaseLocalColorSettings">
+    <colors>
+      <entry key="3664b409-d688-41f3-8c5a-38a717156062" value="Blue" />
+    </colors>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -37,50 +81,28 @@
     </option>
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_BRANCH_BY_REPOSITORY">
-      <map>
-        <entry key="$PROJECT_DIR$" value="master" />
-      </map>
-    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;nicolastinger&quot;
-  }
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/nicolastinger/rust-umi-im.git&quot;,
-    &quot;accountId&quot;: &quot;2ed232ec-7758-4b03-8dd3-6485e1e350e3&quot;
-  }
-}</component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/node_modules/.pnpm/@tauri-apps+api@2.5.0/node_modules/@tauri-apps/api/webviewWindow.d.ts" root0="SKIP_INSPECTION" />
-  </component>
   <component name="MacroExpansionManager">
-    <option name="directoryName" value="1sXlXJIh" />
-  </component>
-  <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="directoryName" value="sscC230O" />
   </component>
   <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 1
 }</component>
-  <component name="ProjectId" id="2ydmqYuroIi4R5xIVo2AzjQZJrV" />
+  <component name="ProjectId" id="359CNCSntLUPXJifCOXIKVWZHy8" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;dev__1.0.0&quot;,
-    &quot;last_opened_file_path&quot;: &quot;I:/code/rust/umi_gitee/rust-tauri-umi&quot;,
+    &quot;last_opened_file_path&quot;: &quot;I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/utils&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -88,10 +110,9 @@
     &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
     &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
     &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;org.rust.disableDetachedFileInspectionI:/code/rust/umi_tauri/src-tauri/sqlite/init.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspectionI:/code/rust/umi_tauri/src-tauri/src/vo/text_quic_msg.rs&quot;: &quot;true&quot;,
+    &quot;org.rust.hideNoCargoProjectNotificationsI:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/function/back_end.rs&quot;: &quot;true&quot;,
     &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\prettier&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;settings.typescriptcompiler&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;language.rust.build.tool.cargo&quot;,
     &quot;ts.external.directory.path&quot;: &quot;I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\typescript\\lib&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
@@ -103,10 +124,10 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="I:\code\rust\umi_tauri\src\components\Media" />
+      <recent name="I:\code\rust\umi_gitee\rust-tauri-umi\src-tauri\src\utils" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="I:\code\rust\umi_tauri\src-tauri\src\store" />
+      <recent name="I:\code\rust\umi_gitee\rust-tauri-umi\src-tauri\src\emit_app" />
     </key>
   </component>
   <component name="RustProjectSettings">
@@ -114,215 +135,27 @@
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="默认任务">
-      <changelist id="44686b4c-3d0e-4ad9-ae71-ac3158a18706" name="更改" comment="" />
-      <created>1750173015430</created>
+      <changelist id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="" />
+      <created>1762512857081</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1750173015430</updated>
-      <workItem from="1750173016526" duration="164000" />
-      <workItem from="1750173187472" duration="630000" />
-      <workItem from="1750252611240" duration="4000" />
-      <workItem from="1750252781933" duration="113000" />
-      <workItem from="1750252901834" duration="5012000" />
-      <workItem from="1750336536495" duration="10989000" />
-      <workItem from="1750432067434" duration="2669000" />
-      <workItem from="1750480122389" duration="10750000" />
-      <workItem from="1750559846258" duration="3638000" />
-      <workItem from="1750750955897" duration="7692000" />
-      <workItem from="1750760444343" duration="6290000" />
-      <workItem from="1750772737870" duration="2332000" />
-      <workItem from="1750810375922" duration="9490000" />
-      <workItem from="1750840869645" duration="70000" />
-      <workItem from="1750841057024" duration="8133000" />
-      <workItem from="1750849230298" duration="3399000" />
-      <workItem from="1750930967418" duration="1876000" />
-      <workItem from="1751007292472" duration="6000" />
-      <workItem from="1751202213426" duration="4116000" />
-      <workItem from="1751248339137" duration="600000" />
-      <workItem from="1751351581894" duration="1578000" />
-      <workItem from="1751353565618" duration="7737000" />
-      <workItem from="1751374048519" duration="164000" />
-      <workItem from="1751766275552" duration="23650000" />
-      <workItem from="1751850559584" duration="8525000" />
-      <workItem from="1751894813100" duration="5072000" />
-      <workItem from="1751945334204" duration="7525000" />
-      <workItem from="1751969747240" duration="10634000" />
-      <workItem from="1751984232592" duration="344000" />
-      <workItem from="1752026722284" duration="3543000" />
-      <workItem from="1752109672014" duration="3477000" />
-      <workItem from="1752202581669" duration="6254000" />
-      <workItem from="1752585242982" duration="2461000" />
-      <workItem from="1752654362527" duration="605000" />
-      <workItem from="1752717304649" duration="6043000" />
-      <workItem from="1752809585702" duration="1921000" />
+      <updated>1762512857081</updated>
+      <workItem from="1762512858544" duration="1795000" />
+      <workItem from="1762588060359" duration="4000" />
+      <workItem from="1762588669250" duration="10632000" />
+      <workItem from="1762670361513" duration="11471000" />
+      <workItem from="1762866489304" duration="1420000" />
+      <workItem from="1762945725626" duration="11549000" />
+      <workItem from="1763033568762" duration="1265000" />
+      <workItem from="1763214306420" duration="604000" />
+      <workItem from="1763219423096" duration="12000" />
+      <workItem from="1763381516443" duration="22000" />
+      <workItem from="1763381551423" duration="268000" />
+      <workItem from="1763381896295" duration="449000" />
     </task>
-    <task id="LOCAL-00001" summary="feat: hide private info">
-      <option name="closed" value="true" />
-      <created>1750173800513</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1750173800513</updated>
-    </task>
-    <task id="LOCAL-00002" summary="feat: hide private info">
-      <option name="closed" value="true" />
-      <created>1750258885662</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1750258885662</updated>
-    </task>
-    <task id="LOCAL-00003" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750341249384</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1750341249384</updated>
-    </task>
-    <task id="LOCAL-00004" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750342629910</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1750342629910</updated>
-    </task>
-    <task id="LOCAL-00005" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750344840012</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1750344840012</updated>
-    </task>
-    <task id="LOCAL-00006" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750434731942</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1750434731942</updated>
-    </task>
-    <task id="LOCAL-00007" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750843436184</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1750843436184</updated>
-    </task>
-    <task id="LOCAL-00008" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750845959582</created>
-      <option name="number" value="00008" />
-      <option name="presentableId" value="LOCAL-00008" />
-      <option name="project" value="LOCAL" />
-      <updated>1750845959582</updated>
-    </task>
-    <task id="LOCAL-00009" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750846044279</created>
-      <option name="number" value="00009" />
-      <option name="presentableId" value="LOCAL-00009" />
-      <option name="project" value="LOCAL" />
-      <updated>1750846044279</updated>
-    </task>
-    <task id="LOCAL-00010" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750847547045</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1750847547045</updated>
-    </task>
-    <task id="LOCAL-00011" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750848937090</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1750848937090</updated>
-    </task>
-    <task id="LOCAL-00012" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750849700876</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1750849700876</updated>
-    </task>
-    <task id="LOCAL-00013" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750850293894</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1750850293894</updated>
-    </task>
-    <task id="LOCAL-00014" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750850686938</created>
-      <option name="number" value="00014" />
-      <option name="presentableId" value="LOCAL-00014" />
-      <option name="project" value="LOCAL" />
-      <updated>1750850686938</updated>
-    </task>
-    <task id="LOCAL-00015" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1750851199035</created>
-      <option name="number" value="00015" />
-      <option name="presentableId" value="LOCAL-00015" />
-      <option name="project" value="LOCAL" />
-      <updated>1750851199035</updated>
-    </task>
-    <task id="LOCAL-00016" summary="feat: ipv4 p2p quic conn build">
-      <option name="closed" value="true" />
-      <created>1751363626321</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1751363626321</updated>
-    </task>
-    <task id="LOCAL-00017" summary="feat: sqlite init, impl local msg ack">
-      <option name="closed" value="true" />
-      <created>1751967407314</created>
-      <option name="number" value="00017" />
-      <option name="presentableId" value="LOCAL-00017" />
-      <option name="project" value="LOCAL" />
-      <updated>1751967407314</updated>
-    </task>
-    <task id="LOCAL-00018" summary="feat: 增加用户ack信息本地存储">
-      <option name="closed" value="true" />
-      <created>1751981935607</created>
-      <option name="number" value="00018" />
-      <option name="presentableId" value="LOCAL-00018" />
-      <option name="project" value="LOCAL" />
-      <updated>1751981935607</updated>
-    </task>
-    <task id="LOCAL-00019" summary="feat: 增加用户ack信息本地存储">
-      <option name="closed" value="true" />
-      <created>1751983944767</created>
-      <option name="number" value="00019" />
-      <option name="presentableId" value="LOCAL-00019" />
-      <option name="project" value="LOCAL" />
-      <updated>1751983944767</updated>
-    </task>
-    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="VcsManagerConfiguration">
-    <MESSAGE value="feat: hide private info" />
-    <MESSAGE value="feat: ipv4 p2p quic conn build" />
-    <MESSAGE value="feat: sqlite init, impl local msg ack" />
-    <MESSAGE value="feat: 增加用户ack信息本地存储" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: 增加用户ack信息本地存储" />
-  </component>
-  <component name="XSLT-Support.FileAssociations.UIState">
-    <expand />
-    <select />
   </component>
 </project>

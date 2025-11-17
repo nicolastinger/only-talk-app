@@ -1,8 +1,8 @@
-use crate::domain_service::chat_service::{clear_chat_session, query_ack_record_from_db};
-use crate::domain_service::p2p_service::{run_p2p_client, run_p2p_server};
-use crate::function::front_end::process_p2p_msg;
+use crate::service::chat_service::{clear_chat_session, query_ack_record_from_db};
+use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
+use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::p2p_models::P2pInitMsg;
-use crate::entity::text_msg::{MessageType, TextQuicMsg};
+use crate::entity::text_msg::{TextQuicMsg};
 use crate::utils::global_static_str::SYSTEM;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::APP_HANDLE;
@@ -10,27 +10,21 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
 use crate::entity::chat_session::ChatSession;
+use crate::entity::system_notification::SystemNotification;
 use crate::store::chat_record_db::{insert_chat_record, update_chat_session};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
-use crate::store::system_notification_db::{SystemNotification, insert_system_notification};
 use crate::utils::global_static_str::{USER_ADD_FRIEND, USER_PROCESS_FRIEND};
+use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG};
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
-    const TEXT_TYPE: u16 = MessageType::Text as u16;
-    const P2P_TYPE: u16 = MessageType::P2P as u16;
-    const PING_TYPE: u16 = MessageType::Ping as u16;
-    const P2P_USER_SERVER: u16 = MessageType::P2pUserServer as u16;
-    const P2P_USER_CLIENT: u16 = MessageType::P2pUserClient as u16;
-    const RECALL_SUCCESS: u16 = MessageType::RecallSuccess as u16;
-    const SYSTEM_TYPE: u16 = MessageType::System as u16;
     for msg in text_vec {
         match msg.text_type {
             // 纯文本
-            TEXT_TYPE => {
+            MSG_TYPE_TEXT => {
                 process_text_type(msg).await?;
             }
-            P2P_TYPE => {
+            MSG_TYPE_P2P => {
                 info!("接收到p2p信息请求 {:?}", msg);
                 let system = SYSTEM.to_string();
                 if msg.send_user == system {
@@ -40,21 +34,21 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                     process_p2p_msg(p2p_msg).await?;
                 }
             }
-            PING_TYPE => {
-                info!("接收到ping消息");
+            MSG_TYPE_PING => {
+                info!("接收到服务器发送的ping");
             }
             // 本机作为p2p服务端, 建立连接
-            P2P_USER_SERVER => {
+            MSG_TYPE_P2P_USER_SERVER => {
                 info!("接收到建立p2p服务器信息 {:?}", msg);
                 run_p2p_server(msg).await?;
             }
             // 本机作为p2p接收端, 建立连接
-            P2P_USER_CLIENT => {
+            MSG_TYPE_P2P_USER_CLIENT => {
                 info!("接收到建立p2p接收端信息 {:?}", msg);
                 run_p2p_client(msg).await?;
             }
-            // 收到消息ack
-            RECALL_SUCCESS => {
+            // 收到聊天消息ack
+            MSG_TYPE_RECALL_SUCCESS => {
                match process_ack_type(msg).await {  
                    Ok(_) => {
                         info!("处理ack成功");
@@ -64,9 +58,15 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                     }
                };
             }
-            SYSTEM_TYPE => {
+            // 收到通知消息
+            NOTIFY_TYPE_MSG => {
+                info!("接收通知消息 {:?}", msg);
+                process_notify_message(msg).await?;
+            }
+            // 收到系统消息
+            MSG_TYPE_SYSTEM => {
                 info!("接收到系统通知 {:?}", msg);
-                emit_system_message(msg).await?;
+                process_system_message(msg).await?;
             }
             _ => {
                 warn!("接收到来源之外的消息 {:?}", msg);
@@ -162,37 +162,11 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     Ok(())
 }
 
-// 发送系统信息给前端
-async fn emit_system_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+// 处理系统信息
+async fn process_system_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let payload = serde_json::to_string(&msg)?;
     info!("接收到系统信息 {:?}", msg);
-    let mut title = "系统通知".to_string();
-    
-    // 使用 if-else 来匹配消息类型
-    if msg.raw == *USER_ADD_FRIEND {
-        info!("接收到添加好友信息 {:?}", msg);
-        title = "申请好友通知".to_string();
-    } else if msg.raw == *USER_PROCESS_FRIEND {
-        info!("接收到处理好友信息 {:?}", msg);
-        title = "处理好友通知".to_string();
-    } else {
-        warn!("接收到来源之外的系统信息 {:?}", msg);
-        // JSON信息体
-        let json = serde_json::from_str::<serde_json::Value>(&msg.raw)?;
-    }
-
-    // 保存系统通知到数据库
-    let system_notification = SystemNotification::new(
-        msg.nano_id.clone(),
-        title,
-        msg.raw.clone(),
-        msg.timestamp,
-    );
-    
-    if let Err(e) = insert_system_notification(&system_notification).await {
-        error!("保存系统通知到数据库失败: {:?}", e);
-    }
     
     {
         APP_HANDLE
@@ -200,5 +174,17 @@ async fn emit_system_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::E
             .ok_or(anyhow!("获取app失败"))?
             .emit("system_message", payload)?;
     }
+    Ok(())
+}
+
+// 处理通知消息
+async fn process_notify_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let system_notification = serde_json::from_str::<SystemNotification>(&msg.raw)?;
+    // 插入数据库
+    SystemNotification::insert(&system_notification).await?;
+    let payload = serde_json::to_string(&system_notification)?;
+    // 发送消息给前端
+    send_notify_msg(&payload)?;
     Ok(())
 }

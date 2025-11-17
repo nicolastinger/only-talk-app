@@ -8,16 +8,16 @@ use std::collections::HashMap;
 use std::net::SocketAddrV6;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
-mod domain_service;
-mod domain_object;
-mod function;
+mod service;
+mod controller;
 mod entity;
 mod store;
 pub mod utils;
 mod vo;
 mod dto;
+mod emit_app;
 
-use crate::function::back_end::{add_user_map, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_friend_list, get_system_notification_list, get_unread_system_notification_count, get_unread_system_notifications, get_user_map, mark_read, mark_system_notification_as_deleted, mark_system_notification_as_read, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
+use crate::controller::api_controller::{add_user_map, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_friend_list, get_system_notification, get_user_map, mark_read, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
 use utils::http_utils::{get_request, post_request, sign_in};
 use crate::quic_service::p2p_stream_quic_server::{
     udp_port_forward_ipv6
@@ -88,11 +88,7 @@ pub fn run() {
             mark_read,
             get_friend_list,
             create_chat_session,
-            get_unread_system_notification_count,
-            get_system_notification_list,
-            mark_system_notification_as_read,
-            mark_system_notification_as_deleted,
-            get_unread_system_notifications
+            get_system_notification
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

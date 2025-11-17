@@ -11,13 +11,11 @@ use rustls::{Certificate, PrivateKey, ClientConfig as RustlsClientConfig};
 use tokio::sync::{Mutex, RwLock};
 use crate::GLOBAL_QUIC_USER_INFO;
 use crate::entity::quic_connection::ConnectionType;
-use crate::entity::text_msg::MessageType;
 use crate::quic_service::models::TargetSendStream;
 use crate::quic_service::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
 use crate::quic_service::text_msg_service::generate_text_msg;
 use crate::utils::global_static_str::{PING, SYSTEM};
-
-
+use crate::utils::message_types::MSG_TYPE_TEXT;
 
 pub async fn run_client(local_addr: SocketAddr, server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     // 创建客户端端点
@@ -55,7 +53,7 @@ pub async fn run_client(local_addr: SocketAddr, server_addr: SocketAddr) -> Resu
     
     // 发送验证消息
     let verify_msg = generate_text_msg(
-        MessageType::Text as u16,
+        MSG_TYPE_TEXT,
         serde_json::to_vec(&p2p_request_token)?,
         "".to_string(),
         "".to_string(),

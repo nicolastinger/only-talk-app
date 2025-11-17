@@ -1,5 +1,5 @@
 use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pMsgType, P2pVideoConfig, UserAddressInfo};
-use crate::entity::text_msg::{MessageType, TextQuicMsg};
+use crate::entity::text_msg::{TextQuicMsg};
 use crate::utils::http_utils::post;
 use crate::quic_service::p2p_quic_service::get_sender;
 use crate::quic_service::p2p_stream_quic_client::run_client;
@@ -21,7 +21,8 @@ use std::io;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
 use std::time::Duration;
 use tauri::Emitter;
-use crate::domain_service::user_service::get_user_info;
+use crate::service::user_service::get_user_info;
+use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG};
 
 /// 获取10000以上首个可用UDP端口
 pub fn find_available_udp_port(start_port: u16) -> Option<u16> {
@@ -76,7 +77,7 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
         is_server: false,
     };
     let p2p_msg = generate_text_msg(
-        MessageType::P2P as u16,
+        MSG_TYPE_P2P,
         serde_json::to_vec(&p2p_init_msg)?,
         accept_user,
         sender,
@@ -98,7 +99,7 @@ pub async fn reject_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
         uuid.clone()
     };
     let p2p_msg = generate_text_msg(
-        MessageType::P2P as u16,
+        MSG_TYPE_P2P,
         serde_json::to_vec(&p2p_init_msg)?,
         p2p_init_msg.request_uuid,
         me,
@@ -135,7 +136,7 @@ pub async fn access_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
     check_user_ip_type().await?;
 
     let p2p_msg = generate_text_msg(
-        MessageType::P2P as u16,
+        MSG_TYPE_P2P,
         serde_json::to_vec(&p2p_init_msg)?,
         p2p_init_msg.request_uuid,
         uuid,
@@ -233,7 +234,7 @@ pub async fn send_p2p_video_frame_service(
     };
 
     let video_data = generate_text_msg(
-        MessageType::P2PVideoCall as u16,
+        MSG_TYPE_P2P_VIDEO_CALL,
         frame_data,
         target_uuid.clone(),
         sender,
@@ -339,7 +340,7 @@ pub async fn send_p2p_video_config_service(video_config: String, uuid: String)->
     let video_config_vec = serde_json::to_vec(&video_config)?;
     let me = get_user_info(&"uuid".to_string()).await?;
     let p2p_data = generate_text_msg(
-        MessageType::P2pVideoConfig as u16,
+        MSG_TYPE_P2P_VIDEO_CONFIG,
         video_config_vec,
         String::new(),
         me

@@ -5,6 +5,7 @@ interface LayoutBtnProps {
   url: string;
   icon?: React.ReactNode;
   active: boolean;
+  unreadCount: number;
 }
 
 interface MessageQueueProps {

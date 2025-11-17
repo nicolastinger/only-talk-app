@@ -22,7 +22,7 @@ const get_friend_info = async (uuid: string) => {
 export const add_friend = async (friend: FriendRequestInfoDTO) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + '/friend/add_friend',
+    TALK_API + '/integrated/add_friend_with_notify',
     JSON.stringify(friend),
   );
 };
