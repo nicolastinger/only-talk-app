@@ -39,13 +39,14 @@ impl SystemNotification {
     /// 插入系统通知
     pub async fn insert(system_notification: &SystemNotification) -> Result<(), anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
-        sqlx::query(r#"INSERT INTO system_notification (id, title, content, created_at, content_type, user_id, is_read,  level1, level2, level3, level4, unread_count, timestamp, is_deleted, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#)
+        sqlx::query(r#"INSERT INTO system_notification (id, title, content, created_at, content_type, user_id, biz_id, is_read,  level1, level2, level3, level4, unread_count, timestamp, is_deleted, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#)
             .bind(&system_notification.id)
             .bind(&system_notification.title)
             .bind(&system_notification.content)
             .bind(&system_notification.created_at)
             .bind(&system_notification.content_type)
             .bind(&system_notification.user_id)
+            .bind(&system_notification.biz_id)
             .bind(&system_notification.is_read)
             .bind(&system_notification.level1)
             .bind(&system_notification.level2)

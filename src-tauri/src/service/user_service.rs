@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use anyhow::anyhow;
-use log::{error, info};
+use log::{error, info, warn};
 use uuid::Uuid;
 use serde_json::Value;
 use crate::{GLOBAL_QUIC_USER_INFO};
 use crate::dto::add_read_chat_record::AddReadChatRecord;
+use crate::dto::http_result::HttpResult;
 use crate::entity::chat_session::ChatSession;
 use crate::entity::friend::Friend;
+use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::utils::http_utils::post_request;
 use crate::quic_service::text_quic_client::run_client;
@@ -25,8 +27,8 @@ pub async fn user_login()-> Result<(), anyhow::Error>{
     update_friend_list().await.unwrap_or_else(|e| { error!("获取好友列表失败 {:?}", e); });
     //2、获取未读消息
     get_unread_message().await.unwrap_or_else(|e| { error!("获取未读消息失败 {:?}", e)});
-    //3、获取好友请求信息
-    
+    //3、获取未读通知
+    get_unread_notification().await.unwrap_or_else(|e| { error!("获取未读通知失败 {:?}", e)});
     //4、启动定时已读任务
     start_read_task().await?;
     //启动quic服务
@@ -124,7 +126,16 @@ pub async fn get_unread_message()-> Result<(), anyhow::Error>{
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     let data = result.body;
-    let json: Vec<TextQuicMsg> = serde_json::from_str(&data)?;
+    let result = serde_json::from_str::<HttpResult>(&data)?;
+    if result.code == 204 {
+        info!("无未读消息");
+        return Ok(());
+    }
+    if result.code != 200 {
+        error!("获取未读通知失败 {:?}", result);
+        return Ok(());
+    }
+    let json: Vec<TextQuicMsg> = serde_json::from_value(result.data)?;
     let text_quic_msg_vec = TextQuicMsgVo::from_vec(json)?;
     info!("获取未读消息结果 {:?}", text_quic_msg_vec);
     // 未读消息计数
@@ -212,8 +223,37 @@ pub async fn start_read_task()-> Result<(), anyhow::Error>{
                     }
                 }
             }
-            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
         }
     });
+    Ok(())
+}
+
+/// 获取未读通知
+async fn get_unread_notification() -> Result<(), anyhow::Error>{
+    let url = format!("{}/notify/get_user_unread_notification", TALK_API);
+    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+    let data = result.body;
+    let result = serde_json::from_str::<HttpResult>(&data)?;
+    if result.code != 200 {
+        error!("获取未读通知失败 {}", result.message);
+        return Ok(());
+    }
+    let system_notification_vec: Vec<SystemNotification> = serde_json::from_value(result.data)?;
+    info!("获取未读通知结果 {:?}", system_notification_vec);
+    
+    if system_notification_vec.is_empty() { 
+        return Ok(());
+    }
+    
+    for system_notification in system_notification_vec {
+        match SystemNotification::insert(&system_notification).await {
+            Ok(_) => {},
+            Err(e) => {
+                warn!("插入系统通知失败 {}", e.to_string());
+                continue;
+            }
+        }
+    }
     Ok(())
 }

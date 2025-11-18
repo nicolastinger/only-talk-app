@@ -12,56 +12,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/mod.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src-tauri/src/utils/message_types.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/hooks/useSystemNotify.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/types/backend/system/index.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/types/menu/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b5fb8511-f517-42f3-bd01-8b9d621af7c6.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/b5fb8511-f517-42f3-bd01-8b9d621af7c6/storage_v2/_src_/schema/main.uQUzAA.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/project.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src-tauri/src/dto/http_result.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_object/mod.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_object/user_aggregate.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/chat_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/p2p_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/p2p_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/domain_service/user_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/function/back_end.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/controller/api_controller.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/function/front_end.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/emit_controller.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/function/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/controller/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/controller/api_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/api_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/controller/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dto/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dto/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_quic_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_quic_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_client.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_stream_quic_server.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/process_quic_msg_from_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/process_quic_msg_from_server.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/text_msg_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/text_msg_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/text_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/text_quic_client.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/chat_record_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/store/chat_record_db.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/create_table.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/store/create_table.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/store/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/store/system_notification_db.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/http_utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/http_utils.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/Button/LayoutBtn.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Button/LayoutBtn.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/Button/style/index.less" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Button/style/index.less" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/LeftAside/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/LeftAside/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/SearchFriend/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/SearchFriend/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/constants/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/global.less" beforeDir="false" afterPath="$PROJECT_DIR$/src/global.less" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/layouts/HomeLayout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/layouts/HomeLayout/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/Sign/SignUp/components/FastSignUp.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Sign/SignUp/components/FastSignUp.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/userService/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/userService/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/store/store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/store/store.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/types/backend/httpRust.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/backend/httpRust.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/types/user/common.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/user/common.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,33 +54,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;dev__1.0.0&quot;,
-    &quot;last_opened_file_path&quot;: &quot;I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/utils&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
-    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
-    &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;org.rust.hideNoCargoProjectNotificationsI:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/function/back_end.rs&quot;: &quot;true&quot;,
-    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\prettier&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;language.rust.build.tool.cargo&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.rust.reset.selective.auto.import": "true",
+    "git-widget-placeholder": "dev__1.0.0",
+    "last_opened_file_path": "I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/utils",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "pnpm",
+    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "org.rust.hideNoCargoProjectNotificationsI:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/function/back_end.rs": "true",
+    "prettierjs.PrettierConfiguration.Package": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\prettier",
+    "settings.editor.selected.configurable": "通义灵码",
+    "ts.external.directory.path": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;sqlite&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "sqlite"
     ]
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="I:\code\rust\umi_gitee\rust-tauri-umi\src-tauri\src\utils" />
@@ -152,6 +111,8 @@
       <workItem from="1763381516443" duration="22000" />
       <workItem from="1763381551423" duration="268000" />
       <workItem from="1763381896295" duration="449000" />
+      <workItem from="1763475818493" duration="76000" />
+      <workItem from="1763476616155" duration="3838000" />
     </task>
     <servers />
   </component>
