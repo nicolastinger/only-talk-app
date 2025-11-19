@@ -17,6 +17,11 @@ const routes = [
             redirect: '/home/chats',
           },
           {
+            name: 'menu.settings',
+            path: '/home/settings',
+            component: './Home/Settings',
+          },
+          {
             name: 'menu.chats',
             path: 'chats',
             component: '@/layouts/HomeLayout/ChatsLayout',
@@ -57,7 +62,7 @@ const routes = [
                 component: './Home/Contacts',
               },
             ],
-          },
+          }
         ],
       },
       {

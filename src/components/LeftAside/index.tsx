@@ -9,14 +9,16 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { history } from '@umijs/max';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './index.less';
+import UserInfoModal from './UserInfoModal';
 
 const LeftAside = () => {
   const [topBtnList, setTopBtnList] = React.useState<LayoutBtnProps[]>([]);
   const [bottomBtnList, setBottomBtnList] = React.useState<LayoutBtnProps[]>(
     [],
   );
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const userInfo = useBearStore((state) => state.userInfo);
 
   const menuUnread = useBearStore((state) => state.menuUnread);
@@ -48,6 +50,14 @@ const LeftAside = () => {
     history.push(url);
   };
 
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
+
   useEffect(() => {
     setTopBtnList([
       {
@@ -68,7 +78,7 @@ const LeftAside = () => {
 
     setBottomBtnList([
       {
-        text: '动态',
+        text: '设置',
         url: '/home/settings',
         active: false,
         icon: <SettingOutlined style={{ fontSize: '18px' }} />,
@@ -135,7 +145,7 @@ const LeftAside = () => {
     <div className={styles.leftSideBar}>
       <div className={styles.top}>
         <div className={styles.header}></div>
-        <div className={styles.icon}>
+        <div className={styles.icon} onClick={showModal}>
           <img
             width={100}
             height={100}
@@ -147,6 +157,8 @@ const LeftAside = () => {
         {renderBtn(topBtnList)}
       </div>
       <div className={styles.bottom}>{renderBtn(bottomBtnList)}</div>
+      
+      <UserInfoModal visible={isModalVisible} onClose={handleCancel} />
     </div>
   );
 };

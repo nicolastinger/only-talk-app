@@ -1,7 +1,7 @@
 .leftSideBar {
   width: 100%;
   height: 100%;
-  background-color: var(--color-white-05);
+  background: linear-gradient(135deg, #0a192f 0%, #007bff 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,24 +20,51 @@
   .icon {
     width: 40px;
     height: 40px;
+    transition: transform 0.3s ease;
+    cursor: pointer;
+  }
+
+  .icon:hover {
+    transform: scale(1.1) rotate(5deg);
   }
 
   .imgItem {
     width: 100%;
     height: 100%;
-    border-radius: 3px;
+    border-radius: 50%;
     overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+  }
+
+  .icon:hover .imgItem {
+    border-color: #1890ff;
+    box-shadow: 0 0 10px rgba(24, 144, 255, 0.3);
   }
 
   .iconBtn {
     width: 40px;
     height: 40px;
-    color: var(--acai-icon-btn);
+    color: #ffffff;
+    // 添加半透明背景和边框，提高在渐变背景上的可见性
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   .iconBtn:hover {
-    color: var(--acai-light);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     cursor: pointer;
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   }
 
   .top,
@@ -51,4 +78,58 @@
     justify-content: center;
     align-items: center;
   }
+}
+
+.userModal {
+  :global {
+    .ant-modal-content {
+      border-radius: 12px;
+    }
+  }
+}
+
+.modalContent {
+  padding: 24px;
+}
+
+.avatarSection {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.largeAvatar {
+  margin-bottom: 16px;
+  border: 3px solid #e8e8e8;
+  transition: all 0.3s ease;
+}
+
+.largeAvatar:hover {
+  transform: scale(1.05);
+  border-color: #1890ff;
+  box-shadow: 0 0 15px rgba(24, 144, 255, 0.4);
+}
+
+.username {
+  margin-bottom: 0 !important;
+  text-align: center;
+}
+
+.infoSection {
+  margin-top: 20px;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.infoIcon {
+  font-size: 16px;
+  color: #1890ff;
+}
+
+.infoText {
+  margin-left: auto;
 }

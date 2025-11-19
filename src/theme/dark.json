@@ -6,5 +6,9 @@
   {
     "name": "--text-color",
     "value": "white"
+  },
+  {
+    "name": "--sidebar-bg-gradient",
+    "value": "linear-gradient(180deg, #1E3A8A 0%, #000000 100%)"
   }
 ]

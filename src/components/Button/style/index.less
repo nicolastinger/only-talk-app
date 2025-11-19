@@ -10,7 +10,10 @@
 }
 
 .container.active {
-  color: var(--acai-icon-btn-hover);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.8);
 }
 
 .container:hover {
@@ -28,15 +31,17 @@
   right: -4px;
   background-color: var(--acai-danger-color);
   color: white;
-  font-size: 8px;
-  font-weight: 500;
-  width: 18px;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   z-index: 10;
+  padding: 0 4px;
+  box-sizing: border-box;
 }

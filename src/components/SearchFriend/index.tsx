@@ -65,7 +65,7 @@ const SearchFriend = () => {
 
       const result = await add_friend(friendData);
       console.log('请求结果', result);
-      if (result.netSuccess && result.res.status === 204) {
+      if (result.netSuccess && result.res.status === 200) {
         message.success(`已发送好友请求给 ${currentUser.username}`);
         handleCancel();
       } else {
