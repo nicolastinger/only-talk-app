@@ -4,7 +4,7 @@ import type { WindowOptions } from '@tauri-apps/api/window';
 
 const openNewWindow = async (
   label: string,
-  window: WebviewOptions,
+  window: WebviewOptions | WindowOptions,
   oldWindow: any,
 ) => {
   const newWindow = new WebviewWindow(label, {
@@ -38,6 +38,10 @@ const openNewWindowWithoutClose = async (
     ...window,
     ...config,
     decorations: false,
+  });
+
+  await newWindow.once('tauri://created', () => {
+    console.log('New window created successfully!');
   });
 
   await newWindow.once('tauri://error', (e) => {

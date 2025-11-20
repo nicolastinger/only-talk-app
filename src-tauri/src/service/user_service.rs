@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use uuid::Uuid;
 use serde_json::Value;
-use crate::{GLOBAL_QUIC_USER_INFO};
+use crate::{GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE};
 use crate::dto::add_read_chat_record::AddReadChatRecord;
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_session::ChatSession;
@@ -30,7 +30,12 @@ pub async fn user_login()-> Result<(), anyhow::Error>{
     //3、获取未读通知
     get_unread_notification().await.unwrap_or_else(|e| { error!("获取未读通知失败 {:?}", e)});
     //4、启动定时已读任务
-    start_read_task().await?;
+    let handle = start_read_task().await?;
+    // 保存任务句柄到全局变量
+    {
+        let mut task_handle = GLOBAL_READ_TASK_HANDLE.write().await;
+        *task_handle = Some(handle);
+    }
     //启动quic服务
     let addr = resolve_ipv4(DOMAIN_NAME, 4433).await?;
     tokio::spawn(async move{
@@ -192,8 +197,8 @@ pub async fn get_unread_message()-> Result<(), anyhow::Error>{
 }
 
 /// 启动定时已读任务
-pub async fn start_read_task()-> Result<(), anyhow::Error>{
-    tokio::spawn(async move{
+pub async fn start_read_task()-> Result<tokio::task::JoinHandle<()>, anyhow::Error>{
+    let handle = tokio::spawn(async move{
         let uuid = get_user_info(&"uuid".to_string()).await.expect("获取uuid失败");
 
         let mut timestamp = 0;
@@ -226,7 +231,7 @@ pub async fn start_read_task()-> Result<(), anyhow::Error>{
             tokio::time::sleep(std::time::Duration::from_secs(30)).await;
         }
     });
-    Ok(())
+    Ok(handle)
 }
 
 /// 获取未读通知

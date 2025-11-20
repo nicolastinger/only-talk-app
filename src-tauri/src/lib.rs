@@ -19,6 +19,7 @@ mod emit_app;
 
 use crate::cmd::api_controller::{add_user_map, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_friend_list, get_system_notification, get_user_map, mark_read, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
 use utils::http_utils::{get_request, post_request, sign_in};
+use crate::cmd::auth_controller::{logout, clear_user_info};
 use crate::quic_service::p2p_stream_quic_server::{
     udp_port_forward_ipv6
 };
@@ -35,6 +36,8 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_QUIC_USER_INFO: Arc<RwLock<HashMap<String, String>>> =
         Arc::new(RwLock::new(HashMap::new()));
+    pub static ref GLOBAL_READ_TASK_HANDLE: Arc<RwLock<Option<tokio::task::JoinHandle<()>>>> =
+        Arc::new(RwLock::new(None));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -74,6 +77,8 @@ pub fn run() {
             get_request,
             post_request,
             sign_in,
+            logout,
+            clear_user_info,
             get_user_map,
             add_user_map,
             send_video_frame,
