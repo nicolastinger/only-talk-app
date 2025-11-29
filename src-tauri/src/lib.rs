@@ -63,7 +63,6 @@ pub fn run() {
             .unwrap_or_else(|x| {
                 warn!("本机不支持ipv6传输 {}", x.to_string());
             });
-        init_sqlite().await.expect("初始化数据库失败!");
     });
 
     tauri::Builder::default()

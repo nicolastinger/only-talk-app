@@ -69,7 +69,7 @@ pub async fn sign_in(url: String, mut body: HashMap<String, String>) -> Result<A
 
     let status = response.status().as_u16();
     let response_body = response.text().await.map_err(|e| e.to_string())?;
-    info!("response_body: {:?}", response_body);
+
     let sign_in_result: serde_json::Result<SignInResult> = serde_json::from_str(&response_body);
     let sign_in_result = match sign_in_result {
         Ok(t) => t,
@@ -91,7 +91,7 @@ pub async fn sign_in(url: String, mut body: HashMap<String, String>) -> Result<A
         GLOBAL_QUIC_USER_INFO.write().await.insert("token".to_string(), sign_in_result.data);
         GLOBAL_QUIC_USER_INFO.write().await.insert("account".to_string(), body.remove("account").unwrap_or(String::new()));
     }
-    info!("me_url: {:?}", me_url);
+
     let me_res = post_request(me_url, String::new()).await?;
     if me_res.status == 200 {
         let res: Value = serde_json::from_str(&me_res.body).map_err(|x| "解析用户信息失败".to_string())?;
@@ -101,5 +101,6 @@ pub async fn sign_in(url: String, mut body: HashMap<String, String>) -> Result<A
     }
 
     user_login().await.map_err(|e| e.to_string())?;
+    info!("登录成功");
     Ok(ApiResponse { status, body: response_body })
 }
