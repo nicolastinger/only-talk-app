@@ -1,13 +1,18 @@
 import { RustResponse } from '@/types/backend/httpRust';
 import { invoke } from '@tauri-apps/api/core';
 import { notification } from 'antd'; // 导入通知组件
-import { HttpStatusMap } from '@/constants';
+import { HttpStatusMap, TALK_API } from '@/constants';
+
+const base_url: string = TALK_API
 
 const invoke_rust = async (
   method: string,
   url: string,
   body: string,
 ): Promise<RustResponse> => {
+  if (!url.includes(base_url)) {
+    url = base_url + url
+  }
   let res: RustResponse = {
     netSuccess: false,
     error: '',

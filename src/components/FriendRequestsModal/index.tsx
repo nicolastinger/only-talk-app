@@ -1,117 +1,149 @@
-import { Avatar, Button, List, Modal, Tabs } from 'antd';
-import { useState } from 'react';
+import {
+  get_accept_friend_request_list,
+  get_friend_request_list,
+  process_friend_request,
+} from '@/services/userService';
+import { FriendRequestInfo, FriendRequestInfoDTO } from '@/types/friend';
 import { CheckOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Button, List, Modal, Tabs } from 'antd';
+import { useEffect, useState } from 'react';
 import styles from './index.less';
 
-interface FriendRequest {
-  id: string;
-  username: string;
-  avatar?: string;
-  message: string;
-  time: string;
-  status: 'pending' | 'accepted' | 'rejected';
-}
-
-const FriendRequestsModal = ({ 
-  visible, 
-  onClose 
-}: { 
-  visible: boolean; 
-  onClose: () => void; 
+const FriendRequestsModal = ({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
 }) => {
-  // 示例数据 - 我发起的好友请求
-  const [sentRequests] = useState<FriendRequest[]>([
-    {
-      id: '1',
-      username: '张三',
-      message: '你好，我想加你为好友',
-      time: '2023-05-15 10:30',
-      status: 'pending'
-    },
-    {
-      id: '2',
-      username: '李四',
-      message: '很高兴认识你',
-      time: '2023-05-14 14:20',
-      status: 'accepted'
-    },
-    {
-      id: '3',
-      username: '王五',
-      message: '朋友推荐',
-      time: '2023-05-12 09:15',
-      status: 'rejected'
-    }
-  ]);
+  const [acceptRequests, setAcceptRequests] = useState<FriendRequestInfo[]>([]);
+  const [sentRequests, setSentRequests] = useState<FriendRequestInfo[]>([]);
 
-  // 示例数据 - 收到的好友请求
-  const [receivedRequests] = useState<FriendRequest[]>([
-    {
-      id: '4',
-      username: '赵六',
-      message: '通过这个平台认识你很高兴',
-      time: '2023-05-16 16:45',
-      status: 'pending'
-    },
-    {
-      id: '5',
-      username: '孙七',
-      message: '同事推荐',
-      time: '2023-05-15 11:30',
-      status: 'pending'
-    },
-    {
-      id: '6',
-      username: '周八',
-      message: '一起学习交流',
-      time: '2023-05-10 18:20',
-      status: 'accepted'
+  useEffect(() => {
+    if (visible) {
+      getAcceptFriendRequestList();
+      getFriendRequestList();
     }
-  ]);
+  }, [visible]);
 
-  const handleAccept = (id: string) => {
-    console.log(`接受好友请求: ${id}`);
-    // 这里可以添加实际的接受逻辑
+  // 获取我发起的好友请求
+  const getFriendRequestList = async () => {
+    let friendRequestInfoDTO: FriendRequestInfoDTO = {};
+    try {
+      const res = await get_friend_request_list(friendRequestInfoDTO);
+      if (res.netSuccess && res.res.status === 200) {
+        const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
+        console.log('获取我发起的好友请求成功', data);
+        setSentRequests(data);
+      }
+    } catch (e) {
+      console.log('获取我发起的好友请求失败', e);
+    }
   };
 
-  const handleReject = (id: string) => {
-    console.log(`拒绝好友请求: ${id}`);
+  // 获取向我发起的好友请求
+  const getAcceptFriendRequestList = async () => {
+    let friendRequestInfoDTO: FriendRequestInfoDTO = {};
+    try {
+      const res = await get_accept_friend_request_list(friendRequestInfoDTO);
+      if (res.netSuccess && res.res.status === 200) {
+        const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
+        console.log('获取我收到的好友请求成功', data);
+        setAcceptRequests(data);
+      }
+    } catch (e) {
+      console.log('获取我收到的好友请求失败', e);
+    }
+  };
+
+  // 根据accept_status获取状态文本
+  const getStatusText = (status?: number) => {
+    if (status === undefined) return '未知';
+    switch (status) {
+      case 0:
+        return '等待验证';
+      case 1:
+        return '已接受';
+      case 2:
+        return '已拒绝';
+      default:
+        return '未知';
+    }
+  };
+
+  // 根据accept_status获取状态样式类名
+  const getStatusClassName = (status?: number) => {
+    if (status === undefined) return styles.unknownStatus;
+    switch (status) {
+      case 0:
+        return styles.pendingStatus;
+      case 1:
+        return styles.acceptedStatus;
+      case 2:
+        return styles.rejectedStatus;
+      default:
+        return styles.unknownStatus;
+    }
+  };
+
+  const handleAccept = async (uuid: string) => {
+    console.log(`接受好友请求: ${uuid}`);
+    // 这里可以添加实际的接受逻辑
+    let friendRequestInfoDTO: FriendRequestInfoDTO = {
+      accept_message: '我同意',
+      request_user: '019acd70-2a31-79e3-b6f7-49f66a012acf',
+      add_type: 'card',
+      version: 0,
+      accept_status: 1,
+    };
+    const res = await process_friend_request(friendRequestInfoDTO);
+    if (res.netSuccess && res.res.status === 204) {
+      getAcceptFriendRequestList();
+    }
+  };
+
+  const handleReject = async (uuid: string) => {
+    console.log(`拒绝好友请求: ${uuid}`);
     // 这里可以添加实际的拒绝逻辑
+    let friendRequestInfoDTO: FriendRequestInfoDTO = {
+      accept_message: '我同意',
+      request_user: '019acd70-2a31-79e3-b6f7-49f66a012acf',
+      add_type: 'card',
+      version: 0,
+      accept_status: 2,
+    };
+    const res = await process_friend_request(friendRequestInfoDTO);
+    if (res.netSuccess && res.res.status === 204) {
+      getAcceptFriendRequestList();
+    }
   };
 
   const items = [
     {
       key: '1',
-      label: `我发起的 (${sentRequests.filter(r => r.status === 'pending').length})`,
+      label: `我发起的 (${sentRequests.length})`,
       children: (
         <List
           dataSource={sentRequests}
           renderItem={(request) => (
             <List.Item
               actions={[
-                request.status === 'pending' ? (
-                  <span className={styles.pendingStatus}>等待验证</span>
-                ) : request.status === 'accepted' ? (
-                  <span className={styles.acceptedStatus}>已接受</span>
-                ) : (
-                  <span className={styles.rejectedStatus}>已拒绝</span>
-                )
+                <span className={getStatusClassName(request.accept_status)}>
+                  {getStatusText(request.accept_status)}
+                </span>,
               ]}
             >
               <List.Item.Meta
-                avatar={
-                  <Avatar 
-                    src={request.avatar} 
-                    icon={!request.avatar ? <UserOutlined /> : undefined}
-                  >
-                    {!request.avatar && request.username.charAt(0)}
-                  </Avatar>
-                }
-                title={request.username}
+                avatar={<Avatar icon={<UserOutlined />} />}
+                title={request.request_user || '未知用户'}
                 description={
                   <div>
-                    <div>{request.message}</div>
-                    <div className={styles.time}>{request.time}</div>
+                    <div>{request.request_message || '无消息'}</div>
+                    <div className={styles.time}>
+                      {request.created_at
+                        ? new Date(request.created_at).toLocaleString()
+                        : '未知时间'}
+                    </div>
                   </div>
                 }
               />
@@ -122,50 +154,55 @@ const FriendRequestsModal = ({
     },
     {
       key: '2',
-      label: `收到的 (${receivedRequests.filter(r => r.status === 'pending').length})`,
+      label: `收到的 (${acceptRequests.filter.length})`,
       children: (
         <List
-          dataSource={receivedRequests}
+          dataSource={acceptRequests}
           renderItem={(request) => (
             <List.Item
               actions={
-                request.status === 'pending' ? [
-                  <Button 
-                    type="primary" 
-                    icon={<CheckOutlined />} 
-                    onClick={() => handleAccept(request.id)}
-                    size="small"
-                  >
-                    接受
-                  </Button>,
-                  <Button 
-                    icon={<CloseOutlined />} 
-                    onClick={() => handleReject(request.id)}
-                    size="small"
-                  >
-                    拒绝
-                  </Button>
-                ] : request.status === 'accepted' ? [
-                  <span className={styles.acceptedStatus}>已接受</span>
-                ] : [
-                  <span className={styles.rejectedStatus}>已拒绝</span>
-                ]
+                request.accept_status === 0
+                  ? [
+                      <Button
+                        type="primary"
+                        icon={<CheckOutlined />}
+                        onClick={() =>
+                          request.uuid && handleAccept(request.uuid)
+                        }
+                        size="small"
+                      >
+                        接受
+                      </Button>,
+                      <Button
+                        icon={<CloseOutlined />}
+                        onClick={() =>
+                          request.uuid && handleReject(request.uuid)
+                        }
+                        size="small"
+                      >
+                        拒绝
+                      </Button>,
+                    ]
+                  : [
+                      <span
+                        className={getStatusClassName(request.accept_status)}
+                      >
+                        {getStatusText(request.accept_status)}
+                      </span>,
+                    ]
               }
             >
               <List.Item.Meta
-                avatar={
-                  <Avatar 
-                    src={request.avatar} 
-                    icon={!request.avatar ? <UserOutlined /> : undefined}
-                  >
-                    {!request.avatar && request.username.charAt(0)}
-                  </Avatar>
-                }
-                title={request.username}
+                avatar={<Avatar icon={<UserOutlined />} />}
+                title={request.request_user || '未知用户'}
                 description={
                   <div>
-                    <div>{request.message}</div>
-                    <div className={styles.time}>{request.time}</div>
+                    <div>{request.request_message || '无消息'}</div>
+                    <div className={styles.time}>
+                      {request.created_at
+                        ? new Date(request.created_at).toLocaleString()
+                        : '未知时间'}
+                    </div>
                   </div>
                 }
               />

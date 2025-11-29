@@ -75,7 +75,7 @@ pub async fn update_friend_list()-> Result<(), anyhow::Error>{
         let last_update_friend = res.into_iter().max_by_key(|f| f.updated_at);
         // 现在last_update_friend是按updated_at倒序的最后一条记录
         if last_update_friend.is_some() {
-            let last_update_friend = last_update_friend.unwrap();
+            let last_update_friend = last_update_friend.expect("获取最后更新好友失败");
             last_uuid = last_update_friend.friend_id;
             last_version = last_update_friend.version;
         }

@@ -47,7 +47,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
                     match process_rec_msg(&mut buffer, length, &ConnectionType::Text,buffer_msg.clone(), head_length).await {
                         Ok(_) => {}
                         Err(e) => {
-                            error!("处理连接数据失败 {}", e.backtrace());
+                            error!("处理连接数据失败 {} {}", e.to_string(), e.backtrace());
                         }
                     };
                 }

@@ -18,6 +18,11 @@ interface BearState {
   setMenuUnread: (menuUnread: UnreadCount) => void;
   isLogin: boolean;
   setIsLogin: (isLogin: boolean) => void;
+  setAddContacts: (addContacts: number) => void;
+  setAddChats: (addChats: number) => void;
+  setAddGroups: (addGroups: number) => void;
+  setAddSystem: (addSystem: number) => void;
+  setAddSettings: (addSettings: number) => void;
 }
 
 export const useBearStore = create<BearState>()((set) => ({
@@ -63,4 +68,39 @@ export const useBearStore = create<BearState>()((set) => ({
   setIsLogin: (isLogin: boolean) => set({ isLogin: isLogin }),
   setMenuUnread: (menuUnread: UnreadCount) =>
     set({ menuUnread: menuUnread }),
+  setAddContacts: (addContacts: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        contacts: state.menuUnread.contacts + (addContacts ?? 0),
+      },
+    })),
+  setAddChats: (addChats: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        chats: state.menuUnread.chats + (addChats ?? 0),
+      },
+    })),
+  setAddGroups: (addGroups: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        groups: state.menuUnread.groups + (addGroups ?? 0),
+      },
+    })),
+  setAddSystem: (addSystem: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        system: state.menuUnread.system + (addSystem ?? 0),
+      },
+    })),
+  setAddSettings: (addSettings: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        settings: state.menuUnread.settings + (addSettings ?? 0),
+      },
+    })),
 }));

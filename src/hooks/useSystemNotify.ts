@@ -7,6 +7,11 @@ import { useBearStore } from '@/store/store';
 // 监听系统通知
 const useSystemNotify = (uuid: string) => {
   const setMenuUnread = useBearStore((state) => state.setMenuUnread);
+  const setAddContacts = useBearStore((state) => state.setAddContacts);
+  const setAddChats = useBearStore((state) => state.setAddChats);
+  const setAddGroups = useBearStore((state) => state.setAddGroups);
+  const setAddSystem = useBearStore((state) => state.setAddSystem);
+  const setAddSettings = useBearStore((state) => state.setAddSettings);
 
   useEffect(() => {
     if (!uuid) return;
@@ -18,6 +23,9 @@ const useSystemNotify = (uuid: string) => {
       unlisten = await listen<string>('listen_notify_msg', (event) => {
         try {
           const notify = JSON.parse(event.payload) as SystemNotification;
+          if (notify.level1 === 1) {
+            setAddContacts(notify?.unread_count || 0);
+          }
           console.log('接受到系统通知', notify);
         } catch (e) {
           console.log('接受信息错误', e);
