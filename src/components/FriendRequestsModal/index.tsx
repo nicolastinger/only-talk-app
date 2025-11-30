@@ -101,12 +101,13 @@ const FriendRequestsModal = ({
     }
   };
 
-  const handleAccept = async (uuid: string) => {
+  const handleAccept = async (uuid: string | undefined) => {
+    if (!uuid) return;
     console.log(`接受好友请求: ${uuid}`);
     // 这里可以添加实际的接受逻辑
     let friendRequestInfoDTO: FriendRequestInfoDTO = {
       accept_message: '我同意',
-      request_user: '019acd70-2a31-79e3-b6f7-49f66a012acf',
+      request_user: uuid,
       add_type: 'card',
       version: 0,
       accept_status: 1,
@@ -117,12 +118,13 @@ const FriendRequestsModal = ({
     }
   };
 
-  const handleReject = async (uuid: string) => {
+  const handleReject = async (uuid: string | undefined) => {
+    if (!uuid) return;
     console.log(`拒绝好友请求: ${uuid}`);
     // 这里可以添加实际的拒绝逻辑
     let friendRequestInfoDTO: FriendRequestInfoDTO = {
-      accept_message: '我同意',
-      request_user: '019acd70-2a31-79e3-b6f7-49f66a012acf',
+      accept_message: '我拒绝',
+      request_user: uuid,
       add_type: 'card',
       version: 0,
       accept_status: 2,
@@ -182,7 +184,7 @@ const FriendRequestsModal = ({
                         type="primary"
                         icon={<CheckOutlined />}
                         onClick={() =>
-                          request.uuid && handleAccept(request.uuid)
+                          request.uuid && handleAccept(request.request_user)
                         }
                         size="small"
                       >
@@ -191,7 +193,7 @@ const FriendRequestsModal = ({
                       <Button
                         icon={<CloseOutlined />}
                         onClick={() =>
-                          request.uuid && handleReject(request.uuid)
+                          request.uuid && handleReject(request.request_user)
                         }
                         size="small"
                       >

@@ -114,6 +114,8 @@ const ChatPage: React.FC = () => {
         };
         return temp;
       });
+      const last_read_record = chatMessages.sort((a, b) => b.text_msg_raw.timestamp - a.text_msg_raw.timestamp)[0].text_msg_raw.nano_id;
+      markRead(last_read_record);
       setMessageList(chatMessages);
     } catch (err) {
       console.log(err);

@@ -53,7 +53,7 @@ const useSystemNotify = (recvUuid: string) => {
   const initSystemNotify = async () => {
     try {
       let systemNotifications = (await invoke('get_system_notification', {
-        isRead: null,
+        isRead: 0,
       })) as SystemNotification[];
       let contacts = 0;
       systemNotifications.forEach((notification) => {
