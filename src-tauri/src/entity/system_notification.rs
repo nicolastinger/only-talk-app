@@ -1,4 +1,5 @@
 use crate::store::get_db_client;
+use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -77,6 +78,8 @@ impl SystemNotification {
 
     /// 批量已读系统通知
     pub async fn batch_read(user_id: &str, ids: Vec<String>) -> Result<i32, anyhow::Error> {
+        info!("批量已读系统通知，user_id: {}, ids: {:?}", user_id, ids);
+        // 检查ids是否为空
         if ids.is_empty() {
             return Ok(0);
         }
@@ -88,7 +91,7 @@ impl SystemNotification {
         
         // 更新未读的系统消息为已读，并返回更新的行数
         let query_str = format!(
-            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND id IN ({}) AND is_read = 0",
+            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND biz_id IN ({}) AND is_read = 0",
             placeholders_str
         );
         
@@ -99,6 +102,8 @@ impl SystemNotification {
         
         let result = query.execute(&pool_sqlite).await?;
         let effect_row = result.rows_affected() as i32;
+
+        info!("批量已读系统通知完成，user_id: {}, effect_row: {}", user_id, effect_row);
 
         Ok(effect_row)
     }
