@@ -19,17 +19,20 @@ interface BearState {
   isLogin: boolean;
   setIsLogin: (isLogin: boolean) => void;
   setAddContacts: (addContacts: number) => void;
-  setAddChats: (addChats: number) => void;
   setAddGroups: (addGroups: number) => void;
   setAddSystem: (addSystem: number) => void;
   setAddSettings: (addSettings: number) => void;
+  chats: number;
+  setChats: (chats: number, isAdd: boolean) => void;
 }
 
 export const useBearStore = create<BearState>()((set) => ({
   bears: 0,
   userIcon:
     'https://ss1.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=3663778712,1545220977&fm=253&gp=0.jpg',
-  userInfo: {},
+  userInfo: {
+    uuid: '',
+  },
   setUserInfo: (userInfo: UserInfo) => set({ userInfo: userInfo }),
   setUserIcon: (userIcon: string) => set({ userIcon: userIcon }),
   increase: (by) => set((state) => ({ bears: state.bears + by })),
@@ -58,7 +61,6 @@ export const useBearStore = create<BearState>()((set) => ({
   setRequestMediaMsg: (requestMediaMsg: RequestMediaMsg) =>
     set({ requestMediaMsg: requestMediaMsg }),
   menuUnread: {
-    chats: 0,
     contacts: 0,
     groups: 0,
     system: 0,
@@ -75,13 +77,19 @@ export const useBearStore = create<BearState>()((set) => ({
         contacts: state.menuUnread.contacts + (addContacts ?? 0),
       },
     })),
-  setAddChats: (addChats: number) =>
+  chats: 0,
+  setChats: (chats: number, isAdd: boolean) =>{
+    // 加减
+    if (isAdd) {
     set((state) => ({
-      menuUnread: {
-        ...state.menuUnread,
-        chats: state.menuUnread.chats + (addChats ?? 0),
-      },
-    })),
+      chats: state.chats + chats
+    }))}
+    else {
+      set((_) => ({
+        chats: chats
+      }))
+    }
+    },
   setAddGroups: (addGroups: number) =>
     set((state) => ({
       menuUnread: {

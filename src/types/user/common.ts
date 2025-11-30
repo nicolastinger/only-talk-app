@@ -54,7 +54,7 @@ interface BasicUser {
 }
 
 interface UserInfo {
-  uuid?: string;
+  uuid: string;
   username?: string;
   account?: string;
   icon?: string;

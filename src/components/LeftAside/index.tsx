@@ -12,6 +12,7 @@ import { history } from '@umijs/max';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
+import { useChatsUnread } from '@/hooks/useChatsUnread';
 
 const LeftAside = () => {
   const [topBtnList, setTopBtnList] = React.useState<LayoutBtnProps[]>([]);
@@ -22,6 +23,8 @@ const LeftAside = () => {
   const userInfo = useBearStore((state) => state.userInfo);
 
   const menuUnread = useBearStore((state) => state.menuUnread);
+  const { totalUnreadCount } = useChatsUnread(userInfo.uuid);
+
   const routeToPage = async (url: string) => {
     setTopBtnList((prev) => {
       // 创建新数组保持不可变性
@@ -65,7 +68,7 @@ const LeftAside = () => {
         url: '/home/chats',
         active: true,
         icon: <MessageOutlined style={{ fontSize: '18px' }} />,
-        unreadCount: menuUnread.chats,
+        unreadCount: totalUnreadCount,
       },
       {
         text: '朋友列表',

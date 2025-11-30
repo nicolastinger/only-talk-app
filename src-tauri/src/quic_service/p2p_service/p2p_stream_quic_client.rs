@@ -12,8 +12,8 @@ use tokio::sync::{Mutex, RwLock};
 use crate::GLOBAL_QUIC_USER_INFO;
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
-use crate::quic_service::text_msg_service::generate_text_msg;
+use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
+use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::MSG_TYPE_TEXT;
 

@@ -10,16 +10,16 @@ use tokio::sync::{Mutex, RwLock};
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
-use crate::quic_service::process_quic_msg_from_server::process_msg;
+use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
 use crate::quic_service::safe_configuration::configure_client;
-use crate::quic_service::text_msg_service::{generate_text_msg, generate_text_msg_without_nano, get_text_msg};
+use crate::quic_service::center_service::text_msg_service::{generate_text_msg, generate_text_msg_without_nano, get_text_msg};
 use crate::store::chat_record_db::insert_local_ack_to_db;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::MSG_TYPE_PING;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
-// 客户端异步函数，尝试与服务器建立QUIC连接
+// 客户端异步函数，尝试与服务器建立QUIC连接，文字信息连接
 pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     // 创建客户端端点
     let mut endpoint = Endpoint::client("0.0.0.0:0".parse()?)?;

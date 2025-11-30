@@ -11,6 +11,7 @@ import ChatFooter from '../components/Footer';
 import MessageList from '../components/MessageList';
 import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
+import { useBearStore } from '@/store/store';
 
 const ChatPage: React.FC = () => {
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
@@ -18,13 +19,9 @@ const ChatPage: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendUuid = params.get('currentFriend') || '';
-  const { textMessage } = useMessageApi(friendUuid);
-  const [meUuid, setMeUuid] = useState('');
-
-  // 初始化当前用户信息
-  useEffect(() => {
-    initUserInfo();
-  }, []);
+  
+  const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
+  const { textMessage } = useMessageApi(friendUuid, meUuid);
 
   // 更新已读记录
   useEffect(() => {
@@ -118,17 +115,6 @@ const ChatPage: React.FC = () => {
         return temp;
       });
       setMessageList(chatMessages);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const initUserInfo = async () => {
-    try {
-      const data: string = await invoke('get_user_map', {
-        key: 'uuid',
-      });
-      setMeUuid(data);
     } catch (err) {
       console.log(err);
     }

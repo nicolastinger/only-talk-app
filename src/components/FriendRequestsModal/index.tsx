@@ -3,11 +3,14 @@ import {
   get_friend_request_list,
   process_friend_request,
 } from '@/services/userService';
+import { useBearStore } from '@/store/store';
 import { FriendRequestInfo, FriendRequestInfoDTO } from '@/types/friend';
 import { CheckOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
 import { Avatar, Button, List, Modal, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
+import { readContactsNotification } from '@/services/ReadSystemMotification';
 
 const FriendRequestsModal = ({
   visible,
@@ -18,6 +21,7 @@ const FriendRequestsModal = ({
 }) => {
   const [acceptRequests, setAcceptRequests] = useState<FriendRequestInfo[]>([]);
   const [sentRequests, setSentRequests] = useState<FriendRequestInfo[]>([]);
+  const setAddContacts = useBearStore((state) => state.setAddContacts);
 
   useEffect(() => {
     if (visible) {
@@ -35,6 +39,11 @@ const FriendRequestsModal = ({
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
         console.log('获取我发起的好友请求成功', data);
         setSentRequests(data);
+        // 已读系统通知
+        const ids = data.map((item) => item.uuid).filter((item) => item !== undefined);
+        if (ids && ids.length > 0) {
+          await readContactsNotification(ids, setAddContacts);
+        }
       }
     } catch (e) {
       console.log('获取我发起的好友请求失败', e);
@@ -50,6 +59,12 @@ const FriendRequestsModal = ({
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
         console.log('获取我收到的好友请求成功', data);
         setAcceptRequests(data);
+
+        // 已读系统通知
+        const ids = data.map((item) => item.uuid).filter((item) => item !== undefined);
+        if (ids && ids.length > 0) {
+          await readContactsNotification(ids, setAddContacts);
+        }
       }
     } catch (e) {
       console.log('获取我收到的好友请求失败', e);
@@ -154,7 +169,7 @@ const FriendRequestsModal = ({
     },
     {
       key: '2',
-      label: `收到的 (${acceptRequests.filter.length})`,
+      label: `收到的 (${acceptRequests.length})`,
       children: (
         <List
           dataSource={acceptRequests}

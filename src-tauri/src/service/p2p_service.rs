@@ -1,13 +1,13 @@
 use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pMsgType, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::{TextQuicMsg};
 use crate::utils::http_utils::post;
-use crate::quic_service::p2p_quic_service::get_sender;
-use crate::quic_service::p2p_stream_quic_client::run_client;
-use crate::quic_service::p2p_stream_quic_server::{
+use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
+use crate::quic_service::p2p_service::p2p_stream_quic_client::run_client;
+use crate::quic_service::p2p_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward,
     udp_port_forward_ipv6,
 };
-use crate::quic_service::text_msg_service::generate_text_msg;
+use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };

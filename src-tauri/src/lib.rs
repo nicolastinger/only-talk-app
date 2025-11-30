@@ -17,10 +17,10 @@ mod vo;
 mod dto;
 mod emit_app;
 
-use crate::cmd::api_controller::{add_user_map, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_friend_list, get_system_notification, get_user_map, mark_read, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
+use crate::cmd::api_controller::{add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_friend_list, get_system_notification, get_user_map, mark_read, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame, update_local_friend_list};
 use utils::http_utils::{get_request, post_request, sign_in};
 use crate::cmd::auth_controller::{logout, clear_user_info};
-use crate::quic_service::p2p_stream_quic_server::{
+use quic_service::p2p_service::p2p_stream_quic_server::{
     udp_port_forward_ipv6
 };
 use crate::utils::global_static_str::{UDP_SOCKET_V6};
@@ -92,7 +92,9 @@ pub fn run() {
             mark_read,
             get_friend_list,
             create_chat_session,
-            get_system_notification
+            get_system_notification,
+            update_local_friend_list,
+            batch_read_system_notification
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

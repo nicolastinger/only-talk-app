@@ -14,7 +14,7 @@ use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 查询ack表中是否存在某条信息
-pub async fn query_ack_record_from_db(nanoid: &String) -> Result<TextQuicMsgVo, anyhow::Error> {
+pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {
     let pool_guard = GLOBAL_SQL_POOL.read().await;
     let pool_sqlite = pool_guard.as_ref().ok_or(anyhow!("获取失败"))?.as_ref();
     let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record_ack WHERE nano_id = ?1"#)
@@ -66,10 +66,34 @@ pub async fn send_msg(
 /// 更新已读消息
 pub async fn update_last_read_msg_from_db(last_msg_vec: Vec<TextQuicMsgVo>) -> Result<(), anyhow::Error> {
     let uuid = get_user_map("uuid".to_string()).await.map_err(|e| anyhow!(e))?;
+    // 遍历更新，根据发送端和接收时间进行判断去重
+    // 使用HashMap去重，key为(发送者, 接收者)，value为最新的消息
+    let mut unique_msgs: std::collections::HashMap<(String, String), TextQuicMsgVo> = std::collections::HashMap::new();
+    
     for item in last_msg_vec {
+        let key = (
+            match item.send_user == uuid { 
+                true => item.recv_user.clone(),
+                false => item.send_user.clone()
+            },
+            uuid.clone()
+        );
+        
+        // 如果已经存在这个发送者-接收者的组合，只保留时间戳更新的
+        if let Some(existing_item) = unique_msgs.get(&key) {
+            if item.timestamp > existing_item.timestamp {
+                unique_msgs.insert(key, item);
+            }
+        } else {
+            unique_msgs.insert(key, item);
+        }
+    }
+    
+    // 遍历去重后的消息进行处理
+    for (_, item) in unique_msgs {
         let chat_record_read = ChatRecordRead {
             id: 0,
-            nano_id: item.nano_id,
+            nano_id: item.nano_id.clone(),
             timestamp: item.timestamp,
             recv_user: uuid.clone(),
             send_user: match item.send_user == uuid { 

@@ -13,7 +13,7 @@ use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::utils::http_utils::post_request;
-use crate::quic_service::text_quic_client::run_client;
+use crate::quic_service::center_service::text_quic_client::run_client;
 use crate::store::chat_record_db::{insert_chat_record, query_friend_info, query_last_read_msg, update_chat_session, update_friend_info};
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, QUIC_SERVER_ADDR, TALK_API};
@@ -54,7 +54,7 @@ pub async fn user_login()-> Result<(), anyhow::Error>{
 }
 
 /// 获取用户信息
-pub async fn get_user_info(key: &String)-> Result<String, anyhow::Error>{
+pub async fn get_user_info(key: &str)-> Result<String, anyhow::Error>{
     let guard = GLOBAL_QUIC_USER_INFO.read().await;
     match guard.get(key){
         Some(value) => Ok(value.clone()),
@@ -63,7 +63,7 @@ pub async fn get_user_info(key: &String)-> Result<String, anyhow::Error>{
 }
 
 /// 插入用户信息
-pub async fn insert_user_info(key: &String, value: &String)-> Result<(), anyhow::Error>{
+pub async fn insert_user_info(key: &str, value: &str)-> Result<(), anyhow::Error>{
     GLOBAL_QUIC_USER_INFO.write().await.insert(key.to_string(), value.to_string());
     Ok(())
 }

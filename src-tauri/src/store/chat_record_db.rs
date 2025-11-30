@@ -26,7 +26,7 @@ pub async fn query_chat_record_from_db(text_quic_msg: TextQuicMsgVo,page: Page) 
 }
 
 /// 根据id获取聊天记录
-pub async fn query_chat_record_by_id_from_db(id: &String, uuid: &String) -> Result<TextQuicMsgVo, anyhow::Error> {
+pub async fn query_chat_record_by_id_from_db(id: &str, uuid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE nano_id = ? and (send_user = ? OR recv_user = ?)"#)
         .bind(id)
@@ -119,7 +119,7 @@ pub async fn update_chat_session_local(chat_session: &ChatSession) -> Result<(),
 }
 
 /// 获取会话列表
-pub async fn query_chat_session(uuid: &String) -> Result<Vec<ChatSessionVo>, anyhow::Error> {
+pub async fn query_chat_session(uuid: &str) -> Result<Vec<ChatSessionVo>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     let record = sqlx::query_as::<_, ChatSessionVo>(r#"select cs.*, fr.friend_icon, fr.friend_name from chat_session cs left join
 (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
@@ -132,7 +132,7 @@ where cs.recv_user = ?1"#)
 }
 
 /// 获取已读消息
-pub async fn query_last_read_msg(uuid: &String, timestamp: i64) -> Result<Vec<ChatRecordRead>, anyhow::Error> {
+pub async fn query_last_read_msg(uuid: &str, timestamp: i64) -> Result<Vec<ChatRecordRead>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     let record = sqlx::query_as::<_, ChatRecordRead>(r#"select * from chat_record_read where recv_user = ?1 and timestamp > ?2"#)
         .bind(uuid)
@@ -228,7 +228,7 @@ pub async fn update_friend_info(friend: &Friend) -> Result<(), anyhow::Error> {
 }
 
 /// 获取好友信息表
-pub async fn query_friend_info(uuid: &String) -> Result<Vec<Friend>, anyhow::Error> {
+pub async fn query_friend_info(uuid: &str) -> Result<Vec<Friend>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     let record = sqlx::query_as::<_, Friend>(r#"select * from friend where me = ?1"#)
         .bind(uuid)
@@ -238,7 +238,7 @@ pub async fn query_friend_info(uuid: &String) -> Result<Vec<Friend>, anyhow::Err
 }
 
 /// 获取单条好友信息
-pub async fn query_friend_info_by_id(uuid: &String, friend_id: &String) -> Result<Friend, anyhow::Error> {
+pub async fn query_friend_info_by_id(uuid: &str, friend_id: &str) -> Result<Friend, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     let record = sqlx::query_as::<_, Friend>(r#"select * from friend where me = ?1 and friend_id = ?2 limit 1"#)
         .bind(uuid)

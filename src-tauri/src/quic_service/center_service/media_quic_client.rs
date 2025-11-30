@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex};
 use crate::quic_service::safe_configuration::configure_client;
 
-/// 中央服务器转发视频流数据
+/// 媒体流客户端
 pub async fn run_video_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     // 创建客户端端点
     let mut endpoint = Endpoint::client("0.0.0.0:0".parse()?)?;

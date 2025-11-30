@@ -1,12 +1,6 @@
-use std::error::Error;
-pub mod text_quic_client;
-pub(crate) mod text_msg_service;
-mod center_video_stream_quic_client;
-pub mod p2p_stream_quic_client;
-pub mod p2p_stream_quic_server;
+pub mod center_service;
 mod dangerous_configuration;
+mod models;
+pub mod p2p_service;
 mod safe_configuration;
 pub mod udp_utils;
-mod process_quic_msg_from_server;
-mod models;
-pub mod p2p_quic_service;

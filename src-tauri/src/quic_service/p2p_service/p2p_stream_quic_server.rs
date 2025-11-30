@@ -12,8 +12,8 @@ use crate::entity::p2p_models::{P2pVideoConfig, UserAddressInfo};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::{TextQuicMsg};
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
-use crate::quic_service::text_msg_service::get_text_msg;
+use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
+use crate::quic_service::center_service::text_msg_service::get_text_msg;
 
 pub async fn udp_port_forward(local: SocketAddr, remote: SocketAddr, raw: &Vec<u8>) -> Result<(), std::io::Error> {
     // 创建 UDP 套接字，绑定随机本地端口

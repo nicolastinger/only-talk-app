@@ -22,7 +22,7 @@ const AccountPrivacy = () => {
 
       // 重置前端状态
       setIsLogin(false);
-      setUserInfo({});
+      setUserInfo({ uuid: ''});
 
       // 清除全局用户信息
       await invoke('clear_user_info');

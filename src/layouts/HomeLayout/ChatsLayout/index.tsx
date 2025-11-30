@@ -7,13 +7,13 @@ import { history, Outlet } from '@umijs/max';
 import React, { useEffect } from 'react';
 import styles from './index.less';
 
-const ChatsLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
+const ChatsLayout = () => {
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
     [],
   );
 
   const { userInfo } = useBearStore();
-  const { chatSessionEvent } = useChatSession();
+  const { chatSessionEvent } = useChatSession(userInfo.uuid);
   const routeToChat = (item: ChatSessionVo) => {
     console.log('userInfo', userInfo, item);
     let uuid =

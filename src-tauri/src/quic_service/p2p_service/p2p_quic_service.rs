@@ -15,7 +15,7 @@ use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::{TextQuicMsg};
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::text_msg_service::{generate_text_msg, get_text_msg};
+use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING, MSG_TYPE_TEXT};
 
@@ -50,7 +50,7 @@ lazy_static! {
 }
 
 /// 获取p2p连接
-pub async fn get_sender(target_uuid: &String) -> Result<Arc<Mutex<SendStream>>, anyhow::Error> {
+pub async fn get_sender(target_uuid: &str) -> Result<Arc<Mutex<SendStream>>, anyhow::Error> {
     let sender = {
         let guard = P2P_STREAM_SENDER.read().await;
         let target_sender = guard.get(target_uuid).ok_or(anyhow!("no target_sender"))?;

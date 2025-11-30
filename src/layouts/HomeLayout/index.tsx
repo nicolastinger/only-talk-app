@@ -15,10 +15,9 @@ import { useSystemNotify } from '@/hooks/useSystemNotify';
 const HomeLayout = () => {
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
-  const isLogin = useBearStore((state) => state.isLogin);
 
   // 使用系统通知hook
-  useSystemNotify(userInfo?.uuid || '');
+  useSystemNotify(userInfo.uuid);
 
   // 最小化
   const minimizeWindow = async () => {
@@ -38,6 +37,23 @@ const HomeLayout = () => {
   }, []);
 
   const initUserInfo = async () => {
+    // 先从本地缓存获取
+    try { 
+      const uuid: string = await invoke('get_user_map', {
+        key: 'uuid',
+      });
+      const me: string = await invoke('get_user_map', {
+        key: 'me',
+      });
+      const userInfo: UserInfo = JSON.parse(me);
+      if (uuid === userInfo.uuid) {
+        setUserInfo(userInfo);
+        return;
+      }
+    } catch (error) {
+      console.log("本地缓存获取用户信息失败", error);
+    }
+    // 从服务器获取用户信息
     try {
       const res: HttpResponse = await invoke('post_request', {
         url: TALK_API + '/user/me',

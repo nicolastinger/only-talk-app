@@ -1,6 +1,6 @@
+use crate::store::get_db_client;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use crate::store::get_db_client;
 
 /// 系统通知
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -60,13 +60,46 @@ impl SystemNotification {
     }
 
     /// 获取已读/未读/所有系统通知
-    pub async fn find_all_by_is_read(user_id: &str, is_read: Option<bool>) -> Result<Vec<SystemNotification>, anyhow::Error> {
+    pub async fn find_all_by_is_read(
+        user_id: &str,
+        is_read: Option<bool>,
+    ) -> Result<Vec<SystemNotification>, anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
-        let system_notification = sqlx::query_as::<_, SystemNotification>(r#"SELECT * FROM system_notification WHERE user_id = ? and (? is null or is_read = ?)"#)
-            .bind(user_id)
-            .bind(is_read)
-            .fetch_all(&pool_sqlite)
-            .await?;
+        let system_notification = sqlx::query_as::<_, SystemNotification>(
+            r#"SELECT * FROM system_notification WHERE user_id = ? and (? is null or is_read = ?)"#,
+        )
+        .bind(user_id)
+        .bind(is_read)
+        .fetch_all(&pool_sqlite)
+        .await?;
         Ok(system_notification)
+    }
+
+    /// 批量已读系统通知
+    pub async fn batch_read(user_id: &str, ids: Vec<String>) -> Result<i32, anyhow::Error> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let pool_sqlite = get_db_client().await?;
+        
+        // 构建 IN 查询的占位符
+        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+        let placeholders_str = placeholders.join(",");
+        
+        // 更新未读的系统消息为已读，并返回更新的行数
+        let query_str = format!(
+            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND id IN ({}) AND is_read = 0",
+            placeholders_str
+        );
+        
+        let mut query = sqlx::query(&query_str).bind(user_id);
+        for id in &ids {
+            query = query.bind(id);
+        }
+        
+        let result = query.execute(&pool_sqlite).await?;
+        let effect_row = result.rows_affected() as i32;
+
+        Ok(effect_row)
     }
 }

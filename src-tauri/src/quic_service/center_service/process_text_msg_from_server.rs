@@ -1,20 +1,23 @@
+use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
+use crate::entity::chat_session::ChatSession;
+use crate::entity::p2p_models::P2pInitMsg;
+use crate::entity::system_notification::SystemNotification;
+use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{clear_chat_session, query_ack_record_from_db};
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
-use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
-use crate::entity::p2p_models::P2pInitMsg;
-use crate::entity::text_msg::{TextQuicMsg};
+use crate::store::chat_record_db::{insert_chat_record, update_chat_session};
 use crate::utils::global_static_str::SYSTEM;
+use crate::utils::global_static_str::{USER_ADD_FRIEND, USER_PROCESS_FRIEND};
+use crate::utils::message_types::{
+    MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING,
+    MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG,
+};
+use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::APP_HANDLE;
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
-use crate::entity::chat_session::ChatSession;
-use crate::entity::system_notification::SystemNotification;
-use crate::store::chat_record_db::{insert_chat_record, update_chat_session};
-use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
-use crate::utils::global_static_str::{USER_ADD_FRIEND, USER_PROCESS_FRIEND};
-use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG};
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -49,14 +52,14 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             }
             // 收到聊天消息ack
             MSG_TYPE_RECALL_SUCCESS => {
-               match process_ack_type(msg).await {  
-                   Ok(_) => {
+                match process_ack_type(msg).await {
+                    Ok(_) => {
                         info!("处理ack成功");
-                    },
-                   Err(e) => {
+                    }
+                    Err(e) => {
                         error!("处理ack失败 {}", e);
                     }
-               };
+                };
             }
             // 收到通知消息
             NOTIFY_TYPE_MSG => {
@@ -78,23 +81,11 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
 
 /// 处理纯文本消息
 async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
-    //1.更新会话列表
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
-    let chat_session = ChatSession {
-        id: 0,
-        nano_id: msg.nano_id.clone(),
-        timestamp: msg.timestamp,
-        text_type: msg.text_type,
-        unread_count: 1,
-        last_message: msg.raw.clone(),
-        recv_user: msg.recv_user.clone(),
-        send_user: msg.send_user.clone(),
-        session_type: 0,
-        is_show: 0,
-        is_top: 0
-    };
-    update_session_list(chat_session).await?;
+    //1.插入数据库
+    insert_chat_record(&msg).await?;
     let payload = serde_json::to_string(&msg)?;
+
     //2.发送消息给前端
     {
         APP_HANDLE
@@ -102,8 +93,22 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
             .ok_or(anyhow!("获取app失败"))?
             .emit("text_message", payload)?;
     }
-    //3.插入数据库
-    insert_chat_record(&msg).await?;
+
+    //3.更新会话列表
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: msg.nano_id,
+        timestamp: msg.timestamp,
+        text_type: msg.text_type,
+        unread_count: 1,
+        last_message: msg.raw,
+        recv_user: msg.recv_user,
+        send_user: msg.send_user,
+        session_type: 0,
+        is_show: 0,
+        is_top: 0,
+    };
+    update_session_list(chat_session).await?;
     Ok(())
 }
 
@@ -114,7 +119,7 @@ pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow
     //发送会话消息给前端
     let chat_session_event = ChatSessionEvent {
         r#type: 1,
-        data: ChatSessionVo::from(chat_session)?
+        data: ChatSessionVo::from(chat_session)?,
     };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
@@ -167,7 +172,7 @@ async fn process_system_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let payload = serde_json::to_string(&msg)?;
     info!("接收到系统信息 {:?}", msg);
-    
+
     {
         APP_HANDLE
             .get()
