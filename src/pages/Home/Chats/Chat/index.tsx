@@ -1,5 +1,6 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
+import { useBearStore } from '@/store/store';
 import { Page } from '@/types/backend';
 import { ResponseData } from '@/types/backend/httpRust';
 import { FriendVo } from '@/types/backend/vo';
@@ -11,7 +12,6 @@ import ChatFooter from '../components/Footer';
 import MessageList from '../components/MessageList';
 import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
-import { useBearStore } from '@/store/store';
 
 const ChatPage: React.FC = () => {
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
@@ -19,7 +19,7 @@ const ChatPage: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendUuid = params.get('currentFriend') || '';
-  
+
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(friendUuid, meUuid);
 
@@ -114,9 +114,16 @@ const ChatPage: React.FC = () => {
         };
         return temp;
       });
-      const last_read_record = chatMessages.sort((a, b) => b.text_msg_raw.timestamp - a.text_msg_raw.timestamp)[0].text_msg_raw.nano_id;
-      markRead(last_read_record);
       setMessageList(chatMessages);
+      // 使用reduce()直接找到最大值（性能更好）
+      if (chatMessages.length > 0) {
+        const last_read_record = chatMessages.reduce((latest, current) =>
+          latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
+            ? latest
+            : current,
+        )?.text_msg_raw.nano_id;
+        markRead(last_read_record);
+      }
     } catch (err) {
       console.log(err);
     }
