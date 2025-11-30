@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 // 监听会话信息
 const useChatSession = (recvUuid: string) => {
   const [chatSessionEvent, setChatSessionEvent] = useState<ChatSessionEvent>();
-  const setAddChats = useBearStore((state) => state.setChats);
 
   useEffect(() => {
     if (recvUuid === '') {
@@ -27,6 +26,7 @@ const useChatSession = (recvUuid: string) => {
           if (chatSessionEvent.data.recv_user !== recvUuid) {
             return;
           }
+          setChatSessionEvent(chatSessionEvent);
         } catch (e) {
           console.log('接受信息错误', e);
         }

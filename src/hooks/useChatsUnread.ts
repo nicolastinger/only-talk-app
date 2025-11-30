@@ -10,14 +10,14 @@ const useChatsUnread = (recvUuid: string) => {
 
   useEffect(() => {
     // 监听会话信息变化，更新会话数量
-    // 过滤出有未读消息的会话
-    const unreadSessions = chatSessions.filter((item) => item.unread_count > 0);
-    
+    let totalUnreadCount = 0;
     // 计算所有会话的未读消息总数
-    const totalUnreadCount = unreadSessions.reduce((sum, session) => sum + session.unread_count, 0);
+    chatSessions.forEach((session) => {
+      totalUnreadCount += session.unread_count;
+    });
     
     // 可以在这里使用totalUnreadCount进行其他操作，比如设置到状态中
-    console.log('Total unread messages:', totalUnreadCount);
+    console.log('Total unread messages:', chatSessions);
     
     setTotalUnreadCount(totalUnreadCount);
   }, [recvUuid, chatSessions]);
@@ -69,9 +69,18 @@ const useChatsUnread = (recvUuid: string) => {
             if (index === -1) {
               return [...prev, chatSessionEvent.data];
             }
-            const newChatSessions = [...prev];
-            newChatSessions[index] = chatSessionEvent.data;
-            return newChatSessions;
+            if (chatSessionEvent.type === 0) {
+              chatSessionEvent.data.unread_count = 0;
+              const newChatSessions = [...prev];
+              newChatSessions[index] = chatSessionEvent.data;
+              return newChatSessions;
+            } else if (chatSessionEvent.type === 1) {
+              const newChatSessions = [...prev];
+              chatSessionEvent.data.unread_count = chatSessionEvent.data.unread_count + newChatSessions[index].unread_count;
+              newChatSessions[index] = chatSessionEvent.data;
+              return newChatSessions;
+            }
+            return [...prev];
           });
         } catch (e) {
           console.log('接受信息错误', e);

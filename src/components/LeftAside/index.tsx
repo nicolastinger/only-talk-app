@@ -88,7 +88,7 @@ const LeftAside = () => {
         unreadCount: menuUnread.settings,
       },
     ]);
-  }, [menuUnread]);
+  }, [menuUnread, totalUnreadCount]);
 
   // 监听路由变化，更新按钮激活状态
   useEffect(() => {
