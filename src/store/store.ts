@@ -74,7 +74,7 @@ export const useBearStore = create<BearState>()((set) => ({
     set((state) => ({
       menuUnread: {
         ...state.menuUnread,
-        contacts: state.menuUnread.contacts + (addContacts ?? 0),
+        contacts: Math.max(0, state.menuUnread.contacts + addContacts ),
       },
     })),
   chats: 0,
@@ -82,11 +82,11 @@ export const useBearStore = create<BearState>()((set) => ({
     // 加减
     if (isAdd) {
     set((state) => ({
-      chats: state.chats + chats
+      chats: Math.max(0, state.chats + chats),
     }))}
     else {
       set((_) => ({
-        chats: chats
+        chats: Math.max(0, chats)
       }))
     }
     },
@@ -94,21 +94,21 @@ export const useBearStore = create<BearState>()((set) => ({
     set((state) => ({
       menuUnread: {
         ...state.menuUnread,
-        groups: state.menuUnread.groups + (addGroups ?? 0),
+        groups: Math.max(0, state.menuUnread.groups + addGroups),
       },
     })),
   setAddSystem: (addSystem: number) =>
     set((state) => ({
       menuUnread: {
         ...state.menuUnread,
-        system: state.menuUnread.system + (addSystem ?? 0),
+        system: Math.max(0, state.menuUnread.system + addSystem),
       },
     })),
   setAddSettings: (addSettings: number) =>
     set((state) => ({
       menuUnread: {
         ...state.menuUnread,
-        settings: state.menuUnread.settings + (addSettings ?? 0),
+        settings: Math.max(0, state.menuUnread.settings + addSettings),
       },
     })),
 }));
