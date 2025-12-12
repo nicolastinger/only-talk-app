@@ -254,7 +254,7 @@ pub async fn create_chat_session(friend_uuid: String) -> Result<(), String> {
 /// 获取系统通知信息
 #[tauri::command]
 pub async fn get_system_notification(
-    is_read: Option<bool>,
+    is_read: Option<i32>,
 ) -> Result<Vec<SystemNotification>, String> {
     let me = get_user_info(&"uuid".to_string())
         .await

@@ -63,13 +63,14 @@ impl SystemNotification {
     /// 获取已读/未读/所有系统通知
     pub async fn find_all_by_is_read(
         user_id: &str,
-        is_read: Option<bool>,
+        is_read: Option<i32>,
     ) -> Result<Vec<SystemNotification>, anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
         let system_notification = sqlx::query_as::<_, SystemNotification>(
             r#"SELECT * FROM system_notification WHERE user_id = ? and (? is null or is_read = ?)"#,
         )
         .bind(user_id)
+        .bind(is_read)
         .bind(is_read)
         .fetch_all(&pool_sqlite)
         .await?;
