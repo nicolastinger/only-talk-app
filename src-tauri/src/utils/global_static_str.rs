@@ -21,3 +21,5 @@ pub static QUIC_SERVER_ADDR: &str = "REDACTED_SERVER_IP_1:4433";
 pub static USER_ADD_FRIEND: &str = "USER_ADD_FRIEND_REQUEST";
 // 用户处理好友申请
 pub static USER_PROCESS_FRIEND: &str = "USER_PROCESS_FRIEND_REQUEST";
+// 本地数据库文件夹
+pub static SQLITE_PATH: &str = "./dbData";

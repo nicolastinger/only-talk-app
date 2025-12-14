@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 use tokio::sync::RwLock;
 use crate::cmd::api_controller::get_user_map;
 use crate::store::create_table::init_ddl;
+use crate::utils::global_static_str::SQLITE_PATH;
 
 lazy_static! {
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
@@ -65,6 +66,13 @@ async fn get_db_path() -> String {
     let path_buf = std::env::current_dir().expect("找不到路径");
     info!("当前程序路径 {}", path_buf.display());
     let account = get_user_map("account".to_string()).await.expect("获取用户信息失败");
+    let sqlite_path = Path::new(SQLITE_PATH);
+
+    // 检查目录是否存在，不存在则新建
+    if !sqlite_path.exists() {
+        fs::create_dir(sqlite_path).expect("创建数据库目录失败");
+        info!("已创建目录: dbData");
+    }
 
     let db_file_path = format!("./dbData/{}", account);
 
