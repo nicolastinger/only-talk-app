@@ -17,7 +17,7 @@ use crate::vo::text_quic_msg::TextQuicMsgVo;
 /// 分页获取聊天记录
 pub async fn query_chat_record_from_db(text_quic_msg: TextQuicMsgVo,page: Page) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by timestamp asc"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by timestamp"#)
         .bind(text_quic_msg.send_user)
         .bind(text_quic_msg.recv_user)
         .fetch_all(&pool_sqlite)
@@ -52,84 +52,7 @@ pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), any
         Ok(())
 }
 
-/// 会话消息更新
-pub async fn update_chat_session(chat_session: &ChatSession) -> Result<(), anyhow::Error> {
-    let pool_sqlite = get_db_client().await?;
-    let me = get_user_info(&"uuid".to_string()).await?;
-    let send_user = match chat_session.send_user == me {
-        true => chat_session.recv_user.clone(),
-        false => chat_session.send_user.clone()
-    };
-    // 执行更新
-    let res = sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = unread_count + ?4, last_message = ?5 WHERE send_user = ?6 and recv_user = ?7"#)
-        .bind(&chat_session.nano_id)
-        .bind(chat_session.timestamp)
-        .bind(chat_session.text_type)
-        .bind(chat_session.unread_count)
-        .bind(&chat_session.last_message)
-        .bind(&send_user)
-        .bind(&me)
-        .execute(&pool_sqlite)
-        .await?;
-    info!("更新会话成功: {}", res.rows_affected());
-    if res.rows_affected() < 1 {
-        // 如果更新失败，则插入新的会话
-        let result = sqlx::query(r#"INSERT INTO chat_session (nano_id, timestamp, text_type, unread_count, last_message, send_user, recv_user, session_type, is_show, is_top) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"#)
-            .bind(&chat_session.nano_id)
-            .bind(chat_session.timestamp)
-            .bind(chat_session.text_type)
-            .bind(chat_session.unread_count)
-            .bind(&chat_session.last_message)
-            .bind(&send_user)
-            .bind(&me)
-            .bind(chat_session.session_type)
-            .bind(chat_session.is_show)
-            .bind(chat_session.is_top)
-            .execute(&pool_sqlite)
-            .await;
-        if let Err(e) = result {
-            error!("保存会话消息失败 {:?}", e);
-        }
-    }
-    Ok(())
-}
 
-/// 本地更新会话
-pub async fn update_chat_session_local(chat_session: &ChatSession) -> Result<(), anyhow::Error> {
-    let me = get_user_info(&"uuid".to_string()).await?;
-    let send_user = match chat_session.send_user == me {
-        true => chat_session.recv_user.clone(),
-        false => chat_session.send_user.clone()
-    };
-    let pool_sqlite = get_db_client().await?;
-    // 执行更新
-    sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = ?4, last_message = ?5, is_show = ?6, is_top = ?7 WHERE send_user = ?8 and recv_user = ?9"#)
-        .bind(&chat_session.nano_id)
-        .bind(chat_session.timestamp)
-        .bind(chat_session.text_type)
-        .bind(chat_session.unread_count)
-        .bind(&chat_session.last_message)
-        .bind(chat_session.is_show)
-        .bind(chat_session.is_top)
-        .bind(&send_user)
-        .bind(&me)
-        .execute(&pool_sqlite)
-        .await?;
-    Ok(())
-}
-
-/// 获取会话列表
-pub async fn query_chat_session(uuid: &str) -> Result<Vec<ChatSessionVo>, anyhow::Error> {
-    let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, ChatSessionVo>(r#"select cs.*, fr.friend_icon, fr.friend_name from chat_session cs left join
-(SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
-on cs.send_user = fr.friend_id
-where cs.recv_user = ?1"#)
-        .bind(uuid)
-        .fetch_all(&pool_sqlite)
-        .await?;
-    Ok(record)
-}
 
 /// 获取已读消息
 pub async fn query_last_read_msg(uuid: &str, timestamp: i64) -> Result<Vec<ChatRecordRead>, anyhow::Error> {
@@ -180,70 +103,13 @@ pub async fn insert_local_ack_to_db(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     Ok(())
 }
 
-/// 更新好友信息表
-pub async fn update_friend_info(friend: &Friend) -> Result<(), anyhow::Error> {
-    let res = sqlx::query(r#"UPDATE friend SET friend_id = ?1, friend_account = ?2, friend_name = ?3, friend_icon = ?4, friend_status = ?5, me = ?6, is_del = ?7, is_block = ?8, is_mute = ?9, is_top = ?10, is_show = ?11, created_at = ?12, updated_at = ?13, version = ?14, friend_info = ?15 WHERE friend_id = ?1 and me = ?6"#)
-        .bind(&friend.friend_id)
-        .bind(&friend.friend_account)
-        .bind(&friend.friend_name)
-        .bind(&friend.friend_icon)
-        .bind(friend.friend_status)
-        .bind(&friend.me)
-        .bind(friend.is_del)
-        .bind(friend.is_block)
-        .bind(friend.is_mute)
-        .bind(friend.is_top)
-        .bind(friend.is_show)
-        .bind(friend.created_at)
-        .bind(friend.updated_at)
-        .bind(friend.version)
-        .bind(&friend.friend_info)
-        .execute(&get_db_client().await?)
-        .await;
-    if res?.rows_affected() < 1 {
-        // 如果更新失败，则插入新的好友信息
-        let res = sqlx::query(r#"INSERT INTO friend (friend_id, friend_account, friend_name, friend_icon, friend_status, me, is_del, is_block, is_mute, is_top, is_show, created_at, updated_at, version, friend_info) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)"#)
-            .bind(&friend.friend_id)
-            .bind(&friend.friend_account)
-            .bind(&friend.friend_name)
-            .bind(&friend.friend_icon)
-            .bind(friend.friend_status)
-            .bind(&friend.me)
-            .bind(friend.is_del)
-            .bind(friend.is_block)
-            .bind(friend.is_mute)
-            .bind(friend.is_top)
-            .bind(friend.is_show)
-            .bind(friend.created_at)
-            .bind(friend.updated_at)
-            .bind(friend.version)
-            .bind(&friend.friend_info)
-            .execute(&get_db_client().await?)
-            .await;
-        if let Err(e) = res {
-            error!("更新好友信息表失败 {:?}", e);
-        }
-    }
-    Ok(())
-}
-
-/// 获取好友信息表
-pub async fn query_friend_info(uuid: &str) -> Result<Vec<Friend>, anyhow::Error> {
+/// 获取目标用户最新一条聊天消息
+pub async fn query_last_chat_record(uuid: &str, friend_id: &str) -> Result<Option<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, Friend>(r#"select * from friend where me = ?1"#)
-        .bind(uuid)
-        .fetch_all(&pool_sqlite)
-        .await?;
-    Ok(record)
-}
-
-/// 获取单条好友信息
-pub async fn query_friend_info_by_id(uuid: &str, friend_id: &str) -> Result<Friend, anyhow::Error> {
-    let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, Friend>(r#"select * from friend where me = ?1 and friend_id = ?2 limit 1"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"select * from chat_record where (send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1) order by timestamp desc limit 1"#)
         .bind(uuid)
         .bind(friend_id)
-        .fetch_one(&pool_sqlite)
+        .fetch_optional(&pool_sqlite)
         .await?;
     Ok(record)
 }

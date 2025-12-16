@@ -5,7 +5,7 @@ use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{clear_chat_session, query_ack_record_from_db};
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
-use crate::store::chat_record_db::{insert_chat_record, update_chat_session};
+use crate::store::chat_record_db::{insert_chat_record};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::global_static_str::{USER_ADD_FRIEND, USER_PROCESS_FRIEND};
 use crate::utils::message_types::{
@@ -18,6 +18,7 @@ use crate::APP_HANDLE;
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
+use crate::store::session_db::update_chat_session_db;
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -114,7 +115,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
 
 // 更新会话列表
 pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow::Error> {
-    update_chat_session(&chat_session).await?;
+    update_chat_session_db(&chat_session).await?;
 
     //发送会话消息给前端
     let chat_session_event = ChatSessionEvent {

@@ -41,10 +41,10 @@ const useChatsUnread = (recvUuid: string) => {
       }
     };
 
-    // 添加一个定时任务，每1分钟检查一次会话信息
+    // 添加一个定时任务，每30s检查一次会话信息
     const intervalId = setInterval(() => {
       getChatSession();
-    }, 60000); // 1分钟 = 60000毫秒
+    }, 30000); 
 
     const setupListener = async () => {
       // 初始获取会话数据

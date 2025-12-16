@@ -25,24 +25,15 @@ const ChatPage: React.FC = () => {
 
   // 更新已读记录
   useEffect(() => {
-    let last_time = 0;
     if (messageList.length > 1) {
-      let last_message: string = '';
-      for (let i = 0; i < messageList.length; i++) {
-        let last_record: ChatMessage = messageList[i];
-        if (last_record.from === MessageFrom.System) {
-          continue;
-        }
-        if (last_record.text_msg_raw.timestamp > last_time) {
-          last_time = last_record.text_msg_raw.timestamp;
-          last_message = last_record.text_msg_raw.nano_id;
-        }
-      }
-      if (last_message !== '') {
+      let last_nano_id: string = '';
+      const last_message = messageList[messageList.length - 1];
+      last_nano_id = last_message.text_msg_raw.nano_id;
+      if (last_nano_id !== '' && last_message.ack === undefined) {
         // 消息已读
-        markRead(last_message);
+        console.log('已读', messageList);
+        markRead(last_nano_id);
       }
-      // 会话更新
     }
   }, [messageList]);
 
@@ -50,7 +41,23 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     getChatRecordFromStore(meUuid, friendUuid);
     getFriendInfo(friendUuid);
+    markReadFriend(friendUuid);
   }, [meUuid, friendUuid]);
+
+  // 已读好友会话
+  const markReadFriend = async (friendUuid: string) => {
+    if (friendUuid == null ||friendUuid === '') {
+      return;
+    }
+    try {
+      const data: ResponseData = await invoke('mark_read_chat_session', {
+        friendUuid,
+      });
+      console.log('已读好友会话', data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   // 已读当前会话聊天记录
   const markRead = async (last_read_record: string) => {
