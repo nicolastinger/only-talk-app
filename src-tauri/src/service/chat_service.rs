@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use anyhow::anyhow;
-use log::info;
+use log::{error, info};
 use quinn::SendStream;
 use tauri::Emitter;
 use tokio::sync::RwLock;
@@ -8,7 +8,7 @@ use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
 use crate::cmd::api_controller::get_user_map;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
-use crate::store::chat_record_db::{query_last_chat_record,  update_last_read_msg};
+use crate::store::chat_record_db::{query_chat_record_count_by_friend_db, query_last_chat_record, update_last_read_msg};
 use crate::store::init_db::GLOBAL_SQL_POOL;
 use crate::store::session_db::{query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db, update_chat_session_local_db};
 use crate::utils::time::get_now_time_stamp_as_millis;
@@ -74,12 +74,28 @@ pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), any
         return Ok(());
     }
     let last_msg = last_msg.ok_or(anyhow!("获取失败"))?;
+    info!("最新消息: {}", last_msg.nano_id);
     // 获取目标用户的会话
-    let last_chat_session = query_chat_session_by_user_db(&me, &friend_uuid).await;
-    if last_chat_session.is_err() {
-        return Ok(());
+    let mut chat_session = query_chat_session_by_user_db(&me, &friend_uuid).await?;
+    if chat_session.is_empty() {
+        let friend_uuid_clone = friend_uuid.clone();
+        create_chat_session_service(friend_uuid_clone).await?;
+        chat_session = query_chat_session_by_user_db(&me, &friend_uuid).await?;
     }
-    let last_chat_session = last_chat_session?;
+    let last_chat_session = match chat_session.len() { 
+        0 => {
+            error!("获取会话失败，新建会话失败！");
+            return Ok(());
+        }
+        1 => chat_session.remove(0),
+        _ => {
+            error!("获取会话失败，超出会话限制！");
+            info!("开始删除旧会话...");
+            // TODO: 删除旧会话，获取最新会话
+            chat_session.remove(0)
+        }
+    };
+
     info!("最新聊天消息: {}，最新会话消息: {}", last_msg.nano_id, last_chat_session.nano_id);
     // 如果会话已存在，则不处理
     if last_chat_session.nano_id == last_msg.nano_id && last_chat_session.unread_count == 0{
@@ -167,6 +183,9 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
     // 获取当前用户
     let me = get_user_map("uuid".to_string()).await.map_err(|e| anyhow!(e))?;
 
+    // 查询聊天记录
+    let chat_record_count = query_chat_record_count_by_friend_db(&me, &friend_uuid).await?;
+
     // 查询是否存在会话
     let chat_session = query_chat_session_db(&me).await?;
     for mut item in chat_session {
@@ -183,7 +202,7 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
         nano_id: nanoid::nanoid!(),
         timestamp: get_now_time_stamp_as_millis()?,
         text_type: 0,
-        unread_count: 0,
+        unread_count: chat_record_count as i64,
         last_message: "".to_string(),
         recv_user: me,
         send_user: friend_uuid,

@@ -84,12 +84,12 @@ where cs.recv_user = ?1"#)
 }
 
 /// 获取跟目标用户的会话信息
-pub async fn query_chat_session_by_user_db(uuid: &str, target_uuid: &str) -> Result<ChatSessionVo, anyhow::Error> {
+pub async fn query_chat_session_by_user_db(uuid: &str, target_uuid: &str) -> Result<Vec<ChatSession>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, ChatSessionVo>(r#"select * from chat_session where send_user = ?1 and recv_user = ?2"#)
+    let record = sqlx::query_as::<_, ChatSession>(r#"select * from chat_session where send_user = ?1 and recv_user = ?2"#)
         .bind(target_uuid)
         .bind(uuid)
-        .fetch_one(&pool_sqlite)
+        .fetch_all(&pool_sqlite)
         .await?;
     Ok(record)
 }

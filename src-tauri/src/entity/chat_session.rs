@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use crate::vo::chat_session_vo::ChatSessionVo;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatSession{
     pub id: i64,
     pub nano_id: String,
