@@ -9,12 +9,9 @@ use anyhow::anyhow;
 use lazy_static::lazy_static;
 use tokio::sync::RwLock;
 use crate::cmd::api_controller::get_user_map;
+use crate::GLOBAL_SQL_POOL;
 use crate::store::create_table::init_ddl;
 use crate::utils::global_static_str::SQLITE_PATH;
-
-lazy_static! {
-    pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
-}
 
 pub async fn init_sqlite() -> Result<(), anyhow::Error> {
     let db_path = get_db_path().await;

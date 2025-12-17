@@ -7,6 +7,7 @@ use log::{info, warn, LevelFilter};
 use std::collections::HashMap;
 use std::net::SocketAddrV6;
 use std::sync::{Arc, OnceLock};
+use sqlx::SqlitePool;
 use tokio::sync::RwLock;
 mod service;
 mod cmd;
@@ -17,7 +18,7 @@ mod vo;
 mod dto;
 mod emit_app;
 
-use crate::cmd::api_controller::{add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_friend_info, get_friend_list, get_system_notification, get_user_map, mark_read, mark_read_chat_session, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame, update_local_friend_list};
+use crate::cmd::api_controller::{add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_system_notification, get_user_map, mark_read, mark_read_chat_session, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
 use utils::http_utils::{get_request, post_request, sign_in};
 use crate::cmd::auth_controller::{logout, clear_user_info};
 use quic_service::p2p_service::p2p_stream_quic_server::{
@@ -26,6 +27,8 @@ use quic_service::p2p_service::p2p_stream_quic_server::{
 use crate::utils::global_static_str::{UDP_SOCKET_V6};
 use entity::quic_connection::QuicConnection;
 use store::init_db::init_sqlite;
+use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
+use crate::quic_service::models::TargetSendStream;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 // 创建CRC-16/X25计算器
@@ -38,6 +41,8 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_READ_TASK_HANDLE: Arc<RwLock<Option<tokio::task::JoinHandle<()>>>> =
         Arc::new(RwLock::new(None));
+    pub static ref P2P_STREAM_SENDER: Arc<RwLock<HashMap<String, TargetSendStream>>> = Arc::new(RwLock::new(HashMap::new()));
+    pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

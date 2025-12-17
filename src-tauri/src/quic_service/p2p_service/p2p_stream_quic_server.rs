@@ -4,7 +4,7 @@ use std::net::{SocketAddr, SocketAddrV6, UdpSocket};
 use std::sync::{Arc};
 use tauri::Emitter;
 use tokio::sync::{Mutex};
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 use crate::quic_service::dangerous_configuration::configure_server;
 use anyhow::anyhow;
 use crate::service::user_service::insert_user_info;
@@ -12,7 +12,7 @@ use crate::entity::p2p_models::{P2pVideoConfig, UserAddressInfo};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::{TextQuicMsg};
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg, P2P_STREAM_SENDER};
+use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg};
 use crate::quic_service::center_service::text_msg_service::get_text_msg;
 
 pub async fn udp_port_forward(local: SocketAddr, remote: SocketAddr, raw: &Vec<u8>) -> Result<(), std::io::Error> {

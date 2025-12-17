@@ -3,9 +3,9 @@ use crate::entity::chat_session::ChatSession;
 use crate::entity::p2p_models::P2pInitMsg;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
-use crate::service::chat_service::{clear_chat_session, query_ack_record_from_db};
+use crate::service::chat_service::{clear_chat_session};
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
-use crate::store::chat_record_db::{insert_chat_record};
+use crate::store::chat_record_db::{insert_chat_record, query_ack_record_from_db};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::global_static_str::{USER_ADD_FRIEND, USER_PROCESS_FRIEND};
 use crate::utils::message_types::{

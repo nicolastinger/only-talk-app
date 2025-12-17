@@ -1,17 +1,10 @@
 // 本地聊天记录sql
 
 use anyhow::anyhow;
-use log::{error, info};
-use crate::service::user_service::get_user_info;
 use crate::entity::chat_record_read::ChatRecordRead;
-use crate::entity::chat_session::ChatSession;
-use crate::entity::friend::Friend;
 use crate::entity::Page;
-use crate::entity::text_msg::TextQuicMsg;
-use crate::store::create_table::init_ddl;
+use crate::GLOBAL_SQL_POOL;
 use crate::store::get_db_client;
-use crate::store::init_db::GLOBAL_SQL_POOL;
-use crate::vo::chat_session_vo::ChatSessionVo;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 分页获取聊天记录
@@ -123,4 +116,15 @@ pub async fn query_chat_record_count_by_friend_db(uuid: &str, friend_id: &str) -
         .fetch_one(&pool_sqlite)
         .await?;
     Ok(record.0)
+}
+
+/// 查询ack表中是否存在某条信息
+pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {
+    let pool_guard = GLOBAL_SQL_POOL.read().await;
+    let pool_sqlite = pool_guard.as_ref().ok_or(anyhow!("获取失败"))?.as_ref();
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record_ack WHERE nano_id = ?1"#)
+        .bind(nanoid)
+        .fetch_one(pool_sqlite)
+        .await?;
+    Ok(record)
 }

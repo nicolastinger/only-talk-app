@@ -4,30 +4,19 @@ use log::{error, info};
 use quinn::SendStream;
 use tauri::Emitter;
 use tokio::sync::RwLock;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
 use crate::cmd::api_controller::get_user_map;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
 use crate::store::chat_record_db::{query_chat_record_count_by_friend_db, query_last_chat_record, update_last_read_msg};
-use crate::store::init_db::GLOBAL_SQL_POOL;
 use crate::store::session_db::{query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db, update_chat_session_local_db};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
-/// 查询ack表中是否存在某条信息
-pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {
-    let pool_guard = GLOBAL_SQL_POOL.read().await;
-    let pool_sqlite = pool_guard.as_ref().ok_or(anyhow!("获取失败"))?.as_ref();
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record_ack WHERE nano_id = ?1"#)
-        .bind(nanoid)
-        .fetch_one(pool_sqlite)
-        .await?;
-    Ok(record)
-}
 
 /// 获取会话列表
-pub async fn get_chat_session_from_db() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
+pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
     let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
     Ok(query_chat_session_db(&uuid).await?)
 }
@@ -82,7 +71,7 @@ pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), any
         create_chat_session_service(friend_uuid_clone).await?;
         chat_session = query_chat_session_by_user_db(&me, &friend_uuid).await?;
     }
-    let last_chat_session = match chat_session.len() { 
+    let last_chat_session = match chat_session.len() {
         0 => {
             error!("获取会话失败，新建会话失败！");
             return Ok(());

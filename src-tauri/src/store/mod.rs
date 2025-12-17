@@ -1,5 +1,5 @@
-use crate::store::init_db::GLOBAL_SQL_POOL;
 use anyhow::anyhow;
+use crate::GLOBAL_SQL_POOL;
 
 pub mod chat_record_db;
 mod create_table;

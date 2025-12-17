@@ -4,7 +4,7 @@ use crate::entity::Page;
 use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
-use crate::service::chat_service::{create_chat_session_service, get_chat_session_from_db, send_msg, update_last_read_msg_from_db, update_last_read_msg_service};
+use crate::service::chat_service::{create_chat_session_service, get_chat_session_service, send_msg, update_last_read_msg_from_db, update_last_read_msg_service};
 use crate::service::p2p_service::{
     access_p2p_request, find_available_udp_port, reject_p2p_request,
     send_p2p_init_msg as send_p2p_init_msg_service, send_p2p_video_config_service,
@@ -142,7 +142,7 @@ pub async fn get_chat_record_from_store(
 /// 获取会话列表
 #[tauri::command]
 pub async fn get_chat_session_from_store() -> Result<Vec<ChatSessionVo>, String> {
-    Ok(get_chat_session_from_db()
+    Ok(get_chat_session_service()
         .await
         .map_err(|e| e.to_string())?)
 }
@@ -193,33 +193,7 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
         .map_err(|e| e.to_string())
 }
 
-/// 查询当前好友信息
-#[tauri::command]
-pub async fn get_friend_info(friend_uuid: String) -> Result<FriendVo, String> {
-    let me = get_user_info(&"uuid".to_string())
-        .await
-        .map_err(|e| e.to_string())?;
-    let friend = query_friend_info_by_id_db(&me, &friend_uuid)
-        .await
-        .map_err(|e| e.to_string())?;
-    let friend_vo = FriendVo::from(friend);
-    Ok(friend_vo)
-}
 
-/// 查询好友列表
-#[tauri::command]
-pub async fn get_friend_list() -> Result<Vec<FriendVo>, String> {
-    let me = get_user_info(&"uuid".to_string())
-        .await
-        .map_err(|e| e.to_string())?;
-    let friends = query_friend_info_db(&me).await.map_err(|e| e.to_string())?;
-    let mut friend_vec = vec![];
-    for friend in friends {
-        let friend_vo = FriendVo::from(friend);
-        friend_vec.push(friend_vo);
-    }
-    Ok(friend_vec)
-}
 
 /// 已读当前记录
 #[tauri::command]
@@ -286,9 +260,4 @@ pub async fn batch_read_system_notification(
     Ok(res)
 }
 
-/// 更新本地好友列表
-#[tauri::command]
-pub async fn update_local_friend_list() -> Result<(), String> {
-    update_friend_list().await.map_err(|e| e.to_string())?;
-    Ok(())
-}
+

@@ -32,6 +32,12 @@ const useSystemNotify = (recvUuid: string) => {
           if (notify.level1 === 1) {
             // 用户模块
             if (notify.level2 === 1) {
+              // 收到好友处理请求
+              if (notify.level3 === 2) {
+                update_local_friend_list().then(() => {
+                  console.log('更新好友列表成功');
+                });
+              }
               setAddContacts(notify?.unread_count || 0);
             }
           }
@@ -80,6 +86,19 @@ const useSystemNotify = (recvUuid: string) => {
       console.log('初始化通知信息错误', e);
     }
   };
+
+  // 更新好友列表
+  const update_local_friend_list = async () => {
+    try {
+      console.log('开始更新好友列表');
+      const res = await invoke('update_local_friend_list', {});
+      console.log('更新好友列表成功', res);
+    } catch (err) {
+      console.log(err);
+    }
+  };
 };
+
+
 
 export { useSystemNotify };

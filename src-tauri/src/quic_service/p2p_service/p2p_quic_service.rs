@@ -9,19 +9,15 @@ use tauri::Emitter;
 use tokio::io::AsyncReadExt;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio::sync::mpsc::Sender;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 use crate::service::user_service::insert_user_info;
 use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::{TextQuicMsg};
-use crate::quic_service::models::TargetSendStream;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING, MSG_TYPE_TEXT};
 
-lazy_static! {
-  pub static ref P2P_STREAM_SENDER: Arc<RwLock<HashMap<String, TargetSendStream>>> = Arc::new(RwLock::new(HashMap::new()));
-}
 
 /// 传输的视频帧
 lazy_static! {

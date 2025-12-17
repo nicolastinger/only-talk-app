@@ -113,8 +113,19 @@ const FriendRequestsModal = ({
       accept_status: 1,
     };
     const res = await process_friend_request(friendRequestInfoDTO);
-    if (res.netSuccess && res.res.status === 204) {
-      getAcceptFriendRequestList();
+    console.log('请求结果', res);
+    if (res.netSuccess && res.res.status === 200) {
+      await update_local_friend_list();
+      await getAcceptFriendRequestList();
+    }
+  };
+
+  const update_local_friend_list = async () => {
+    try {
+      const res = await invoke('update_local_friend_list', {});
+      console.log('更新好友列表成功', res);
+    } catch (err) {
+      console.log(err);
     }
   };
 
