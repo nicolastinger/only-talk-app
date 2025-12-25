@@ -10,7 +10,7 @@ use crate::service::p2p_service::{
     send_p2p_init_msg as send_p2p_init_msg_service, send_p2p_video_config_service,
     send_p2p_video_frame_service,
 };
-use crate::service::user_service::{get_user_info, update_friend_list};
+use crate::service::user_service::{get_user_info};
 use crate::store::chat_record_db::{
     insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db
 };

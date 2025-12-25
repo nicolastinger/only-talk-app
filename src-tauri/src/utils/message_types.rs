@@ -9,6 +9,9 @@ pub const MSG_TYPE_IMAGE: u16 = 2;
 /// 文件消息
 pub const MSG_TYPE_FILE: u16 = 3;
 
+/// JSON消息
+pub const MSG_TYPE_JSON: u16 = 88;
+
 /// P2P消息
 pub const MSG_TYPE_P2P: u16 = 4;
 
@@ -41,3 +44,6 @@ pub const NOTIFY_TYPE_MSG: u16 = 1024;
 
 /// 系统消息
 pub const MSG_TYPE_SYSTEM: u16 = 10001;
+
+/// 当前会话好友
+pub const CURRENT_SESSION_FRIEND: &str = "current_session_friend";

@@ -42,7 +42,27 @@ const ChatPage: React.FC = () => {
     getChatRecordFromStore(meUuid, friendUuid);
     getFriendInfo(friendUuid);
     markReadFriend(friendUuid);
+    setCurrentFriendSession(friendUuid);
+    
+    // 组件卸载时清理当前好友会话
+    return () => {
+      setCurrentFriendSession('-1');
+    };
   }, [meUuid, friendUuid]);
+
+  // 设置当前好友会话
+  const setCurrentFriendSession = async (friend: string) => {
+    try {
+      const res = await invoke('add_user_map', {
+        map: {
+          current_session_friend: friend
+        }
+      });
+      console.log('设置当前好友会话', res);
+    }catch (err){
+      console.log(err);
+    }
+  };
 
   // 已读好友会话
   const markReadFriend = async (friendUuid: string) => {

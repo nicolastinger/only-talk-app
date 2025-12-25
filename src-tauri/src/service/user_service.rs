@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use anyhow::anyhow;
 use log::{error, info, warn};
-use uuid::Uuid;
-use serde_json::Value;
+use crate::service::friend_service::update_friend_list;
 use crate::store::init_db::init_sqlite;
 use crate::{GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE};
 use crate::dto::add_read_chat_record::AddReadChatRecord;
@@ -15,7 +14,7 @@ use crate::entity::text_msg::TextQuicMsg;
 use crate::utils::http_utils::post_request;
 use crate::quic_service::center_service::text_quic_client::run_client;
 use crate::store::chat_record_db::{insert_chat_record, query_last_read_msg};
-use crate::store::friend_db::{query_friend_info_db, update_friend_info_db};
+
 use crate::store::session_db::update_chat_session_db;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, QUIC_SERVER_ADDR, TALK_API};
@@ -67,67 +66,6 @@ pub async fn get_user_info(key: &str)-> Result<String, anyhow::Error>{
 /// 插入用户信息
 pub async fn insert_user_info(key: &str, value: &str)-> Result<(), anyhow::Error>{
     GLOBAL_QUIC_USER_INFO.write().await.insert(key.to_string(), value.to_string());
-    Ok(())
-}
-
-/// 获取好友列表
-pub async fn update_friend_list()-> Result<(), anyhow::Error>{
-    // 获取本地最新update的好友
-    let uuid = get_user_info(&"uuid".to_string()).await?;
-    let res = query_friend_info_db(&uuid).await?;
-    let mut last_uuid = Uuid::now_v7().to_string();
-    let mut last_version = 0;
-    if !res.is_empty() { 
-        let last_update_friend = res.into_iter().max_by_key(|f| f.updated_at);
-        // 现在last_update_friend是按updated_at倒序的最后一条记录
-        if last_update_friend.is_some() {
-            let last_update_friend = last_update_friend.expect("获取最后更新好友失败");
-            last_uuid = last_update_friend.friend_id;
-            last_version = last_update_friend.version;
-        }
-    }
-    let url = format!("{}/friend/get_friend/{}/{}", TALK_API, &last_uuid, last_version);
-    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
-
-    let data = result.body;
-    info!("获取好友列表结果 {:?}", data);
-    let response: Response = serde_json::from_str(&data)?;
-    
-    // 处理不同类型的响应数据
-    match response.data {
-        Some(Value::Array(arr)) => {
-            // 将数组中的每个元素分别转换为FriendListVO对象
-            for item in arr {
-                let friend_vo: FriendListVO = serde_json::from_value(item)?;
-
-                let friend = Friend {
-                    id: 0,
-                    created_at: friend_vo.created_at,
-                    updated_at: friend_vo.updated_at,
-                    friend_id: friend_vo.uuid,
-                    friend_account: friend_vo.account,
-                    friend_name: friend_vo.username,
-                    friend_icon: friend_vo.icon,
-                    friend_info: friend_vo.info,
-                    friend_status: 0,
-                    me: uuid.clone(),
-                    is_del: friend_vo.is_del,
-                    is_block: 0,
-                    is_mute: 0,
-                    is_top: 0,
-                    is_show: 1,
-                    version: friend_vo.version,
-                };
-                update_friend_info_db(&friend).await.unwrap_or_else(|e| {error!("更新好友信息失败 {:?}", e)})
-            }
-            // TODO: 在这里处理好友列表，比如保存到数据库
-        }
-        _ => {
-            // 无数据
-            info!("无数据返回");
-        }
-    }
-
     Ok(())
 }
 

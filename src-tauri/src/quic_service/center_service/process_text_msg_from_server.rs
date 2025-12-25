@@ -4,21 +4,20 @@ use crate::entity::p2p_models::P2pInitMsg;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{clear_chat_session};
+use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::store::chat_record_db::{insert_chat_record, query_ack_record_from_db};
 use crate::utils::global_static_str::SYSTEM;
-use crate::utils::global_static_str::{USER_ADD_FRIEND, USER_PROCESS_FRIEND};
-use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING,
-    MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG,
-};
+use crate::utils::global_static_str::{USER_PROCESS_FRIEND};
+use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG, MSG_TYPE_JSON, CURRENT_SESSION_FRIEND};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::APP_HANDLE;
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
-use crate::store::session_db::update_chat_session_db;
+use crate::service::user_service::get_user_info;
+use crate::store::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -28,6 +27,10 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             MSG_TYPE_TEXT => {
                 process_text_type(msg).await?;
             }
+            // JSON信息
+            MSG_TYPE_JSON => {
+
+            },
             MSG_TYPE_P2P => {
                 info!("接收到p2p信息请求 {:?}", msg);
                 let system = SYSTEM.to_string();
@@ -96,20 +99,50 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
     }
 
     //3.更新会话列表
-    let chat_session = ChatSession {
-        id: 0,
-        nano_id: msg.nano_id,
-        timestamp: msg.timestamp,
-        text_type: msg.text_type,
-        unread_count: 1,
-        last_message: msg.raw,
-        recv_user: msg.recv_user,
-        send_user: msg.send_user,
-        session_type: 0,
-        is_show: 0,
-        is_top: 0,
-    };
-    update_session_list(chat_session).await?;
+    let mut flag = false;
+    let me = get_user_info(&"uuid".to_string()).await?;
+    let friend_uuid = &msg.send_user;
+    let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
+    if current_session_friend.is_ok() && current_session_friend? == friend_uuid.to_string() {
+        flag = true;
+    }
+    let mut friend_session = query_chat_session_by_user_db(&me, &friend_uuid).await?;
+    if friend_session.is_empty() {
+        let mut chat_session = ChatSession {
+            id: 0,
+            nano_id: msg.nano_id,
+            timestamp: msg.timestamp,
+            text_type: msg.text_type,
+            unread_count: 1,
+            last_message: msg.raw,
+            recv_user: msg.recv_user,
+            send_user: msg.send_user,
+            session_type: 0,
+            is_show: 0,
+            is_top: 0,
+        };
+        if flag {
+            chat_session.unread_count = 0;
+            clear_chat_session(chat_session).await?;
+        } else {
+            update_session_list(chat_session).await?;
+        }
+    } else { 
+        let mut chat_session = friend_session.remove(0);
+        chat_session.last_message = msg.raw;
+        chat_session.timestamp = msg.timestamp;
+        chat_session.text_type = msg.text_type;
+        chat_session.nano_id = msg.nano_id;
+        if flag {
+            chat_session.unread_count = 0;
+            update_chat_session_db(&chat_session).await?;
+            clear_chat_session(chat_session).await?;
+        } else {
+            chat_session.unread_count = 1;
+            update_session_list(chat_session).await?;
+        }
+    }
+    
     Ok(())
 }
 
@@ -192,5 +225,41 @@ async fn process_notify_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
     let payload = serde_json::to_string(&system_notification)?;
     // 发送消息给前端
     send_notify_msg(&payload)?;
+    // 处理对应通知类型
+    match system_notification.level1.ok_or(anyhow!("level1为空"))? {
+        1 => {
+            // 处理本系统通知
+            info!("处理本系统通知 {:?}", system_notification);
+            process_local_notify_message(system_notification).await?;
+        }
+        2 => {
+            // 处理第三方通知
+            info!("处理第三方通知 {:?}", system_notification);
+        }
+        _ => {
+            // 处理其他通知
+            info!("处理其他通知 {:?}", system_notification);
+        }
+    }
+    Ok(())
+}
+
+async fn process_local_notify_message(system_notification: SystemNotification) -> Result<(), anyhow::Error> {
+    // 处理本系统通知
+    match system_notification.level2.ok_or(anyhow!("level2为空"))? {
+        1 => {
+            // 处理好友通知
+            info!("处理好友通知 {:?}", system_notification);
+            friend_service::process_friend_notify_message(system_notification).await?;
+        }
+        2 => {
+            // 处理用户本身通知
+            info!("处理用户本身通知 {:?}", system_notification);
+        }
+        _ => {
+            // 处理其他通知
+            info!("处理其他通知 {:?}", system_notification);
+        }
+    }
     Ok(())
 }
