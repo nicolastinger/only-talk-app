@@ -1,0 +1,78 @@
+.container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  align-items: center;
+}
+
+
+.sideBar {
+  width: 100%;
+  height: 100%;
+}
+
+.barTool {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  flex-direction: row;
+  background-color: var(--sidebar-bg);
+
+  .tools {
+    padding: 4px;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    min-width: 60px;
+  }
+}
+
+.sideBarToolDraggable {
+  flex: 8;
+  height: 100%;
+}
+
+.sideBarToolButton {
+  flex: 2;
+  height: 100%;
+}
+
+.sideBarToolButtonList {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.rightButton,
+.rightButtonDanger {
+  color: var(--color-gray-10);
+  width: 40px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+}
+
+.rightButton:hover {
+  background-color: var(--acai-primary);
+  color: var(--color-white-11);
+}
+
+.rightButtonDanger:hover {
+  background-color: var(--acai-danger);
+  color: var(--color-white-11);
+}
+
+.rightButtonMin:hover {
+  color: var(--color-gray-10);
+}
+
+.content {
+  height: calc(100% - 40px);
+}

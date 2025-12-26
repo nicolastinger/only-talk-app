@@ -8,6 +8,22 @@ const routes = [
         redirect: '/signIn',
       },
       {
+        name: 'menu.fakeHome',
+        path: '/fakeHome',
+        component: '@/layouts/FakeLayout',
+        routes: [
+          {
+            path: '/fakeHome',
+            redirect: '/fakeHome/settings',
+          },
+          {
+            name: 'menu.settings',
+            path: '/fakeHome/settings',
+            component: './Home/Settings',
+          },
+        ],
+      },
+      {
         name: 'menu.home',
         path: '/home',
         component: '@/layouts/HomeLayout',
