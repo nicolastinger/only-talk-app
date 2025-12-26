@@ -1,12 +1,9 @@
 import SearchBar from '@/components/SearchBar';
 import FriendList from '@/pages/Home/Contacts/components/FriendList';
 import { Outlet } from '@umijs/max';
-import React from 'react';
 import styles from './index.less';
 
-const ContactsLayout = ({
-  children,
-}: Readonly<{ children: React.ReactNode }>) => {
+const ContactsLayout = () => {
   return (
     <div className={styles.container}>
       <div className={styles.left}>

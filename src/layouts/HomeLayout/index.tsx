@@ -10,11 +10,12 @@ import { CloseOutlined, MinusOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Window } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './index.less';
 import { useSystemNotify } from '@/hooks/useSystemNotify';
 
 const HomeLayout = () => {
+  const [isHovered, setIsHovered] = useState(false);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
 
@@ -77,12 +78,19 @@ const HomeLayout = () => {
       </div>
       <div className={styles.rightSideBar}>
         <div className={styles.rightSideBarTool}>
-          <div className={styles.tools}>
+          <div className={styles.tools}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             <OnlineStatusSwitch />
-            <MuteButton />
-            <CamouflageButton />
-            <LanguageButton />
-            <ThemeButton />
+            {isHovered && (
+              <>
+                <MuteButton />
+                <CamouflageButton />
+                <LanguageButton />
+                <ThemeButton />
+              </>
+            )}
           </div>
           <div className={styles.rightSideBarToolDraggable}>
             <DraggableHeader />
