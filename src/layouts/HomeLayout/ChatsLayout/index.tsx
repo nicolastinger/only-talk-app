@@ -1,8 +1,10 @@
 import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
+import Search from '@/pages/Home/Chats/components/Search';
 import { useBearStore } from '@/store/store';
 import { ChatSessionVo } from '@/types/backend/vo';
 import { invoke } from '@tauri-apps/api/core';
+import { Splitter } from 'antd';
 import { history, Outlet } from '@umijs/max';
 import React, { useEffect } from 'react';
 import styles from './index.less';
@@ -111,9 +113,16 @@ const ChatsLayout = () => {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.left}>
-        <div className={styles.header}>消息列表</div>
+    <Splitter>
+      <Splitter.Panel
+        min="20%"
+        max="50%"
+        defaultSize="36%"
+        className={styles.left}
+      >
+        <div className={styles.header}>
+          <Search />
+        </div>
         <div className={styles.item} key="chat">
           {chatSessionList.map((item: ChatSessionVo) => {
             return (
@@ -130,11 +139,11 @@ const ChatsLayout = () => {
             );
           })}
         </div>
-      </div>
-      <div className={styles.right}>
+      </Splitter.Panel>
+      <Splitter.Panel className={styles.right}>
         <Outlet />
-      </div>
-    </div>
+      </Splitter.Panel>
+    </Splitter>
   );
 };
 

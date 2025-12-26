@@ -4,6 +4,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
+  background-color: var(--content-list-bg);
   flex-direction: row;
 }
 
@@ -34,11 +35,12 @@
 }
 
 .left {
-  width: 280px;
+  width: auto !important;
+  overflow: hidden;
 }
 
 .right {
-  width: calc(100% - 280px);
+  width: auto !important;
 }
 
 .item {
