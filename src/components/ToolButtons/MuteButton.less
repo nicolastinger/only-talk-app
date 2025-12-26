@@ -1,0 +1,27 @@
+.muteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  font-size: 16px;
+  color: var(--color-gray-10);
+  user-select: none;
+
+  &:hover {
+    background-color: var(--acai-primary);
+    color: var(--color-white-11);
+  }
+
+  &.muted {
+    color: var(--acai-danger);
+  }
+
+  &.muted:hover {
+    background-color: var(--acai-danger);
+    color: var(--color-white-11);
+  }
+}

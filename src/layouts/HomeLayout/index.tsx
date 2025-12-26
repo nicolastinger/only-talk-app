@@ -1,5 +1,7 @@
 import DraggableHeader from '@/components/DraggableHeader';
 import { LeftAside } from '@/components/LeftAside';
+import OnlineStatusSwitch from '@/components/OnlineStatusSwitch';
+import { MuteButton, CamouflageButton, LanguageButton, ThemeButton } from '@/components/ToolButtons';
 import { TALK_API } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { HttpResponse, ResponseData } from '@/types/backend/httpRust';
@@ -30,11 +32,6 @@ const HomeLayout = () => {
     const currentWindow = Window.getCurrent();
     await currentWindow.close();
   };
-
-  //初始化用户信息
-  useEffect(() => {
-    initUserInfo();
-  }, []);
 
   const initUserInfo = async () => {
     // 先从本地缓存获取
@@ -68,6 +65,11 @@ const HomeLayout = () => {
     }
   };
 
+  //初始化用户信息
+  useEffect(() => {
+    initUserInfo();
+  }, []);
+
   return (
     <div className={styles.userHomeContainer}>
       <div className={styles.leftSideBar}>
@@ -75,6 +77,13 @@ const HomeLayout = () => {
       </div>
       <div className={styles.rightSideBar}>
         <div className={styles.rightSideBarTool}>
+          <div className={styles.tools}>
+            <OnlineStatusSwitch />
+            <MuteButton />
+            <CamouflageButton />
+            <LanguageButton />
+            <ThemeButton />
+          </div>
           <div className={styles.rightSideBarToolDraggable}>
             <DraggableHeader />
           </div>
