@@ -6,6 +6,7 @@ mod create_table;
 pub mod init_db;
 pub mod friend_db;
 pub mod session_db;
+pub mod init_common_db;
 
 pub async fn get_db_client() -> Result<sqlx::SqlitePool, anyhow::Error> {
     let pool_guard = GLOBAL_SQL_POOL.read().await;

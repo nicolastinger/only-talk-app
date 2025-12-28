@@ -1,7 +1,9 @@
 import LanguageSwitcher from '@/components/LanguageSwitch';
+import LocalImage from '@/components/LocalImage';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { TALK_API } from '@/constants';
+import { useWindowDrag } from '@/hooks';
 import { HttpResponse, ResponseData } from '@/types/backend/httpRust';
 import { FormattedMessage } from '@@/exports';
 import {
@@ -14,12 +16,10 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
-import { useIntl } from '@umijs/max';
-import { Avatar, Button, Checkbox, Input, message, Modal } from 'antd';
+import { history, useIntl } from '@umijs/max';
+import { Button, Checkbox, Input, message, Modal } from 'antd';
 import React, { useState } from 'react';
 import styles from './index.less';
-import { history } from '@umijs/max';
-import { useWindowDrag } from '@/hooks';
 
 const AVATAR_URL =
   'https://ss2.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=16890549,1598107895&fm=253&gp=0.jpg';
@@ -69,7 +69,11 @@ const LoginPage: React.FC = () => {
           x: 200,
           y: 200,
         };
-        await openNewWindow(intl.formatMessage({ id: 'menu.home' }), webviewOptions, Window.getCurrent());
+        await openNewWindow(
+          intl.formatMessage({ id: 'menu.home' }),
+          webviewOptions,
+          Window.getCurrent(),
+        );
       } else {
         messageApi.error(
           <FormattedMessage id="signIn.errors.invalidCredentials" />,
@@ -133,7 +137,9 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className={styles.avatarContainer}>
-          <Avatar size={80} icon={<UserOutlined />} src={AVATAR_URL} />
+          {/* <Avatar size={80} icon={<UserOutlined />} src={AVATAR_URL} /> */}
+          {/* 自定义尺寸 */}
+          <LocalImage width={100} height={100} />
         </div>
 
         <div className={styles.inputContainer}>

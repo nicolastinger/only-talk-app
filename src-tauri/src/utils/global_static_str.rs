@@ -23,3 +23,5 @@ pub static USER_ADD_FRIEND: &str = "USER_ADD_FRIEND_REQUEST";
 pub static USER_PROCESS_FRIEND: &str = "USER_PROCESS_FRIEND_REQUEST";
 // 本地数据库文件夹
 pub static SQLITE_PATH: &str = "./dbData";
+// 本地资源文件夹
+pub static RESOURCE_PATH: &str = "./resource";

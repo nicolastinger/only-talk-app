@@ -1,13 +1,51 @@
 use sqlx::SqlitePool;
 use crate::GLOBAL_QUIC_USER_INFO;
 
+/// 初始化公共数据库
+pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
+    create_file_local_map_table(pool_sqlite).await?;
+    {
+        // 本地存储初始化成功
+        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+        guard.insert("common_store_init".to_string(), "1".to_string());
+    }
+    Ok(())
+}
+
+/// 创建文件本地映射表
+pub async fn create_file_local_map_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS file_local_map (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id TEXT NOT NULL,
+            file_hash TEXT NOT NULL,
+            created_at INTEGER NOT NULL DEFAULT 0,
+            updated_at INTEGER NOT NULL DEFAULT 0,
+            created_by TEXT NOT NULL DEFAULT '',
+            updated_by TEXT NOT NULL DEFAULT '',
+            status INTEGER NOT NULL DEFAULT 0,
+            file_extension TEXT NOT NULL DEFAULT '',
+            mime_type TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            original_file_name TEXT NOT NULL,
+            original_file_path TEXT NOT NULL,
+            size INTEGER NOT NULL DEFAULT 0,  
+            relative_path TEXT NOT NULL,
+            relative_file_name TEXT NOT NULL,
+            is_del INTEGER NOT NULL DEFAULT 0
+        )"#,
+    )
+        .execute(pool_sqlite)
+        .await?;
+    Ok(())
+}
+
 /// 初始化数据库
 pub async fn init_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
     create_chat_record_table(pool_sqlite).await?;
     create_record_state_table(pool_sqlite).await?;
     create_ack_record_table(pool_sqlite).await?;
     create_chat_session_table(pool_sqlite).await?;
-    create_file_local_map_table(pool_sqlite).await?;
     create_friend_table(pool_sqlite).await?;
     create_system_notification_table(pool_sqlite).await?;
     {
@@ -94,26 +132,6 @@ pub async fn create_chat_session_table(pool_sqlite: &SqlitePool) -> Result<(), a
     Ok(())
 }
 
-
-/// 创建文件本地映射表
-pub async fn create_file_local_map_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
-    sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS file_local_map (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp INTEGER NOT NULL,
-            file_id TEXT NOT NULL,
-            original_file_name TEXT NOT NULL,
-            original_file_path TEXT NOT NULL,
-            file_type INTEGER NOT NULL DEFAULT 0,
-            local_file_path TEXT NOT NULL,
-            local_file_name TEXT NOT NULL,
-            is_deleted INTEGER NOT NULL DEFAULT 0
-        )"#,
-    )
-        .execute(pool_sqlite)
-        .await?;
-    Ok(())
-}
 
 /// 创建用户好友表
 pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {

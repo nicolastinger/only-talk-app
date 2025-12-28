@@ -3,9 +3,8 @@ mod quic_service;
 use crc::Crc;
 use fast_log::Config;
 use lazy_static::lazy_static;
-use log::{info, warn, LevelFilter};
+use log::{info, LevelFilter};
 use std::collections::HashMap;
-use std::net::SocketAddrV6;
 use std::sync::{Arc, OnceLock};
 use sqlx::SqlitePool;
 use tokio::sync::RwLock;
@@ -16,18 +15,16 @@ mod store;
 pub mod utils;
 mod vo;
 mod dto;
+mod init_app;
 mod emit_app;
 
 use crate::cmd::api_controller::{add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_system_notification, get_user_map, mark_read, mark_read_chat_session, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
+use crate::cmd::file_controller::get_local_file;
 use utils::http_utils::{get_request, post_request, sign_in};
 use crate::cmd::auth_controller::{logout, clear_user_info};
-use quic_service::p2p_service::p2p_stream_quic_server::{
-    udp_port_forward_ipv6
-};
-use crate::utils::global_static_str::{UDP_SOCKET_V6};
 use entity::quic_connection::QuicConnection;
-use store::init_db::init_sqlite;
 use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
+use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
@@ -43,6 +40,7 @@ lazy_static! {
         Arc::new(RwLock::new(None));
     pub static ref P2P_STREAM_SENDER: Arc<RwLock<HashMap<String, TargetSendStream>>> = Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
+    pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -57,17 +55,9 @@ pub fn run() {
     .unwrap();
     info!("日志初始化完成");
 
-    // 定义服务器监听地址
+    // 初始化环境
     tokio::spawn(async {
-        let addr_v6 = "[::]:10086";
-        let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>().unwrap();
-        let udp_socket_v6 = UDP_SOCKET_V6.parse::<SocketAddrV6>().unwrap();
-        let addr_json = Vec::new();
-        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json)
-            .await
-            .unwrap_or_else(|x| {
-                warn!("本机不支持ipv6传输 {}", x.to_string());
-            });
+        init_app().await.expect("初始化失败");
     });
 
     tauri::Builder::default()
@@ -100,7 +90,8 @@ pub fn run() {
             get_system_notification,
             update_local_friend_list,
             batch_read_system_notification,
-            mark_read_chat_session
+            mark_read_chat_session,
+            get_local_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
