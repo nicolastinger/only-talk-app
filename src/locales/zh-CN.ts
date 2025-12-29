@@ -3,6 +3,7 @@ export default {
   language: '简体中文',
   'menu.home': '首页',
   'menu.access': '权限演示',
+  'menu.testComponent': '组件测试',
   'menu.table': 'CRUD 示例',
   'welcome.title': '欢迎使用',
   'welcome.desc': '这是一个基于 Umi 的示例项目',

@@ -4,28 +4,33 @@ use crc::Crc;
 use fast_log::Config;
 use lazy_static::lazy_static;
 use log::{info, LevelFilter};
+use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
-use sqlx::SqlitePool;
 use tokio::sync::RwLock;
-mod service;
 mod cmd;
+mod dto;
+mod emit_app;
 mod entity;
+mod init_app;
+mod service;
 mod store;
 pub mod utils;
 mod vo;
-mod dto;
-mod init_app;
-mod emit_app;
 
-use crate::cmd::api_controller::{add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store, get_chat_session_from_store, get_system_notification, get_user_map, mark_read, mark_read_chat_session, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame};
+use crate::cmd::api_controller::{
+    add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store,
+    get_chat_session_from_store, get_system_notification, get_user_map, mark_read,
+    mark_read_chat_session, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg,
+    send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame,
+};
+use crate::cmd::auth_controller::{clear_user_info, logout};
 use crate::cmd::file_controller::get_local_file;
-use utils::http_utils::{get_request, post_request, sign_in};
-use crate::cmd::auth_controller::{logout, clear_user_info};
-use entity::quic_connection::QuicConnection;
 use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
+use entity::quic_connection::QuicConnection;
+use utils::http_utils::{get_request, post_request, sign_in};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 // 创建CRC-16/X25计算器
@@ -38,7 +43,8 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_READ_TASK_HANDLE: Arc<RwLock<Option<tokio::task::JoinHandle<()>>>> =
         Arc::new(RwLock::new(None));
-    pub static ref P2P_STREAM_SENDER: Arc<RwLock<HashMap<String, TargetSendStream>>> = Arc::new(RwLock::new(HashMap::new()));
+    pub static ref P2P_STREAM_SENDER: Arc<RwLock<HashMap<String, TargetSendStream>>> =
+        Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
 }
@@ -61,6 +67,7 @@ pub fn run() {
     });
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
             Ok(())

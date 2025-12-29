@@ -1,6 +1,6 @@
-use log::error;
 use crate::entity::friend::Friend;
 use crate::store::get_db_client;
+use log::error;
 
 /// 获取好友信息表
 pub async fn query_friend_info_db(uuid: &str) -> Result<Vec<Friend>, anyhow::Error> {
@@ -13,13 +13,18 @@ pub async fn query_friend_info_db(uuid: &str) -> Result<Vec<Friend>, anyhow::Err
 }
 
 /// 获取单条好友信息
-pub async fn query_friend_info_by_id_db(uuid: &str, friend_id: &str) -> Result<Friend, anyhow::Error> {
+pub async fn query_friend_info_by_id_db(
+    uuid: &str,
+    friend_id: &str,
+) -> Result<Friend, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, Friend>(r#"select * from friend where me = ?1 and friend_id = ?2 limit 1"#)
-        .bind(uuid)
-        .bind(friend_id)
-        .fetch_one(&pool_sqlite)
-        .await?;
+    let record = sqlx::query_as::<_, Friend>(
+        r#"select * from friend where me = ?1 and friend_id = ?2 limit 1"#,
+    )
+    .bind(uuid)
+    .bind(friend_id)
+    .fetch_one(&pool_sqlite)
+    .await?;
     Ok(record)
 }
 

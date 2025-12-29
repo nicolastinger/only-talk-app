@@ -1,15 +1,18 @@
 use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pMsgType, P2pVideoConfig, UserAddressInfo};
-use crate::entity::text_msg::{TextQuicMsg};
-use crate::utils::http_utils::post;
+use crate::entity::text_msg::TextQuicMsg;
+use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
 use crate::quic_service::p2p_service::p2p_stream_quic_client::run_client;
 use crate::quic_service::p2p_service::p2p_stream_quic_server::{
-    get_user_address_info, run_server, udp_port_forward,
-    udp_port_forward_ipv6,
+    get_user_address_info, run_server, udp_port_forward, udp_port_forward_ipv6,
 };
-use crate::quic_service::center_service::text_msg_service::generate_text_msg;
+use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
+};
+use crate::utils::http_utils::post;
+use crate::utils::message_types::{
+    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use anyhow::anyhow;
@@ -21,8 +24,6 @@ use std::io;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
 use std::time::Duration;
 use tauri::Emitter;
-use crate::service::user_service::get_user_info;
-use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG};
 
 /// 获取10000以上首个可用UDP端口
 pub fn find_available_udp_port(start_port: u16) -> Option<u16> {
@@ -254,8 +255,7 @@ pub async fn send_p2p_video_frame_service(
 
 /// 建立p2p服务端
 pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
-    let target_address_info: UserAddressInfo =
-        serde_json::from_slice(&text_quic_msg.raw)?;
+    let target_address_info: UserAddressInfo = serde_json::from_slice(&text_quic_msg.raw)?;
     // 打开视频窗口
     if let Some(handle) = APP_HANDLE.get() {
         let p2p_msg = P2pMsg {
@@ -268,7 +268,9 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
         info!("收到 {:?}", target_address_info);
         // 开启ipv4服务端
         if target_address_info.ip_type == 1 {
-            run_p2p_serer_v4(target_address_info).await.expect("运行ipv4版本p2p服务端失败");
+            run_p2p_serer_v4(target_address_info)
+                .await
+                .expect("运行ipv4版本p2p服务端失败");
         }
     });
     Ok(())
@@ -282,7 +284,9 @@ pub async fn run_p2p_client(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
         info!("收到2 {:?}", target_address_info);
         // 开启ipv4客户端
         if target_address_info.ip_type == 1 {
-            run_p2p_client_v4(target_address_info).await.expect("创建ipv4版p2p客户失败");
+            run_p2p_client_v4(target_address_info)
+                .await
+                .expect("创建ipv4版p2p客户失败");
         }
     });
     Ok(())
@@ -303,7 +307,7 @@ async fn run_p2p_serer_v4(target_address_info: UserAddressInfo) -> Result<(), an
         target_address_info.address.to_string().parse()?,
         &vec_to,
     )
-        .await?;
+    .await?;
     run_server(addr.parse()?).await?;
     Ok(())
 }
@@ -334,7 +338,10 @@ async fn run_p2p_client_v4(target_address_info: UserAddressInfo) -> Result<(), a
 }
 
 /// 发送p2p视频配置信息，提示对方已就绪
-pub async fn send_p2p_video_config_service(video_config: String, uuid: String)-> Result<(), anyhow::Error> {
+pub async fn send_p2p_video_config_service(
+    video_config: String,
+    uuid: String,
+) -> Result<(), anyhow::Error> {
     info!("开始发送配置信息 {}", uuid);
     let video_config = serde_json::from_str::<P2pVideoConfig>(&video_config)?;
     let video_config_vec = serde_json::to_vec(&video_config)?;
@@ -343,7 +350,7 @@ pub async fn send_p2p_video_config_service(video_config: String, uuid: String)->
         MSG_TYPE_P2P_VIDEO_CONFIG,
         video_config_vec,
         String::new(),
-        me
+        me,
     )?;
     for _ in 0..10 {
         info!("等待p2p连接 {}", uuid);
@@ -354,9 +361,9 @@ pub async fn send_p2p_video_config_service(video_config: String, uuid: String)->
                     let mut guard = sender.try_lock()?;
                     guard.write_all(&p2p_data).await?;
                     return Ok(());
-                },
+                }
                 Err(e) => {
-                    warn!("找不到发送流，等待下一次获取 {}",e.to_string());
+                    warn!("找不到发送流，等待下一次获取 {}", e.to_string());
                 }
             };
         }

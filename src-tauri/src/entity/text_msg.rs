@@ -10,19 +10,19 @@ pub trait TextMsg {
 pub struct HeadMsg {
     pub version: u8,
     pub crc: u16,
-    pub body_len: u32,       // 消息体长度
-    pub message_type: u16,    // 消息类型, 1-好友单聊
+    pub body_len: u32,     // 消息体长度
+    pub message_type: u16, // 消息类型, 1-好友单聊
 }
 
 //文本信息消息体
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextQuicMsg {
     pub nano_id: String,
-    pub text_type: u16,  //消息类型
-    pub raw: Vec<u8>,  //二进制数据
-    pub recv_user: String,  //接收用户
-    pub send_user: String,   //发送用户
-    pub timestamp: i64
+    pub text_type: u16,    //消息类型
+    pub raw: Vec<u8>,      //二进制数据
+    pub recv_user: String, //接收用户
+    pub send_user: String, //发送用户
+    pub timestamp: i64,
 }
 
 impl TextMsg for HeadMsg {

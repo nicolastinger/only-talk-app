@@ -1,14 +1,14 @@
-use log::info;
-use sqlx::sqlite::{SqlitePoolOptions};
-use std::fs;
-use std::fs::File;
-use std::path::{Path};
-use std::sync::Arc;
-use anyhow::anyhow;
 use crate::cmd::api_controller::get_user_map;
-use crate::GLOBAL_SQL_POOL;
 use crate::store::create_table::init_ddl;
 use crate::utils::global_static_str::SQLITE_PATH;
+use crate::GLOBAL_SQL_POOL;
+use anyhow::anyhow;
+use log::info;
+use sqlx::sqlite::SqlitePoolOptions;
+use std::fs;
+use std::fs::File;
+use std::path::Path;
+use std::sync::Arc;
 
 pub async fn init_sqlite() -> Result<(), anyhow::Error> {
     let db_path = get_db_path().await;
@@ -42,7 +42,9 @@ pub async fn init_sqlite() -> Result<(), anyhow::Error> {
 async fn get_db_path() -> String {
     let path_buf = std::env::current_dir().expect("找不到路径");
     info!("当前程序路径 {}", path_buf.display());
-    let account = get_user_map("account".to_string()).await.expect("获取用户信息失败");
+    let account = get_user_map("account".to_string())
+        .await
+        .expect("获取用户信息失败");
     let sqlite_path = Path::new(SQLITE_PATH);
 
     // 检查目录是否存在，不存在则新建

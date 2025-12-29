@@ -1,19 +1,23 @@
 use crate::entity::p2p_models::{P2pInitMsg, P2pVideoData};
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::Page;
-use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
+use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
-use crate::service::chat_service::{create_chat_session_service, get_chat_session_service, send_msg, update_last_read_msg_from_db, update_last_read_msg_service};
+use crate::service::chat_service::{
+    create_chat_session_service, get_chat_session_service, send_msg, update_last_read_msg_from_db,
+    update_last_read_msg_service,
+};
 use crate::service::p2p_service::{
     access_p2p_request, find_available_udp_port, reject_p2p_request,
     send_p2p_init_msg as send_p2p_init_msg_service, send_p2p_video_config_service,
     send_p2p_video_frame_service,
 };
-use crate::service::user_service::{get_user_info};
+use crate::service::user_service::get_user_info;
 use crate::store::chat_record_db::{
-    insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db
+    insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db,
 };
+use crate::store::friend_db::{query_friend_info_by_id_db, query_friend_info_db};
 use crate::utils::global_static_str::UDP_SOCKET;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::ChatSessionVo;
@@ -22,7 +26,6 @@ use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use log::info;
 use std::collections::HashMap;
-use crate::store::friend_db::{query_friend_info_by_id_db, query_friend_info_db};
 
 /// 增加持久化数据
 #[tauri::command]
@@ -193,8 +196,6 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
         .map_err(|e| e.to_string())
 }
 
-
-
 /// 已读当前记录
 #[tauri::command]
 pub async fn mark_read(text_quic_msg_vec: Vec<String>) -> Result<(), String> {
@@ -248,9 +249,7 @@ pub async fn get_system_notification(
 
 /// 已读系统通知信息
 #[tauri::command]
-pub async fn batch_read_system_notification(
-    read_ids: Vec<String>
-) -> Result<i32, String> {
+pub async fn batch_read_system_notification(read_ids: Vec<String>) -> Result<i32, String> {
     let me = get_user_info(&"uuid".to_string())
         .await
         .map_err(|e| e.to_string())?;
@@ -259,5 +258,3 @@ pub async fn batch_read_system_notification(
         .map_err(|e| e.to_string())?;
     Ok(res)
 }
-
-

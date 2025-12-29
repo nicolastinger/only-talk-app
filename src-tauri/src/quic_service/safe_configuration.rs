@@ -1,11 +1,11 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::sync::Arc;
-use std::time::Duration;
 use log::warn;
 use quinn::{ClientConfig, TransportConfig};
 use rustls::{Certificate, RootCertStore};
 use rustls_pemfile::certs;
+use std::fs::File;
+use std::io::BufReader;
+use std::sync::Arc;
+use std::time::Duration;
 use webpki_roots::TLS_SERVER_ROOTS;
 
 /// 中央服务器连接配置证书
@@ -14,15 +14,13 @@ pub fn configure_client() -> ClientConfig {
     let mut root_store = RootCertStore::empty();
 
     // 这将允许客户端验证Let's Encrypt颁发的证书
-    root_store.add_trust_anchors(
-        webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-            rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-                ta.subject.as_ref().to_vec(), 
-                ta.subject_public_key_info.as_ref().to_vec(),
-                ta.name_constraints.as_ref().map(|nc| nc.as_ref().to_vec())
-            )
-        })
-    );
+    root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
+        rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+            ta.subject.as_ref().to_vec(),
+            ta.subject_public_key_info.as_ref().to_vec(),
+            ta.name_constraints.as_ref().map(|nc| nc.as_ref().to_vec()),
+        )
+    }));
 
     // 尝试加载本地证书文件
     match File::open("config/TLS/DigiCertGlobalRootCA.crt.pem") {
@@ -30,7 +28,8 @@ pub fn configure_client() -> ClientConfig {
             let mut cert_file_reader = BufReader::new(cert_file);
             let ca_certs: Vec<Certificate> = certs(&mut cert_file_reader)
                 .map(|certs| certs.into_iter().map(Certificate).collect())
-                .map_err(|_| "无法解析证书文件").expect("解析失败");
+                .map_err(|_| "无法解析证书文件")
+                .expect("解析失败");
 
             // 添加CA证书到根证书存储
             for cert in ca_certs {
@@ -41,15 +40,13 @@ pub fn configure_client() -> ClientConfig {
             // 如果本地证书文件不存在，则使用系统默认根证书
             warn!("无法找到本地证书文件，使用系统默认根证书");
             root_store = RootCertStore::empty();
-            root_store.roots.extend(
-                TLS_SERVER_ROOTS.iter().map(|ta| {
-                    rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-                        ta.subject.as_ref(),
-                        ta.subject_public_key_info.as_ref(),
-                        ta.name_constraints.as_ref().map(|nc| nc.as_ref()),
-                    )
-                })
-            );
+            root_store.roots.extend(TLS_SERVER_ROOTS.iter().map(|ta| {
+                rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+                    ta.subject.as_ref(),
+                    ta.subject_public_key_info.as_ref(),
+                    ta.name_constraints.as_ref().map(|nc| nc.as_ref()),
+                )
+            }));
         }
     }
 

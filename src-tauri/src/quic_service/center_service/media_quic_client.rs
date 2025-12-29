@@ -1,9 +1,9 @@
+use crate::quic_service::safe_configuration::configure_client;
 use log::{error, info};
-use quinn::{Endpoint};
+use quinn::Endpoint;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::{Mutex};
-use crate::quic_service::safe_configuration::configure_client;
+use tokio::sync::Mutex;
 
 /// 媒体流客户端
 pub async fn run_video_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
@@ -13,9 +13,7 @@ pub async fn run_video_client(server_addr: SocketAddr) -> Result<(), anyhow::Err
     // 设置默认客户端配置
     endpoint.set_default_client_config(configure_client());
     // 尝试连接到服务器
-    let connection = endpoint
-        .connect(server_addr, "onlytalk.local")?
-        .await?;
+    let connection = endpoint.connect(server_addr, "onlytalk.local")?.await?;
     // 打印连接成功的服务器地址
     info!("[client] connected: addr={}", connection.remote_address());
 
@@ -30,9 +28,7 @@ pub async fn run_video_client(server_addr: SocketAddr) -> Result<(), anyhow::Err
         let mut buffer = vec![0u8; 1024 * 8];
         loop {
             match _recv_stream.read(&mut buffer).await {
-                Ok(Some(length)) => {
-
-                }
+                Ok(Some(length)) => {}
                 Ok(None) => {
                     info!("[客户端]没有接收到数据");
                     break;

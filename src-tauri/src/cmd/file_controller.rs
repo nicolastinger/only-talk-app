@@ -1,27 +1,26 @@
+use crate::vo::file_vo::FileVo;
 use std::fs;
 use std::path::Path;
-use crate::vo::file_vo::FileVo;
 
 /// 增加持久化数据
 #[tauri::command]
 pub async fn get_local_file() -> Result<FileVo, String> {
     let resource_path = Path::new("./resource/default.jpg");
-    
+
     if !resource_path.exists() {
         return Err("文件不存在".to_string());
     }
-    
-    let metadata = fs::metadata(resource_path)
-        .map_err(|e| format!("读取文件元数据失败: {}", e))?;
-    
-    let file_name = resource_path.file_name()
+
+    let metadata = fs::metadata(resource_path).map_err(|e| format!("读取文件元数据失败: {}", e))?;
+
+    let file_name = resource_path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("11111.jpg")
         .to_string();
-    
-    let file_content = fs::read(resource_path)
-        .map_err(|e| format!("读取文件内容失败: {}", e))?;
-    
+
+    let file_content = fs::read(resource_path).map_err(|e| format!("读取文件内容失败: {}", e))?;
+
     let file_vo = FileVo {
         file_id: None,
         size: Some(metadata.len()),
@@ -41,6 +40,6 @@ pub async fn get_local_file() -> Result<FileVo, String> {
         raw: Some(file_content),
         is_del: Some(0),
     };
-    
+
     Ok(file_vo)
 }

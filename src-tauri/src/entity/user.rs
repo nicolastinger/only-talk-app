@@ -1,8 +1,8 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SignInResult {
     pub code: u16,
     pub data: String,
-    pub message: String        
+    pub message: String,
 }

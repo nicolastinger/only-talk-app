@@ -9,7 +9,7 @@ pub struct P2pInitMsg {
     // 请求人uuid
     pub request_uuid: String,
     // 请求人token
-    pub request_token:  String,
+    pub request_token: String,
     // 接收人uuid
     pub accept_uuid: String,
     // 是否接受
@@ -19,7 +19,7 @@ pub struct P2pInitMsg {
     // 步骤,0-未处理，1-已拒绝，2-已接受，3-交换ip
     pub step: u8,
     // 是否作为服务端
-    pub is_server: bool
+    pub is_server: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ pub struct UserAddressInfo {
     pub nat_type: u8,
     pub is_server: bool,
     pub lock_uuid: String,
-    pub is_lock: bool
+    pub is_lock: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -60,8 +60,7 @@ pub struct P2pVideoConfig {
 }
 
 // 前端通信
-#[derive(Debug, Serialize, Deserialize)]
-#[derive(Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct P2pMsg {
     // 消息类型
     pub r#type: u16,
@@ -72,7 +71,7 @@ pub struct P2pMsg {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum P2pMsgType {
     // 接收到p2p请求
-    P2pRequest = 102,  
+    P2pRequest = 102,
     // 同意p2p请求
     AcceptRequest = 103,
     // 拒绝p2p请求

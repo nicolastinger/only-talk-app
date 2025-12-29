@@ -1,23 +1,25 @@
-use std::collections::HashMap;
-use std::sync::{Arc};
-use std::time::Duration;
+use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData};
+use crate::entity::quic_connection::ConnectionType;
+use crate::entity::text_msg::TextQuicMsg;
+use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
+use crate::service::user_service::insert_user_info;
+use crate::utils::global_static_str::{PING, SYSTEM};
+use crate::utils::message_types::{
+    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
+    MSG_TYPE_PING, MSG_TYPE_TEXT,
+};
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 use anyhow::anyhow;
 use lazy_static::lazy_static;
 use log::{info, warn};
 use quinn::SendStream;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
 use tauri::Emitter;
 use tokio::io::AsyncReadExt;
-use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio::sync::mpsc::Sender;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
-use crate::service::user_service::insert_user_info;
-use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData};
-use crate::entity::quic_connection::ConnectionType;
-use crate::entity::text_msg::{TextQuicMsg};
-use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
-use crate::utils::global_static_str::{PING, SYSTEM};
-use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING, MSG_TYPE_TEXT};
-
+use tokio::sync::{mpsc, Mutex, RwLock};
 
 /// 传输的视频帧
 lazy_static! {
@@ -55,7 +57,6 @@ pub async fn get_sender(target_uuid: &str) -> Result<Arc<Mutex<SendStream>>, any
     };
     Ok(sender)
 }
-
 
 pub async fn process_rec_msg(
     buffer: &mut Vec<u8>,
@@ -95,19 +96,19 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                         handle.emit("video_frame", msg.raw)?;
                     }
                 }
-            },
+            }
             MSG_TYPE_P2P_VIDEO_DATA => {
                 if let Some(handle) = APP_HANDLE.get() {
                     handle.emit("video_frame", msg.raw)?;
                 }
-            },
+            }
             MSG_TYPE_P2P_VIDEO_CONFIG => {
                 info!("接收到p2p视频配置信息 {:?}", msg);
                 let key = format!("p2p_video_config_{}", msg.send_user);
                 let video_config = serde_json::from_slice::<P2pVideoConfig>(&msg.raw)?;
                 let video_str = serde_json::to_string(&video_config)?;
                 insert_user_info(&key, &video_str).await?;
-            },
+            }
             MSG_TYPE_PING => {
                 info!("接收到p2p的ping消息 {:?}", msg);
             }
@@ -134,8 +135,9 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, uuid: String) {
                 MSG_TYPE_PING,
                 PING.as_bytes().to_vec(),
                 SYSTEM.to_string(),
-                me
-            ).expect("");
+                me,
+            )
+            .expect("");
             {
                 let mut send_stream = send_stream_ping.lock().await;
                 send_stream.write_all(&ping_msg).await.unwrap();

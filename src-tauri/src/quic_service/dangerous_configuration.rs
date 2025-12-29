@@ -1,8 +1,8 @@
 use quinn::{ServerConfig, TransportConfig};
+use rcgen;
 use rustls::{Certificate, PrivateKey, ServerConfig as RustlsServerConfig};
 use std::sync::Arc;
 use std::time::Duration;
-use rcgen;
 
 pub fn configure_server() -> ServerConfig {
     // 创建一个不安全的 TLS 配置
@@ -17,15 +17,12 @@ pub fn configure_server() -> ServerConfig {
 
     // 使用自签名证书
     let crypto = crypto
-        .with_single_cert(
-            vec![Certificate(cert_der)],
-            PrivateKey(key_der)
-        )
+        .with_single_cert(vec![Certificate(cert_der)], PrivateKey(key_der))
         .unwrap();
 
     // 创建 QUIC 服务端配置
     let mut config = ServerConfig::with_crypto(Arc::new(crypto));
-    
+
     // 配置传输参数
     let mut transport_config = TransportConfig::default();
     transport_config.max_concurrent_uni_streams(0_u8.into()); // 设置最大并发单向流数量

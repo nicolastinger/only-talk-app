@@ -5,5 +5,5 @@ use serde_json::Value;
 pub struct Response {
     pub code: i32,
     pub message: String,
-    pub data: Option<Value>
+    pub data: Option<Value>,
 }

@@ -1,5 +1,5 @@
 use crate::service::friend_service::update_friend_list;
-use crate::service::user_service::{get_user_info};
+use crate::service::user_service::get_user_info;
 use crate::store::friend_db::{query_friend_info_by_id_db, query_friend_info_db};
 use crate::vo::friend_vo::FriendVo;
 

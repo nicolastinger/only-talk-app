@@ -5,7 +5,7 @@ const routes = [
     routes: [
       {
         path: '/',
-        redirect: '/signIn',
+        redirect: '/testComponent',
       },
       {
         name: 'menu.fakeHome',
@@ -95,6 +95,11 @@ const routes = [
         name: 'menu.signUp',
         path: '/signUp',
         component: './Sign/SignUp',
+      },
+      {
+        name: 'menu.testComponent',
+        path: '/testComponent',
+        component: './TestComponent',
       }
     ],
   },

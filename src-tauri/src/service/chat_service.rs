@@ -1,35 +1,43 @@
-use std::sync::Arc;
-use anyhow::anyhow;
-use log::{error, info};
-use quinn::SendStream;
-use tauri::Emitter;
-use tokio::sync::RwLock;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
 use crate::cmd::api_controller::get_user_map;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
-use crate::store::chat_record_db::{query_chat_record_count_by_friend_db, query_last_chat_record, update_last_read_msg};
-use crate::store::session_db::{query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db, update_chat_session_local_db};
+use crate::store::chat_record_db::{
+    query_chat_record_count_by_friend_db, query_last_chat_record, update_last_read_msg,
+};
+use crate::store::session_db::{
+    query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db,
+    update_chat_session_local_db,
+};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
+use anyhow::anyhow;
+use log::{error, info};
+use quinn::SendStream;
+use std::sync::Arc;
+use tauri::Emitter;
+use tokio::sync::RwLock;
 
 /// 获取会话列表
 pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
-    let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
+    let uuid = GLOBAL_QUIC_USER_INFO
+        .read()
+        .await
+        .get("uuid")
+        .cloned()
+        .ok_or(anyhow!("获取失败"))?;
     Ok(query_chat_session_db(&uuid).await?)
 }
 
-
 /// 本地清空已读消息计数
-pub async fn clear_chat_session(chat_session: ChatSession)-> Result<(), anyhow::Error>{
+pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow::Error> {
     update_chat_session_local_db(&chat_session).await?;
 
     //发送会话消息给前端
     let chat_session_event = ChatSessionEvent {
         r#type: 0,
-        data: ChatSessionVo::from(chat_session)?
+        data: ChatSessionVo::from(chat_session)?,
     };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
@@ -46,17 +54,15 @@ pub async fn send_msg(
     text_msg: Vec<u8>,
     send_stream: Arc<RwLock<SendStream>>,
 ) -> Result<String, anyhow::Error> {
-    send_stream
-        .write()
-        .await
-        .write_all(&text_msg)
-        .await?;
+    send_stream.write().await.write_all(&text_msg).await?;
     Ok("success".to_string())
 }
 
 /// 已读目标用户的所有聊天消息
 pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), anyhow::Error> {
-    let me = get_user_map("uuid".to_string()).await.map_err(|e| anyhow!(e))?;
+    let me = get_user_map("uuid".to_string())
+        .await
+        .map_err(|e| anyhow!(e))?;
     // 获取目标用户最新一条聊天消息
     let last_msg = query_last_chat_record(&me, &friend_uuid).await?;
     if last_msg.is_none() {
@@ -85,9 +91,12 @@ pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), any
         }
     };
 
-    info!("最新聊天消息: {}，最新会话消息: {}", last_msg.nano_id, last_chat_session.nano_id);
+    info!(
+        "最新聊天消息: {}，最新会话消息: {}",
+        last_msg.nano_id, last_chat_session.nano_id
+    );
     // 如果会话已存在，则不处理
-    if last_chat_session.nano_id == last_msg.nano_id && last_chat_session.unread_count == 0{
+    if last_chat_session.nano_id == last_msg.nano_id && last_chat_session.unread_count == 0 {
         return Ok(());
     }
     //发送会话消息给前端
@@ -109,21 +118,26 @@ pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), any
 }
 
 /// 更新已读消息
-pub async fn update_last_read_msg_from_db(last_msg_vec: Vec<TextQuicMsgVo>) -> Result<(), anyhow::Error> {
-    let uuid = get_user_map("uuid".to_string()).await.map_err(|e| anyhow!(e))?;
+pub async fn update_last_read_msg_from_db(
+    last_msg_vec: Vec<TextQuicMsgVo>,
+) -> Result<(), anyhow::Error> {
+    let uuid = get_user_map("uuid".to_string())
+        .await
+        .map_err(|e| anyhow!(e))?;
     // 遍历更新，根据发送端和接收时间进行判断去重
     // 使用HashMap去重，key为(发送者, 接收者)，value为最新的消息
-    let mut unique_msgs: std::collections::HashMap<(String, String), TextQuicMsgVo> = std::collections::HashMap::new();
-    
+    let mut unique_msgs: std::collections::HashMap<(String, String), TextQuicMsgVo> =
+        std::collections::HashMap::new();
+
     for item in last_msg_vec {
         let key = (
-            match item.send_user == uuid { 
+            match item.send_user == uuid {
                 true => item.recv_user.clone(),
-                false => item.send_user.clone()
+                false => item.send_user.clone(),
             },
-            uuid.clone()
+            uuid.clone(),
         );
-        
+
         // 如果已经存在这个发送者-接收者的组合，只保留时间戳更新的
         if let Some(existing_item) = unique_msgs.get(&key) {
             if item.timestamp > existing_item.timestamp {
@@ -133,7 +147,7 @@ pub async fn update_last_read_msg_from_db(last_msg_vec: Vec<TextQuicMsgVo>) -> R
             unique_msgs.insert(key, item);
         }
     }
-    
+
     // 遍历去重后的消息进行处理
     for (_, item) in unique_msgs {
         let chat_record_read = ChatRecordRead {
@@ -141,13 +155,13 @@ pub async fn update_last_read_msg_from_db(last_msg_vec: Vec<TextQuicMsgVo>) -> R
             nano_id: item.nano_id.clone(),
             timestamp: item.timestamp,
             recv_user: uuid.clone(),
-            send_user: match item.send_user == uuid { 
+            send_user: match item.send_user == uuid {
                 true => item.recv_user.clone(),
-                false => item.send_user.clone()
+                false => item.send_user.clone(),
             },
         };
         update_last_read_msg(&chat_record_read).await?;
-        
+
         //发送会话消息给前端
         let chat_session = ChatSession {
             id: 0,
@@ -170,7 +184,9 @@ pub async fn update_last_read_msg_from_db(last_msg_vec: Vec<TextQuicMsgVo>) -> R
 /// 创建会话窗口
 pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyhow::Error> {
     // 获取当前用户
-    let me = get_user_map("uuid".to_string()).await.map_err(|e| anyhow!(e))?;
+    let me = get_user_map("uuid".to_string())
+        .await
+        .map_err(|e| anyhow!(e))?;
 
     // 查询聊天记录
     let chat_record_count = query_chat_record_count_by_friend_db(&me, &friend_uuid).await?;

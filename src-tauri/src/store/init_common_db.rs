@@ -1,13 +1,13 @@
+use crate::store::create_table::init_common_ddl;
+use crate::utils::global_static_str::SQLITE_PATH;
+use crate::GLOBAL_COMMON_SQL_POOL;
+use anyhow::anyhow;
 use log::info;
-use sqlx::sqlite::{SqlitePoolOptions};
+use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
 use std::fs::File;
-use std::path::{Path};
+use std::path::Path;
 use std::sync::Arc;
-use anyhow::anyhow;
-use crate::GLOBAL_COMMON_SQL_POOL;
-use crate::store::create_table::{init_common_ddl};
-use crate::utils::global_static_str::SQLITE_PATH;
 
 pub async fn init_common_sqlite() -> Result<(), anyhow::Error> {
     let db_path = get_db_path().await;

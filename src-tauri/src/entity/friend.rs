@@ -18,5 +18,5 @@ pub struct Friend {
     pub is_mute: i32,
     pub is_top: i32,
     pub is_show: i32,
-    pub version: i32
+    pub version: i32,
 }

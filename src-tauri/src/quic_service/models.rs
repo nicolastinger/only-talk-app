@@ -1,5 +1,5 @@
-use std::sync::{Arc};
 use quinn::SendStream;
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub struct TargetSendStream {

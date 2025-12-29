@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-pub mod quic_connection;
-pub mod text_msg;
-pub mod user;
-pub(crate) mod p2p_models;
+pub mod chat_record_read;
 pub mod chat_session;
 pub mod friend;
-pub mod chat_record_read;
+pub(crate) mod p2p_models;
+pub mod quic_connection;
 pub mod system_notification;
+pub mod text_msg;
+pub mod user;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {

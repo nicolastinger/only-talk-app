@@ -16,6 +16,9 @@
     "core:webview:allow-create-webview-window",
     "core:window:allow-close",
     "core:event:allow-listen",
-    "core:event:default"
+    "core:event:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save"
   ]
 }

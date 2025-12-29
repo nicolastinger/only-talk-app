@@ -1,16 +1,16 @@
+use crate::entity::text_msg::TextQuicMsg;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use crate::entity::text_msg::TextQuicMsg;
 
 //文本信息消息体
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct TextQuicMsgVo {
     pub nano_id: String,
-    pub text_type: u16,  //消息类型
-    pub raw: String,  //数据
-    pub recv_user: String,  //接收用户
-    pub send_user: String,   //发送用户
-    pub timestamp: i64
+    pub text_type: u16,    //消息类型
+    pub raw: String,       //数据
+    pub recv_user: String, //接收用户
+    pub send_user: String, //发送用户
+    pub timestamp: i64,
 }
 
 impl TextQuicMsgVo {
@@ -22,7 +22,7 @@ impl TextQuicMsgVo {
             raw,
             recv_user: text_quic_msg.recv_user,
             send_user: text_quic_msg.send_user,
-            timestamp: text_quic_msg.timestamp
+            timestamp: text_quic_msg.timestamp,
         })
     }
 

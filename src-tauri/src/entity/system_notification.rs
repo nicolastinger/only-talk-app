@@ -85,26 +85,29 @@ impl SystemNotification {
             return Ok(0);
         }
         let pool_sqlite = get_db_client().await?;
-        
+
         // 构建 IN 查询的占位符
         let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
         let placeholders_str = placeholders.join(",");
-        
+
         // 更新未读的系统消息为已读，并返回更新的行数
         let query_str = format!(
             "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND biz_id IN ({}) AND is_read = 0",
             placeholders_str
         );
-        
+
         let mut query = sqlx::query(&query_str).bind(user_id);
         for id in &ids {
             query = query.bind(id);
         }
-        
+
         let result = query.execute(&pool_sqlite).await?;
         let effect_row = result.rows_affected() as i32;
 
-        info!("批量已读系统通知完成，user_id: {}, effect_row: {}", user_id, effect_row);
+        info!(
+            "批量已读系统通知完成，user_id: {}, effect_row: {}",
+            user_id, effect_row
+        );
 
         Ok(effect_row)
     }

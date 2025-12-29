@@ -1,8 +1,8 @@
-use log::{error, info};
 use crate::entity::chat_session::ChatSession;
 use crate::service::user_service::get_user_info;
 use crate::store::get_db_client;
 use crate::vo::chat_session_vo::ChatSessionVo;
+use log::{error, info};
 
 /// 会话消息更新
 pub async fn update_chat_session_db(chat_session: &ChatSession) -> Result<(), anyhow::Error> {
@@ -10,7 +10,7 @@ pub async fn update_chat_session_db(chat_session: &ChatSession) -> Result<(), an
     let me = get_user_info(&"uuid".to_string()).await?;
     let send_user = match chat_session.send_user == me {
         true => chat_session.recv_user.clone(),
-        false => chat_session.send_user.clone()
+        false => chat_session.send_user.clone(),
     };
     // 执行更新
     let res = sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = unread_count + ?4, last_message = ?5 WHERE send_user = ?6 and recv_user = ?7"#)
@@ -51,7 +51,7 @@ pub async fn update_chat_session_local_db(chat_session: &ChatSession) -> Result<
     let me = get_user_info(&"uuid".to_string()).await?;
     let send_user = match chat_session.send_user == me {
         true => chat_session.recv_user.clone(),
-        false => chat_session.send_user.clone()
+        false => chat_session.send_user.clone(),
     };
     let pool_sqlite = get_db_client().await?;
     // 执行更新
@@ -73,23 +73,30 @@ pub async fn update_chat_session_local_db(chat_session: &ChatSession) -> Result<
 /// 获取会话列表
 pub async fn query_chat_session_db(uuid: &str) -> Result<Vec<ChatSessionVo>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, ChatSessionVo>(r#"select cs.*, fr.friend_icon, fr.friend_name from chat_session cs left join
+    let record = sqlx::query_as::<_, ChatSessionVo>(
+        r#"select cs.*, fr.friend_icon, fr.friend_name from chat_session cs left join
 (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
 on cs.send_user = fr.friend_id
-where cs.recv_user = ?1"#)
-        .bind(uuid)
-        .fetch_all(&pool_sqlite)
-        .await?;
+where cs.recv_user = ?1"#,
+    )
+    .bind(uuid)
+    .fetch_all(&pool_sqlite)
+    .await?;
     Ok(record)
 }
 
 /// 获取跟目标用户的会话信息
-pub async fn query_chat_session_by_user_db(uuid: &str, target_uuid: &str) -> Result<Vec<ChatSession>, anyhow::Error> {
+pub async fn query_chat_session_by_user_db(
+    uuid: &str,
+    target_uuid: &str,
+) -> Result<Vec<ChatSession>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let record = sqlx::query_as::<_, ChatSession>(r#"select * from chat_session where send_user = ?1 and recv_user = ?2"#)
-        .bind(target_uuid)
-        .bind(uuid)
-        .fetch_all(&pool_sqlite)
-        .await?;
+    let record = sqlx::query_as::<_, ChatSession>(
+        r#"select * from chat_session where send_user = ?1 and recv_user = ?2"#,
+    )
+    .bind(target_uuid)
+    .bind(uuid)
+    .fetch_all(&pool_sqlite)
+    .await?;
     Ok(record)
 }

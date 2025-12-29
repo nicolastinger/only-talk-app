@@ -1,18 +1,18 @@
+use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
+use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
+use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
+use crate::quic_service::safe_configuration::configure_client;
+use crate::utils::global_static_str::{PING, SYSTEM};
+use crate::utils::message_types::MSG_TYPE_PING;
 use crate::utils::time::get_now_time_stamp_as_millis;
+use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use anyhow::anyhow;
 use log::{error, info, warn};
 use quinn::{Endpoint, SendStream};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use anyhow::anyhow;
 use tokio::sync::{Mutex, RwLock};
-use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
-use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
-use crate::quic_service::safe_configuration::configure_client;
-use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
-use crate::utils::global_static_str::{PING, SYSTEM};
-use crate::utils::message_types::MSG_TYPE_PING;
 // 客户端异步函数，尝试与服务器建立QUIC连接，文字信息连接
 pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     // 创建客户端端点
@@ -22,9 +22,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
 
     info!("尝试连接到服务器");
     // 尝试连接到服务器
-    let connection = endpoint
-        .connect(server_addr, "onlytalk.local")?
-        .await?;
+    let connection = endpoint.connect(server_addr, "onlytalk.local")?.await?;
     info!("[client] connected: addr={}", connection.remote_address()); // 打印连接成功的服务器地址
 
     // 开启一个双向流
@@ -38,7 +36,15 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
         loop {
             match _recv_stream.read(&mut buffer).await {
                 Ok(Some(length)) => {
-                    match process_rec_msg(&mut buffer, length, &ConnectionType::Text,buffer_msg.clone(), head_length).await {
+                    match process_rec_msg(
+                        &mut buffer,
+                        length,
+                        &ConnectionType::Text,
+                        buffer_msg.clone(),
+                        head_length,
+                    )
+                    .await
+                    {
                         Ok(_) => {}
                         Err(e) => {
                             error!("处理连接数据失败 {} {}", e.to_string(), e.backtrace());
@@ -71,8 +77,18 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
 async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error> {
     // 发送消息给服务器
     let mut first_quic_msg = FirstQuicMsg::new();
-    let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").ok_or(anyhow!("uuid为空"))?.clone();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").ok_or(anyhow!("token为空"))?.clone();
+    let uuid = GLOBAL_QUIC_USER_INFO
+        .read()
+        .await
+        .get("uuid")
+        .ok_or(anyhow!("uuid为空"))?
+        .clone();
+    let token = GLOBAL_QUIC_USER_INFO
+        .read()
+        .await
+        .get("token")
+        .ok_or(anyhow!("token为空"))?
+        .clone();
     first_quic_msg.dyn_header_size = 9;
     first_quic_msg.uuid = uuid;
     first_quic_msg.text_serde_struct = "user_chat_json".to_string();
@@ -81,7 +97,7 @@ async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error>
         .write_all(serde_json::to_string(&first_quic_msg)?.as_bytes())
         .await?;
 
-    tokio::time::sleep(Duration::from_secs(1)).await;  //初始化一秒，防止连发元数据
+    tokio::time::sleep(Duration::from_secs(1)).await; //初始化一秒，防止连发元数据
 
     let send_stream = Arc::new(RwLock::new(send_stream));
 
@@ -119,18 +135,19 @@ fn send_ping_msg(send_stream_ping: Arc<RwLock<SendStream>>) {
             let me = me.get("uuid");
             let sender = match me {
                 None => "".to_string(),
-                Some(v) => v.clone()
+                Some(v) => v.clone(),
             };
             let ping_msg = generate_text_msg(
                 MSG_TYPE_PING,
                 PING.as_bytes().to_vec(),
                 SYSTEM.to_string(),
-                sender
-            ).expect("");
+                sender,
+            )
+            .expect("");
             match send_stream_ping.write().await.write_all(&ping_msg).await {
                 Ok(_) => {
                     info!("发送成功");
-                },
+                }
                 Err(e) => {
                     error!("发送心跳失败 {}", e);
                 }
@@ -144,8 +161,8 @@ async fn process_rec_msg(
     length: usize,
     msg_type: &ConnectionType,
     buffer_msg: Arc<Mutex<Vec<u8>>>,
-    head_length: usize
-) -> anyhow::Result<()>{
+    head_length: usize,
+) -> anyhow::Result<()> {
     match msg_type {
         ConnectionType::Text => {
             let text_vec = get_text_msg(buffer, length, buffer_msg, head_length).await?;
@@ -162,6 +179,3 @@ async fn process_rec_msg(
     }
     Ok(())
 }
-
-
-

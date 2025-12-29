@@ -1,5 +1,5 @@
-use sqlx::SqlitePool;
 use crate::GLOBAL_QUIC_USER_INFO;
+use sqlx::SqlitePool;
 
 /// 初始化公共数据库
 pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
@@ -35,8 +35,8 @@ pub async fn create_file_local_map_table(pool_sqlite: &SqlitePool) -> Result<(),
             is_del INTEGER NOT NULL DEFAULT 0
         )"#,
     )
-        .execute(pool_sqlite)
-        .await?;
+    .execute(pool_sqlite)
+    .await?;
     Ok(())
 }
 
@@ -104,8 +104,8 @@ pub async fn create_ack_record_table(pool_sqlite: &SqlitePool) -> Result<(), any
             text_type INTEGER NOT NULL DEFAULT 0
         )"#,
     )
-        .execute(pool_sqlite)
-        .await?;
+    .execute(pool_sqlite)
+    .await?;
     Ok(())
 }
 
@@ -127,11 +127,10 @@ pub async fn create_chat_session_table(pool_sqlite: &SqlitePool) -> Result<(), a
             UNIQUE(send_user, recv_user)
         )"#,
     )
-        .execute(pool_sqlite)
-        .await?;
+    .execute(pool_sqlite)
+    .await?;
     Ok(())
 }
-
 
 /// 创建用户好友表
 pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
@@ -156,13 +155,15 @@ pub async fn create_friend_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow:
             UNIQUE(friend_id, me)
         )"#,
     )
-        .execute(pool_sqlite)
-        .await?;
+    .execute(pool_sqlite)
+    .await?;
     Ok(())
 }
 
 /// 创建系统通知消息表
-pub async fn create_system_notification_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
+pub async fn create_system_notification_table(
+    pool_sqlite: &SqlitePool,
+) -> Result<(), anyhow::Error> {
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS system_notification (
             id TEXT PRIMARY KEY,
@@ -181,21 +182,21 @@ pub async fn create_system_notification_table(pool_sqlite: &SqlitePool) -> Resul
             priority INTEGER NOT NULL DEFAULT 0
         )"#,
     )
-        .execute(pool_sqlite)
-        .await?;
-        
+    .execute(pool_sqlite)
+    .await?;
+
     // 创建索引
     sqlx::query(
         r#"CREATE INDEX IF NOT EXISTS idx_system_notification_user_id_created_at ON system_notification(user_id, created_at)"#
     )
     .execute(pool_sqlite)
     .await?;
-    
+
     sqlx::query(
         r#"CREATE INDEX IF NOT EXISTS idx_system_notification_is_read ON system_notification(is_read)"#
     )
     .execute(pool_sqlite)
     .await?;
-    
+
     Ok(())
 }

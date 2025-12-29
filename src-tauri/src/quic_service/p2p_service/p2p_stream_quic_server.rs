@@ -1,21 +1,25 @@
-use log::{error, info, warn};
-use quinn::{Endpoint};
-use std::net::{SocketAddr, SocketAddrV6, UdpSocket};
-use std::sync::{Arc};
-use tauri::Emitter;
-use tokio::sync::{Mutex};
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
-use crate::quic_service::dangerous_configuration::configure_server;
-use anyhow::anyhow;
-use crate::service::user_service::insert_user_info;
 use crate::entity::p2p_models::{P2pVideoConfig, UserAddressInfo};
 use crate::entity::quic_connection::ConnectionType;
-use crate::entity::text_msg::{TextQuicMsg};
+use crate::entity::text_msg::TextQuicMsg;
+use crate::quic_service::center_service::text_msg_service::get_text_msg;
+use crate::quic_service::dangerous_configuration::configure_server;
 use crate::quic_service::models::TargetSendStream;
 use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg};
-use crate::quic_service::center_service::text_msg_service::get_text_msg;
+use crate::service::user_service::insert_user_info;
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
+use anyhow::anyhow;
+use log::{error, info, warn};
+use quinn::Endpoint;
+use std::net::{SocketAddr, SocketAddrV6, UdpSocket};
+use std::sync::Arc;
+use tauri::Emitter;
+use tokio::sync::Mutex;
 
-pub async fn udp_port_forward(local: SocketAddr, remote: SocketAddr, raw: &Vec<u8>) -> Result<(), std::io::Error> {
+pub async fn udp_port_forward(
+    local: SocketAddr,
+    remote: SocketAddr,
+    raw: &Vec<u8>,
+) -> Result<(), std::io::Error> {
     // 创建 UDP 套接字，绑定随机本地端口
     {
         let socket = UdpSocket::bind(local)?;
@@ -27,7 +31,11 @@ pub async fn udp_port_forward(local: SocketAddr, remote: SocketAddr, raw: &Vec<u
     Ok(())
 }
 
-pub async fn udp_port_forward_ipv6(local: SocketAddrV6, remote: SocketAddrV6, raw: &Vec<u8>) -> Result<(), std::io::Error> {
+pub async fn udp_port_forward_ipv6(
+    local: SocketAddrV6,
+    remote: SocketAddrV6,
+    raw: &Vec<u8>,
+) -> Result<(), std::io::Error> {
     // 创建 UDP 套接字，绑定随机本地端口
     let socket = UdpSocket::bind(local)?;
 
@@ -38,11 +46,17 @@ pub async fn udp_port_forward_ipv6(local: SocketAddrV6, remote: SocketAddrV6, ra
     Ok(())
 }
 
-pub async fn get_user_address_info(local: String, token: String) -> Result<UserAddressInfo, anyhow::Error> {
+pub async fn get_user_address_info(
+    local: String,
+    token: String,
+) -> Result<UserAddressInfo, anyhow::Error> {
     let empty_token = "".to_string();
     let (uuid, target_uuid) = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let target_uuid = guard.get("target_uuid").unwrap_or_else(|| &empty_token).clone();
+        let target_uuid = guard
+            .get("target_uuid")
+            .unwrap_or_else(|| &empty_token)
+            .clone();
         let uuid = guard.get("uuid").unwrap_or_else(|| &empty_token).clone();
         (uuid, target_uuid)
     };
@@ -60,12 +74,20 @@ pub async fn get_user_address_info(local: String, token: String) -> Result<UserA
     Ok(user_address_info)
 }
 
-pub async fn udp_p2p_port_forward(local: SocketAddr, remote: SocketAddr) -> Result<(), std::io::Error> {
+pub async fn udp_p2p_port_forward(
+    local: SocketAddr,
+    remote: SocketAddr,
+) -> Result<(), std::io::Error> {
     // 创建 UDP 套接字，绑定随机本地端口
     let socket = UdpSocket::bind(local)?;
 
     let empty_token = "ping".to_string();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").unwrap_or_else(|| &empty_token).clone();
+    let token = GLOBAL_QUIC_USER_INFO
+        .read()
+        .await
+        .get("uuid")
+        .unwrap_or_else(|| &empty_token)
+        .clone();
     // 发送 UDP 数据（发送 "ping" 字符串）
     info!("发送ping信息 {}", remote);
     socket.send_to(token.as_bytes(), remote)?;
@@ -75,10 +97,7 @@ pub async fn udp_p2p_port_forward(local: SocketAddr, remote: SocketAddr) -> Resu
 
 pub async fn run_server(addr: SocketAddr) -> Result<(), anyhow::Error> {
     // 创建服务端端点
-    let endpoint = Endpoint::server(
-        configure_server(),
-        addr,
-    )?;
+    let endpoint = Endpoint::server(configure_server(), addr)?;
 
     info!("quic服务器启动 {}", addr);
 
@@ -126,7 +145,15 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
             match recv.read(&mut buf).await {
                 Ok(Some(n)) => {
                     info!("收到 {} bytes", n);
-                    process_rec_msg(&mut buf, n, &ConnectionType::Video, buffer_msg.clone(), head_length).await.expect("处理消息失败");
+                    process_rec_msg(
+                        &mut buf,
+                        n,
+                        &ConnectionType::Video,
+                        buffer_msg.clone(),
+                        head_length,
+                    )
+                    .await
+                    .expect("处理消息失败");
                 }
                 Ok(None) => {
                     info!("Stream closed");
@@ -137,7 +164,7 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
                     break;
                 }
             }
-        };
+        }
         info!("结束p2p服务端连接");
     }
     Ok(())

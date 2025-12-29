@@ -1,6 +1,6 @@
+use crate::entity::chat_session::ChatSession;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use crate::entity::chat_session::ChatSession;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatSessionVo {
@@ -11,11 +11,11 @@ pub struct ChatSessionVo {
     pub last_message: String,
     pub recv_user: String,
     pub send_user: String,
-    pub session_type: i64,  //1-单聊，2-群聊，3-系统，4-公众号
+    pub session_type: i64, //1-单聊，2-群聊，3-系统，4-公众号
     pub is_show: i64,
     pub is_top: i64,
     pub friend_icon: String,
-    pub friend_name: String
+    pub friend_name: String,
 }
 
 impl ChatSessionVo {
@@ -32,7 +32,7 @@ impl ChatSessionVo {
             is_show: chat_session.is_show,
             is_top: chat_session.is_top,
             friend_icon: "".to_string(),
-            friend_name: "".to_string()
+            friend_name: "".to_string(),
         })
     }
 }
@@ -40,5 +40,5 @@ impl ChatSessionVo {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatSessionEvent {
     pub r#type: i32,
-    pub data: ChatSessionVo
+    pub data: ChatSessionVo,
 }
