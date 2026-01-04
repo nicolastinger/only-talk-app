@@ -5,7 +5,7 @@ const routes = [
     routes: [
       {
         path: '/',
-        redirect: '/testComponent',
+        redirect: '/signIn',
       },
       {
         name: 'menu.fakeHome',
@@ -78,7 +78,7 @@ const routes = [
                 component: './Home/Contacts',
               },
             ],
-          }
+          },
         ],
       },
       {
@@ -100,7 +100,7 @@ const routes = [
         name: 'menu.testComponent',
         path: '/testComponent',
         component: './TestComponent',
-      }
+      },
     ],
   },
   {

@@ -17,10 +17,11 @@ const openNewWindow = async (
     console.log('New window created successfully!');
     // 当新窗口创建完成后，关闭当前窗口
     if (oldWindow) {
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      oldWindow.close().catch((err: any) => {
-        console.error('Failed to close the current window:', err);
-      });
+      setTimeout(() => {
+        oldWindow.close().catch((err: any) => {
+          console.error('Failed to close the current window:', err);
+        });
+      }, 500);
     }
   });
 

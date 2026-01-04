@@ -51,6 +51,12 @@ lazy_static! {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    {
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        std::env::set_var("QT_QPA_PLATFORM", "wayland");
+    }
+
     fast_log::init(
         Config::new()
             .console()

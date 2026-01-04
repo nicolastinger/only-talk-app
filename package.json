@@ -1,6 +1,6 @@
 {
   "private": true,
-  "author": "黄锦盛 <huang.jinsheng@iwhalecloud.com>",
+  "author": "huang <2737484812@qq.com>",
   "scripts": {
     "build": "max build",
     "dev": "max dev",
@@ -15,6 +15,7 @@
     "@ant-design/icons": "5.x",
     "@ant-design/pro-components": "^2.4.4",
     "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
     "@umijs/max": "^4.4.11",
     "antd": "^5.4.0",
     "dayjs": "^1.11.13",
