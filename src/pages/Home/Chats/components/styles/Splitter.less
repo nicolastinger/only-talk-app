@@ -1,0 +1,34 @@
+.splitter {
+  position: relative;
+  height: 6px;
+  background-color: transparent;
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--color-gray-3);
+  }
+
+  &.dragging {
+    background-color: var(--color-gray-4);
+  }
+}
+
+.handle {
+  width: 40px;
+  height: 3px;
+  background-color: var(--color-gray-5);
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+
+  .splitter:hover & {
+    background-color: var(--color-gray-7);
+  }
+
+  .splitter.dragging & {
+    background-color: var(--color-primary);
+  }
+}

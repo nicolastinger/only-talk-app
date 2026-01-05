@@ -117,7 +117,7 @@ const ChatsLayout = () => {
       <Splitter.Panel
         min="20%"
         max="50%"
-        defaultSize="36%"
+        defaultSize="32%"
         className={styles.left}
       >
         <div className={styles.header}>

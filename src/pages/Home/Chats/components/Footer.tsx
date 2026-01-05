@@ -75,13 +75,12 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
           onChange={(e) => setMessage(e.target.value)}
           className={styles.footerTextArea}
           placeholder="请输入"
-          autoSize
         />
-      </div>
-      <div className={styles.footerSendBtn}>
-        <Button color="default" variant="outlined" onClick={sendMessage}>
+        <div className={styles.footerSendBtn}>
+        <Button type="primary" variant="outlined" onClick={sendMessage}>
           发送(S)
         </Button>
+      </div>
       </div>
     </div>
   );

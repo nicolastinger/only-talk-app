@@ -11,17 +11,33 @@ import React, { useEffect, useState } from 'react';
 import ChatFooter from '../components/Footer';
 import MessageList from '../components/MessageList';
 import ChatTopBar from '../components/TopBar';
+import Splitter from '../components/Splitter';
 import styles from './index.less';
 
 const ChatPage: React.FC = () => {
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
+  const [footerHeight, setFooterHeight] = useState(180); // 默认高度180px
+  const [realFootHeight, setRealFooterHeight] = useState(186);
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendUuid = params.get('currentFriend') || '';
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(friendUuid, meUuid);
+
+  const handleHeightChange = (heightPercent: number) => {
+    // 将百分比转换为像素值，限制在最小20px和最大80%之间
+    const containerHeight = window.innerHeight;
+    const minHeightPx = 20;
+    const maxHeightPx = containerHeight * 0.8;
+    const heightPx = Math.max(minHeightPx, Math.min(maxHeightPx, (heightPercent / 100) * containerHeight));
+    setFooterHeight(heightPx);
+  };
+
+  useEffect(() => {
+    setRealFooterHeight(footerHeight + 6)
+  }, [footerHeight])
 
   // 更新已读记录
   useEffect(() => {
@@ -208,14 +224,24 @@ const ChatPage: React.FC = () => {
         <ChatTopBar title={currentFriend?.friend_name || ''} />
       </div>
       <div className={styles.mainContainer}>
-        <div className={styles.messageContainer}>
+        <div 
+          className={styles.messageContainer}
+          style={{ height: `calc(100% - ${realFootHeight}px)` }}
+        >
           <MessageList
             messages={messageList}
             friendIcon={currentFriend?.friend_icon}
           />
           <div id="anchor"></div>
         </div>
-        <ChatFooter friendUuid={friendUuid} onMessageSent={handleMessageSent} />
+        <Splitter 
+          onHeightChange={handleHeightChange}
+          minHeight={20}
+          maxHeight={80}
+        />
+        <div style={{ height: `${footerHeight}px` }}>
+          <ChatFooter friendUuid={friendUuid} onMessageSent={handleMessageSent} />
+        </div>
       </div>
     </div>
   );

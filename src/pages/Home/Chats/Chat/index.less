@@ -17,7 +17,41 @@
   border-left: 1px solid var(--color-gray-4);
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 20px;
+  padding: 0 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-4) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-4);
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
+
+  &:not(:hover)::-webkit-scrollbar-thumb {
+    opacity: 0;
+  }
+
+  &:active::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
 }
 
 .messageContainer {
@@ -25,10 +59,40 @@
   height: calc(100% - 180px);
   overflow-y: auto;
   overflow-x: hidden;
-}
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-4) transparent;
 
-.messageContainer::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-4);
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
+
+  &:not(:hover)::-webkit-scrollbar-thumb {
+    opacity: 0;
+  }
+
+  &:active::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
 }
 
 .footer {
