@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 
 pub mod chat_record_read;
 pub mod chat_session;
+pub mod file_record;
 pub mod friend;
 pub(crate) mod p2p_models;
 pub mod quic_connection;

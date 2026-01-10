@@ -28,5 +28,6 @@ pub async fn init_app() -> Result<(), anyhow::Error> {
         .unwrap_or_else(|x| {
             warn!("本机不支持ipv6传输 {}", x.to_string());
         });
+    info!("应用启动成功");
     Ok(())
 }
