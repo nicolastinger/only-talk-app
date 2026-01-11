@@ -1,6 +1,8 @@
+use anyhow::Error;
 use crate::vo::chat_session_vo::ChatSessionVo;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, SqlitePool};
+use crate::store::store::SqliteStore;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatSession {
@@ -32,5 +34,37 @@ impl ChatSession {
             is_show: chat_session_vo.is_show,
             is_top: chat_session_vo.is_top,
         })
+    }
+}
+
+impl SqliteStore for ChatSession {
+    async fn create_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        sqlx::query(
+            r#"CREATE TABLE IF NOT EXISTS chat_session (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nano_id TEXT NOT NULL,
+            timestamp INTEGER NOT NULL,
+            send_user TEXT NOT NULL,
+            recv_user TEXT NOT NULL,
+            text_type INTEGER NOT NULL DEFAULT 0,
+            unread_count INTEGER NOT NULL DEFAULT 0,
+            last_message TEXT NOT NULL,
+            is_show INTEGER NOT NULL DEFAULT 1,
+            is_top INTEGER NOT NULL DEFAULT 0,
+            session_type INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(send_user, recv_user)
+        )"#,
+        )
+            .execute(pool_sqlite)
+            .await?;
+        Ok(())
+    }
+
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        Ok(())
+    }
+
+    async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        Ok(())
     }
 }

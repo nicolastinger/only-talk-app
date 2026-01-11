@@ -1,5 +1,7 @@
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, SqlitePool};
+use crate::store::store::SqliteStore;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Friend {
@@ -19,4 +21,41 @@ pub struct Friend {
     pub is_top: i32,
     pub is_show: i32,
     pub version: i32,
+}
+
+impl SqliteStore for Friend {
+    async fn create_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        sqlx::query(
+            r#"CREATE TABLE IF NOT EXISTS friend (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            friend_id TEXT NOT NULL,
+            friend_account TEXT NOT NULL,
+            friend_name TEXT NOT NULL,
+            friend_icon TEXT NOT NULL,
+            friend_info TEXT NOT NULL,
+            friend_status INTEGER NOT NULL DEFAULT 0,
+            me TEXT NOT NULL,
+            is_del INTEGER NOT NULL DEFAULT 0,
+            is_block INTEGER NOT NULL DEFAULT 0,
+            is_mute INTEGER NOT NULL DEFAULT 0,
+            is_top INTEGER NOT NULL DEFAULT 0,
+            is_show INTEGER NOT NULL DEFAULT 1,
+            version INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(friend_id, me)
+        )"#,
+        )
+            .execute(pool_sqlite)
+            .await?;
+        Ok(())
+    }
+
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        Ok(())
+    }
+
+    async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        Ok(())
+    }
 }

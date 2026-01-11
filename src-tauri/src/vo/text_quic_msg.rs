@@ -1,6 +1,7 @@
 use crate::entity::text_msg::TextQuicMsg;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use crate::entity::chat_record::ChatRecord;
 
 //文本信息消息体
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -23,6 +24,17 @@ impl TextQuicMsgVo {
             recv_user: text_quic_msg.recv_user,
             send_user: text_quic_msg.send_user,
             timestamp: text_quic_msg.timestamp,
+        })
+    }
+
+    pub fn from_chat_record(chat_record: ChatRecord) -> Result<TextQuicMsgVo, anyhow::Error> {
+        Ok(TextQuicMsgVo {
+            nano_id: chat_record.nano_id,
+            text_type: chat_record.text_type,
+            raw: chat_record.raw,
+            recv_user: chat_record.recv_user,
+            send_user: chat_record.send_user,
+            timestamp: chat_record.timestamp,
         })
     }
 

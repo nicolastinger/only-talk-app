@@ -1,5 +1,5 @@
 use crate::cmd::api_controller::get_user_map;
-use crate::store::create_table::init_ddl;
+use crate::store::create_table::init_user_ddl;
 use crate::utils::global_static_str::SQLITE_PATH;
 use crate::GLOBAL_SQL_POOL;
 use anyhow::anyhow;
@@ -34,7 +34,7 @@ pub async fn init_sqlite() -> Result<(), anyhow::Error> {
         let pool_guard = GLOBAL_SQL_POOL.read().await;
         let pool_sqlite = pool_guard.as_ref().ok_or(anyhow!("获取失败"))?.as_ref();
         // 创建表
-        init_ddl(pool_sqlite).await?;
+        init_user_ddl(pool_sqlite).await?;
     }
     Ok(())
 }

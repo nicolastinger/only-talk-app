@@ -9,6 +9,8 @@ pub mod quic_connection;
 pub mod system_notification;
 pub mod text_msg;
 pub mod user;
+pub mod chat_record;
+pub mod chat_record_ack;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {

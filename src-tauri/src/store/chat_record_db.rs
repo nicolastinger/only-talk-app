@@ -121,19 +121,7 @@ pub async fn query_last_chat_record(
     Ok(record)
 }
 
-/// 获取目标用户聊天条数
-pub async fn query_chat_record_count_by_friend_db(
-    uuid: &str,
-    friend_id: &str,
-) -> Result<i32, anyhow::Error> {
-    let pool_sqlite = get_db_client().await?;
-    let record: (i32,) = sqlx::query_as(r#"select count(*) from chat_record where (send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1)"#)
-        .bind(uuid)
-        .bind(friend_id)
-        .fetch_one(&pool_sqlite)
-        .await?;
-    Ok(record.0)
-}
+
 
 /// 查询ack表中是否存在某条信息
 pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {

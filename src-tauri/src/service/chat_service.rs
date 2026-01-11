@@ -2,7 +2,7 @@ use crate::cmd::api_controller::get_user_map;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
 use crate::store::chat_record_db::{
-    query_chat_record_count_by_friend_db, query_last_chat_record, update_last_read_msg,
+     query_last_chat_record, update_last_read_msg,
 };
 use crate::store::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db,
@@ -18,6 +18,7 @@ use quinn::SendStream;
 use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::RwLock;
+use crate::entity::chat_record::ChatRecord;
 
 /// 获取会话列表
 pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
@@ -189,7 +190,7 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
         .map_err(|e| anyhow!(e))?;
 
     // 查询聊天记录
-    let chat_record_count = query_chat_record_count_by_friend_db(&me, &friend_uuid).await?;
+    let chat_record_count = ChatRecord::query_chat_record_count_by_friend(&me, &friend_uuid).await?;
 
     // 查询是否存在会话
     let chat_session = query_chat_session_db(&me).await?;

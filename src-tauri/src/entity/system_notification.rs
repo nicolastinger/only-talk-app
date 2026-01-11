@@ -1,7 +1,9 @@
+use anyhow::Error;
 use crate::store::get_db_client;
 use log::info;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, SqlitePool};
+use crate::store::store::SqliteStore;
 
 /// 系统通知
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -110,5 +112,52 @@ impl SystemNotification {
         );
 
         Ok(effect_row)
+    }
+}
+
+impl SqliteStore for SystemNotification {
+    async fn create_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        sqlx::query(
+            r#"CREATE TABLE IF NOT EXISTS system_notification (
+            id TEXT PRIMARY KEY,
+            title TEXT,
+            content TEXT,
+            created_at INTEGER,
+            content_type INTEGER,
+            user_id TEXT,
+            biz_id TEXT,
+            is_read INTEGER,
+            level1 INTEGER,
+            level2 INTEGER,
+            level3 INTEGER,
+            level4 INTEGER,
+            unread_count INTEGER,
+            priority INTEGER NOT NULL DEFAULT 0
+        )"#,
+        )
+            .execute(pool_sqlite)
+            .await?;
+        Ok(())
+    }
+
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        // 创建索引
+        sqlx::query(
+            r#"CREATE INDEX IF NOT EXISTS idx_system_notification_user_id_created_at ON system_notification(user_id, created_at)"#
+        )
+            .execute(pool_sqlite)
+            .await?;
+
+        sqlx::query(
+            r#"CREATE INDEX IF NOT EXISTS idx_system_notification_is_read ON system_notification(is_read)"#
+        )
+            .execute(pool_sqlite)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        Ok(())
     }
 }

@@ -47,9 +47,6 @@ pub async fn get_local_file() -> Result<FileVo, String> {
 /// 通过业务id获取文件
 #[tauri::command]
 pub async fn get_file_by_biz_id(biz_id: String) -> Result<Vec<FileVo>, String> {
-    let resource_path = Path::new("./resource/default.jpg");
-
-    if !resource_path.exists() {
-        return Err("文件不存在".to_string());
-    }
+    let result = Vec::<FileVo>::new();
+    Ok(result)
 }
