@@ -25,7 +25,7 @@ use crate::cmd::api_controller::{
     send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame,
 };
 use crate::cmd::auth_controller::{clear_user_info, logout};
-use crate::cmd::file_controller::get_local_file;
+use crate::cmd::file_controller::{get_file_by_biz_id, get_local_file};
 use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
@@ -104,7 +104,8 @@ pub fn run() {
             update_local_friend_list,
             batch_read_system_notification,
             mark_read_chat_session,
-            get_local_file
+            get_local_file,
+            get_file_by_biz_id
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

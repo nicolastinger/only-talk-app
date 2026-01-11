@@ -3,6 +3,7 @@ use anyhow::Error;
 use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+use crate::store::get_common_db_client;
 
 /// 本地文件记录表
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
@@ -62,5 +63,19 @@ impl SqliteStore for FileRecord {
     async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
         info!("删除文件记录表...");
         Ok(())
+    }
+}
+
+impl FileRecord {
+    // 通过biz_id获取文件记录
+    pub async fn get_by_biz_id(biz_id: &str) -> Result<Vec<FileRecord>, Error> {
+        let pool_sqlite = get_common_db_client().await?;
+        let file_record = sqlx::query_as::<_, FileRecord>(
+            r#"SELECT * FROM file_record WHERE biz_id = ? AND status = 0"#,
+        )
+        .bind(biz_id)
+        .fetch_all(&pool_sqlite)
+        .await?;
+        Ok(file_record)
     }
 }
