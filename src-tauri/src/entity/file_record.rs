@@ -1,9 +1,9 @@
-use crate::store::store::SqliteStore;
+use crate::dao::store::SqliteStore;
 use anyhow::Error;
 use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
-use crate::store::get_common_db_client;
+use crate::dao::get_common_db_client;
 
 /// 本地文件记录表
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]

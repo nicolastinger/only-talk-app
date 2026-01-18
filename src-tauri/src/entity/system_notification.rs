@@ -1,9 +1,9 @@
 use anyhow::Error;
-use crate::store::get_db_client;
+use crate::dao::get_db_client;
 use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
-use crate::store::store::SqliteStore;
+use crate::dao::store::SqliteStore;
 
 /// 系统通知
 #[derive(Debug, Serialize, Deserialize, FromRow)]

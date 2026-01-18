@@ -2,7 +2,7 @@
 
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::Page;
-use crate::store::get_db_client;
+use crate::dao::get_db_client;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::GLOBAL_SQL_POOL;
 use anyhow::anyhow;

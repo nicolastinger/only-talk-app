@@ -1,6 +1,6 @@
 use crate::entity::chat_session::ChatSession;
 use crate::service::user_service::get_user_info;
-use crate::store::get_db_client;
+use crate::dao::get_db_client;
 use crate::vo::chat_session_vo::ChatSessionVo;
 use log::{error, info};
 

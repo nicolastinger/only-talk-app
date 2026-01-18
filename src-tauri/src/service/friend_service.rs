@@ -1,12 +1,12 @@
 use crate::entity::friend::Friend;
 use crate::service::user_service::get_user_info;
-use crate::store::friend_db::update_friend_info_db;
+use crate::dao::friend_db::update_friend_info_db;
 use crate::utils::global_static_str::{QUIC_SERVER_ADDR, TALK_API};
 use crate::utils::http_utils::post_request;
 use crate::vo::friend_vo::FriendListVO;
 use crate::vo::http_response::Response;
 use crate::{
-    entity::system_notification::SystemNotification, store::friend_db::query_friend_info_db,
+    entity::system_notification::SystemNotification, dao::friend_db::query_friend_info_db,
 };
 use anyhow::anyhow;
 use log::{error, info};

@@ -2,7 +2,7 @@ use anyhow::Error;
 use crate::vo::chat_session_vo::ChatSessionVo;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
-use crate::store::store::SqliteStore;
+use crate::dao::store::SqliteStore;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatSession {

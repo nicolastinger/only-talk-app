@@ -14,7 +14,7 @@ mod emit_app;
 mod entity;
 mod init_app;
 mod service;
-mod store;
+mod dao;
 pub mod utils;
 mod vo;
 
@@ -55,6 +55,11 @@ pub fn run() {
     {
         std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
         std::env::set_var("QT_QPA_PLATFORM", "wayland");
+    }
+
+    // 添加backtrace, 错误信息堆栈显示
+    {
+        std::env::set_var("RUST_BACKTRACE", "full");
     }
 
     fast_log::init(

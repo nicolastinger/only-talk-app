@@ -45,3 +45,5 @@ rcgen = "0.11.3"
 webpki-roots = "1.0.2"
 uuid = { version = "1.11.0", features = ["v4", "v7"] }
 tauri-plugin-dialog = "2.0.0-rc"
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }

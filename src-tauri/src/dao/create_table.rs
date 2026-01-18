@@ -7,7 +7,7 @@ use crate::entity::chat_session::ChatSession;
 use crate::entity::file_record::FileRecord;
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
-use crate::store::store::init_sqlite;
+use crate::dao::store::init_sqlite;
 
 /// 初始化公共数据库
 pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {

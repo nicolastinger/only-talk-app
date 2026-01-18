@@ -1,5 +1,5 @@
 use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
-use crate::store::init_common_db::init_common_sqlite;
+use crate::dao::init_common_db::init_common_sqlite;
 use crate::utils::global_static_str::{RESOURCE_PATH, UDP_SOCKET_V6};
 use log::{info, warn};
 use std::fs;
@@ -12,8 +12,8 @@ pub async fn init_app() -> Result<(), anyhow::Error> {
 
     // 检查目录是否存在，不存在则新建
     if !resource_path.exists() {
-        fs::create_dir(resource_path).expect("创建数据库目录失败");
-        info!("已创建目录: dbData");
+        fs::create_dir(resource_path).expect("创建文件目录失败");
+        info!("已创建目录: {}", RESOURCE_PATH);
     }
     // 初始化公共数据库
     init_common_sqlite().await.expect("初始化公共数据库失败!");

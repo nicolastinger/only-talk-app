@@ -1,10 +1,10 @@
 use crate::cmd::api_controller::get_user_map;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
-use crate::store::chat_record_db::{
+use crate::dao::chat_record_db::{
      query_last_chat_record, update_last_read_msg,
 };
-use crate::store::session_db::{
+use crate::dao::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db,
     update_chat_session_local_db,
 };

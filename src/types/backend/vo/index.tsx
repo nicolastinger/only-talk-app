@@ -32,4 +32,24 @@ interface FriendVo {
   is_show: number;
 }
 
-export { ChatSessionEvent, ChatSessionVo, FriendVo };
+interface FileVo {
+  file_id?: string;
+  size?: number;
+  file_hash?: string;
+  created_at?: number;
+  updated_at?: number;
+  created_by?: string;
+  updated_by?: string;
+  status?: number;
+  file_extension?: string;
+  mime_type?: string;
+  description?: string;
+  original_file_name?: string;
+  original_file_path?: string;
+  relative_path?: string;
+  relative_file_name?: string;
+  raw?: number[];
+  is_del?: number;
+}
+
+export { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo };

@@ -7,8 +7,8 @@ use crate::service::chat_service::clear_chat_session;
 use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::get_user_info;
-use crate::store::chat_record_db::{insert_chat_record, query_ack_record_from_db};
-use crate::store::session_db::{query_chat_session_by_user_db, update_chat_session_db};
+use crate::dao::chat_record_db::{insert_chat_record, query_ack_record_from_db};
+use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::global_static_str::USER_PROCESS_FRIEND;
 use crate::utils::message_types::{

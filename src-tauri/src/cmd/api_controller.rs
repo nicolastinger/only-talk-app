@@ -14,10 +14,10 @@ use crate::service::p2p_service::{
     send_p2p_video_frame_service,
 };
 use crate::service::user_service::get_user_info;
-use crate::store::chat_record_db::{
+use crate::dao::chat_record_db::{
     insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db,
 };
-use crate::store::friend_db::{query_friend_info_by_id_db, query_friend_info_db};
+use crate::dao::friend_db::{query_friend_info_by_id_db, query_friend_info_db};
 use crate::utils::global_static_str::UDP_SOCKET;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::ChatSessionVo;

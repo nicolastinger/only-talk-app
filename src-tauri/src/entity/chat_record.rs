@@ -1,8 +1,8 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
-use crate::store::get_db_client;
-use crate::store::store::SqliteStore;
+use crate::dao::get_db_client;
+use crate::dao::store::SqliteStore;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatRecord {

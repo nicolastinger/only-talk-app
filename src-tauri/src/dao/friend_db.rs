@@ -1,5 +1,5 @@
 use crate::entity::friend::Friend;
-use crate::store::get_db_client;
+use crate::dao::get_db_client;
 use log::error;
 
 /// 获取好友信息表
