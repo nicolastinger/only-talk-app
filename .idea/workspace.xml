@@ -6,21 +6,17 @@
   <component name="CargoProjects">
     <cargoProject FILE="$PROJECT_DIR$/src-tauri/Cargo.toml">
       <package file="$PROJECT_DIR$/src-tauri">
-        <enabledFeature name="default" />
+        <feature name="default" enabled="true" />
       </package>
     </cargoProject>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/src-tauri/src/dto/http_result.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/controller/api_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/api_controller.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/controller/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dto/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dto/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/init_app.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/init_app.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/tauri.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/tauri.conf.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,6 +56,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "git-widget-placeholder": "dev__1.0.0",
     "last_opened_file_path": "I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/utils",
     "node.js.detected.package.eslint": "true",
@@ -113,6 +110,7 @@
       <workItem from="1763381896295" duration="449000" />
       <workItem from="1763475818493" duration="76000" />
       <workItem from="1763476616155" duration="3838000" />
+      <workItem from="1769011824448" duration="12000" />
     </task>
     <servers />
   </component>

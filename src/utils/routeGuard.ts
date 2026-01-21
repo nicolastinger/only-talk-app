@@ -44,14 +44,17 @@ export interface RouteInfo {
  */
 export const handleRouteChange = (routeInfo: RouteInfo) => {
   const { location, routes, action } = routeInfo;
-  // 记录路由跳转信息
-  console.log('路由跳转:', {
-    pathname: location.pathname,
-    search: location.search,
-    hash: location.hash,
-    action: action,
-    timestamp: new Date().toISOString(),
-  });
+  
+  // 只在非开发环境或路由真正变化时记录日志
+  if (process.env.NODE_ENV !== 'development' || action === 'PUSH') {
+    console.log('路由跳转:', {
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+      action: action,
+      timestamp: new Date().toISOString(),
+    });
+  }
   
   // 可以在这里添加权限验证逻辑
   // 例如：检查用户是否登录，是否有权限访问当前路由

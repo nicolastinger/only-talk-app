@@ -50,6 +50,7 @@ lazy_static! {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[allow(non_snake_case)]
 pub fn run() {
     #[cfg(target_os = "linux")]
     {
@@ -62,25 +63,46 @@ pub fn run() {
         std::env::set_var("RUST_BACKTRACE", "full");
     }
 
-    fast_log::init(
-        Config::new()
-            .console()
-            .level(LevelFilter::Info)
-            .file("target/rust_im.log")
-            .chan_len(Some(10)),
-    )
-    .unwrap();
-    info!("日志初始化完成");
+    #[cfg(not(target_os = "android"))]
+    {
+        fast_log::init(
+            Config::new()
+                .console()
+                .level(LevelFilter::Info)
+                .file("target/rust_im.log")
+                .chan_len(Some(10)),
+        )
+        .unwrap();
+    }
 
-    // 初始化环境
-    tokio::spawn(async {
-        init_app().await.expect("初始化失败");
-    });
+    #[cfg(target_os = "android")]
+    {
+        fast_log::init(
+            Config::new()
+                .console()
+                .level(LevelFilter::Info)
+                .chan_len(Some(10)),
+        )
+        .unwrap();
+    }
+
+    info!("日志初始化完成");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
+            
+            // 初始化环境 (仅在非 Android 平台)
+            #[cfg(not(target_os = "android"))]
+            {
+                tokio::spawn(async move {
+                    if let Err(e) = init_app().await {
+                        eprintln!("初始化失败: {}", e);
+                    }
+                });
+            }
+            
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())

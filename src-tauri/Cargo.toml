@@ -27,7 +27,7 @@ windows = { version = "0.58.0", features = [
 ] }
 tauri-plugin-opener = "2"
 tauri = { version = "2.5.1", features = ["tray-icon", "unstable"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 quinn = {version = "0.10.2"}
 rustls = { version = "0.21", features = ["dangerous_configuration"] }
 rustls-pemfile = "1.0.4"
