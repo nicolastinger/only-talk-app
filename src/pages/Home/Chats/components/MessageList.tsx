@@ -28,7 +28,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
           );
         } else {
           return (
-            <MineChatBox key={message.nano_id} msg={msg} isAck={msg.ack} />
+            <MineChatBox icon={friendIcon} key={message.nano_id} msg={msg} isAck={msg.ack} />
           );
         }
       })}

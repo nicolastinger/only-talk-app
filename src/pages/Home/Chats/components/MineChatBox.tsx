@@ -4,10 +4,12 @@ import { ChatMessage } from '@/types/user/common';
 import React, { useEffect, useRef } from 'react';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
+import { getImageFiles } from '@/services/FileService';
 
 type MineChatBoxProps = {
   msg: ChatMessage;
   isAck: boolean | undefined;
+  icon?: string;
 };
 
 const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
@@ -16,7 +18,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       text_msg_raw: { raw, text_type },
     },
     isAck = true,
+    icon
   } = props;
+  const [userIcon, setUserIcon] = React.useState<string | null>(null);
 
   const userInfo = useBearStore((state) => state.userInfo);
   // 初始化ackFlag
@@ -52,6 +56,21 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     };
   }, [isAck]); // 明确依赖项
 
+  // 获取用户头像
+  const getUserIcon = async (icon: string) => {
+    try {
+      const FileVos = await getImageFiles(icon);
+      setUserIcon(FileVos?.[0]?.blob_url || null);
+      console.log('用户信息', userInfo);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getUserIcon(userInfo?.icon || '');
+  }, [userInfo])
+
   const renderMessage = (message: string) => {
     switch (text_type) {
       case 1:
@@ -71,7 +90,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       <div className={styles.chatContainer}>{renderMessage(raw)}</div>
       <div className={styles.userIcon}>
         <img
-          src={userInfo?.icon || DEFAULT_ICON}
+          src={userIcon || DEFAULT_ICON}
           width={40}
           height={40}
           className={styles.imgItem}

@@ -4,7 +4,7 @@ use crate::utils::global_static_str::{RESOURCE_PATH, TALK_API};
 use crate::utils::http_utils::post;
 use crate::vo::file_vo::FileVo;
 use anyhow::anyhow;
-use log::info;
+use log::{error, info};
 use reqwest::Client;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ use std::path::Path;
 use sha2::{Sha256, Digest};
 use std::io::Write;
 use chrono::Local;
-use crate::dao::file_record_db::insert_file_record;
+use crate::dao::file_record_db::{delete_file_record_by_id, insert_file_record};
 
 pub async fn get_file_by_biz_id_service(biz_id: String) -> Result<Vec<FileVo>, anyhow::Error> {
     // 0、从biz业务表获取文件列表id，biz只负责文件业务
@@ -36,7 +36,15 @@ pub async fn get_file_by_biz_id_service(biz_id: String) -> Result<Vec<FileVo>, a
         // 添加文件数据读取
         let path = file.file_path.ok_or(anyhow::anyhow!("文件不存在"))?;
         let file_path = Path::new(&path);
-        let raw = fs::read(file_path)?;
+        let raw = fs::read(file_path);
+        if raw.is_err() {
+            // 文件不存在
+            error!("文件不存在");
+            // 删除文件记录
+            let file_id = file.uuid.ok_or(anyhow::anyhow!("文件不存在"))?;
+            delete_file_record_by_id(&biz_id, &file_id).await?;
+            return Err(anyhow::anyhow!("文件不存在"));
+        }
         let file_vo = FileVo {
             file_id: file.uuid,
             file_hash: file.file_hash,
@@ -52,7 +60,7 @@ pub async fn get_file_by_biz_id_service(biz_id: String) -> Result<Vec<FileVo>, a
             original_file_path: None,
             relative_path: None,
             relative_file_name: None,
-            raw: Some(raw),
+            raw: Some(raw?),
             size: None,
             is_del: None,
         };
@@ -119,8 +127,23 @@ pub async fn download_file_by_biz_service(biz_id: &str) -> Result<(), anyhow::Er
         let file_hash = format!("{:x}", hash_result);
         
         // 获取原始文件名（从Content-Disposition头或URL中提取）
-        let file_name = extract_filename_from_content_disposition(&content_disposition)
-            .unwrap_or_else(|| format!("file_{}", biz_id));
+        let original_file_name = extract_filename_from_content_disposition(&content_disposition)
+            .unwrap_or_else(|| format!("file_{}.tmp", biz_id));
+        
+        // 提取原始文件的扩展名
+        let ext = std::path::Path::new(&original_file_name)
+            .extension()
+            .map(|ext| ext.to_string_lossy().to_string())
+            .unwrap_or_default();
+        
+        // 创建uuid_v4作为文件名，但保留扩展名
+        let uuid = uuid::Uuid::new_v4().to_string();
+        let file_name = if !ext.is_empty() {
+            format!("{}.{}", uuid, ext)
+        } else {
+            error!("无法获取原始文件的扩展名");
+            return Err(anyhow!("无法保存文件"));
+        };
         
         // 构建文件路径
         let file_path = format!("{}/{}", RESOURCE_PATH, file_name);
@@ -129,9 +152,6 @@ pub async fn download_file_by_biz_service(biz_id: &str) -> Result<(), anyhow::Er
         let mut file = fs::File::create(&file_path)?;
         file.write_all(&binary_data)?;
         info!("文件已保存到: {}", file_path);
-        
-        // 创建uuid_v4
-        let uuid = uuid::Uuid::new_v4().to_string();
         
         // 插入文件记录到数据库
         insert_file_record(biz_id, &uuid, &file_name, &file_path, binary_data.len() as i64, &content_type, &file_hash).await?;

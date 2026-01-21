@@ -2,10 +2,11 @@ import { add_friend, search_user_by_account } from '@/services/userService';
 import { FriendRequestInfoDTO } from '@/types/friend';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './index.less';
 import { UserInfo } from '@/types/user/common';
 import { invoke } from '@tauri-apps/api/core';
+import { getImageFiles } from '@/services/FileService';
 
 const SearchFriend = () => {
   const [form] = Form.useForm();
@@ -17,6 +18,7 @@ const SearchFriend = () => {
     username: string;
   } | null>(null);
   const [requestMessage, setRequestMessage] = useState('');
+  const [avatarUrls, setAvatarUrls] = useState<{[key: string]: string}>({});
   const intl = useIntl();
 
   const handleSearch = async (values: { searchKey: string }) => {
@@ -81,6 +83,37 @@ const SearchFriend = () => {
     setResults([]);
   };
 
+  // 获取用户头像
+  const getUserIcon = async (icon: string): Promise<string> => {
+    try {
+      const FileVos = await getImageFiles(icon);
+
+      return FileVos?.[0]?.blob_url || '';
+    } catch (error) {
+      message.error('获取用户头像时出现错误');
+
+      console.log(error);
+      return '';
+    }
+  };
+
+  // 当results更新时，预加载所有用户的头像
+  useEffect(() => {
+    const loadAvatars = async () => {
+      const newAvatarUrls: {[key: string]: string} = {};
+      for (const item of results) {
+        if (item.icon && item.uuid) {
+          newAvatarUrls[item.uuid] = await getUserIcon(item.icon);
+        }
+      }
+      setAvatarUrls(newAvatarUrls);
+    };
+
+    if (results.length > 0) {
+      loadAvatars();
+    }
+  }, [results]);
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -133,7 +166,9 @@ const SearchFriend = () => {
                 ]}
               >
                 <List.Item.Meta
-                  avatar={<Avatar src={item.icon}>{item.username}</Avatar>}
+                  avatar={
+                    <Avatar src={avatarUrls[item.uuid || '']}>{item.username}</Avatar>
+                  }
                   title={item.username}
                   description={item.info}
                 />

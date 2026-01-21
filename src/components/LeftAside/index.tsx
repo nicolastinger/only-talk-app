@@ -15,6 +15,7 @@ import UserInfoModal from './UserInfoModal';
 import { useChatsUnread } from '@/hooks/useChatsUnread';
 import { invoke } from '@tauri-apps/api/core';
 import { FileVo } from '@/types/backend/vo';
+import { getImageFiles } from '@/services/FileService';
 
 const LeftAside = () => {
   const [topBtnList, setTopBtnList] = React.useState<LayoutBtnProps[]>([]);
@@ -149,23 +150,14 @@ const LeftAside = () => {
 
   useEffect(() => {
     getUserIcon();
-  }, []);
+  }, [userInfo]);
 
   // 获取用户头像
   const getUserIcon = async () => {
     try {
-      const FileVos: FileVo[] = await invoke('get_file_by_biz_id', {
-        bizId: '480b4e31-5761-4046-a251-dc9d3e577a2c',
-      });
-      console.log('获取文件信息', FileVos);
-      if (FileVos.length > 0 && FileVos[0].raw) {
-        const userIconU8 = FileVos[0].raw;
-        // 将二进制数据转换为Base64字符串，然后创建data URL
-        const uint8Array = new Uint8Array(userIconU8);
-        const blob = new Blob([uint8Array], { type: FileVos[0].mime_type || 'image/png' });
-        const imageUrl = URL.createObjectURL(blob);
-        setUserIcon(imageUrl);
-      }
+      const FileVos = await getImageFiles(userInfo.icon || '');
+      setUserIcon(FileVos?.[0]?.blob_url || null);
+      console.log("用户信息", userInfo)
     } catch (error) {
       console.log(error);
     }

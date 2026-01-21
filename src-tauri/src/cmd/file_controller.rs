@@ -1,7 +1,7 @@
 use crate::vo::file_vo::FileVo;
 use std::fs;
 use std::path::Path;
-use log::error;
+use log::{error, warn};
 use crate::service::file_service::get_file_by_biz_id_service;
 
 /// 增加持久化数据
@@ -49,6 +49,11 @@ pub async fn get_local_file() -> Result<FileVo, String> {
 /// 通过业务id获取文件
 #[tauri::command]
 pub async fn get_file_by_biz_id(biz_id: String) -> Result<Vec<FileVo>, String> {
+    log::info!("通过业务id获取文件 {}", biz_id);
+    if biz_id == "" { 
+        warn!("业务id不能为空");
+        return Err("业务id不能为空".to_string());
+    }
     let res = get_file_by_biz_id_service(biz_id).await;
     match res { 
         Ok(file_vo) => {
