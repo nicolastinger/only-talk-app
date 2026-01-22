@@ -1,0 +1,20 @@
+{
+  "name": "@workspace/types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.3"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  }
+}

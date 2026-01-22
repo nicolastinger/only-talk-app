@@ -1,0 +1,3757 @@
+{
+  "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+  "pkg": {
+    "private": true,
+    "author": "huang <2737484812@qq.com>",
+    "name": "@workspace/app-pc",
+    "version": "1.0.0",
+    "description": "Mobile app with Vue3 + Vant + Vapor + Less + TypeScript",
+    "type": "module",
+    "scripts": {
+      "build": "max build",
+      "dev": "max dev",
+      "format": "prettier --cache --write .",
+      "postinstall": "max setup",
+      "prepare": "husky",
+      "setup": "max setup",
+      "start": "npm run dev",
+      "tauri": "tauri"
+    },
+    "dependencies": {
+      "@ant-design/icons": "5.x",
+      "@ant-design/pro-components": "^2.4.4",
+      "@tauri-apps/api": "^2.5.0",
+      "@tauri-apps/plugin-dialog": "^2.4.2",
+      "@umijs/max": "^4.4.11",
+      "antd": "^5.4.0",
+      "dayjs": "^1.11.13",
+      "dva": "^2.4.1",
+      "nanoid": "^5.1.5",
+      "react-markdown": "^10.1.0",
+      "zustand": "^5.0.5"
+    },
+    "devDependencies": {
+      "@tauri-apps/cli": "2.0.0-rc.18",
+      "@types/react": "^18.0.33",
+      "@types/react-dom": "^18.0.11",
+      "husky": "^9",
+      "lint-staged": "^13.2.0",
+      "prettier": "^2.8.7",
+      "prettier-plugin-organize-imports": "^3.2.2",
+      "prettier-plugin-packagejson": "^2.4.3",
+      "typescript": "^5.0.3"
+    }
+  },
+  "pkgPath": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\package.json",
+  "plugins": {
+    "@umijs/core/dist/service/servicePlugin": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "preset",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+core@4.4.11/node_modules/@umijs/core/dist/service/servicePlugin.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/core/dist/service/servicePlugin",
+      "key": "servicePlugin"
+    },
+    "@umijs/preset-umi": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 24
+      },
+      "enableBy": "register",
+      "type": "preset",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/index.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi",
+      "key": "umi"
+    },
+    "@umijs/max/dist/preset": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 11
+      },
+      "enableBy": "register",
+      "type": "preset",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/preset.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/max/dist/preset",
+      "key": "preset"
+    },
+    "@umijs/preset-umi/dist/registerMethods": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "onStart": [
+            0
+          ]
+        },
+        "register": 5
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/registerMethods.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/registerMethods",
+      "key": "registerMethods"
+    },
+    "@umijs/did-you-know": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "onStart": [
+            1
+          ]
+        },
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+did-you-know@1.0.3/node_modules/@umijs/did-you-know/dist/plugin.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/did-you-know",
+      "key": "umijsDidYouKnow"
+    },
+    "@umijs/preset-umi/dist/features/404/404": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyRoutes": [
+            0
+          ]
+        },
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/404/404.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/404/404",
+      "key": "404"
+    },
+    "@umijs/preset-umi/dist/features/appData/appData": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyAppData": [
+            40
+          ]
+        },
+        "register": 24
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/appData/appData.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/appData/appData",
+      "key": "appData"
+    },
+    "@umijs/preset-umi/dist/features/appData/umiInfo": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 0
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/appData/umiInfo.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/appData/umiInfo",
+      "key": "umiInfo"
+    },
+    "@umijs/preset-umi/dist/features/check/check": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "onCheckConfig": [
+            0
+          ],
+          "onCheck": [
+            0
+          ]
+        },
+        "register": 2
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/check/check.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/check/check",
+      "key": "check"
+    },
+    "@umijs/preset-umi/dist/features/check/babel722": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "onCheck": [
+            1
+          ]
+        },
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/check/babel722.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/check/babel722",
+      "key": "babel722"
+    },
+    "@umijs/preset-umi/dist/features/codeSplitting/codeSplitting": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/codeSplitting/codeSplitting.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/codeSplitting/codeSplitting",
+      "key": "codeSplitting"
+    },
+    "@umijs/preset-umi/dist/features/configPlugins/configPlugins": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyConfig": [
+            0
+          ]
+        },
+        "register": 15
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/configPlugins/configPlugins.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/configPlugins/configPlugins",
+      "key": "configPlugins"
+    },
+    "virtual: config-title": {
+      "id": "virtual: config-title",
+      "key": "title",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-styles": {
+      "id": "virtual: config-styles",
+      "key": "styles",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-scripts": {
+      "id": "virtual: config-scripts",
+      "key": "scripts",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-routes": {
+      "id": "virtual: config-routes",
+      "key": "routes",
+      "config": {
+        "onChange": "regenerateTmpFiles"
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-routeLoader": {
+      "id": "virtual: config-routeLoader",
+      "key": "routeLoader",
+      "config": {
+        "default": {
+          "moduleType": "esm"
+        }
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-reactRouter5Compat": {
+      "id": "virtual: config-reactRouter5Compat",
+      "key": "reactRouter5Compat",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-presets": {
+      "id": "virtual: config-presets",
+      "key": "presets",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-plugins": {
+      "id": "virtual: config-plugins",
+      "key": "plugins",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-npmClient": {
+      "id": "virtual: config-npmClient",
+      "key": "npmClient",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-mountElementId": {
+      "id": "virtual: config-mountElementId",
+      "key": "mountElementId",
+      "config": {
+        "default": "root"
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-metas": {
+      "id": "virtual: config-metas",
+      "key": "metas",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-links": {
+      "id": "virtual: config-links",
+      "key": "links",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-historyWithQuery": {
+      "id": "virtual: config-historyWithQuery",
+      "key": "historyWithQuery",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-history": {
+      "id": "virtual: config-history",
+      "key": "history",
+      "config": {
+        "default": {
+          "type": "browser"
+        }
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-headScripts": {
+      "id": "virtual: config-headScripts",
+      "key": "headScripts",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-esbuildMinifyIIFE": {
+      "id": "virtual: config-esbuildMinifyIIFE",
+      "key": "esbuildMinifyIIFE",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-conventionRoutes": {
+      "id": "virtual: config-conventionRoutes",
+      "key": "conventionRoutes",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-conventionLayout": {
+      "id": "virtual: config-conventionLayout",
+      "key": "conventionLayout",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-base": {
+      "id": "virtual: config-base",
+      "key": "base",
+      "config": {
+        "default": "/"
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-analyze": {
+      "id": "virtual: config-analyze",
+      "key": "analyze",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-writeToDisk": {
+      "id": "virtual: config-writeToDisk",
+      "key": "writeToDisk",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-transformRuntime": {
+      "id": "virtual: config-transformRuntime",
+      "key": "transformRuntime",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-theme": {
+      "id": "virtual: config-theme",
+      "key": "theme",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-targets": {
+      "id": "virtual: config-targets",
+      "key": "targets",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-svgr": {
+      "id": "virtual: config-svgr",
+      "key": "svgr",
+      "config": {
+        "default": {}
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-svgo": {
+      "id": "virtual: config-svgo",
+      "key": "svgo",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-stylusLoader": {
+      "id": "virtual: config-stylusLoader",
+      "key": "stylusLoader",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-styleLoader": {
+      "id": "virtual: config-styleLoader",
+      "key": "styleLoader",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-srcTranspilerOptions": {
+      "id": "virtual: config-srcTranspilerOptions",
+      "key": "srcTranspilerOptions",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-srcTranspiler": {
+      "id": "virtual: config-srcTranspiler",
+      "key": "srcTranspiler",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-sassLoader": {
+      "id": "virtual: config-sassLoader",
+      "key": "sassLoader",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-runtimePublicPath": {
+      "id": "virtual: config-runtimePublicPath",
+      "key": "runtimePublicPath",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-purgeCSS": {
+      "id": "virtual: config-purgeCSS",
+      "key": "purgeCSS",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-publicPath": {
+      "id": "virtual: config-publicPath",
+      "key": "publicPath",
+      "config": {
+        "default": "/"
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-proxy": {
+      "id": "virtual: config-proxy",
+      "key": "proxy",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-postcssLoader": {
+      "id": "virtual: config-postcssLoader",
+      "key": "postcssLoader",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-outputPath": {
+      "id": "virtual: config-outputPath",
+      "key": "outputPath",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-normalCSSLoaderModules": {
+      "id": "virtual: config-normalCSSLoaderModules",
+      "key": "normalCSSLoaderModules",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-mfsu": {
+      "id": "virtual: config-mfsu",
+      "key": "mfsu",
+      "config": {
+        "default": {
+          "strategy": "eager"
+        }
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-mdx": {
+      "id": "virtual: config-mdx",
+      "key": "mdx",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-manifest": {
+      "id": "virtual: config-manifest",
+      "key": "manifest",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-lessLoader": {
+      "id": "virtual: config-lessLoader",
+      "key": "lessLoader",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-jsMinifierOptions": {
+      "id": "virtual: config-jsMinifierOptions",
+      "key": "jsMinifierOptions",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-jsMinifier": {
+      "id": "virtual: config-jsMinifier",
+      "key": "jsMinifier",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-inlineLimit": {
+      "id": "virtual: config-inlineLimit",
+      "key": "inlineLimit",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-ignoreMomentLocale": {
+      "id": "virtual: config-ignoreMomentLocale",
+      "key": "ignoreMomentLocale",
+      "config": {
+        "default": true
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-https": {
+      "id": "virtual: config-https",
+      "key": "https",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-hash": {
+      "id": "virtual: config-hash",
+      "key": "hash",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-forkTSChecker": {
+      "id": "virtual: config-forkTSChecker",
+      "key": "forkTSChecker",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-fastRefresh": {
+      "id": "virtual: config-fastRefresh",
+      "key": "fastRefresh",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-extraPostCSSPlugins": {
+      "id": "virtual: config-extraPostCSSPlugins",
+      "key": "extraPostCSSPlugins",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-extraBabelPresets": {
+      "id": "virtual: config-extraBabelPresets",
+      "key": "extraBabelPresets",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-extraBabelPlugins": {
+      "id": "virtual: config-extraBabelPlugins",
+      "key": "extraBabelPlugins",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-extraBabelIncludes": {
+      "id": "virtual: config-extraBabelIncludes",
+      "key": "extraBabelIncludes",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-externals": {
+      "id": "virtual: config-externals",
+      "key": "externals",
+      "config": {
+        "default": {}
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-esm": {
+      "id": "virtual: config-esm",
+      "key": "esm",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-devtool": {
+      "id": "virtual: config-devtool",
+      "key": "devtool",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-depTranspiler": {
+      "id": "virtual: config-depTranspiler",
+      "key": "depTranspiler",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-define": {
+      "id": "virtual: config-define",
+      "key": "define",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-deadCode": {
+      "id": "virtual: config-deadCode",
+      "key": "deadCode",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-cssPublicPath": {
+      "id": "virtual: config-cssPublicPath",
+      "key": "cssPublicPath",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-cssMinifierOptions": {
+      "id": "virtual: config-cssMinifierOptions",
+      "key": "cssMinifierOptions",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-cssMinifier": {
+      "id": "virtual: config-cssMinifier",
+      "key": "cssMinifier",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-cssLoaderModules": {
+      "id": "virtual: config-cssLoaderModules",
+      "key": "cssLoaderModules",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-cssLoader": {
+      "id": "virtual: config-cssLoader",
+      "key": "cssLoader",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-copy": {
+      "id": "virtual: config-copy",
+      "key": "copy",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-checkDepCssModules": {
+      "id": "virtual: config-checkDepCssModules",
+      "key": "checkDepCssModules",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-chainWebpack": {
+      "id": "virtual: config-chainWebpack",
+      "key": "chainWebpack",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-cacheDirectoryPath": {
+      "id": "virtual: config-cacheDirectoryPath",
+      "key": "cacheDirectoryPath",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-babelLoaderCustomize": {
+      "id": "virtual: config-babelLoaderCustomize",
+      "key": "babelLoaderCustomize",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-autoprefixer": {
+      "id": "virtual: config-autoprefixer",
+      "key": "autoprefixer",
+      "config": {},
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-autoCSSModules": {
+      "id": "virtual: config-autoCSSModules",
+      "key": "autoCSSModules",
+      "config": {
+        "default": true
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "virtual: config-alias": {
+      "id": "virtual: config-alias",
+      "key": "alias",
+      "config": {
+        "default": {
+          "umi": "@@/exports",
+          "react": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react@18.3.1\\node_modules\\react",
+          "react-dom": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react-dom@18.3.1_react@18.3.1\\node_modules\\react-dom",
+          "react-router": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react-router@6.3.0_react@18.3.1\\node_modules\\react-router",
+          "react-router-dom": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react-router-dom@6.3.0_reac_beb70b932a60871592d5dec302f52003\\node_modules\\react-router-dom"
+        }
+      },
+      "type": "plugin",
+      "enableBy": "register",
+      "time": {
+        "hooks": {},
+        "register": 0
+      }
+    },
+    "@umijs/preset-umi/dist/features/crossorigin/crossorigin": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/crossorigin/crossorigin.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/crossorigin/crossorigin",
+      "key": "crossorigin"
+    },
+    "@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "onStart": [
+            0
+          ]
+        },
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand",
+      "key": "depsOnDemand"
+    },
+    "@umijs/preset-umi/dist/features/devTool/devTool": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/devTool/devTool.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/devTool/devTool",
+      "key": "devTool"
+    },
+    "@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 64
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker",
+      "key": "esbuildHelperChecker"
+    },
+    "@umijs/preset-umi/dist/features/esmi/esmi": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 153
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/esmi/esmi.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/esmi/esmi",
+      "key": "esmi"
+    },
+    "@umijs/preset-umi/dist/features/exportStatic/exportStatic": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 22
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/exportStatic/exportStatic.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/exportStatic/exportStatic",
+      "key": "exportStatic"
+    },
+    "@umijs/preset-umi/dist/features/favicons/favicons": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyAppData": [
+            0
+          ]
+        },
+        "register": 0
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/favicons/favicons.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/favicons/favicons",
+      "key": "favicons"
+    },
+    "@umijs/preset-umi/dist/features/helmet/helmet": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/helmet/helmet.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/helmet/helmet",
+      "key": "helmet"
+    },
+    "@umijs/preset-umi/dist/features/icons/icons": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/icons/icons.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/icons/icons",
+      "key": "icons"
+    },
+    "@umijs/preset-umi/dist/features/mock/mock": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "onStart": [
+            1
+          ]
+        },
+        "register": 31
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/mock/mock.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/mock/mock",
+      "key": "mock"
+    },
+    "@umijs/preset-umi/dist/features/mpa/mpa": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/mpa/mpa.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/mpa/mpa",
+      "key": "mpa"
+    },
+    "@umijs/preset-umi/dist/features/okam/okam": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/okam/okam.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/okam/okam",
+      "key": "okam"
+    },
+    "@umijs/preset-umi/dist/features/overrides/overrides": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 0
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/overrides/overrides.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/overrides/overrides",
+      "key": "overrides"
+    },
+    "@umijs/preset-umi/dist/features/phantomDependency/phantomDependency": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/phantomDependency/phantomDependency.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/phantomDependency/phantomDependency",
+      "key": "phantomDependency"
+    },
+    "@umijs/preset-umi/dist/features/polyfill/polyfill": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyConfig": [
+            1
+          ]
+        },
+        "register": 3
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/polyfill/polyfill.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/polyfill/polyfill",
+      "key": "polyfill"
+    },
+    "@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill",
+      "key": "publicPathPolyfill"
+    },
+    "@umijs/preset-umi/dist/features/prepare/prepare": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/prepare/prepare.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/prepare/prepare",
+      "key": "prepare"
+    },
+    "@umijs/preset-umi/dist/features/routePrefetch/routePrefetch": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routePrefetch/routePrefetch.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/routePrefetch/routePrefetch",
+      "key": "routePrefetch"
+    },
+    "@umijs/preset-umi/dist/features/terminal/terminal": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/terminal/terminal.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/terminal/terminal",
+      "key": "terminal"
+    },
+    "@umijs/preset-umi/dist/features/tmpFiles/tmpFiles": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 8
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/tmpFiles/tmpFiles.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/tmpFiles/tmpFiles",
+      "key": "tmpFiles"
+    },
+    "@umijs/preset-umi/dist/features/clientLoader/clientLoader": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/clientLoader/clientLoader.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/clientLoader/clientLoader",
+      "key": "clientLoader"
+    },
+    "@umijs/preset-umi/dist/features/routeProps/routeProps": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routeProps/routeProps.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/routeProps/routeProps",
+      "key": "routeProps"
+    },
+    "@umijs/preset-umi/dist/features/ssr/ssr": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 5
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/ssr/ssr.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/ssr/ssr",
+      "key": "ssr"
+    },
+    "@umijs/preset-umi/dist/features/tmpFiles/configTypes": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 5
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/tmpFiles/configTypes.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/tmpFiles/configTypes",
+      "key": "configTypes"
+    },
+    "@umijs/preset-umi/dist/features/transform/transform": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 5
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/transform/transform.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/transform/transform",
+      "key": "transform"
+    },
+    "@umijs/preset-umi/dist/features/lowImport/lowImport": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 4
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/lowImport/lowImport.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/lowImport/lowImport",
+      "key": "lowImport"
+    },
+    "@umijs/preset-umi/dist/features/vite/vite": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/vite/vite.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/vite/vite",
+      "key": "vite"
+    },
+    "@umijs/preset-umi/dist/features/apiRoute/apiRoute": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 10
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/apiRoute/apiRoute.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/apiRoute/apiRoute",
+      "key": "apiRoute"
+    },
+    "@umijs/preset-umi/dist/features/monorepo/redirect": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 20
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/monorepo/redirect.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/monorepo/redirect",
+      "key": "monorepoRedirect"
+    },
+    "@umijs/preset-umi/dist/features/test/test": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/test/test.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/test/test",
+      "key": "test"
+    },
+    "@umijs/preset-umi/dist/features/clickToComponent/clickToComponent": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/clickToComponent/clickToComponent.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/clickToComponent/clickToComponent",
+      "key": "clickToComponent"
+    },
+    "@umijs/preset-umi/dist/features/legacy/legacy": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/legacy/legacy.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/legacy/legacy",
+      "key": "legacy"
+    },
+    "@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 0
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose",
+      "key": "classPropertiesLoose"
+    },
+    "@umijs/preset-umi/dist/features/webpack/webpack": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/webpack/webpack.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/webpack/webpack",
+      "key": "preset-umi:webpack"
+    },
+    "@umijs/preset-umi/dist/features/swc/swc": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "addOnDemandDeps": [
+            0
+          ]
+        },
+        "register": 0
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/swc/swc.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/swc/swc",
+      "key": "swc"
+    },
+    "@umijs/preset-umi/dist/features/ui/ui": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 4
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/ui/ui.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/ui/ui",
+      "key": "ui"
+    },
+    "@umijs/preset-umi/dist/features/mako/mako": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/mako/mako.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/mako/mako",
+      "key": "mako"
+    },
+    "@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 4
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian",
+      "key": "hmrGuardian"
+    },
+    "@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad",
+      "key": "routePreloadOnLoad"
+    },
+    "@umijs/preset-umi/dist/features/forget/forget": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/forget/forget.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/forget/forget",
+      "key": "forget"
+    },
+    "@umijs/preset-umi/dist/features/bundler/bundler": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/bundler/bundler.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/features/bundler/bundler",
+      "key": "preset-umi:bundler"
+    },
+    "@umijs/preset-umi/dist/commands/build": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 18
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/build.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/build",
+      "key": "build"
+    },
+    "@umijs/preset-umi/dist/commands/config/config": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 38
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/config/config.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/config/config",
+      "key": "config"
+    },
+    "@umijs/preset-umi/dist/commands/dev/dev": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyAppData": [
+            21
+          ],
+          "onStart": [
+            1
+          ]
+        },
+        "register": 60
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/dev/dev.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/dev/dev",
+      "key": "dev"
+    },
+    "@umijs/preset-umi/dist/commands/help": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/help.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/help",
+      "key": "help"
+    },
+    "@umijs/preset-umi/dist/commands/lint": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/lint.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/lint",
+      "key": "lint"
+    },
+    "@umijs/preset-umi/dist/commands/setup": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 0
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/setup.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/setup",
+      "key": "setup"
+    },
+    "@umijs/preset-umi/dist/commands/deadcode": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/deadcode.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/deadcode",
+      "key": "deadcode"
+    },
+    "@umijs/preset-umi/dist/commands/version": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/version.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/version",
+      "key": "version"
+    },
+    "@umijs/preset-umi/dist/commands/generators/page": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 4
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/page.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/page",
+      "key": "generator:page"
+    },
+    "@umijs/preset-umi/dist/commands/generators/prettier": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/prettier.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/prettier",
+      "key": "generator:prettier"
+    },
+    "@umijs/preset-umi/dist/commands/generators/tsconfig": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 0
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/tsconfig.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/tsconfig",
+      "key": "generator:tsconfig"
+    },
+    "@umijs/preset-umi/dist/commands/generators/jest": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/jest.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/jest",
+      "key": "generator:jest"
+    },
+    "@umijs/preset-umi/dist/commands/generators/tailwindcss": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/tailwindcss.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/tailwindcss",
+      "key": "generator:tailwindcss"
+    },
+    "@umijs/preset-umi/dist/commands/generators/dva": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/dva.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/dva",
+      "key": "generator:dva"
+    },
+    "@umijs/preset-umi/dist/commands/generators/component": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/component.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/component",
+      "key": "generator:component"
+    },
+    "@umijs/preset-umi/dist/commands/generators/mock": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/mock.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/mock",
+      "key": "generator:mock"
+    },
+    "@umijs/preset-umi/dist/commands/generators/cypress": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/cypress.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/cypress",
+      "key": "generator:cypress"
+    },
+    "@umijs/preset-umi/dist/commands/generators/api": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/api.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/api",
+      "key": "generator:api"
+    },
+    "@umijs/preset-umi/dist/commands/generators/precommit": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/precommit.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/generators/precommit",
+      "key": "generator:precommit"
+    },
+    "@umijs/preset-umi/dist/commands/plugin": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/plugin.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/plugin",
+      "key": "command:plugin"
+    },
+    "@umijs/preset-umi/dist/commands/verify-commit": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/verify-commit.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/verify-commit",
+      "key": "verifyCommit"
+    },
+    "@umijs/preset-umi/dist/commands/preview": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 19
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/preview.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/preview",
+      "key": "preview"
+    },
+    "@umijs/preset-umi/dist/commands/mfsu/mfsu": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/mfsu/mfsu.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/preset-umi/dist/commands/mfsu/mfsu",
+      "key": "mfsu-cli"
+    },
+    "@umijs/plugin-run": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 6
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugin-run@4.4.11/node_modules/@umijs/plugin-run/dist/index.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugin-run",
+      "key": "run"
+    },
+    "@umijs/plugins/dist/access": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/access.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/access",
+      "key": "access"
+    },
+    "@umijs/plugins/dist/analytics": {
+      "config": {
+        "onChange": "reload"
+      },
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/analytics.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/analytics",
+      "key": "analytics"
+    },
+    "@umijs/plugins/dist/antd": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyConfig": [
+            7
+          ],
+          "modifyAppData": [
+            0
+          ]
+        },
+        "register": 6
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/antd.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/antd",
+      "key": "antd"
+    },
+    "@umijs/plugins/dist/dva": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 10
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/dva.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/dva",
+      "key": "dva"
+    },
+    "@umijs/plugins/dist/initial-state": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/initial-state.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/initial-state",
+      "key": "initialState"
+    },
+    "@umijs/plugins/dist/layout": {
+      "config": {
+        "onChange": "regenerateTmpFiles"
+      },
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/layout.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/layout",
+      "key": "layout"
+    },
+    "@umijs/plugins/dist/locale": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 4
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/locale.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/locale",
+      "key": "locale"
+    },
+    "@umijs/plugins/dist/mf": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/mf.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/mf",
+      "key": "mf"
+    },
+    "@umijs/plugins/dist/model": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/model.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/model",
+      "key": "model"
+    },
+    "@umijs/plugins/dist/moment2dayjs": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/moment2dayjs.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/moment2dayjs",
+      "key": "moment2dayjs"
+    },
+    "@umijs/plugins/dist/qiankun": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/qiankun.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/qiankun",
+      "key": "qiankun"
+    },
+    "@umijs/plugins/dist/qiankun/master": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/qiankun/master.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/qiankun/master",
+      "key": "qiankun-master"
+    },
+    "@umijs/plugins/dist/qiankun/slave": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/qiankun/slave.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/qiankun/slave",
+      "key": "qiankun-slave"
+    },
+    "@umijs/plugins/dist/react-query": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/react-query.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/react-query",
+      "key": "reactQuery"
+    },
+    "@umijs/plugins/dist/request": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/request.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/request",
+      "key": "request"
+    },
+    "@umijs/plugins/dist/styled-components": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/styled-components.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/styled-components",
+      "key": "styledComponents"
+    },
+    "@umijs/plugins/dist/tailwindcss": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/tailwindcss.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/tailwindcss",
+      "key": "tailwindcss"
+    },
+    "@umijs/plugins/dist/valtio": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/valtio.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/plugins/dist/valtio",
+      "key": "valtio"
+    },
+    "@umijs/max/dist/plugins/maxAlias": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyConfig": [
+            0
+          ]
+        },
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/plugins/maxAlias.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/max/dist/plugins/maxAlias",
+      "key": "maxAlias"
+    },
+    "@umijs/max/dist/plugins/maxAppData": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyAppData": [
+            0
+          ]
+        },
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/plugins/maxAppData.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/max/dist/plugins/maxAppData",
+      "key": "maxAppData"
+    },
+    "@umijs/max/dist/plugins/maxChecker": {
+      "config": {},
+      "time": {
+        "hooks": {
+          "onCheckPkgJSON": [
+            0
+          ]
+        },
+        "register": 0
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/plugins/maxChecker.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/max/dist/plugins/maxChecker",
+      "key": "maxChecker"
+    },
+    "@umijs/core/dist/service/generatePlugin": {
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+core@4.4.11/node_modules/@umijs/core/dist/service/generatePlugin.js",
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "id": "@umijs/core/dist/service/generatePlugin",
+      "key": "generatePlugin"
+    }
+  },
+  "presets": [],
+  "name": "dev",
+  "args": {
+    "_": []
+  },
+  "userConfig": {
+    "antd": {},
+    "access": {},
+    "model": {},
+    "initialState": {},
+    "request": {},
+    "layout": false,
+    "locale": {
+      "default": "zh-CN",
+      "antd": true,
+      "title": true,
+      "baseNavigator": true,
+      "useLocalStorage": true
+    },
+    "routes": [
+      {
+        "path": "/",
+        "component": "@/layouts/RootLayout",
+        "routes": [
+          {
+            "path": "/",
+            "redirect": "/signIn"
+          },
+          {
+            "name": "menu.fakeHome",
+            "path": "/fakeHome",
+            "component": "@/layouts/FakeLayout",
+            "routes": [
+              {
+                "path": "/fakeHome",
+                "redirect": "/fakeHome/settings"
+              },
+              {
+                "name": "menu.settings",
+                "path": "/fakeHome/settings",
+                "component": "./Home/Settings"
+              }
+            ]
+          },
+          {
+            "name": "menu.home",
+            "path": "/home",
+            "component": "@/layouts/HomeLayout",
+            "routes": [
+              {
+                "path": "/home",
+                "redirect": "/home/chats"
+              },
+              {
+                "name": "menu.settings",
+                "path": "/home/settings",
+                "component": "./Home/Settings"
+              },
+              {
+                "name": "menu.chats",
+                "path": "chats",
+                "component": "@/layouts/HomeLayout/ChatsLayout",
+                "routes": [
+                  {
+                    "path": "",
+                    "redirect": "dashboard"
+                  },
+                  {
+                    "name": "menu.chats.chat",
+                    "path": "chat",
+                    "component": "./Home/Chats/Chat"
+                  },
+                  {
+                    "name": "menu.chats.dashboard",
+                    "path": "dashboard",
+                    "component": "./Home/Chats/Dashboard"
+                  }
+                ]
+              },
+              {
+                "name": "menu.contacts",
+                "path": "contacts",
+                "component": "@/layouts/HomeLayout/ContactsLayout",
+                "routes": [
+                  {
+                    "path": "",
+                    "redirect": "dashboard"
+                  },
+                  {
+                    "name": "menu.contacts.dashboard",
+                    "path": "dashboard",
+                    "component": "./Home/Contacts/components/Dashboard"
+                  },
+                  {
+                    "name": "menu.contacts.friend",
+                    "path": "friend",
+                    "component": "./Home/Contacts"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "menu.access",
+            "path": "/access",
+            "component": "./Access"
+          },
+          {
+            "name": "menu.signIn",
+            "path": "/signIn",
+            "component": "./Sign/SignIn"
+          },
+          {
+            "name": "menu.signUp",
+            "path": "/signUp",
+            "component": "./Sign/SignUp"
+          },
+          {
+            "name": "menu.testComponent",
+            "path": "/testComponent",
+            "component": "./TestComponent"
+          }
+        ]
+      },
+      {
+        "path": "/media/handler",
+        "component": "./Media/Handler"
+      },
+      {
+        "path": "/media/videoCall",
+        "component": "./Media/VideoCall"
+      },
+      {
+        "path": "/search/friend",
+        "component": "./Search/Friend"
+      },
+      {
+        "path": "/*",
+        "component": "./Error"
+      }
+    ],
+    "npmClient": "pnpm",
+    "esbuildMinifyIIFE": true
+  },
+  "mainConfigFile": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\.umirc.ts",
+  "config": {
+    "routeLoader": {
+      "moduleType": "esm"
+    },
+    "mountElementId": "root",
+    "history": {
+      "type": "browser"
+    },
+    "base": "/",
+    "svgr": {},
+    "publicPath": "/",
+    "mfsu": {
+      "strategy": "eager"
+    },
+    "ignoreMomentLocale": true,
+    "externals": {},
+    "autoCSSModules": true,
+    "alias": {
+      "umi": "@@/exports",
+      "react": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react@18.3.1\\node_modules\\react",
+      "react-dom": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react-dom@18.3.1_react@18.3.1\\node_modules\\react-dom",
+      "react-router": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react-router@6.3.0_react@18.3.1\\node_modules\\react-router",
+      "react-router-dom": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react-router-dom@6.3.0_reac_beb70b932a60871592d5dec302f52003\\node_modules\\react-router-dom",
+      "@": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src",
+      "@@": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/.umi",
+      "regenerator-runtime": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\regenerator-runtime@0.13.11\\node_modules\\regenerator-runtime",
+      "antd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\node_modules\\antd",
+      "@umijs/max": "@@/exports"
+    },
+    "antd": {},
+    "access": {},
+    "model": {},
+    "initialState": {},
+    "request": {},
+    "layout": false,
+    "locale": {
+      "default": "zh-CN",
+      "antd": true,
+      "title": true,
+      "baseNavigator": true,
+      "useLocalStorage": true
+    },
+    "routes": [
+      {
+        "path": "/",
+        "component": "@/layouts/RootLayout",
+        "routes": [
+          {
+            "path": "/",
+            "redirect": "/signIn"
+          },
+          {
+            "name": "menu.fakeHome",
+            "path": "/fakeHome",
+            "component": "@/layouts/FakeLayout",
+            "routes": [
+              {
+                "path": "/fakeHome",
+                "redirect": "/fakeHome/settings"
+              },
+              {
+                "name": "menu.settings",
+                "path": "/fakeHome/settings",
+                "component": "./Home/Settings"
+              }
+            ]
+          },
+          {
+            "name": "menu.home",
+            "path": "/home",
+            "component": "@/layouts/HomeLayout",
+            "routes": [
+              {
+                "path": "/home",
+                "redirect": "/home/chats"
+              },
+              {
+                "name": "menu.settings",
+                "path": "/home/settings",
+                "component": "./Home/Settings"
+              },
+              {
+                "name": "menu.chats",
+                "path": "chats",
+                "component": "@/layouts/HomeLayout/ChatsLayout",
+                "routes": [
+                  {
+                    "path": "",
+                    "redirect": "dashboard"
+                  },
+                  {
+                    "name": "menu.chats.chat",
+                    "path": "chat",
+                    "component": "./Home/Chats/Chat"
+                  },
+                  {
+                    "name": "menu.chats.dashboard",
+                    "path": "dashboard",
+                    "component": "./Home/Chats/Dashboard"
+                  }
+                ]
+              },
+              {
+                "name": "menu.contacts",
+                "path": "contacts",
+                "component": "@/layouts/HomeLayout/ContactsLayout",
+                "routes": [
+                  {
+                    "path": "",
+                    "redirect": "dashboard"
+                  },
+                  {
+                    "name": "menu.contacts.dashboard",
+                    "path": "dashboard",
+                    "component": "./Home/Contacts/components/Dashboard"
+                  },
+                  {
+                    "name": "menu.contacts.friend",
+                    "path": "friend",
+                    "component": "./Home/Contacts"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "menu.access",
+            "path": "/access",
+            "component": "./Access"
+          },
+          {
+            "name": "menu.signIn",
+            "path": "/signIn",
+            "component": "./Sign/SignIn"
+          },
+          {
+            "name": "menu.signUp",
+            "path": "/signUp",
+            "component": "./Sign/SignUp"
+          },
+          {
+            "name": "menu.testComponent",
+            "path": "/testComponent",
+            "component": "./TestComponent"
+          }
+        ]
+      },
+      {
+        "path": "/media/handler",
+        "component": "./Media/Handler"
+      },
+      {
+        "path": "/media/videoCall",
+        "component": "./Media/VideoCall"
+      },
+      {
+        "path": "/search/friend",
+        "component": "./Search/Friend"
+      },
+      {
+        "path": "/*",
+        "component": "./Error"
+      }
+    ],
+    "npmClient": "pnpm",
+    "esbuildMinifyIIFE": true,
+    "targets": {
+      "chrome": 80
+    },
+    "theme": {
+      "blue-base": "#1890ff",
+      "blue-1": "#e6f7ff",
+      "blue-2": "#bae7ff",
+      "blue-3": "#91d5ff",
+      "blue-4": "#69c0ff",
+      "blue-5": "#40a9ff",
+      "blue-6": "#1890ff",
+      "blue-7": "#096dd9",
+      "blue-8": "#0050b3",
+      "blue-9": "#003a8c",
+      "blue-10": "#002766",
+      "purple-base": "#722ed1",
+      "purple-1": "#f9f0ff",
+      "purple-2": "#efdbff",
+      "purple-3": "#d3adf7",
+      "purple-4": "#b37feb",
+      "purple-5": "#9254de",
+      "purple-6": "#722ed1",
+      "purple-7": "#531dab",
+      "purple-8": "#391085",
+      "purple-9": "#22075e",
+      "purple-10": "#120338",
+      "cyan-base": "#13c2c2",
+      "cyan-1": "#e6fffb",
+      "cyan-2": "#b5f5ec",
+      "cyan-3": "#87e8de",
+      "cyan-4": "#5cdbd3",
+      "cyan-5": "#36cfc9",
+      "cyan-6": "#13c2c2",
+      "cyan-7": "#08979c",
+      "cyan-8": "#006d75",
+      "cyan-9": "#00474f",
+      "cyan-10": "#002329",
+      "green-base": "#52c41a",
+      "green-1": "#f6ffed",
+      "green-2": "#d9f7be",
+      "green-3": "#b7eb8f",
+      "green-4": "#95de64",
+      "green-5": "#73d13d",
+      "green-6": "#52c41a",
+      "green-7": "#389e0d",
+      "green-8": "#237804",
+      "green-9": "#135200",
+      "green-10": "#092b00",
+      "magenta-base": "#eb2f96",
+      "magenta-1": "#fff0f6",
+      "magenta-2": "#ffd6e7",
+      "magenta-3": "#ffadd2",
+      "magenta-4": "#ff85c0",
+      "magenta-5": "#f759ab",
+      "magenta-6": "#eb2f96",
+      "magenta-7": "#c41d7f",
+      "magenta-8": "#9e1068",
+      "magenta-9": "#780650",
+      "magenta-10": "#520339",
+      "pink-base": "#eb2f96",
+      "pink-1": "#fff0f6",
+      "pink-2": "#ffd6e7",
+      "pink-3": "#ffadd2",
+      "pink-4": "#ff85c0",
+      "pink-5": "#f759ab",
+      "pink-6": "#eb2f96",
+      "pink-7": "#c41d7f",
+      "pink-8": "#9e1068",
+      "pink-9": "#780650",
+      "pink-10": "#520339",
+      "red-base": "#f5222d",
+      "red-1": "#fff1f0",
+      "red-2": "#ffccc7",
+      "red-3": "#ffa39e",
+      "red-4": "#ff7875",
+      "red-5": "#ff4d4f",
+      "red-6": "#f5222d",
+      "red-7": "#cf1322",
+      "red-8": "#a8071a",
+      "red-9": "#820014",
+      "red-10": "#5c0011",
+      "orange-base": "#fa8c16",
+      "orange-1": "#fff7e6",
+      "orange-2": "#ffe7ba",
+      "orange-3": "#ffd591",
+      "orange-4": "#ffc069",
+      "orange-5": "#ffa940",
+      "orange-6": "#fa8c16",
+      "orange-7": "#d46b08",
+      "orange-8": "#ad4e00",
+      "orange-9": "#873800",
+      "orange-10": "#612500",
+      "yellow-base": "#fadb14",
+      "yellow-1": "#feffe6",
+      "yellow-2": "#ffffb8",
+      "yellow-3": "#fffb8f",
+      "yellow-4": "#fff566",
+      "yellow-5": "#ffec3d",
+      "yellow-6": "#fadb14",
+      "yellow-7": "#d4b106",
+      "yellow-8": "#ad8b00",
+      "yellow-9": "#876800",
+      "yellow-10": "#614700",
+      "volcano-base": "#fa541c",
+      "volcano-1": "#fff2e8",
+      "volcano-2": "#ffd8bf",
+      "volcano-3": "#ffbb96",
+      "volcano-4": "#ff9c6e",
+      "volcano-5": "#ff7a45",
+      "volcano-6": "#fa541c",
+      "volcano-7": "#d4380d",
+      "volcano-8": "#ad2102",
+      "volcano-9": "#871400",
+      "volcano-10": "#610b00",
+      "geekblue-base": "#2f54eb",
+      "geekblue-1": "#f0f5ff",
+      "geekblue-2": "#d6e4ff",
+      "geekblue-3": "#adc6ff",
+      "geekblue-4": "#85a5ff",
+      "geekblue-5": "#597ef7",
+      "geekblue-6": "#2f54eb",
+      "geekblue-7": "#1d39c4",
+      "geekblue-8": "#10239e",
+      "geekblue-9": "#061178",
+      "geekblue-10": "#030852",
+      "lime-base": "#a0d911",
+      "lime-1": "#fcffe6",
+      "lime-2": "#f4ffb8",
+      "lime-3": "#eaff8f",
+      "lime-4": "#d3f261",
+      "lime-5": "#bae637",
+      "lime-6": "#a0d911",
+      "lime-7": "#7cb305",
+      "lime-8": "#5b8c00",
+      "lime-9": "#3f6600",
+      "lime-10": "#254000",
+      "gold-base": "#faad14",
+      "gold-1": "#fffbe6",
+      "gold-2": "#fff1b8",
+      "gold-3": "#ffe58f",
+      "gold-4": "#ffd666",
+      "gold-5": "#ffc53d",
+      "gold-6": "#faad14",
+      "gold-7": "#d48806",
+      "gold-8": "#ad6800",
+      "gold-9": "#874d00",
+      "gold-10": "#613400",
+      "preset-colors": "pink, magenta, red, volcano, orange, yellow, gold, cyan, lime, green, blue, geekblue,",
+      "theme": "default",
+      "ant-prefix": "ant",
+      "html-selector": "html",
+      "primary-color": "#1890ff",
+      "primary-color-hover": "#40a9ff",
+      "primary-color-active": "#096dd9",
+      "primary-color-outline": "rgba(24, 144, 255, 0.2)",
+      "processing-color": "#1890ff",
+      "info-color": "#1890ff",
+      "info-color-deprecated-bg": "#e6f7ff",
+      "info-color-deprecated-border": "#91d5ff",
+      "success-color": "#52c41a",
+      "success-color-hover": "#73d13d",
+      "success-color-active": "#389e0d",
+      "success-color-outline": "rgba(82, 196, 26, 0.2)",
+      "success-color-deprecated-bg": "#f6ffed",
+      "success-color-deprecated-border": "#b7eb8f",
+      "warning-color": "#faad14",
+      "warning-color-hover": "#ffc53d",
+      "warning-color-active": "#d48806",
+      "warning-color-outline": "rgba(250, 173, 20, 0.2)",
+      "warning-color-deprecated-bg": "#fffbe6",
+      "warning-color-deprecated-border": "#ffe58f",
+      "error-color": "#ff4d4f",
+      "error-color-hover": "#ff7875",
+      "error-color-active": "#d9363e",
+      "error-color-outline": "rgba(255, 77, 79, 0.2)",
+      "error-color-deprecated-bg": "#fff2f0",
+      "error-color-deprecated-border": "#ffccc7",
+      "highlight-color": "#ff4d4f",
+      "normal-color": "#d9d9d9",
+      "white": "#fff",
+      "black": "#000",
+      "primary-1": "#e6f7ff",
+      "primary-2": "#bae7ff",
+      "primary-3": "#91d5ff",
+      "primary-4": "#69c0ff",
+      "primary-5": "#40a9ff",
+      "primary-6": "#1890ff",
+      "primary-7": "#096dd9",
+      "primary-8": "#0050b3",
+      "primary-9": "#003a8c",
+      "primary-10": "#002766",
+      "component-background": "#fff",
+      "popover-background": "#fff",
+      "popover-customize-border-color": "#f0f0f0",
+      "font-family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+      "code-family": "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace",
+      "text-color": "rgba(0, 0, 0, 0.85)",
+      "text-color-secondary": "rgba(0, 0, 0, 0.45)",
+      "text-color-inverse": "#fff",
+      "icon-color": "inherit",
+      "icon-color-hover": "rgba(0, 0, 0, 0.75)",
+      "heading-color": "rgba(0, 0, 0, 0.85)",
+      "text-color-dark": "rgba(255, 255, 255, 0.85)",
+      "text-color-secondary-dark": "rgba(255, 255, 255, 0.65)",
+      "text-selection-bg": "#1890ff",
+      "font-variant-base": "tabular-nums",
+      "font-feature-settings-base": "tnum",
+      "font-size-base": "14px",
+      "font-size-lg": "16px",
+      "font-size-sm": "12px",
+      "heading-1-size": "38px",
+      "heading-2-size": "30px",
+      "heading-3-size": "24px",
+      "heading-4-size": "20px",
+      "heading-5-size": "16px",
+      "line-height-base": "1.5715",
+      "border-radius-base": "2px",
+      "border-radius-sm": "2px",
+      "control-border-radius": "2px",
+      "arrow-border-radius": "2px",
+      "padding-lg": "24px",
+      "padding-md": "16px",
+      "padding-sm": "12px",
+      "padding-xs": "8px",
+      "padding-xss": "4px",
+      "control-padding-horizontal": "12px",
+      "control-padding-horizontal-sm": "8px",
+      "margin-lg": "24px",
+      "margin-md": "16px",
+      "margin-sm": "12px",
+      "margin-xs": "8px",
+      "margin-xss": "4px",
+      "height-base": "32px",
+      "height-lg": "40px",
+      "height-sm": "24px",
+      "item-active-bg": "#e6f7ff",
+      "item-hover-bg": "#f5f5f5",
+      "iconfont-css-prefix": "anticon",
+      "link-color": "#1890ff",
+      "link-hover-color": "#40a9ff",
+      "link-active-color": "#096dd9",
+      "link-decoration": "none",
+      "link-hover-decoration": "none",
+      "link-focus-decoration": "none",
+      "link-focus-outline": "0",
+      "ease-base-out": "cubic-bezier(0.7, 0.3, 0.1, 1)",
+      "ease-base-in": "cubic-bezier(0.9, 0, 0.3, 0.7)",
+      "ease-out": "cubic-bezier(0.215, 0.61, 0.355, 1)",
+      "ease-in": "cubic-bezier(0.55, 0.055, 0.675, 0.19)",
+      "ease-in-out": "cubic-bezier(0.645, 0.045, 0.355, 1)",
+      "ease-out-back": "cubic-bezier(0.12, 0.4, 0.29, 1.46)",
+      "ease-in-back": "cubic-bezier(0.71, -0.46, 0.88, 0.6)",
+      "ease-in-out-back": "cubic-bezier(0.71, -0.46, 0.29, 1.46)",
+      "ease-out-circ": "cubic-bezier(0.08, 0.82, 0.17, 1)",
+      "ease-in-circ": "cubic-bezier(0.6, 0.04, 0.98, 0.34)",
+      "ease-in-out-circ": "cubic-bezier(0.78, 0.14, 0.15, 0.86)",
+      "ease-out-quint": "cubic-bezier(0.23, 1, 0.32, 1)",
+      "ease-in-quint": "cubic-bezier(0.755, 0.05, 0.855, 0.06)",
+      "ease-in-out-quint": "cubic-bezier(0.86, 0, 0.07, 1)",
+      "border-color-base": "#d9d9d9",
+      "border-color-split": "#f0f0f0",
+      "border-color-inverse": "#fff",
+      "border-width-base": "1px",
+      "border-style-base": "solid",
+      "outline-blur-size": "0",
+      "outline-width": "2px",
+      "outline-color": "#1890ff",
+      "outline-fade": "20%",
+      "background-color-light": "#fafafa",
+      "background-color-base": "#f5f5f5",
+      "disabled-color": "rgba(0, 0, 0, 0.25)",
+      "disabled-bg": "#f5f5f5",
+      "disabled-active-bg": "#e6e6e6",
+      "disabled-color-dark": "rgba(255, 255, 255, 0.35)",
+      "shadow-color": "rgba(0, 0, 0, 0.15)",
+      "shadow-color-inverse": "#fff",
+      "box-shadow-base": "0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05)",
+      "shadow-1-up": "0 -6px 16px -8px rgba(0, 0, 0, 0.08), 0 -9px 28px 0 rgba(0, 0, 0, 0.05), 0 -12px 48px 16px rgba(0, 0, 0, 0.03)",
+      "shadow-1-down": "0 6px 16px -8px rgba(0, 0, 0, 0.08), 0 9px 28px 0 rgba(0, 0, 0, 0.05), 0 12px 48px 16px rgba(0, 0, 0, 0.03)",
+      "shadow-1-left": "-6px 0 16px -8px rgba(0, 0, 0, 0.08), -9px 0 28px 0 rgba(0, 0, 0, 0.05), -12px 0 48px 16px rgba(0, 0, 0, 0.03)",
+      "shadow-1-right": "6px 0 16px -8px rgba(0, 0, 0, 0.08), 9px 0 28px 0 rgba(0, 0, 0, 0.05), 12px 0 48px 16px rgba(0, 0, 0, 0.03)",
+      "shadow-2": "0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05)",
+      "btn-font-weight": "400",
+      "btn-border-radius-base": "2px",
+      "btn-border-radius-sm": "2px",
+      "btn-border-width": "1px",
+      "btn-border-style": "solid",
+      "btn-shadow": "0 2px 0 rgba(0, 0, 0, 0.015)",
+      "btn-primary-shadow": "0 2px 0 rgba(0, 0, 0, 0.045)",
+      "btn-text-shadow": "0 -1px 0 rgba(0, 0, 0, 0.12)",
+      "btn-primary-color": "#fff",
+      "btn-primary-bg": "#1890ff",
+      "btn-default-color": "rgba(0, 0, 0, 0.85)",
+      "btn-default-bg": "#fff",
+      "btn-default-border": "#d9d9d9",
+      "btn-danger-color": "#fff",
+      "btn-danger-bg": "#ff4d4f",
+      "btn-danger-border": "#ff4d4f",
+      "btn-disable-color": "rgba(0, 0, 0, 0.25)",
+      "btn-disable-bg": "#f5f5f5",
+      "btn-disable-border": "#d9d9d9",
+      "btn-default-ghost-color": "#fff",
+      "btn-default-ghost-bg": "transparent",
+      "btn-default-ghost-border": "#fff",
+      "btn-font-size-lg": "16px",
+      "btn-font-size-sm": "14px",
+      "btn-padding-horizontal-base": "15px",
+      "btn-padding-horizontal-lg": "15px",
+      "btn-padding-horizontal-sm": "7px",
+      "btn-height-base": "32px",
+      "btn-height-lg": "40px",
+      "btn-height-sm": "24px",
+      "btn-line-height": "1.5715",
+      "btn-circle-size": "32px",
+      "btn-circle-size-lg": "40px",
+      "btn-circle-size-sm": "24px",
+      "btn-square-size": "32px",
+      "btn-square-size-lg": "40px",
+      "btn-square-size-sm": "24px",
+      "btn-square-only-icon-size": "16px",
+      "btn-square-only-icon-size-sm": "14px",
+      "btn-square-only-icon-size-lg": "18px",
+      "btn-group-border": "#40a9ff",
+      "btn-link-hover-bg": "transparent",
+      "btn-text-hover-bg": "rgba(0, 0, 0, 0.018)",
+      "checkbox-size": "16px",
+      "checkbox-color": "#1890ff",
+      "checkbox-check-color": "#fff",
+      "checkbox-check-bg": "#fff",
+      "checkbox-border-width": "1px",
+      "checkbox-border-radius": "2px",
+      "checkbox-group-item-margin-right": "8px",
+      "descriptions-bg": "#fafafa",
+      "descriptions-title-margin-bottom": "20px",
+      "descriptions-default-padding": "16px 24px",
+      "descriptions-middle-padding": "12px 24px",
+      "descriptions-small-padding": "8px 16px",
+      "descriptions-item-padding-bottom": "16px",
+      "descriptions-item-trailing-colon": "true",
+      "descriptions-item-label-colon-margin-right": "8px",
+      "descriptions-item-label-colon-margin-left": "2px",
+      "descriptions-extra-color": "rgba(0, 0, 0, 0.85)",
+      "divider-text-padding": "1em",
+      "divider-orientation-margin": "5%",
+      "divider-color": "rgba(0, 0, 0, 0.06)",
+      "divider-vertical-gutter": "8px",
+      "dropdown-selected-color": "#1890ff",
+      "dropdown-menu-submenu-disabled-bg": "#fff",
+      "dropdown-selected-bg": "#e6f7ff",
+      "empty-font-size": "14px",
+      "radio-size": "16px",
+      "radio-top": "0.2em",
+      "radio-border-width": "1px",
+      "radio-dot-size": "8px",
+      "radio-dot-color": "#1890ff",
+      "radio-dot-disabled-color": "rgba(0, 0, 0, 0.2)",
+      "radio-solid-checked-color": "#fff",
+      "radio-button-bg": "#fff",
+      "radio-button-checked-bg": "#fff",
+      "radio-button-color": "rgba(0, 0, 0, 0.85)",
+      "radio-button-hover-color": "#40a9ff",
+      "radio-button-active-color": "#096dd9",
+      "radio-button-padding-horizontal": "15px",
+      "radio-disabled-button-checked-bg": "#e6e6e6",
+      "radio-disabled-button-checked-color": "rgba(0, 0, 0, 0.25)",
+      "radio-wrapper-margin-right": "8px",
+      "screen-xs": "480px",
+      "screen-xs-min": "480px",
+      "screen-sm": "576px",
+      "screen-sm-min": "576px",
+      "screen-md": "768px",
+      "screen-md-min": "768px",
+      "screen-lg": "992px",
+      "screen-lg-min": "992px",
+      "screen-xl": "1200px",
+      "screen-xl-min": "1200px",
+      "screen-xxl": "1600px",
+      "screen-xxl-min": "1600px",
+      "screen-xs-max": "575px",
+      "screen-sm-max": "767px",
+      "screen-md-max": "991px",
+      "screen-lg-max": "1199px",
+      "screen-xl-max": "1599px",
+      "grid-columns": "24",
+      "layout-header-background": "#001529",
+      "layout-header-height": "64px",
+      "layout-header-padding": "0 50px",
+      "layout-header-color": "rgba(0, 0, 0, 0.85)",
+      "layout-footer-padding": "24px 50px",
+      "layout-footer-background": "#f0f2f5",
+      "layout-sider-background": "#001529",
+      "layout-trigger-height": "48px",
+      "layout-trigger-background": "#002140",
+      "layout-trigger-color": "#fff",
+      "layout-zero-trigger-width": "36px",
+      "layout-zero-trigger-height": "42px",
+      "layout-sider-background-light": "#fff",
+      "layout-trigger-background-light": "#fff",
+      "layout-trigger-color-light": "rgba(0, 0, 0, 0.85)",
+      "zindex-badge": "auto",
+      "zindex-table-fixed": "2",
+      "zindex-affix": "10",
+      "zindex-back-top": "10",
+      "zindex-picker-panel": "10",
+      "zindex-popup-close": "10",
+      "zindex-modal": "1000",
+      "zindex-modal-mask": "1000",
+      "zindex-message": "1010",
+      "zindex-notification": "1010",
+      "zindex-popover": "1030",
+      "zindex-dropdown": "1050",
+      "zindex-picker": "1050",
+      "zindex-popoconfirm": "1060",
+      "zindex-tooltip": "1070",
+      "zindex-image": "1080",
+      "animation-duration-slow": "0.3s",
+      "animation-duration-base": "0.2s",
+      "animation-duration-fast": "0.1s",
+      "collapse-panel-border-radius": "2px",
+      "dropdown-menu-bg": "#fff",
+      "dropdown-vertical-padding": "5px",
+      "dropdown-edge-child-vertical-padding": "4px",
+      "dropdown-font-size": "14px",
+      "dropdown-line-height": "22px",
+      "label-required-color": "#ff4d4f",
+      "label-color": "rgba(0, 0, 0, 0.85)",
+      "form-warning-input-bg": "#fff",
+      "form-item-margin-bottom": "24px",
+      "form-item-trailing-colon": "true",
+      "form-vertical-label-padding": "0 0 8px",
+      "form-vertical-label-margin": "0",
+      "form-item-label-font-size": "14px",
+      "form-item-label-height": "32px",
+      "form-item-label-colon-margin-right": "8px",
+      "form-item-label-colon-margin-left": "2px",
+      "form-error-input-bg": "#fff",
+      "input-height-base": "32px",
+      "input-height-lg": "40px",
+      "input-height-sm": "24px",
+      "input-padding-horizontal": "11px",
+      "input-padding-horizontal-base": "11px",
+      "input-padding-horizontal-sm": "7px",
+      "input-padding-horizontal-lg": "11px",
+      "input-padding-vertical-base": "4px",
+      "input-padding-vertical-sm": "0px",
+      "input-padding-vertical-lg": "6.5px",
+      "input-placeholder-color": "#bfbfbf",
+      "input-color": "rgba(0, 0, 0, 0.85)",
+      "input-icon-color": "rgba(0, 0, 0, 0.85)",
+      "input-border-color": "#d9d9d9",
+      "input-bg": "#fff",
+      "input-number-hover-border-color": "#40a9ff",
+      "input-number-handler-active-bg": "#f4f4f4",
+      "input-number-handler-hover-bg": "#40a9ff",
+      "input-number-handler-bg": "#fff",
+      "input-number-handler-border-color": "#d9d9d9",
+      "input-addon-bg": "#fafafa",
+      "input-hover-border-color": "#40a9ff",
+      "input-disabled-bg": "#f5f5f5",
+      "input-outline-offset": "0 0",
+      "input-icon-hover-color": "rgba(0, 0, 0, 0.85)",
+      "input-disabled-color": "rgba(0, 0, 0, 0.25)",
+      "mentions-dropdown-bg": "#fff",
+      "mentions-dropdown-menu-item-hover-bg": "#fff",
+      "select-border-color": "#d9d9d9",
+      "select-item-selected-color": "rgba(0, 0, 0, 0.85)",
+      "select-item-selected-font-weight": "600",
+      "select-dropdown-bg": "#fff",
+      "select-item-selected-bg": "#e6f7ff",
+      "select-item-active-bg": "#f5f5f5",
+      "select-dropdown-vertical-padding": "5px",
+      "select-dropdown-font-size": "14px",
+      "select-dropdown-line-height": "22px",
+      "select-dropdown-height": "32px",
+      "select-background": "#fff",
+      "select-clear-background": "#fff",
+      "select-selection-item-bg": "#f5f5f5",
+      "select-selection-item-border-color": "#f0f0f0",
+      "select-single-item-height-lg": "40px",
+      "select-multiple-item-height": "24px",
+      "select-multiple-item-height-lg": "32px",
+      "select-multiple-item-spacing-half": "2px",
+      "select-multiple-disabled-background": "#f5f5f5",
+      "select-multiple-item-disabled-color": "#bfbfbf",
+      "select-multiple-item-disabled-border-color": "#d9d9d9",
+      "cascader-bg": "#fff",
+      "cascader-item-selected-bg": "#e6f7ff",
+      "cascader-menu-bg": "#fff",
+      "cascader-menu-border-color-split": "#f0f0f0",
+      "cascader-dropdown-vertical-padding": "5px",
+      "cascader-dropdown-edge-child-vertical-padding": "4px",
+      "cascader-dropdown-font-size": "14px",
+      "cascader-dropdown-line-height": "22px",
+      "anchor-bg": "transparent",
+      "anchor-border-color": "#f0f0f0",
+      "anchor-link-top": "4px",
+      "anchor-link-left": "16px",
+      "anchor-link-padding": "4px 0 4px 16px",
+      "tooltip-max-width": "250px",
+      "tooltip-color": "#fff",
+      "tooltip-bg": "rgba(0, 0, 0, 0.75)",
+      "tooltip-arrow-width": "11.3137085px",
+      "tooltip-distance": "14.3137085px",
+      "tooltip-arrow-color": "rgba(0, 0, 0, 0.75)",
+      "tooltip-border-radius": "2px",
+      "popover-bg": "#fff",
+      "popover-color": "rgba(0, 0, 0, 0.85)",
+      "popover-min-width": "177px",
+      "popover-min-height": "32px",
+      "popover-arrow-width": "11.3137085px",
+      "popover-arrow-color": "#fff",
+      "popover-arrow-outer-color": "#fff",
+      "popover-distance": "15.3137085px",
+      "popover-padding-horizontal": "16px",
+      "modal-header-padding-vertical": "16px",
+      "modal-header-padding-horizontal": "24px",
+      "modal-header-bg": "#fff",
+      "modal-header-padding": "16px 24px",
+      "modal-header-border-width": "1px",
+      "modal-header-border-style": "solid",
+      "modal-header-title-line-height": "22px",
+      "modal-header-title-font-size": "16px",
+      "modal-header-border-color-split": "#f0f0f0",
+      "modal-header-close-size": "54px",
+      "modal-content-bg": "#fff",
+      "modal-heading-color": "rgba(0, 0, 0, 0.85)",
+      "modal-close-color": "rgba(0, 0, 0, 0.45)",
+      "modal-footer-bg": "transparent",
+      "modal-footer-border-color-split": "#f0f0f0",
+      "modal-footer-border-style": "solid",
+      "modal-footer-padding-vertical": "10px",
+      "modal-footer-padding-horizontal": "16px",
+      "modal-footer-border-width": "1px",
+      "modal-mask-bg": "rgba(0, 0, 0, 0.45)",
+      "modal-confirm-title-font-size": "16px",
+      "modal-border-radius": "2px",
+      "progress-default-color": "#1890ff",
+      "progress-remaining-color": "#f5f5f5",
+      "progress-info-text-color": "rgba(0, 0, 0, 0.85)",
+      "progress-radius": "100px",
+      "progress-steps-item-bg": "#f3f3f3",
+      "progress-text-font-size": "1em",
+      "progress-text-color": "rgba(0, 0, 0, 0.85)",
+      "progress-circle-text-font-size": "1em",
+      "menu-inline-toplevel-item-height": "40px",
+      "menu-item-height": "40px",
+      "menu-item-group-height": "1.5715",
+      "menu-collapsed-width": "80px",
+      "menu-bg": "#fff",
+      "menu-popup-bg": "#fff",
+      "menu-item-color": "rgba(0, 0, 0, 0.85)",
+      "menu-inline-submenu-bg": "#fafafa",
+      "menu-highlight-color": "#1890ff",
+      "menu-highlight-danger-color": "#ff4d4f",
+      "menu-item-active-bg": "#e6f7ff",
+      "menu-item-active-danger-bg": "#fff1f0",
+      "menu-item-active-border-width": "3px",
+      "menu-item-group-title-color": "rgba(0, 0, 0, 0.45)",
+      "menu-item-vertical-margin": "4px",
+      "menu-item-font-size": "14px",
+      "menu-item-boundary-margin": "8px",
+      "menu-item-padding-horizontal": "20px",
+      "menu-item-padding": "0 20px",
+      "menu-horizontal-line-height": "46px",
+      "menu-icon-margin-right": "10px",
+      "menu-icon-size": "14px",
+      "menu-icon-size-lg": "16px",
+      "menu-item-group-title-font-size": "14px",
+      "menu-dark-color": "rgba(255, 255, 255, 0.65)",
+      "menu-dark-danger-color": "#ff4d4f",
+      "menu-dark-bg": "#001529",
+      "menu-dark-arrow-color": "#fff",
+      "menu-dark-inline-submenu-bg": "#000c17",
+      "menu-dark-highlight-color": "#fff",
+      "menu-dark-item-active-bg": "#1890ff",
+      "menu-dark-item-active-danger-bg": "#ff4d4f",
+      "menu-dark-selected-item-icon-color": "#fff",
+      "menu-dark-selected-item-text-color": "#fff",
+      "menu-dark-item-hover-bg": "transparent",
+      "spin-dot-size-sm": "14px",
+      "spin-dot-size": "20px",
+      "spin-dot-size-lg": "32px",
+      "table-bg": "#fff",
+      "table-header-bg": "#fafafa",
+      "table-header-color": "rgba(0, 0, 0, 0.85)",
+      "table-header-sort-bg": "#f5f5f5",
+      "table-row-hover-bg": "#fafafa",
+      "table-selected-row-color": "inherit",
+      "table-selected-row-bg": "#e6f7ff",
+      "table-selected-row-hover-bg": "#dcf4ff",
+      "table-expanded-row-bg": "#fbfbfb",
+      "table-padding-vertical": "16px",
+      "table-padding-horizontal": "16px",
+      "table-padding-vertical-md": "12px",
+      "table-padding-horizontal-md": "8px",
+      "table-padding-vertical-sm": "8px",
+      "table-padding-horizontal-sm": "8px",
+      "table-border-color": "#f0f0f0",
+      "table-border-radius-base": "2px",
+      "table-footer-bg": "#fafafa",
+      "table-footer-color": "rgba(0, 0, 0, 0.85)",
+      "table-header-bg-sm": "#fafafa",
+      "table-font-size": "14px",
+      "table-font-size-md": "14px",
+      "table-font-size-sm": "14px",
+      "table-header-cell-split-color": "rgba(0, 0, 0, 0.06)",
+      "table-header-sort-active-bg": "rgba(0, 0, 0, 0.04)",
+      "table-fixed-header-sort-active-bg": "#f5f5f5",
+      "table-header-filter-active-bg": "rgba(0, 0, 0, 0.04)",
+      "table-filter-btns-bg": "inherit",
+      "table-filter-dropdown-bg": "#fff",
+      "table-expand-icon-bg": "#fff",
+      "table-selection-column-width": "32px",
+      "table-sticky-scroll-bar-bg": "rgba(0, 0, 0, 0.35)",
+      "table-sticky-scroll-bar-radius": "4px",
+      "tag-border-radius": "2px",
+      "tag-default-bg": "#fafafa",
+      "tag-default-color": "rgba(0, 0, 0, 0.85)",
+      "tag-font-size": "12px",
+      "tag-line-height": "20px",
+      "picker-bg": "#fff",
+      "picker-basic-cell-hover-color": "#f5f5f5",
+      "picker-basic-cell-active-with-range-color": "#e6f7ff",
+      "picker-basic-cell-hover-with-range-color": "#cbe6ff",
+      "picker-basic-cell-disabled-bg": "rgba(0, 0, 0, 0.04)",
+      "picker-border-color": "#f0f0f0",
+      "picker-date-hover-range-border-color": "#7ec1ff",
+      "picker-date-hover-range-color": "#cbe6ff",
+      "picker-time-panel-column-width": "56px",
+      "picker-time-panel-column-height": "224px",
+      "picker-time-panel-cell-height": "28px",
+      "picker-panel-cell-height": "24px",
+      "picker-panel-cell-width": "36px",
+      "picker-text-height": "40px",
+      "picker-panel-without-time-cell-height": "66px",
+      "calendar-bg": "#fff",
+      "calendar-input-bg": "#fff",
+      "calendar-border-color": "#fff",
+      "calendar-item-active-bg": "#e6f7ff",
+      "calendar-column-active-bg": "rgba(230, 247, 255, 0.2)",
+      "calendar-full-bg": "#fff",
+      "calendar-full-panel-bg": "#fff",
+      "carousel-dot-width": "16px",
+      "carousel-dot-height": "3px",
+      "carousel-dot-active-width": "24px",
+      "badge-height": "20px",
+      "badge-height-sm": "14px",
+      "badge-dot-size": "6px",
+      "badge-font-size": "12px",
+      "badge-font-size-sm": "12px",
+      "badge-font-weight": "normal",
+      "badge-status-size": "6px",
+      "badge-text-color": "#fff",
+      "badge-color": "#ff4d4f",
+      "rate-star-color": "#fadb14",
+      "rate-star-bg": "#f0f0f0",
+      "rate-star-size": "20px",
+      "rate-star-hover-scale": "scale(1.1)",
+      "card-head-color": "rgba(0, 0, 0, 0.85)",
+      "card-head-background": "transparent",
+      "card-head-font-size": "16px",
+      "card-head-font-size-sm": "14px",
+      "card-head-padding": "16px",
+      "card-head-padding-sm": "8px",
+      "card-head-height": "48px",
+      "card-head-height-sm": "36px",
+      "card-inner-head-padding": "12px",
+      "card-padding-base": "24px",
+      "card-padding-base-sm": "12px",
+      "card-actions-background": "#fff",
+      "card-actions-li-margin": "12px 0",
+      "card-skeleton-bg": "#cfd8dc",
+      "card-background": "#fff",
+      "card-shadow": "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
+      "card-radius": "2px",
+      "card-head-tabs-margin-bottom": "-17px",
+      "card-head-extra-color": "rgba(0, 0, 0, 0.85)",
+      "comment-bg": "inherit",
+      "comment-padding-base": "16px 0",
+      "comment-nest-indent": "44px",
+      "comment-font-size-base": "14px",
+      "comment-font-size-sm": "12px",
+      "comment-author-name-color": "rgba(0, 0, 0, 0.45)",
+      "comment-author-time-color": "#ccc",
+      "comment-action-color": "rgba(0, 0, 0, 0.45)",
+      "comment-action-hover-color": "#595959",
+      "comment-actions-margin-bottom": "inherit",
+      "comment-actions-margin-top": "12px",
+      "comment-content-detail-p-margin-bottom": "inherit",
+      "tabs-card-head-background": "#fafafa",
+      "tabs-card-height": "40px",
+      "tabs-card-active-color": "#1890ff",
+      "tabs-card-horizontal-padding": "8px 16px",
+      "tabs-card-horizontal-padding-sm": "6px 16px",
+      "tabs-card-horizontal-padding-lg": "7px 16px 6px",
+      "tabs-title-font-size": "14px",
+      "tabs-title-font-size-lg": "16px",
+      "tabs-title-font-size-sm": "14px",
+      "tabs-ink-bar-color": "#1890ff",
+      "tabs-bar-margin": "0 0 16px 0",
+      "tabs-horizontal-gutter": "32px",
+      "tabs-horizontal-margin": "0 0 0 32px",
+      "tabs-horizontal-margin-rtl": "0 0 0 32px",
+      "tabs-horizontal-padding": "12px 0",
+      "tabs-horizontal-padding-lg": "16px 0",
+      "tabs-horizontal-padding-sm": "8px 0",
+      "tabs-vertical-padding": "8px 24px",
+      "tabs-vertical-margin": "16px 0 0 0",
+      "tabs-scrolling-size": "32px",
+      "tabs-highlight-color": "#1890ff",
+      "tabs-hover-color": "#40a9ff",
+      "tabs-active-color": "#096dd9",
+      "tabs-card-gutter": "2px",
+      "tabs-card-tab-active-border-top": "2px solid transparent",
+      "back-top-color": "#fff",
+      "back-top-bg": "rgba(0, 0, 0, 0.45)",
+      "back-top-hover-bg": "rgba(0, 0, 0, 0.85)",
+      "avatar-size-base": "32px",
+      "avatar-size-lg": "40px",
+      "avatar-size-sm": "24px",
+      "avatar-font-size-base": "18px",
+      "avatar-font-size-lg": "24px",
+      "avatar-font-size-sm": "14px",
+      "avatar-bg": "#ccc",
+      "avatar-color": "#fff",
+      "avatar-border-radius": "2px",
+      "avatar-group-overlapping": "-8px",
+      "avatar-group-space": "3px",
+      "avatar-group-border-color": "#fff",
+      "switch-height": "22px",
+      "switch-sm-height": "16px",
+      "switch-min-width": "44px",
+      "switch-sm-min-width": "28px",
+      "switch-disabled-opacity": "0.4",
+      "switch-color": "#1890ff",
+      "switch-bg": "#fff",
+      "switch-shadow-color": "rgba(0, 35, 11, 0.2)",
+      "switch-padding": "2px",
+      "switch-inner-margin-min": "7px",
+      "switch-inner-margin-max": "25px",
+      "switch-sm-inner-margin-min": "5px",
+      "switch-sm-inner-margin-max": "18px",
+      "pagination-item-bg": "#fff",
+      "pagination-item-size": "32px",
+      "pagination-item-size-sm": "24px",
+      "pagination-font-family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+      "pagination-font-weight-active": "500",
+      "pagination-item-bg-active": "#fff",
+      "pagination-item-link-bg": "#fff",
+      "pagination-item-disabled-color-active": "rgba(0, 0, 0, 0.25)",
+      "pagination-item-disabled-bg-active": "#e6e6e6",
+      "pagination-item-input-bg": "#fff",
+      "pagination-mini-options-size-changer-top": "0px",
+      "page-header-padding": "24px",
+      "page-header-padding-vertical": "16px",
+      "page-header-padding-breadcrumb": "12px",
+      "page-header-content-padding-vertical": "12px",
+      "page-header-back-color": "#000",
+      "page-header-ghost-bg": "inherit",
+      "page-header-heading-title": "20px",
+      "page-header-heading-sub-title": "14px",
+      "page-header-tabs-tab-font-size": "16px",
+      "breadcrumb-base-color": "rgba(0, 0, 0, 0.45)",
+      "breadcrumb-last-item-color": "rgba(0, 0, 0, 0.85)",
+      "breadcrumb-font-size": "14px",
+      "breadcrumb-icon-font-size": "14px",
+      "breadcrumb-link-color": "rgba(0, 0, 0, 0.45)",
+      "breadcrumb-link-color-hover": "rgba(0, 0, 0, 0.85)",
+      "breadcrumb-separator-color": "rgba(0, 0, 0, 0.45)",
+      "breadcrumb-separator-margin": "0 8px",
+      "slider-margin": "10px 6px 10px",
+      "slider-rail-background-color": "#f5f5f5",
+      "slider-rail-background-color-hover": "#e1e1e1",
+      "slider-track-background-color": "#91d5ff",
+      "slider-track-background-color-hover": "#69c0ff",
+      "slider-handle-border-width": "2px",
+      "slider-handle-background-color": "#fff",
+      "slider-handle-color": "#91d5ff",
+      "slider-handle-color-hover": "#69c0ff",
+      "slider-handle-color-focus": "#46a6ff",
+      "slider-handle-color-focus-shadow": "rgba(24, 144, 255, 0.12)",
+      "slider-handle-color-tooltip-open": "#1890ff",
+      "slider-handle-size": "14px",
+      "slider-handle-margin-top": "-5px",
+      "slider-handle-shadow": "0",
+      "slider-dot-border-color": "#f0f0f0",
+      "slider-dot-border-color-active": "#8cc8ff",
+      "slider-disabled-color": "rgba(0, 0, 0, 0.25)",
+      "slider-disabled-background-color": "#fff",
+      "tree-bg": "#fff",
+      "tree-title-height": "24px",
+      "tree-child-padding": "18px",
+      "tree-directory-selected-color": "#fff",
+      "tree-directory-selected-bg": "#1890ff",
+      "tree-node-hover-bg": "#f5f5f5",
+      "tree-node-selected-bg": "#bae7ff",
+      "collapse-header-padding": "12px 16px",
+      "collapse-header-padding-extra": "40px",
+      "collapse-header-bg": "#fafafa",
+      "collapse-content-padding": "16px",
+      "collapse-content-bg": "#fff",
+      "collapse-header-arrow-left": "16px",
+      "skeleton-color": "rgba(190, 190, 190, 0.2)",
+      "skeleton-to-color": "rgba(129, 129, 129, 0.24)",
+      "skeleton-paragraph-margin-top": "28px",
+      "skeleton-paragraph-li-margin-top": "16px",
+      "skeleton-paragraph-li-height": "16px",
+      "skeleton-title-height": "16px",
+      "skeleton-title-paragraph-margin-top": "24px",
+      "transfer-header-height": "40px",
+      "transfer-item-height": "32px",
+      "transfer-disabled-bg": "#f5f5f5",
+      "transfer-list-height": "200px",
+      "transfer-item-hover-bg": "#f5f5f5",
+      "transfer-item-selected-hover-bg": "#dcf4ff",
+      "transfer-item-padding-vertical": "6px",
+      "transfer-list-search-icon-top": "12px",
+      "message-notice-content-padding": "10px 16px",
+      "message-notice-content-bg": "#fff",
+      "wave-animation-width": "6px",
+      "alert-success-border-color": "#b7eb8f",
+      "alert-success-bg-color": "#f6ffed",
+      "alert-success-icon-color": "#52c41a",
+      "alert-info-border-color": "#91d5ff",
+      "alert-info-bg-color": "#e6f7ff",
+      "alert-info-icon-color": "#1890ff",
+      "alert-warning-border-color": "#ffe58f",
+      "alert-warning-bg-color": "#fffbe6",
+      "alert-warning-icon-color": "#faad14",
+      "alert-error-border-color": "#ffccc7",
+      "alert-error-bg-color": "#fff2f0",
+      "alert-error-icon-color": "#ff4d4f",
+      "alert-message-color": "rgba(0, 0, 0, 0.85)",
+      "alert-text-color": "rgba(0, 0, 0, 0.85)",
+      "alert-close-color": "rgba(0, 0, 0, 0.45)",
+      "alert-close-hover-color": "rgba(0, 0, 0, 0.75)",
+      "alert-no-icon-padding-vertical": "8px",
+      "alert-with-description-no-icon-padding-vertical": "15px",
+      "alert-with-description-padding-vertical": "15px",
+      "alert-with-description-padding": "15px 15px 15px 24px",
+      "alert-icon-top": "12.0005px",
+      "alert-with-description-icon-size": "24px",
+      "list-header-background": "transparent",
+      "list-footer-background": "transparent",
+      "list-empty-text-padding": "16px",
+      "list-item-padding": "12px 0",
+      "list-item-padding-sm": "8px 16px",
+      "list-item-padding-lg": "16px 24px",
+      "list-item-meta-margin-bottom": "16px",
+      "list-item-meta-avatar-margin-right": "16px",
+      "list-item-meta-title-margin-bottom": "12px",
+      "list-customize-card-bg": "#fff",
+      "list-item-meta-description-font-size": "14px",
+      "statistic-title-font-size": "14px",
+      "statistic-content-font-size": "24px",
+      "statistic-unit-font-size": "24px",
+      "statistic-font-family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+      "drawer-header-padding": "16px 24px",
+      "drawer-bg": "#fff",
+      "drawer-footer-padding-vertical": "10px",
+      "drawer-footer-padding-horizontal": "16px",
+      "drawer-header-close-size": "56px",
+      "drawer-title-font-size": "16px",
+      "drawer-title-line-height": "22px",
+      "timeline-width": "2px",
+      "timeline-color": "#f0f0f0",
+      "timeline-dot-border-width": "2px",
+      "timeline-dot-color": "#1890ff",
+      "timeline-dot-bg": "#fff",
+      "timeline-item-padding-bottom": "20px",
+      "typography-title-font-weight": "600",
+      "typography-title-margin-top": "1.2em",
+      "typography-title-margin-bottom": "0.5em",
+      "upload-actions-color": "rgba(0, 0, 0, 0.45)",
+      "process-tail-color": "#f0f0f0",
+      "steps-nav-arrow-color": "rgba(0, 0, 0, 0.25)",
+      "steps-background": "#fff",
+      "steps-icon-size": "32px",
+      "steps-icon-custom-size": "32px",
+      "steps-icon-custom-top": "0px",
+      "steps-icon-custom-font-size": "24px",
+      "steps-icon-top": "-0.5px",
+      "steps-icon-font-size": "16px",
+      "steps-icon-margin": "0 8px 0 0",
+      "steps-title-line-height": "32px",
+      "steps-small-icon-size": "24px",
+      "steps-small-icon-margin": "0 8px 0 0",
+      "steps-dot-size": "8px",
+      "steps-dot-top": "2px",
+      "steps-current-dot-size": "10px",
+      "steps-description-max-width": "140px",
+      "steps-nav-content-max-width": "auto",
+      "steps-vertical-icon-width": "16px",
+      "steps-vertical-tail-width": "16px",
+      "steps-vertical-tail-width-sm": "12px",
+      "notification-bg": "#fff",
+      "notification-padding-vertical": "16px",
+      "notification-padding-horizontal": "24px",
+      "result-title-font-size": "24px",
+      "result-subtitle-font-size": "14px",
+      "result-icon-font-size": "72px",
+      "result-extra-margin": "24px 0 0 0",
+      "image-size-base": "48px",
+      "image-font-size-base": "24px",
+      "image-bg": "#f5f5f5",
+      "image-color": "#fff",
+      "image-mask-font-size": "16px",
+      "image-preview-operation-size": "18px",
+      "image-preview-operation-color": "rgba(255, 255, 255, 0.85)",
+      "image-preview-operation-disabled-color": "rgba(255, 255, 255, 0.25)",
+      "segmented-bg": "rgba(0, 0, 0, 0.04)",
+      "segmented-hover-bg": "rgba(0, 0, 0, 0.06)",
+      "segmented-selected-bg": "#fff",
+      "segmented-label-color": "rgba(0, 0, 0, 0.65)",
+      "segmented-label-hover-color": "#262626"
+    }
+  },
+  "routes": {
+    "1": {
+      "path": "/",
+      "file": "@/layouts/RootLayout.tsx",
+      "id": "1",
+      "absPath": "/",
+      "__content": "import { Outlet } from '@umijs/max';\r\nimport styles from './styles/RootLayout.less';\r\n\r\nconst RootLayout: React.FC = () => {\r\n  // const {  } = useP2pMessageApi();\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <Outlet />\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default RootLayout;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/RootLayout.tsx"
+    },
+    "2": {
+      "path": "/",
+      "redirect": "/signIn",
+      "parentId": "1",
+      "id": "2",
+      "absPath": "/"
+    },
+    "3": {
+      "name": "menu.fakeHome",
+      "path": "/fakeHome",
+      "file": "@/layouts/FakeLayout/index.tsx",
+      "parentId": "1",
+      "id": "3",
+      "absPath": "/fakeHome",
+      "__content": "import DraggableHeader from '@/components/DraggableHeader';\r\nimport { CamouflageButton } from '@/components/ToolButtons';\r\nimport { TALK_API } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse, ResponseData } from '@/types/backend/httpRust';\r\nimport { UserInfo } from '@/types/user/common';\r\nimport { CloseOutlined, MinusOutlined } from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { Outlet } from '@umijs/max';\r\nimport { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { useSystemNotify } from '@/hooks/useSystemNotify';\r\n\r\nconst HomeLayout = () => {\r\n  const [isHovered, setIsHovered] = useState(false);\r\n  const setUserInfo = useBearStore((state) => state.setUserInfo);\r\n  const userInfo = useBearStore((state) => state.userInfo);\r\n\r\n  // 使用系统通知hook\r\n  useSystemNotify(userInfo.uuid);\r\n\r\n  // 最小化\r\n  const minimizeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.minimize();\r\n  };\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  const initUserInfo = async () => {\r\n    // 先从本地缓存获取\r\n    try { \r\n      const uuid: string = await invoke('get_user_map', {\r\n        key: 'uuid',\r\n      });\r\n      const me: string = await invoke('get_user_map', {\r\n        key: 'me',\r\n      });\r\n      const userInfo: UserInfo = JSON.parse(me);\r\n      if (uuid === userInfo.uuid) {\r\n        setUserInfo(userInfo);\r\n        return;\r\n      }\r\n    } catch (error) {\r\n      console.log(\"本地缓存获取用户信息失败\", error);\r\n    }\r\n    // 从服务器获取用户信息\r\n    try {\r\n      const res: HttpResponse = await invoke('post_request', {\r\n        url: TALK_API + '/user/me',\r\n        body: '',\r\n      });\r\n      const data: ResponseData = JSON.parse(res.body);\r\n      const userInfo: UserInfo = data.data;\r\n      await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });\r\n      setUserInfo(userInfo);\r\n    } catch (error) {\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  //初始化用户信息\r\n  useEffect(() => {\r\n    initUserInfo();\r\n  }, []);\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.sideBar}>\r\n        <div className={styles.barTool}>\r\n          <div className={styles.tools}\r\n            onMouseEnter={() => setIsHovered(true)}\r\n            onMouseLeave={() => setIsHovered(false)}\r\n          >\r\n            WPS文字\r\n            {isHovered && (\r\n              <>\r\n                <CamouflageButton />\r\n              </>\r\n            )}\r\n          </div>\r\n          <div className={styles.sideBarToolDraggable}>\r\n            <DraggableHeader />\r\n          </div>\r\n          <div className={styles.sideBarToolButton}>\r\n            <div className={styles.sideBarToolButtonList}>\r\n              <div onClick={minimizeWindow} className={styles.rightButton}>\r\n                <MinusOutlined />\r\n              </div>\r\n              <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n                <CloseOutlined />\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n        <div className={styles.content}>\r\n          <Outlet />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\nexport default HomeLayout;",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/FakeLayout/index.tsx"
+    },
+    "4": {
+      "path": "/fakeHome",
+      "redirect": "/fakeHome/settings",
+      "parentId": "3",
+      "id": "4",
+      "absPath": "/fakeHome"
+    },
+    "5": {
+      "name": "menu.settings",
+      "path": "/fakeHome/settings",
+      "file": "@/pages/Home/Settings/index.tsx",
+      "parentId": "3",
+      "id": "5",
+      "absPath": "/fakeHome/settings",
+      "__content": "import React, { useState } from 'react';\r\nimport { Menu, Layout } from 'antd';\r\nimport {\r\n  UserOutlined,\r\n  SettingOutlined,\r\n  BellOutlined,\r\n  InfoCircleOutlined,\r\n} from '@ant-design/icons';\r\nimport styles from './Settings.less';\r\nimport AccountPrivacy from './components/AccountPrivacy';\r\nimport GeneralSettings from './components/GeneralSettings';\r\nimport NotificationSettings from './components/NotificationSettings';\r\nimport AboutApp from './components/AboutApp';\r\n\r\nconst { Sider, Content } = Layout;\r\n\r\nconst SettingsPage = () => {\r\n  const [activeTab, setActiveTab] = useState('account');\r\n\r\n  const menuItems = [\r\n    {\r\n      key: 'account',\r\n      icon: <UserOutlined />,\r\n      label: '账号与隐私',\r\n    },\r\n    {\r\n      key: 'general',\r\n      icon: <SettingOutlined />,\r\n      label: '通用设置',\r\n    },\r\n    {\r\n      key: 'notification',\r\n      icon: <BellOutlined />,\r\n      label: '通知设置',\r\n    },\r\n    {\r\n      key: 'about',\r\n      icon: <InfoCircleOutlined />,\r\n      label: '关于应用',\r\n    },\r\n  ];\r\n\r\n  const renderContent = () => {\r\n    switch (activeTab) {\r\n      case 'account':\r\n        return <AccountPrivacy />;\r\n      case 'general':\r\n        return <GeneralSettings />;\r\n      case 'notification':\r\n        return <NotificationSettings />;\r\n      case 'about':\r\n        return <AboutApp />;\r\n      default:\r\n        return <AccountPrivacy />;\r\n    }\r\n  };\r\n\r\n  return (\r\n    <Layout className={styles.settingsContainer}>\r\n      <Sider width={250} className={styles.settingsSidebar}>\r\n        <div className={styles.sidebarTitle}>设置</div>\r\n        <Menu\r\n          mode=\"inline\"\r\n          selectedKeys={[activeTab]}\r\n          items={menuItems}\r\n          onClick={({ key }) => setActiveTab(key)}\r\n          className={styles.menu}\r\n        />\r\n      </Sider>\r\n      <Content className={styles.settingsContent}>{renderContent()}</Content>\r\n    </Layout>\r\n  );\r\n};\r\n\r\nexport default SettingsPage;",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Home/Settings/index.tsx"
+    },
+    "6": {
+      "name": "menu.home",
+      "path": "/home",
+      "file": "@/layouts/HomeLayout/index.tsx",
+      "parentId": "1",
+      "id": "6",
+      "absPath": "/home",
+      "__content": "import DraggableHeader from '@/components/DraggableHeader';\r\nimport { LeftAside } from '@/components/LeftAside';\r\nimport OnlineStatusSwitch from '@/components/OnlineStatusSwitch';\r\nimport { MuteButton, CamouflageButton, LanguageButton, ThemeButton } from '@/components/ToolButtons';\r\nimport { TALK_API } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse, ResponseData } from '@/types/backend/httpRust';\r\nimport { UserInfo } from '@/types/user/common';\r\nimport { CloseOutlined, MinusOutlined } from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { Outlet } from '@umijs/max';\r\nimport { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { useSystemNotify } from '@/hooks/useSystemNotify';\r\n\r\nconst HomeLayout = () => {\r\n  const [isHovered, setIsHovered] = useState(false);\r\n  const setUserInfo = useBearStore((state) => state.setUserInfo);\r\n  const userInfo = useBearStore((state) => state.userInfo);\r\n\r\n  // 使用系统通知hook\r\n  useSystemNotify(userInfo.uuid);\r\n\r\n  // 最小化\r\n  const minimizeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.minimize();\r\n  };\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  const initUserInfo = async () => {\r\n    // 先从本地缓存获取\r\n    try { \r\n      const uuid: string = await invoke('get_user_map', {\r\n        key: 'uuid',\r\n      });\r\n      const me: string = await invoke('get_user_map', {\r\n        key: 'me',\r\n      });\r\n      const userInfo: UserInfo = JSON.parse(me);\r\n      if (uuid === userInfo.uuid) {\r\n        setUserInfo(userInfo);\r\n        return;\r\n      }\r\n    } catch (error) {\r\n      console.log(\"本地缓存获取用户信息失败\", error);\r\n    }\r\n    // 从服务器获取用户信息\r\n    try {\r\n      const res: HttpResponse = await invoke('post_request', {\r\n        url: TALK_API + '/user/me',\r\n        body: '',\r\n      });\r\n      const data: ResponseData = JSON.parse(res.body);\r\n      const userInfo: UserInfo = data.data;\r\n      await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });\r\n      setUserInfo(userInfo);\r\n    } catch (error) {\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  //初始化用户信息\r\n  useEffect(() => {\r\n    initUserInfo();\r\n  }, []);\r\n\r\n  return (\r\n    <div className={styles.userHomeContainer}>\r\n      <div className={styles.leftSideBar}>\r\n        <LeftAside />\r\n      </div>\r\n      <div className={styles.rightSideBar}>\r\n        <div className={styles.rightSideBarTool}>\r\n          <div className={styles.tools}\r\n            onMouseEnter={() => setIsHovered(true)}\r\n            onMouseLeave={() => setIsHovered(false)}\r\n          >\r\n            <OnlineStatusSwitch />\r\n            {isHovered && (\r\n              <>\r\n                <MuteButton />\r\n                <CamouflageButton />\r\n                <LanguageButton />\r\n                <ThemeButton />\r\n              </>\r\n            )}\r\n          </div>\r\n          <div className={styles.rightSideBarToolDraggable}>\r\n            <DraggableHeader />\r\n          </div>\r\n          <div className={styles.rightSideBarToolButton}>\r\n            <div className={styles.rightSideBarToolButtonList}>\r\n              <div onClick={minimizeWindow} className={styles.rightButton}>\r\n                <MinusOutlined />\r\n              </div>\r\n              <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n                <CloseOutlined />\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n        <div className={styles.rightSideBarContent}>\r\n          <Outlet />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\nexport default HomeLayout;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/HomeLayout/index.tsx"
+    },
+    "7": {
+      "path": "/home",
+      "redirect": "/home/chats",
+      "parentId": "6",
+      "id": "7",
+      "absPath": "/home"
+    },
+    "8": {
+      "name": "menu.settings",
+      "path": "/home/settings",
+      "file": "@/pages/Home/Settings/index.tsx",
+      "parentId": "6",
+      "id": "8",
+      "absPath": "/home/settings",
+      "__content": "import React, { useState } from 'react';\r\nimport { Menu, Layout } from 'antd';\r\nimport {\r\n  UserOutlined,\r\n  SettingOutlined,\r\n  BellOutlined,\r\n  InfoCircleOutlined,\r\n} from '@ant-design/icons';\r\nimport styles from './Settings.less';\r\nimport AccountPrivacy from './components/AccountPrivacy';\r\nimport GeneralSettings from './components/GeneralSettings';\r\nimport NotificationSettings from './components/NotificationSettings';\r\nimport AboutApp from './components/AboutApp';\r\n\r\nconst { Sider, Content } = Layout;\r\n\r\nconst SettingsPage = () => {\r\n  const [activeTab, setActiveTab] = useState('account');\r\n\r\n  const menuItems = [\r\n    {\r\n      key: 'account',\r\n      icon: <UserOutlined />,\r\n      label: '账号与隐私',\r\n    },\r\n    {\r\n      key: 'general',\r\n      icon: <SettingOutlined />,\r\n      label: '通用设置',\r\n    },\r\n    {\r\n      key: 'notification',\r\n      icon: <BellOutlined />,\r\n      label: '通知设置',\r\n    },\r\n    {\r\n      key: 'about',\r\n      icon: <InfoCircleOutlined />,\r\n      label: '关于应用',\r\n    },\r\n  ];\r\n\r\n  const renderContent = () => {\r\n    switch (activeTab) {\r\n      case 'account':\r\n        return <AccountPrivacy />;\r\n      case 'general':\r\n        return <GeneralSettings />;\r\n      case 'notification':\r\n        return <NotificationSettings />;\r\n      case 'about':\r\n        return <AboutApp />;\r\n      default:\r\n        return <AccountPrivacy />;\r\n    }\r\n  };\r\n\r\n  return (\r\n    <Layout className={styles.settingsContainer}>\r\n      <Sider width={250} className={styles.settingsSidebar}>\r\n        <div className={styles.sidebarTitle}>设置</div>\r\n        <Menu\r\n          mode=\"inline\"\r\n          selectedKeys={[activeTab]}\r\n          items={menuItems}\r\n          onClick={({ key }) => setActiveTab(key)}\r\n          className={styles.menu}\r\n        />\r\n      </Sider>\r\n      <Content className={styles.settingsContent}>{renderContent()}</Content>\r\n    </Layout>\r\n  );\r\n};\r\n\r\nexport default SettingsPage;",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Home/Settings/index.tsx"
+    },
+    "9": {
+      "name": "menu.chats",
+      "path": "chats",
+      "file": "@/layouts/HomeLayout/ChatsLayout/index.tsx",
+      "parentId": "6",
+      "id": "9",
+      "absPath": "/home/chats",
+      "__content": "import { useChatSession } from '@/hooks/useChatSession';\r\nimport Message from '@/pages/Home/Chats/components/MessageBox';\r\nimport Search from '@/pages/Home/Chats/components/Search';\r\nimport { useBearStore } from '@/store/store';\r\nimport { ChatSessionVo } from '@/types/backend/vo';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Splitter } from 'antd';\r\nimport { history, Outlet } from '@umijs/max';\r\nimport React, { useEffect } from 'react';\r\nimport styles from './index.less';\r\n\r\nconst ChatsLayout = () => {\r\n  const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(\r\n    [],\r\n  );\r\n\r\n  const { userInfo } = useBearStore();\r\n  const { chatSessionEvent } = useChatSession(userInfo.uuid);\r\n  const routeToChat = (item: ChatSessionVo) => {\r\n    console.log('userInfo', userInfo, item);\r\n    let uuid =\r\n      item.send_user === userInfo?.uuid ? item.recv_user : item.send_user;\r\n    history.push('/home/chats/chat?currentFriend=' + uuid);\r\n  };\r\n\r\n  useEffect(() => {\r\n    console.log('本次chatSessionEvent', chatSessionEvent);\r\n    setChatSessionList((prevList) => {\r\n      if (!chatSessionEvent?.data) {\r\n        return prevList;\r\n      }\r\n      console.log('prevList', prevList);\r\n\r\n      const index = prevList.findIndex((item) => {\r\n        if (\r\n          item.send_user === chatSessionEvent.data.send_user &&\r\n          item.recv_user === chatSessionEvent.data.recv_user\r\n        ) {\r\n          return true;\r\n        } else if (\r\n          item.send_user === chatSessionEvent.data.recv_user &&\r\n          item.recv_user === chatSessionEvent.data.send_user\r\n        ) {\r\n          return true;\r\n        } else {\r\n          return false;\r\n        }\r\n      });\r\n\r\n      console.log('index', index);\r\n      // 创建新的数组，避免直接修改原数组\r\n      const newList = [...prevList];\r\n\r\n      let friend_icon = newList[index]?.friend_icon;\r\n      let friend_name = newList[index]?.friend_name;\r\n      if (chatSessionEvent.type === 0) {\r\n        if (index !== -1) {\r\n          // 更新现有会话\r\n          newList[index] = chatSessionEvent.data;\r\n          newList[index] = {\r\n            ...newList[index],\r\n            friend_icon: friend_icon,\r\n            friend_name: friend_name,\r\n          };\r\n        } else {\r\n          // 添加新会话\r\n          newList.push(chatSessionEvent.data);\r\n        }\r\n      } else {\r\n        if (index !== -1) {\r\n          // 更新现有会话的属性\r\n          newList[index] = {\r\n            ...newList[index],\r\n            unread_count: newList[index].unread_count + 1,\r\n            last_message: chatSessionEvent.data.last_message,\r\n            timestamp: chatSessionEvent.data.timestamp,\r\n            is_show: chatSessionEvent.data.is_show,\r\n            is_top: chatSessionEvent.data.is_top,\r\n            nano_id: chatSessionEvent.data.nano_id,\r\n            session_type: chatSessionEvent.data.session_type,\r\n            text_type: chatSessionEvent.data.text_type,\r\n            friend_icon: newList[index].friend_icon,\r\n          };\r\n        } else {\r\n          // 添加新会话\r\n          newList.push(chatSessionEvent.data);\r\n        }\r\n      }\r\n\r\n      return newList;\r\n    });\r\n  }, [chatSessionEvent]);\r\n\r\n  useEffect(() => {\r\n    get_chat_session();\r\n  }, []);\r\n\r\n  useEffect(() => {\r\n    console.log('chatSessionList', chatSessionList);\r\n  }, [chatSessionList]);\r\n\r\n  const get_chat_session = async () => {\r\n    try {\r\n      const res = (await invoke(\r\n        'get_chat_session_from_store',\r\n        {},\r\n      )) as ChatSessionVo[];\r\n      console.log('get_chat_session', res);\r\n      setChatSessionList(res);\r\n    } catch (e) {\r\n      console.log(e);\r\n    }\r\n  };\r\n\r\n  return (\r\n    <Splitter>\r\n      <Splitter.Panel\r\n        min=\"20%\"\r\n        max=\"50%\"\r\n        defaultSize=\"32%\"\r\n        className={styles.left}\r\n      >\r\n        <div className={styles.header}>\r\n          <Search />\r\n        </div>\r\n        <div className={styles.item} key=\"chat\">\r\n          {chatSessionList.map((item: ChatSessionVo) => {\r\n            return (\r\n              <div key={item.nano_id} onClick={() => routeToChat(item)}>\r\n                <Message\r\n                  message={item.last_message}\r\n                  img={item.friend_icon}\r\n                  key={item.nano_id}\r\n                  time={item.timestamp}\r\n                  title={item.friend_name}\r\n                  count={item.unread_count}\r\n                />\r\n              </div>\r\n            );\r\n          })}\r\n        </div>\r\n      </Splitter.Panel>\r\n      <Splitter.Panel className={styles.right}>\r\n        <Outlet />\r\n      </Splitter.Panel>\r\n    </Splitter>\r\n  );\r\n};\r\n\r\nexport default ChatsLayout;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/HomeLayout/ChatsLayout/index.tsx"
+    },
+    "10": {
+      "path": "",
+      "redirect": "dashboard",
+      "parentId": "9",
+      "id": "10",
+      "absPath": "/home/chats"
+    },
+    "11": {
+      "name": "menu.chats.chat",
+      "path": "chat",
+      "file": "@/pages/Home/Chats/Chat/index.tsx",
+      "parentId": "9",
+      "id": "11",
+      "absPath": "/home/chats/chat",
+      "__content": "import { SYSTEM_ACCOUNT } from '@/constants';\r\nimport { useMessageApi } from '@/hooks/useMessageApi';\r\nimport { useBearStore } from '@/store/store';\r\nimport { Page } from '@/types/backend';\r\nimport { ResponseData } from '@/types/backend/httpRust';\r\nimport { FriendVo } from '@/types/backend/vo';\r\nimport { ChatMessage, MessageFrom, TextMsgRaw } from '@/types/user/common';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { useLocation } from '@umijs/max';\r\nimport React, { useEffect, useState } from 'react';\r\nimport ChatFooter from '../components/Footer';\r\nimport MessageList from '../components/MessageList';\r\nimport ChatTopBar from '../components/TopBar';\r\nimport Splitter from '../components/Splitter';\r\nimport styles from './index.less';\r\n\r\nconst ChatPage: React.FC = () => {\r\n  const [messageList, setMessageList] = useState<ChatMessage[]>([]);\r\n  const [currentFriend, setCurrentFriend] = useState<FriendVo>();\r\n  const [footerHeight, setFooterHeight] = useState(180); // 默认高度180px\r\n  const [realFootHeight, setRealFooterHeight] = useState(186);\r\n  const location = useLocation();\r\n  const params = new URLSearchParams(location.search);\r\n  const friendUuid = params.get('currentFriend') || '';\r\n\r\n  const meUuid = useBearStore((state) => state.userInfo.uuid) || '';\r\n  const { textMessage } = useMessageApi(friendUuid, meUuid);\r\n\r\n  const handleHeightChange = (heightPercent: number) => {\r\n    // 将百分比转换为像素值，限制在最小20px和最大80%之间\r\n    const containerHeight = window.innerHeight;\r\n    const minHeightPx = 20;\r\n    const maxHeightPx = containerHeight * 0.8;\r\n    const heightPx = Math.max(minHeightPx, Math.min(maxHeightPx, (heightPercent / 100) * containerHeight));\r\n    setFooterHeight(heightPx);\r\n  };\r\n\r\n  useEffect(() => {\r\n    setRealFooterHeight(footerHeight + 6)\r\n  }, [footerHeight])\r\n\r\n  // 更新已读记录\r\n  useEffect(() => {\r\n    if (messageList.length > 1) {\r\n      let last_nano_id: string = '';\r\n      const last_message = messageList[messageList.length - 1];\r\n      last_nano_id = last_message.text_msg_raw.nano_id;\r\n      if (last_nano_id !== '' && last_message.ack === undefined) {\r\n        // 消息已读\r\n        console.log('已读', messageList);\r\n        markRead(last_nano_id);\r\n      }\r\n    }\r\n  }, [messageList]);\r\n\r\n  // 获取聊天记录\r\n  useEffect(() => {\r\n    getChatRecordFromStore(meUuid, friendUuid);\r\n    getFriendInfo(friendUuid);\r\n    markReadFriend(friendUuid);\r\n    setCurrentFriendSession(friendUuid);\r\n    \r\n    // 组件卸载时清理当前好友会话\r\n    return () => {\r\n      setCurrentFriendSession('-1');\r\n    };\r\n  }, [meUuid, friendUuid]);\r\n\r\n  // 设置当前好友会话\r\n  const setCurrentFriendSession = async (friend: string) => {\r\n    try {\r\n      const res = await invoke('add_user_map', {\r\n        map: {\r\n          current_session_friend: friend\r\n        }\r\n      });\r\n      console.log('设置当前好友会话', res);\r\n    }catch (err){\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 已读好友会话\r\n  const markReadFriend = async (friendUuid: string) => {\r\n    if (friendUuid == null ||friendUuid === '') {\r\n      return;\r\n    }\r\n    try {\r\n      const data: ResponseData = await invoke('mark_read_chat_session', {\r\n        friendUuid,\r\n      });\r\n      console.log('已读好友会话', data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 已读当前会话聊天记录\r\n  const markRead = async (last_read_record: string) => {\r\n    try {\r\n      let lastList = [] as string[];\r\n      if (last_read_record) {\r\n        lastList.push(last_read_record);\r\n      }\r\n      const data: ResponseData = await invoke('mark_read', {\r\n        textQuicMsgVec: lastList,\r\n      });\r\n      console.log('已读', data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 获取好友信息\r\n  const getFriendInfo = async (friendUuid: string) => {\r\n    try {\r\n      const data: FriendVo = await invoke('get_friend_info', {\r\n        friendUuid,\r\n      });\r\n      console.log('好友信息', data);\r\n      setCurrentFriend(data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  const getChatRecordFromStore = async (meUuid: string, friendUuid: string) => {\r\n    try {\r\n      let textRawText: TextMsgRaw = {\r\n        nano_id: '',\r\n        raw: '',\r\n        recv_user: meUuid,\r\n        send_user: friendUuid,\r\n        text_type: 0,\r\n        timestamp: 0,\r\n      };\r\n      let page: Page = {\r\n        size: 50,\r\n        current: 1,\r\n        total: 0,\r\n      };\r\n      const data: TextMsgRaw[] = await invoke('get_chat_record_from_store', {\r\n        textQuicMsg: textRawText,\r\n        page,\r\n      });\r\n      if (data.length === 0) {\r\n        return;\r\n      }\r\n\r\n      let chatMessages: ChatMessage[] = data.map((item) => {\r\n        let from =\r\n          item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;\r\n        const temp: ChatMessage = {\r\n          from,\r\n          text_msg_raw: item,\r\n          ack: undefined,\r\n        };\r\n        return temp;\r\n      });\r\n      setMessageList(chatMessages);\r\n      // 使用reduce()直接找到最大值（性能更好）\r\n      if (chatMessages.length > 0) {\r\n        const last_read_record = chatMessages.reduce((latest, current) =>\r\n          latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp\r\n            ? latest\r\n            : current,\r\n        )?.text_msg_raw.nano_id;\r\n        markRead(last_read_record);\r\n      }\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 接收到外部消息\r\n  useEffect(() => {\r\n    if (textMessage) {\r\n      let from = MessageFrom.Customer;\r\n      if (textMessage.send_user == SYSTEM_ACCOUNT) {\r\n        from = MessageFrom.System;\r\n      }\r\n      const temp: ChatMessage = {\r\n        from,\r\n        text_msg_raw: textMessage,\r\n        ack: undefined,\r\n      };\r\n      // ack消息\r\n      if (textMessage.text_type === 201) {\r\n        setMessageList((prevState) => {\r\n          const index = prevState.findIndex(\r\n            (item) => item.text_msg_raw.nano_id === textMessage.raw,\r\n          );\r\n          if (index !== -1) {\r\n            prevState[index].ack = true;\r\n          }\r\n          return [...prevState, temp];\r\n        });\r\n      } else {\r\n        setMessageList((prevState) => [...prevState, temp]);\r\n      }\r\n    }\r\n  }, [textMessage]);\r\n\r\n  const anchorSmooth = () => {\r\n    const anchorTop = document.getElementById('anchor');\r\n    if (anchorTop) {\r\n      anchorTop.scrollIntoView({ behavior: 'smooth' });\r\n    }\r\n  };\r\n\r\n  useEffect(() => {\r\n    anchorSmooth();\r\n  }, [messageList]);\r\n\r\n  const handleMessageSent = (message: string) => {\r\n    const temp: ChatMessage = JSON.parse(message);\r\n\r\n    setMessageList((prev) => [...prev, temp]);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.header}>\r\n        <ChatTopBar title={currentFriend?.friend_name || ''} />\r\n      </div>\r\n      <div className={styles.mainContainer}>\r\n        <div \r\n          className={styles.messageContainer}\r\n          style={{ height: `calc(100% - ${realFootHeight}px)` }}\r\n        >\r\n          <MessageList\r\n            messages={messageList}\r\n            friendIcon={currentFriend?.friend_icon}\r\n          />\r\n          <div id=\"anchor\"></div>\r\n        </div>\r\n        <Splitter \r\n          onHeightChange={handleHeightChange}\r\n          minHeight={20}\r\n          maxHeight={80}\r\n        />\r\n        <div style={{ height: `${footerHeight}px` }}>\r\n          <ChatFooter friendUuid={friendUuid} onMessageSent={handleMessageSent} />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default ChatPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Home/Chats/Chat/index.tsx"
+    },
+    "12": {
+      "name": "menu.chats.dashboard",
+      "path": "dashboard",
+      "file": "@/pages/Home/Chats/Dashboard/index.tsx",
+      "parentId": "9",
+      "id": "12",
+      "absPath": "/home/chats/dashboard",
+      "__content": "import talkSvg from '@/assets/svg/talk.svg';\r\nimport styles from './index.less';\r\n\r\nconst DashboardPage: React.FC = () => {\r\n  console.log('dashboard');\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.content}>\r\n        <img src={talkSvg} alt=\"talk\" className={styles.svgItem} />\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\nexport default DashboardPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Home/Chats/Dashboard/index.tsx"
+    },
+    "13": {
+      "name": "menu.contacts",
+      "path": "contacts",
+      "file": "@/layouts/HomeLayout/ContactsLayout/index.tsx",
+      "parentId": "6",
+      "id": "13",
+      "absPath": "/home/contacts",
+      "__content": "import SearchBar from '@/components/SearchBar';\r\nimport FriendList from '@/pages/Home/Contacts/components/FriendList';\r\nimport { Outlet } from '@umijs/max';\r\nimport { Splitter } from 'antd';\r\nimport styles from './index.less';\r\n\r\nconst ContactsLayout = () => {\r\n  return (\r\n    <Splitter>\r\n      <Splitter.Panel\r\n        min=\"20%\"\r\n        max=\"50%\"\r\n        defaultSize=\"32%\"\r\n        className={styles.left}\r\n      >\r\n        <div className={styles.header}>\r\n          <SearchBar />\r\n        </div>\r\n        <div className={styles.item} key=\"chat\">\r\n          <FriendList key={'contact'} />\r\n        </div>\r\n      </Splitter.Panel>\r\n      <Splitter.Panel className={styles.right}>\r\n        <Outlet />\r\n      </Splitter.Panel>\r\n    </Splitter>\r\n  );\r\n};\r\n\r\nexport default ContactsLayout;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/HomeLayout/ContactsLayout/index.tsx"
+    },
+    "14": {
+      "path": "",
+      "redirect": "dashboard",
+      "parentId": "13",
+      "id": "14",
+      "absPath": "/home/contacts"
+    },
+    "15": {
+      "name": "menu.contacts.dashboard",
+      "path": "dashboard",
+      "file": "@/pages/Home/Contacts/components/Dashboard.tsx",
+      "parentId": "13",
+      "id": "15",
+      "absPath": "/home/contacts/dashboard",
+      "__content": "import thinkSvg from '@/assets/svg/think.svg';\r\nimport styles from './styles/Dashboard.less';\r\n\r\nconst Dashboard = () => {\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.content}>\r\n        <img src={thinkSvg} alt=\"think\" className={styles.svgItem} />\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default Dashboard;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Home/Contacts/components/Dashboard.tsx"
+    },
+    "16": {
+      "name": "menu.contacts.friend",
+      "path": "friend",
+      "file": "@/pages/Home/Contacts/index.tsx",
+      "parentId": "13",
+      "id": "16",
+      "absPath": "/home/contacts/friend",
+      "__content": "import { useLocation } from '@@/exports';\r\nimport { useEffect } from 'react';\r\nimport FriendInfo from './components/FriendInfo';\r\nimport styles from './index.less';\r\n\r\nconst ContactsPage = () => {\r\n  const location = useLocation();\r\n  const params = new URLSearchParams(location.search);\r\n  const friendUuid = params.get('friendId') || '';\r\n  useEffect(() => {\r\n    console.log('friendUuid', friendUuid);\r\n  }, [friendUuid]);\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <FriendInfo uuid={friendUuid} />\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default ContactsPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Home/Contacts/index.tsx"
+    },
+    "17": {
+      "name": "menu.access",
+      "path": "/access",
+      "file": "@/pages/Access/index.tsx",
+      "parentId": "1",
+      "id": "17",
+      "absPath": "/access",
+      "__content": "import { PageContainer } from '@ant-design/pro-components';\r\nimport { Access, useAccess } from '@umijs/max';\r\nimport { Button } from 'antd';\r\n\r\nconst AccessPage: React.FC = () => {\r\n  const access = useAccess();\r\n  return (\r\n    <PageContainer\r\n      ghost\r\n      header={{\r\n        title: '权限示例',\r\n      }}\r\n    >\r\n      <Access accessible={access.canSeeAdmin}>\r\n        <Button>只有 Admin 可以看到这个按钮</Button>\r\n        <div>{}</div>\r\n      </Access>\r\n    </PageContainer>\r\n  );\r\n};\r\n\r\nexport default AccessPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Access/index.tsx"
+    },
+    "18": {
+      "name": "menu.signIn",
+      "path": "/signIn",
+      "file": "@/pages/Sign/SignIn/index.tsx",
+      "parentId": "1",
+      "id": "18",
+      "absPath": "/signIn",
+      "__content": "import LanguageSwitcher from '@/components/LanguageSwitch';\r\nimport LocalImage from '@/components/LocalImage';\r\nimport MarkdownRenderer from '@/components/MarkdownRenderer';\r\nimport { openNewWindow } from '@/components/Window/OpenWindow';\r\nimport { TALK_API } from '@/constants';\r\nimport { useWindowDrag } from '@/hooks';\r\nimport { HttpResponse, ResponseData } from '@/types/backend/httpRust';\r\nimport { FormattedMessage } from '@@/exports';\r\nimport {\r\n  CloseOutlined,\r\n  EyeInvisibleOutlined,\r\n  EyeTwoTone,\r\n  LockOutlined,\r\n  UserOutlined,\r\n} from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { WebviewOptions } from '@tauri-apps/api/webview';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { history, useIntl } from '@umijs/max';\r\nimport { Button, Checkbox, Input, message, Modal } from 'antd';\r\nimport React, { useState } from 'react';\r\nimport styles from './index.less';\r\n\r\nconst AVATAR_URL =\r\n  'https://ss2.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=16890549,1598107895&fm=253&gp=0.jpg';\r\n\r\nconst LoginPage: React.FC = () => {\r\n  const [messageApi, contextHolder] = message.useMessage();\r\n  const [userCode, setUserCode] = useState('');\r\n  const [password, setPassword] = useState('');\r\n  const [rememberMe, setRememberMe] = useState(true);\r\n  const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);\r\n  const [privacyContent, setPrivacyContent] = useState('');\r\n  const intl = useIntl();\r\n  const dragRef = useWindowDrag();\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  // 跳转到注册页面\r\n  const goToSignUp = async () => {\r\n    history.push('/signUp');\r\n  };\r\n\r\n  const fetchData = async (account: string, password: string) => {\r\n    try {\r\n      const response: HttpResponse = await invoke('sign_in', {\r\n        url: TALK_API + '/user/sign_in',\r\n        body: {\r\n          account,\r\n          password,\r\n        },\r\n      });\r\n\r\n      const data: ResponseData = JSON.parse(response.body);\r\n\r\n      if (data.code === 200) {\r\n        messageApi.open({\r\n          type: 'success',\r\n          content: <FormattedMessage id=\"signIn.success\" />,\r\n        });\r\n        const webviewOptions: WebviewOptions = {\r\n          url: '/home/chats',\r\n          height: 600,\r\n          width: 800,\r\n          x: 200,\r\n          y: 200,\r\n        };\r\n        await openNewWindow(\r\n          intl.formatMessage({ id: 'menu.home' }),\r\n          webviewOptions,\r\n          Window.getCurrent(),\r\n        );\r\n      } else {\r\n        messageApi.error(\r\n          <FormattedMessage id=\"signIn.errors.invalidCredentials\" />,\r\n        );\r\n      }\r\n    } catch (error: unknown) {\r\n      if (error != null && typeof error === 'string') {\r\n        try {\r\n          const result = JSON.parse(error);\r\n          if (result.code === 500) {\r\n            messageApi.error(\r\n              <FormattedMessage id=\"signIn.errors.invalidCredentials\" />,\r\n            );\r\n          }\r\n        } catch (e) {\r\n          messageApi.error(\r\n            <FormattedMessage id=\"signIn.errors.networkError\" />,\r\n          );\r\n        }\r\n      } else {\r\n        messageApi.error(<FormattedMessage id=\"signIn.errors.networkError\" />);\r\n      }\r\n\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  const onFinish = () => {\r\n    console.log('userCode:', userCode, 'password:', password);\r\n    fetchData(userCode, password);\r\n  };\r\n\r\n  // 读取md内容\r\n  const loadPrivacyMd = async () => {\r\n    // 这里用fetch读取public下的md文件\r\n    const res = await fetch('/markdown/privacy.md');\r\n    const text = await res.text();\r\n    setPrivacyContent(text);\r\n  };\r\n\r\n  const openPrivacyModal = async () => {\r\n    await loadPrivacyMd();\r\n    setPrivacyModalOpen(true);\r\n  };\r\n\r\n  const closePrivacyModal = () => {\r\n    setPrivacyModalOpen(false);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      {contextHolder}\r\n      <div className={styles.closeBtn}>\r\n        <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n          <CloseOutlined />\r\n        </div>\r\n      </div>\r\n      <div className={styles.content} ref={dragRef}>\r\n        <div className={styles.langSwitcher}>\r\n          <LanguageSwitcher />\r\n        </div>\r\n\r\n        <div className={styles.avatarContainer}>\r\n          {/* <Avatar size={80} icon={<UserOutlined />} src={AVATAR_URL} /> */}\r\n          {/* 自定义尺寸 */}\r\n          {/*<LocalImage width={100} height={100} />*/}\r\n        </div>\r\n\r\n        <div className={styles.inputContainer}>\r\n          <Input\r\n            size=\"large\"\r\n            prefix={<UserOutlined className={styles.icon} />}\r\n            placeholder={intl.formatMessage({ id: 'signIn.username' })}\r\n            value={userCode}\r\n            onChange={(e) => setUserCode(e.target.value)}\r\n          />\r\n          <Input.Password\r\n            prefix={<LockOutlined className={styles.icon} />}\r\n            type=\"password\"\r\n            iconRender={(visible) =>\r\n              visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />\r\n            }\r\n            size=\"large\"\r\n            value={password}\r\n            placeholder={intl.formatMessage({ id: 'signIn.password' })}\r\n            onChange={(e) => setPassword(e.target.value)}\r\n          />\r\n          <div className={styles.agreement}>\r\n            <Checkbox\r\n              checked={rememberMe}\r\n              onChange={(e) => setRememberMe(e.target.checked)}\r\n              style={{ marginRight: 8 }}\r\n            />\r\n            <span>\r\n              <FormattedMessage id=\"signIn.agreement\" />\r\n              <a\r\n                href=\"#\"\r\n                className={styles.highlight}\r\n                onClick={openPrivacyModal}\r\n              >\r\n                <FormattedMessage id=\"signIn.termsOfService\" />\r\n              </a>\r\n              <FormattedMessage id=\"signIn.and\" defaultMessage=\"和\" />\r\n              <a\r\n                href=\"#\"\r\n                className={styles.highlight}\r\n                onClick={openPrivacyModal}\r\n              >\r\n                <FormattedMessage id=\"signIn.privacyPolicy\" />\r\n              </a>\r\n            </span>\r\n          </div>\r\n          <div className={styles.buttonContainer}>\r\n            <Button\r\n              type=\"primary\"\r\n              onClick={onFinish}\r\n              className={styles.button}\r\n              block\r\n              size=\"large\"\r\n            >\r\n              {intl.formatMessage({ id: 'signIn.submit' })}\r\n            </Button>\r\n          </div>\r\n        </div>\r\n\r\n        <div className={styles.bottomOptions}>\r\n          <span className={styles.highlight}>\r\n            <FormattedMessage id=\"signIn.forgotPassword\" />\r\n          </span>\r\n          <span className={styles.highlight} onClick={goToSignUp}>\r\n            <FormattedMessage id=\"signUp.title\" />\r\n          </span>\r\n        </div>\r\n      </div>\r\n      <Modal\r\n        open={isPrivacyModalOpen}\r\n        onOk={closePrivacyModal}\r\n        onCancel={closePrivacyModal}\r\n        closable={false}\r\n        title=\"\"\r\n        className={styles.scrollbarHidden}\r\n        footer={[\r\n          <Button key=\"close\" onClick={closePrivacyModal}>\r\n            <FormattedMessage id=\"signIn.close\" />\r\n          </Button>,\r\n          <Button key=\"ok\" type=\"primary\" onClick={closePrivacyModal}>\r\n            <FormattedMessage id=\"signIn.confirm\" />\r\n          </Button>,\r\n        ]}\r\n        width={'100%'}\r\n        height={'60vh'}\r\n      >\r\n        <MarkdownRenderer content={privacyContent} />\r\n      </Modal>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default LoginPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Sign/SignIn/index.tsx"
+    },
+    "19": {
+      "name": "menu.signUp",
+      "path": "/signUp",
+      "file": "@/pages/Sign/SignUp/index.tsx",
+      "parentId": "1",
+      "id": "19",
+      "absPath": "/signUp",
+      "__content": "import CloseButton from '@/components/TopBar/Buttons/CloseButton';\r\nimport LanguageSwitcher from '@/components/LanguageSwitch';\r\nimport { useIntl } from '@umijs/max';\r\nimport { Avatar, Button } from 'antd';\r\nimport React from 'react';\r\nimport FastSignUp from './components/FastSignUp';\r\nimport styles from './index.less';\r\nimport { history } from '@umijs/max';\r\nimport { useWindowDrag } from '@/hooks';\r\n\r\nconst AVATAR_URL =\r\n  'https://ss2.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=16890549,1598107895&fm=253&gp=0.jpg';\r\n\r\nconst SignUpPage: React.FC = () => {\r\n  const intl = useIntl();\r\n  const dragRef = useWindowDrag();\r\n\r\n  // 跳转到登录页面\r\n  const goToSignIn = async () => {\r\n    history.push('/signIn');\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.closeBtn}>\r\n        <CloseButton />\r\n      </div>\r\n      <div className={styles.content} ref={dragRef}>\r\n        <div className={styles.langSwitcher}>\r\n          <LanguageSwitcher />\r\n        </div>\r\n\r\n        <div className={styles.title}>\r\n          {intl.formatMessage({ id: 'signUp.title' })}\r\n        </div>\r\n\r\n        <div className={styles.formContainer}>\r\n          <FastSignUp />\r\n        </div>\r\n\r\n        <div className={styles.bottomOptions}>\r\n          <Button type=\"link\" onClick={goToSignIn}>\r\n            {intl.formatMessage({ id: 'back' })}\r\n          </Button>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default SignUpPage;",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Sign/SignUp/index.tsx"
+    },
+    "20": {
+      "name": "menu.testComponent",
+      "path": "/testComponent",
+      "file": "@/pages/TestComponent/index.tsx",
+      "parentId": "1",
+      "id": "20",
+      "absPath": "/testComponent",
+      "__content": "import { PageContainer } from '@ant-design/pro-components';\r\nimport FileSelectorTest from './components/FileSelectorTest';\r\n\r\nconst TestComponentPage: React.FC = () => {\r\n  return (\r\n    <PageContainer\r\n      ghost\r\n      header={{\r\n        title: '组件测试',\r\n      }}\r\n    >\r\n      <FileSelectorTest />\r\n    </PageContainer>\r\n  );\r\n};\r\n\r\nexport default TestComponentPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/TestComponent/index.tsx"
+    },
+    "21": {
+      "path": "/media/handler",
+      "file": "@/pages/Media/Handler/index.tsx",
+      "id": "21",
+      "absPath": "/media/handler",
+      "__content": "import { openNewWindow } from '@/components/Window/OpenWindow';\r\nimport { DEFAULT_ICON } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse } from '@/types/backend/httpRust';\r\nimport { FriendInfo, P2pInitMsg } from '@/types/user/common';\r\nimport { CheckOutlined, CloseOutlined } from '@ant-design/icons';\r\nimport { window } from '@tauri-apps/api';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { WebviewOptions } from '@tauri-apps/api/webview';\r\nimport { Button } from 'antd';\r\nimport React, { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\n\r\n//用户视频接收处理组件\r\nconst MediaPage: React.FC = () => {\r\n  const setRequestMediaMsg = useBearStore((state) => state.setRequestMediaMsg);\r\n  const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);\r\n\r\n  console.log('requestMediaMsg', requestMediaMsg);\r\n  const [userInfo, setUserInfo] = useState<FriendInfo>();\r\n  const [localP2pInitMsg, setLocalP2pInitMsg] = useState<P2pInitMsg | null>(\r\n    null,\r\n  );\r\n  const [localMediaType, setLocalMediaType] = useState<number>(0);\r\n\r\n  const currentWindow = window.getCurrentWindow();\r\n\r\n  // 从URL参数读取数据\r\n  useEffect(() => {\r\n    const urlParams = new URLSearchParams(location.search);\r\n    const p2pInitMsgParam = urlParams.get('p2pInitMsg');\r\n    const mediaTypeParam = urlParams.get('mediaType');\r\n\r\n    if (p2pInitMsgParam) {\r\n      try {\r\n        const p2pInitMsg = JSON.parse(p2pInitMsgParam) as P2pInitMsg;\r\n        setLocalP2pInitMsg(p2pInitMsg);\r\n        console.log('从URL参数读取到p2pInitMsg:', p2pInitMsg);\r\n      } catch (e) {\r\n        console.error('解析URL参数失败:', e);\r\n      }\r\n    }\r\n\r\n    if (mediaTypeParam) {\r\n      setLocalMediaType(parseInt(mediaTypeParam));\r\n    }\r\n  }, []);\r\n\r\n  // 接受好友视频/音频请求\r\n  const confirm = async () => {\r\n    // 优先使用本地状态，如果没有则使用store中的状态\r\n    let p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;\r\n\r\n    p2pInitMsg.accept = true;\r\n    try {\r\n      const response: HttpResponse = await invoke('process_init_p2p_request', {\r\n        p2pInitMsg: JSON.stringify(p2pInitMsg),\r\n      });\r\n      console.log('response', response);\r\n      const webviewOptions: WebviewOptions = {\r\n        url: '/media/videoCall?friendId=' + p2pInitMsg.request_uuid,\r\n        height: 600,\r\n        width: 800,\r\n        x: 0,\r\n        y: 0,\r\n      };\r\n      await openNewWindow('视频通话', webviewOptions, currentWindow);\r\n    } catch (e) {\r\n      console.log('处理请求失败', e);\r\n    }\r\n  };\r\n\r\n  // 拒绝请求\r\n  const cancel = async () => {\r\n    //TODO\r\n    await currentWindow.close();\r\n  };\r\n\r\n  useEffect(() => {\r\n    // 监听requestMediaMsg的变化（作为备用）\r\n    console.log('Handler组件接收到新的requestMediaMsg:', requestMediaMsg);\r\n\r\n    // TODO获取好友信息\r\n    // 这里可以根据requestMediaMsg中的信息来获取好友信息\r\n    const p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;\r\n    if (p2pInitMsg?.request_addr) {\r\n      // 根据request_addr获取好友信息\r\n      // setUserInfo(friendInfo);\r\n    }\r\n  }, [requestMediaMsg, localP2pInitMsg]);\r\n\r\n  // 如果没有任何数据，显示加载状态\r\n  if (!localP2pInitMsg && !requestMediaMsg?.p2pInitMsg) {\r\n    return (\r\n      <div className={styles.container}>\r\n        <div className={styles.content}>\r\n          <div>加载中...</div>\r\n        </div>\r\n      </div>\r\n    );\r\n  }\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.content}>\r\n        <div className={styles.left}>\r\n          <div>{userInfo?.account || '蔡徐坤'}</div>\r\n          <img\r\n            src={userInfo?.icon || DEFAULT_ICON}\r\n            alt=\"用户头像\"\r\n            className={styles.imgItem}\r\n          />\r\n        </div>\r\n        <div className={styles.right}>\r\n          发起了视频通话\r\n          <div className={styles.btn}>\r\n            <div className={styles.cancelBtn}>\r\n              <Button\r\n                onClick={cancel}\r\n                variant=\"solid\"\r\n                color=\"danger\"\r\n                shape=\"circle\"\r\n                icon={<CloseOutlined />}\r\n              />\r\n            </div>\r\n            <div className={styles.confirmBtn}>\r\n              <Button\r\n                onClick={confirm}\r\n                variant=\"solid\"\r\n                color=\"cyan\"\r\n                shape=\"circle\"\r\n                icon={<CheckOutlined />}\r\n              />\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default MediaPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Media/Handler/index.tsx"
+    },
+    "22": {
+      "path": "/media/videoCall",
+      "file": "@/pages/Media/VideoCall/index.tsx",
+      "id": "22",
+      "absPath": "/media/videoCall",
+      "__content": "import CameraControl from '@/components/Media/CameraControl';\r\nimport VideoReceiver from '@/components/Media/VideoReceiver';\r\nimport { CheckOutlined, CloseOutlined } from '@ant-design/icons';\r\nimport { useLocation } from '@umijs/max';\r\nimport { Button } from 'antd';\r\nimport React, { useEffect, useRef, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { VideoConfig } from '@/types/p2p';\r\n\r\nconst VideoCallPage: React.FC = () => {\r\n  const location = useLocation();\r\n  const params = new URLSearchParams(location.search);\r\n  const friendId = params.get('friendId') || \"\";\r\n  // 默认接受,1-客户端,0-服务端\r\n  const callType = params.get('callType') || '1';\r\n  console.log('callType', callType, friendId);\r\n  const [showMe, setShowMe] = useState(false);\r\n  const cameraRef = useRef<any>(null);\r\n  const [isReceiver, setIsReceiver] = useState(false);\r\n\r\n  useEffect(()=>{\r\n    // 获取对方的视频流配置\r\n    getTargetVideoConfig()\r\n  }, [])\r\n\r\n  // 获取对方的视频流配置\r\n  const getTargetVideoConfig = async () =>{\r\n    let flag = false;\r\n    for (let i = 0; i < 50; i++) {\r\n      await new Promise(resolve => setTimeout(resolve, 200));\r\n      // 调用方法获取flag的值\r\n      let data = await getVideoConfig(friendId);\r\n      if (data !== null) {\r\n        console.log('对方视频配置:', data);\r\n        setIsReceiver(true);\r\n        flag = true;\r\n        break;\r\n      }\r\n    }\r\n    if (!flag) {\r\n      alert('对方未开启视频');\r\n    }\r\n  }\r\n\r\n  const getVideoConfig = async (uuid: string): Promise<string | null> => {\r\n     try {\r\n      const data: string = await invoke('get_user_map', { key: \"p2p_video_config_\"+uuid });\r\n      console.log('视频配置', data);\r\n      return data;\r\n    } catch (e) {\r\n       console.log('获取视频配置失败:', e);\r\n      return null;\r\n    }\r\n  }\r\n\r\n  const handleStreamReady = (stream: MediaStream) => {\r\n    console.log('摄像头流已就绪:', stream);\r\n  };\r\n\r\n  const handleStartCamera = async () => {\r\n    if (cameraRef.current) {\r\n      await cameraRef.current.startCamera();\r\n    }\r\n  };\r\n\r\n  const handleStopCamera = () => {\r\n    if (cameraRef.current) {\r\n      cameraRef.current.stopCamera();\r\n    }\r\n  };\r\n\r\n  const handleSwitchCamera = () => {\r\n    if (cameraRef.current) {\r\n      cameraRef.current.switchCamera();\r\n    }\r\n  };\r\n\r\n  const handleVideoConfig = (config: VideoConfig) => {\r\n    console.log('对方视频配置:', config);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div\r\n        onClick={() => setShowMe(!showMe)}\r\n        className={showMe ? styles.mainVideo : styles.miniVideo}\r\n      >\r\n        <div>捕获</div>\r\n        <CameraControl isReceiver={isReceiver} callType={callType} uuid={friendId} ref={cameraRef} onStreamReady={handleStreamReady} />\r\n      </div>\r\n\r\n      {isReceiver && <div className={styles.btnList}>\r\n        <div className={styles.btnContainer}>\r\n        <Button\r\n          onClick={handleStopCamera}\r\n          variant=\"solid\"\r\n          color=\"danger\"\r\n          icon={<CloseOutlined />}\r\n         >关闭摄像头\r\n         </Button>\r\n         <Button\r\n          onClick={handleStartCamera}\r\n          variant=\"solid\"\r\n          color=\"cyan\"\r\n          icon={<CheckOutlined />}\r\n        >开启摄像头\r\n        </Button>\r\n        </div>\r\n      </div>}\r\n\r\n      <div\r\n        onClick={() => setShowMe(!showMe)}\r\n        className={showMe ? styles.miniVideo : styles.mainVideo}\r\n      >\r\n        <div>接收</div>\r\n        <VideoReceiver />\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default VideoCallPage;",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Media/VideoCall/index.tsx"
+    },
+    "23": {
+      "path": "/search/friend",
+      "file": "@/pages/Search/Friend/index.tsx",
+      "id": "23",
+      "absPath": "/search/friend",
+      "__content": "import DraggableHeader from '@/components/DraggableHeader';\r\nimport SearchFriend from '@/components/SearchFriend';\r\nimport CloseButton from '@/components/TopBar/Buttons/CloseButton';\r\nimport styles from './index.less';\r\n\r\nconst SearchFriendPage = () => {\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.header}>\r\n        <div className={styles.draggable}>\r\n          <DraggableHeader />\r\n        </div>\r\n        <div className={styles.closeBtn}>\r\n          <CloseButton />\r\n        </div>\r\n      </div>\r\n      <div className={styles.content}>\r\n        <SearchFriend />\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default SearchFriendPage;\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Search/Friend/index.tsx"
+    },
+    "24": {
+      "path": "/*",
+      "file": "@/pages/Error/index.tsx",
+      "id": "24",
+      "absPath": "/*",
+      "__content": "import { FormattedMessage, history } from '@umijs/max';\r\nimport { Button, Result } from 'antd';\r\nimport { invoke } from '@tauri-apps/api/core';\r\n\r\nexport default function NotFound() {\r\n  // 处理返回首页的逻辑\r\n  const handleBackHome = async () => {\r\n    // 查看用户是否登录\r\n    try {\r\n      let uuid = await invoke('get_user_map', {key: 'uuid'}) as string;\r\n      if (uuid != null && uuid !== '') {\r\n        history.push('/home');\r\n      }else {\r\n        history.push('/signIn');\r\n      }\r\n    }catch (e){\r\n      history.push('/signIn');\r\n    }\r\n\r\n  };\r\n\r\n  return (\r\n    <div\r\n      style={{\r\n        height: '100vh',\r\n        display: 'flex',\r\n        justifyContent: 'center',\r\n        alignItems: 'center',\r\n      }}\r\n    >\r\n      <Result\r\n        status=\"404\"\r\n        title=\"404\"\r\n        subTitle={<FormattedMessage id=\"not-found\" />}\r\n        extra={\r\n          <Button type=\"primary\" onClick={handleBackHome}>\r\n            <FormattedMessage id=\"back\" />\r\n          </Button>\r\n        }\r\n      />\r\n    </div>\r\n  );\r\n}\r\n",
+      "__isJSFile": true,
+      "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Error/index.tsx"
+    }
+  },
+  "apiRoutes": {},
+  "hasSrcDir": true,
+  "npmClient": "pnpm",
+  "umi": {
+    "version": "4.4.11",
+    "name": "Umi Max",
+    "importSource": "@umijs/max",
+    "cliName": "max"
+  },
+  "bundleStatus": {
+    "done": false
+  },
+  "mfsuBundleStatus": {
+    "done": false
+  },
+  "react": {
+    "version": "18.3.1",
+    "path": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react@18.3.1\\node_modules\\react"
+  },
+  "react-dom": {
+    "version": "18.3.1",
+    "path": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\.pnpm\\react-dom@18.3.1_react@18.3.1\\node_modules\\react-dom"
+  },
+  "appJS": {
+    "path": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\src\\app.ts",
+    "exports": [
+      "onRouteChange",
+      "getInitialState"
+    ]
+  },
+  "locale": "zh-CN",
+  "globalCSS": [
+    "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\src\\global.less"
+  ],
+  "globalJS": [],
+  "overridesCSS": [],
+  "bundler": "webpack",
+  "git": {
+    "originUrl": "https://gitee.com/write-a-bug/rust-tauri-umi.git"
+  },
+  "framework": "react",
+  "typescript": {
+    "tsVersion": "5.8.3",
+    "tslibVersion": "2.8.1"
+  },
+  "faviconFiles": [],
+  "port": 8080,
+  "host": "0.0.0.0",
+  "ip": "192.168.143.250",
+  "antd": {
+    "pkgPath": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\node_modules\\antd",
+    "version": "5.26.0"
+  }
+}

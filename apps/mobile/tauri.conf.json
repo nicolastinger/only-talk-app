@@ -1,0 +1,42 @@
+{
+  "$schema": "../../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "my-app-mobile",
+  "version": "0.1.0",
+  "identifier": "com.mytauriapp.app.mobile",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "pnpm dev:mobile",
+    "beforeBuildCommand": "pnpm build:mobile"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Mobile App",
+        "width": 375,
+        "height": 667,
+        "resizable": true,
+        "fullscreen": false,
+        "dragDropEnabled": true,
+        "center": true,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": null,
+      "capabilities": ["mobile-default"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "../../src-tauri/icons/32x32.png",
+      "../../src-tauri/icons/128x128.png",
+      "../../src-tauri/icons/128x128@2x.png",
+      "../../src-tauri/icons/icon.icns",
+      "../../src-tauri/icons/icon.ico"
+    ]
+  }
+}
