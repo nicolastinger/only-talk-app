@@ -4,3 +4,4 @@ pub mod http_utils;
 pub mod time;
 
 pub mod message_types;
+pub mod android_utils;

@@ -1,16 +1,16 @@
 use crate::dao::create_table::init_common_ddl;
-use crate::utils::global_static_str::SQLITE_PATH;
+use crate::utils::global_static_str::{COMMON_DB, SQLITE_PATH};
 use crate::GLOBAL_COMMON_SQL_POOL;
 use anyhow::anyhow;
 use log::info;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-pub async fn init_common_sqlite() -> Result<(), anyhow::Error> {
-    let db_path = get_db_path().await;
+pub async fn init_common_sqlite(common_db_path: PathBuf) -> Result<(), anyhow::Error> {
+    let db_path = get_common_db_path(common_db_path).await;
 
     let db_url = format!("sqlite://{}", db_path);
 
@@ -38,18 +38,9 @@ pub async fn init_common_sqlite() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn get_db_path() -> String {
-    let path_buf = std::env::current_dir().expect("找不到路径");
-    info!("当前程序路径 {}", path_buf.display());
-    let sqlite_path = Path::new(SQLITE_PATH);
+async fn get_common_db_path(sqlite_path: PathBuf) -> String {
 
-    // 检查目录是否存在，不存在则新建
-    if !sqlite_path.exists() {
-        fs::create_dir(sqlite_path).expect("创建数据库目录失败");
-        info!("已创建目录: dbData");
-    }
-
-    let db_file_path = sqlite_path.join("common.db"); // 路径拼接
+    let db_file_path = sqlite_path.join(COMMON_DB); // 路径拼接
 
     // 检查文件是否存在，不存在则新建
     if !db_file_path.exists() {

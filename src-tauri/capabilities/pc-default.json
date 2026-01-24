@@ -14,7 +14,6 @@
     "core:menu:default",
     "core:webview:allow-create-webview",
     "core:webview:allow-create-webview-window",
-    "core:window:allow-close",
     "core:event:allow-listen",
     "core:event:default",
     "dialog:default",

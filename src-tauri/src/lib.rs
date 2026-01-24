@@ -1,12 +1,12 @@
-use tauri::{generate_handler, AppHandle};
+use tauri::{generate_handler, AppHandle, Manager};
 mod quic_service;
 use crc::Crc;
-use fast_log::Config;
+use dashmap::DashMap;
 use lazy_static::lazy_static;
-use log::{info, LevelFilter};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
+use tauri::path::BaseDirectory;
 use tokio::sync::RwLock;
 mod cmd;
 mod dto;
@@ -17,6 +17,7 @@ mod service;
 mod dao;
 pub mod utils;
 mod vo;
+mod config;
 
 use crate::cmd::api_controller::{
     add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store,
@@ -47,6 +48,8 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
+    // 全局配置DashMap
+    pub static ref GLOBAL_CONFIG: Arc<DashMap<String, String>> = Arc::new(DashMap::new());
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -63,46 +66,17 @@ pub fn run() {
         std::env::set_var("RUST_BACKTRACE", "full");
     }
 
-    #[cfg(not(target_os = "android"))]
-    {
-        fast_log::init(
-            Config::new()
-                .console()
-                .level(LevelFilter::Info)
-                .file("target/rust_im.log")
-                .chan_len(Some(10)),
-        )
-        .unwrap();
-    }
-
-    #[cfg(target_os = "android")]
-    {
-        fast_log::init(
-            Config::new()
-                .console()
-                .level(LevelFilter::Info)
-                .chan_len(Some(10)),
-        )
-        .unwrap();
-    }
-
-    info!("日志初始化完成");
-
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
-            
-            // 初始化环境 (仅在非 Android 平台)
-            #[cfg(not(target_os = "android"))]
-            {
-                tokio::spawn(async move {
-                    if let Err(e) = init_app().await {
+                let handle = app.handle();
+                let root_path = handle.path().resolve("", BaseDirectory::AppLocalData).expect("获取路径失败");
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = init_app(root_path).await {
                         eprintln!("初始化失败: {}", e);
                     }
                 });
-            }
-            
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())

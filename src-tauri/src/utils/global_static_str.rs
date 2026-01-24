@@ -21,7 +21,19 @@ pub static QUIC_SERVER_ADDR: &str = "REDACTED_SERVER_IP_1:4433";
 pub static USER_ADD_FRIEND: &str = "USER_ADD_FRIEND_REQUEST";
 // 用户处理好友申请
 pub static USER_PROCESS_FRIEND: &str = "USER_PROCESS_FRIEND_REQUEST";
+// 软件包名
+pub static PACKAGE_NAME: &str = "com.only-talk.app";
 // 本地数据库文件夹
-pub static SQLITE_PATH: &str = "./dbData";
+pub static SQLITE_PATH: &str = "dbData";
 // 本地资源文件夹
-pub static RESOURCE_PATH: &str = "./resource";
+pub static RESOURCE_PATH: &str = "resource";
+// 日志文件夹
+pub static LOG_PATH: &str = "logs";
+// 日志文件名
+pub static LOG_FILE_NAME: &str = "only_talk.log";
+// app_path
+pub static APP_PATH: &str = "app_path";
+// 用户数据库
+pub static USER_DB: &str = "user.db";
+// 公共数据库
+pub static COMMON_DB: &str = "common.db";

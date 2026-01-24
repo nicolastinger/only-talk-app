@@ -1,7 +1,7 @@
 use crate::cmd::api_controller::get_user_map;
 use crate::dao::create_table::init_user_ddl;
-use crate::utils::global_static_str::SQLITE_PATH;
-use crate::GLOBAL_SQL_POOL;
+use crate::utils::global_static_str::{APP_PATH, SQLITE_PATH, USER_DB};
+use crate::{config, GLOBAL_SQL_POOL};
 use anyhow::anyhow;
 use log::info;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -9,6 +9,8 @@ use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
 
 pub async fn init_sqlite() -> Result<(), anyhow::Error> {
     let db_path = get_db_path().await;
@@ -40,12 +42,19 @@ pub async fn init_sqlite() -> Result<(), anyhow::Error> {
 }
 
 async fn get_db_path() -> String {
-    let path_buf = std::env::current_dir().expect("找不到路径");
-    info!("当前程序路径 {}", path_buf.display());
+    let app_path = config::get_config(APP_PATH).unwrap_or_else(|| {
+        // TODO emit给前端，3秒后自动关闭程序
+        // 获取应用路径失败，抛出异常
+        sleep(Duration::from_secs(3));
+        panic!("获取应用路径失败");
+    });
     let account = get_user_map("account".to_string())
         .await
         .expect("获取用户信息失败");
-    let sqlite_path = Path::new(SQLITE_PATH);
+    let sqlite_path = Path::new(&app_path).join(SQLITE_PATH);
+
+    let db_data_dir = Path::new(&app_path).join(SQLITE_PATH).join(&account);
+    let db_file_path = Path::new(&app_path).join(SQLITE_PATH).join(&account).join(USER_DB); // 路径拼接
 
     // 检查目录是否存在，不存在则新建
     if !sqlite_path.exists() {
@@ -53,17 +62,11 @@ async fn get_db_path() -> String {
         info!("已创建目录: dbData");
     }
 
-    let db_file_path = format!("./dbData/{}", account);
-
-    let db_data_dir = Path::new(&db_file_path);
-
     // 检查目录是否存在，不存在则新建
     if !db_data_dir.exists() {
         fs::create_dir(db_data_dir).expect("创建 dbData 目录失败");
         info!("已创建目录: dbData");
     }
-
-    let db_file_path = db_data_dir.join("app.db"); // 路径拼接
 
     // 检查文件是否存在，不存在则新建
     if !db_file_path.exists() {
