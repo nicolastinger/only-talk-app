@@ -1,8 +1,10 @@
-use crate::vo::file_vo::FileVo;
 use std::fs;
 use std::path::Path;
+
 use log::{error, warn};
+
 use crate::service::file_service::get_file_by_biz_id_service;
+use crate::vo::file_vo::FileVo;
 
 /// 增加持久化数据
 #[tauri::command]
@@ -15,11 +17,8 @@ pub async fn get_local_file() -> Result<FileVo, String> {
 
     let metadata = fs::metadata(resource_path).map_err(|e| format!("读取文件元数据失败: {}", e))?;
 
-    let file_name = resource_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("11111.jpg")
-        .to_string();
+    let file_name =
+        resource_path.file_name().and_then(|n| n.to_str()).unwrap_or("11111.jpg").to_string();
 
     let file_content = fs::read(resource_path).map_err(|e| format!("读取文件内容失败: {}", e))?;
 
@@ -50,18 +49,15 @@ pub async fn get_local_file() -> Result<FileVo, String> {
 #[tauri::command]
 pub async fn get_file_by_biz_id(biz_id: String) -> Result<Vec<FileVo>, String> {
     log::info!("通过业务id获取文件 {}", biz_id);
-    if biz_id == "" { 
+    if biz_id.is_empty() {
         warn!("业务id不能为空");
         return Err("业务id不能为空".to_string());
     }
     let res = get_file_by_biz_id_service(biz_id).await;
-    match res { 
-        Ok(file_vo) => {
-            Ok(file_vo)
-        }
+    match res {
+        Ok(file_vo) => Ok(file_vo),
         Err(e) => {
             error!("获取文件失败 {}", e);
-            error!("获取文件失败堆栈信息 {}", e.backtrace());
             Err(e.to_string())
         }
     }

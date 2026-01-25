@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 /// DNS解析工具函数
 ///
 /// 提供域名解析功能，支持IPv4和IPv6地址解析。
@@ -20,6 +19,7 @@ use anyhow::anyhow;
 /// # }
 /// ```
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
+
 use tokio::net::lookup_host;
 
 /// 通过域名解析获取IPv4地址和端口
@@ -44,7 +44,7 @@ use tokio::net::lookup_host;
 /// ```
 pub async fn resolve_ipv4(domain: &str, port: u16) -> Result<SocketAddrV4, anyhow::Error> {
     let host_port = format!("{}:{}", domain, port);
-    let mut addrs = lookup_host(&host_port).await?;
+    let addrs = lookup_host(&host_port).await?;
 
     // 查找第一个IPv4地址
     for addr in addrs {
@@ -79,7 +79,7 @@ pub async fn resolve_ipv4(domain: &str, port: u16) -> Result<SocketAddrV4, anyho
 /// ```
 pub async fn resolve_ipv6(domain: &str, port: u16) -> Result<SocketAddrV6, anyhow::Error> {
     let host_port = format!("{}:{}", domain, port);
-    let mut addrs = lookup_host(&host_port).await?;
+    let addrs = lookup_host(&host_port).await?;
 
     // 查找第一个IPv6地址
     for addr in addrs {

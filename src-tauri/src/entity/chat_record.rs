@@ -1,6 +1,7 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+
 use crate::dao::get_db_client;
 use crate::dao::store::SqliteStore;
 
@@ -28,16 +29,29 @@ impl SqliteStore for ChatRecord {
             text_type INTEGER NOT NULL DEFAULT 0
         )"#,
         )
-            .execute(pool_sqlite)
+        .execute(pool_sqlite)
+        .await?;
+        Ok(())
+    }
+
+    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        sqlx::query(
+            r#"CREATE TABLE IF NOT EXISTS chat_record (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nano_id TEXT NOT NULL UNIQUE,
+            raw TEXT NOT NULL,
+            timestamp INTEGER NOT NULL,
+            send_user TEXT NOT NULL,
+            recv_user TEXT NOT NULL,
+            text_type INTEGER NOT NULL DEFAULT 0
+        )"#,
+        )
+            .execute(_pool_sqlite)
             .await?;
         Ok(())
     }
 
-    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
-        Ok(())
-    }
-
-    async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn drop_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -57,4 +71,3 @@ impl ChatRecord {
         Ok(record.0)
     }
 }
-

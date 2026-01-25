@@ -11,12 +11,69 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/src-tauri/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/Cargo.toml" afterDir="false" />
+    <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="fix:修复安卓平台下的报错">
+      <change afterPath="$PROJECT_DIR$/src-tauri/clippy.toml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src-tauri/src/cmd/user_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/appData.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/appData.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/api_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/api_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/auth_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/auth_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/file_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/file_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/friend_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/friend_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/config.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/config.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/chat_record_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/chat_record_db.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/create_table.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/create_table.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/file_record_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/file_record_db.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/friend_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/friend_db.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/init_common_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/init_common_db.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/init_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/init_db.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/session_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/session_db.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/store.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/store.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/emit_app/emit_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/emit_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/emit_app/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_record.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_record.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_ack.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_ack.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_read.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_read.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_session.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_session.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/file_record.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/file_record.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/friend.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/friend.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/p2p_models.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/p2p_models.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/quic_connection.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/quic_connection.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/init_app.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/init_app.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/tauri.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/tauri.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/media_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/media_quic_client.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/process_text_msg_from_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/process_text_msg_from_server.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_msg_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_msg_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_quic_client.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/dangerous_configuration.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/dangerous_configuration.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/models.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/models.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/safe_configuration.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/safe_configuration.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/udp_utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/udp_utils.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/file_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/file_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/friend_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/friend_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/p2p_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/p2p_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/android_utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/android_utils.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/dns.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/dns.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/http_utils.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/message_types.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/message_types.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/time.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/time.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/chat_session_vo.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/chat_session_vo.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/file_vo.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/file_vo.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/friend_vo.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/friend_vo.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/text_quic_msg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/text_quic_msg.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,7 +115,7 @@
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "git-widget-placeholder": "dev__1.0.0",
-    "last_opened_file_path": "I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/utils",
+    "last_opened_file_path": "I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -68,7 +125,7 @@
     "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
     "org.rust.hideNoCargoProjectNotificationsI:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/function/back_end.rs": "true",
     "prettierjs.PrettierConfiguration.Package": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\prettier",
-    "settings.editor.selected.configurable": "通义灵码",
+    "settings.editor.selected.configurable": "language.rust.cargo.check",
     "ts.external.directory.path": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true"
   },
@@ -80,11 +137,15 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="I:\code\rust\umi_gitee\rust-tauri-umi\src-tauri" />
       <recent name="I:\code\rust\umi_gitee\rust-tauri-umi\src-tauri\src\utils" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="I:\code\rust\umi_gitee\rust-tauri-umi\src-tauri\src\emit_app" />
     </key>
+  </component>
+  <component name="RsExternalLinterProjectSettings">
+    <option name="runOnTheFly" value="false" />
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
@@ -111,10 +172,29 @@
       <workItem from="1763475818493" duration="76000" />
       <workItem from="1763476616155" duration="3838000" />
       <workItem from="1769011824448" duration="12000" />
+      <workItem from="1769263760123" duration="1147000" />
+      <workItem from="1769265955915" duration="83000" />
+      <workItem from="1769266053636" duration="5089000" />
+      <workItem from="1769309882393" duration="6819000" />
+      <workItem from="1769318712486" duration="63000" />
+      <workItem from="1769318804301" duration="1742000" />
     </task>
+    <task id="LOCAL-00001" summary="fix:修复安卓平台下的报错">
+      <option name="closed" value="true" />
+      <created>1769271545017</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1769271545017</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="fix:修复安卓平台下的报错" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix:修复安卓平台下的报错" />
   </component>
 </project>

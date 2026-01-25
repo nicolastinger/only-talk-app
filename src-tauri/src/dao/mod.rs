@@ -1,14 +1,15 @@
-use crate::{GLOBAL_COMMON_SQL_POOL, GLOBAL_SQL_POOL};
 use anyhow::anyhow;
+
+use crate::{GLOBAL_COMMON_SQL_POOL, GLOBAL_SQL_POOL};
 
 pub mod chat_record_db;
 mod create_table;
+pub mod file_record_db;
 pub mod friend_db;
 pub mod init_common_db;
 pub mod init_db;
 pub mod session_db;
 pub mod store;
-pub mod file_record_db;
 
 pub async fn get_db_client() -> Result<sqlx::SqlitePool, anyhow::Error> {
     let pool_guard = GLOBAL_SQL_POOL.read().await;

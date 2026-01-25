@@ -1,5 +1,6 @@
-use crate::GLOBAL_QUIC_USER_INFO;
 use sqlx::SqlitePool;
+
+use crate::dao::store::init_sqlite;
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::entity::chat_record_read::ChatRecordRead;
@@ -7,7 +8,7 @@ use crate::entity::chat_session::ChatSession;
 use crate::entity::file_record::FileRecord;
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
-use crate::dao::store::init_sqlite;
+use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 初始化公共数据库
 pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {

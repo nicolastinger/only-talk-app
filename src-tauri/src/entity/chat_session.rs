@@ -1,8 +1,9 @@
 use anyhow::Error;
-use crate::vo::chat_session_vo::ChatSessionVo;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+
 use crate::dao::store::SqliteStore;
+use crate::vo::chat_session_vo::ChatSessionVo;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatSession {
@@ -55,16 +56,16 @@ impl SqliteStore for ChatSession {
             UNIQUE(send_user, recv_user)
         )"#,
         )
-            .execute(pool_sqlite)
-            .await?;
+        .execute(pool_sqlite)
+        .await?;
         Ok(())
     }
 
-    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
         Ok(())
     }
 
-    async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn drop_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
         Ok(())
     }
 }

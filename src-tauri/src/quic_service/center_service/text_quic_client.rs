@@ -1,3 +1,12 @@
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
+
+use anyhow::anyhow;
+use log::{error, info, warn};
+use quinn::{Endpoint, SendStream};
+use tokio::sync::{Mutex, RwLock};
+
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
@@ -6,13 +15,6 @@ use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::MSG_TYPE_PING;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use anyhow::anyhow;
-use log::{error, info, warn};
-use quinn::{Endpoint, SendStream};
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::{Mutex, RwLock};
 // 客户端异步函数，尝试与服务器建立QUIC连接，文字信息连接
 pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     // 创建客户端端点
@@ -47,7 +49,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
                     {
                         Ok(_) => {}
                         Err(e) => {
-                            error!("处理连接数据失败 {} {}", e.to_string(), e.backtrace());
+                            error!("处理连接数据失败 {} {}", e, e.backtrace());
                         }
                     };
                 }
@@ -77,31 +79,20 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
 async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error> {
     // 发送消息给服务器
     let mut first_quic_msg = FirstQuicMsg::new();
-    let uuid = GLOBAL_QUIC_USER_INFO
-        .read()
-        .await
-        .get("uuid")
-        .ok_or(anyhow!("uuid为空"))?
-        .clone();
-    let token = GLOBAL_QUIC_USER_INFO
-        .read()
-        .await
-        .get("token")
-        .ok_or(anyhow!("token为空"))?
-        .clone();
+    let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").ok_or(anyhow!("uuid为空"))?.clone();
+    let token =
+        GLOBAL_QUIC_USER_INFO.read().await.get("token").ok_or(anyhow!("token为空"))?.clone();
     first_quic_msg.dyn_header_size = 9;
     first_quic_msg.uuid = uuid;
     first_quic_msg.text_serde_struct = "user_chat_json".to_string();
     first_quic_msg.token = token;
-    send_stream
-        .write_all(serde_json::to_string(&first_quic_msg)?.as_bytes())
-        .await?;
+    send_stream.write_all(serde_json::to_string(&first_quic_msg)?.as_bytes()).await?;
 
     tokio::time::sleep(Duration::from_secs(1)).await; //初始化一秒，防止连发元数据
 
     let send_stream = Arc::new(RwLock::new(send_stream));
 
-    let now = get_now_time_stamp_as_millis().unwrap_or_else(|_| 0);
+    let now = get_now_time_stamp_as_millis().unwrap_or(0);
 
     let new_connection = QuicConnection {
         is_online: true,

@@ -1,3 +1,9 @@
+use anyhow::anyhow;
+use log::{error, info, warn};
+use tauri::Emitter;
+
+use crate::dao::chat_record_db::{insert_chat_record, query_ack_record_from_db};
+use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::p2p_models::P2pInitMsg;
@@ -7,10 +13,7 @@ use crate::service::chat_service::clear_chat_session;
 use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::get_user_info;
-use crate::dao::chat_record_db::{insert_chat_record, query_ack_record_from_db};
-use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
-use crate::utils::global_static_str::SYSTEM;
-use crate::utils::global_static_str::USER_PROCESS_FRIEND;
+use crate::utils::global_static_str::{SYSTEM};
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT,
     MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM,
@@ -19,9 +22,6 @@ use crate::utils::message_types::{
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::APP_HANDLE;
-use anyhow::anyhow;
-use log::{error, info, warn};
-use tauri::Emitter;
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -94,21 +94,18 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
 
     //2.发送消息给前端
     {
-        APP_HANDLE
-            .get()
-            .ok_or(anyhow!("获取app失败"))?
-            .emit("text_message", payload)?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
     }
 
     //3.更新会话列表
     let mut flag = false;
-    let me = get_user_info(&"uuid".to_string()).await?;
+    let me = get_user_info("uuid").await?;
     let friend_uuid = &msg.send_user;
     let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
-    if current_session_friend.is_ok() && current_session_friend? == friend_uuid.to_string() {
+    if current_session_friend.is_ok() && current_session_friend? == *friend_uuid {
         flag = true;
     }
-    let mut friend_session = query_chat_session_by_user_db(&me, &friend_uuid).await?;
+    let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
     if friend_session.is_empty() {
         let mut chat_session = ChatSession {
             id: 0,
@@ -153,16 +150,11 @@ pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow
     update_chat_session_db(&chat_session).await?;
 
     //发送会话消息给前端
-    let chat_session_event = ChatSessionEvent {
-        r#type: 1,
-        data: ChatSessionVo::from(chat_session)?,
-    };
+    let chat_session_event =
+        ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session)? };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
-        APP_HANDLE
-            .get()
-            .ok_or(anyhow!("获取app失败"))?
-            .emit("chat_session", payload)?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     }
     Ok(())
 }
@@ -180,10 +172,7 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     insert_chat_record(&ack_record).await?;
     // 发送消息给前端
     {
-        APP_HANDLE
-            .get()
-            .ok_or(anyhow!("获取app失败"))?
-            .emit("text_message", payload)?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
     }
     // 清除未读计数
     let chat_session = ChatSession {
@@ -210,10 +199,7 @@ async fn process_system_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
     info!("接收到系统信息 {:?}", msg);
 
     {
-        APP_HANDLE
-            .get()
-            .ok_or(anyhow!("获取app失败"))?
-            .emit("system_message", payload)?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("system_message", payload)?;
     }
     Ok(())
 }

@@ -1,15 +1,14 @@
-use crate::quic_service::p2p_service::p2p_stream_quic_server::{run_server, udp_port_forward};
-use crate::GLOBAL_QUIC_USER_INFO;
-use anyhow::anyhow;
-use log::{error, info, warn};
 use std::net::SocketAddr;
+
+use log::{error, info, warn};
 use tokio::net::UdpSocket;
 use tokio::signal;
 use tokio::time::{timeout, Duration};
+use crate::GLOBAL_QUIC_USER_INFO;
 
 pub async fn send_udp_ping_msg(
-    local_addr: String,
-    remote_addr: String,
+    _local_addr: String,
+    _remote_addr: String,
 ) -> Result<String, anyhow::Error> {
     // let local_addr = local_addr.parse::<SocketAddr>()?;
     // let remote_addr = remote_addr.parse::<SocketAddr>()?;
@@ -40,7 +39,7 @@ pub async fn send_udp_ping_msg(
 }
 
 /// p2p通信使用udp端口
-pub async fn get_p2p_udp_socket(local_addr: SocketAddr) -> anyhow::Result<()> {
+pub async fn _get_p2p_udp_socket(local_addr: SocketAddr) -> anyhow::Result<()> {
     let socket = UdpSocket::bind(local_addr).await?;
     info!("服务端已启动，监听地址 {}", local_addr);
 
@@ -64,7 +63,7 @@ pub async fn get_p2p_udp_socket(local_addr: SocketAddr) -> anyhow::Result<()> {
                         // 转换消息为字符串（自动处理非 UTF-8 字符
                         let message = String::from_utf8_lossy(&buf[..size]);
                         {
-                            let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+                            let guard = GLOBAL_QUIC_USER_INFO.write().await;
                             let accept_user = guard.get("accept_user").expect("accept_user not found").clone();
                             if accept_user != message {
                                warn!("用户id不一致 {} , {}", accept_user, message);

@@ -1,17 +1,15 @@
-use crate::entity::friend::Friend;
-use crate::service::user_service::get_user_info;
-use crate::dao::friend_db::update_friend_info_db;
-use crate::utils::global_static_str::{QUIC_SERVER_ADDR, TALK_API};
-use crate::utils::http_utils::post_request;
-use crate::vo::friend_vo::FriendListVO;
-use crate::vo::http_response::Response;
-use crate::{
-    entity::system_notification::SystemNotification, dao::friend_db::query_friend_info_db,
-};
 use anyhow::anyhow;
 use log::{error, info};
 use serde_json::Value;
 use uuid::Uuid;
+use crate::cmd::auth_controller::post_request;
+use crate::dao::friend_db::{query_friend_info_db, update_friend_info_db};
+use crate::entity::friend::Friend;
+use crate::entity::system_notification::SystemNotification;
+use crate::service::user_service::get_user_info;
+use crate::utils::global_static_str::{TALK_API};
+use crate::vo::friend_vo::FriendListVO;
+use crate::vo::http_response::Response;
 
 pub async fn process_friend_notify_message(
     system_notification: SystemNotification,
@@ -39,26 +37,20 @@ pub async fn process_friend_notify_message(
 /// 获取好友列表
 pub async fn update_friend_list() -> Result<(), anyhow::Error> {
     // 获取本地最新update的好友
-    let uuid = get_user_info(&"uuid".to_string()).await?;
+    let uuid = get_user_info("uuid").await?;
     let res = query_friend_info_db(&uuid).await?;
     let mut last_uuid = Uuid::now_v7().to_string();
     let mut last_version = 0;
     if !res.is_empty() {
         let last_update_friend = res.into_iter().max_by_key(|f| f.updated_at);
         // 现在last_update_friend是按updated_at倒序的最后一条记录
-        if last_update_friend.is_some() {
-            let last_update_friend = last_update_friend.expect("获取最后更新好友失败");
+        if let Some(last_update_friend) = last_update_friend {
             last_uuid = last_update_friend.friend_id;
             last_version = last_update_friend.version;
         }
     }
-    let url = format!(
-        "{}/friend/get_friend/{}/{}",
-        TALK_API, &last_uuid, last_version
-    );
-    let result = post_request(url, String::new())
-        .await
-        .map_err(|e| anyhow!(e))?;
+    let url = format!("{}/friend/get_friend/{}/{}", TALK_API, &last_uuid, last_version);
+    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     let data = result.body;
     info!("获取好友列表结果 {:?}", data);

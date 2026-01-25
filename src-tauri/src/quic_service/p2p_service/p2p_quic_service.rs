@@ -1,3 +1,14 @@
+use std::sync::Arc;
+use std::time::Duration;
+
+use anyhow::anyhow;
+use lazy_static::lazy_static;
+use log::{error, info, warn};
+use quinn::SendStream;
+use tauri::Emitter;
+use tokio::sync::mpsc::Sender;
+use tokio::sync::{mpsc, Mutex};
+
 use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::TextQuicMsg;
@@ -5,23 +16,12 @@ use crate::quic_service::center_service::text_msg_service::{generate_text_msg, g
 use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
-    MSG_TYPE_PING, MSG_TYPE_TEXT,
+    MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
+    MSG_TYPE_PING,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
-use anyhow::anyhow;
-use lazy_static::lazy_static;
-use log::{info, warn};
-use quinn::SendStream;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
-use tauri::Emitter;
-use tokio::io::AsyncReadExt;
-use tokio::sync::mpsc::Sender;
-use tokio::sync::{mpsc, Mutex, RwLock};
 
-/// 传输的视频帧
+// 传输的视频帧
 lazy_static! {
    pub static ref LOG_SENDER: Mutex<Sender<P2pVideoData>> = {
         let (tx, mut rx) = mpsc::channel::<P2pVideoData>(1000);
@@ -52,8 +52,7 @@ pub async fn get_sender(target_uuid: &str) -> Result<Arc<Mutex<SendStream>>, any
     let sender = {
         let guard = P2P_STREAM_SENDER.read().await;
         let target_sender = guard.get(target_uuid).ok_or(anyhow!("no target_sender"))?;
-        let sender = target_sender.send_stream.clone();
-        sender
+        target_sender.send_stream.clone()
     };
     Ok(sender)
 }
@@ -122,25 +121,22 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
 }
 
 /// 发送心跳信息
-pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, uuid: String) {
+pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
     tokio::spawn(async move {
         loop {
             info!("发送p2p心跳");
             let me = {
                 let guard = GLOBAL_QUIC_USER_INFO.read().await;
-                let me = guard.get("uuid").unwrap();
+                let empty_str = String::new();
+                let me = guard.get("uuid").unwrap_or(&empty_str);
                 me.clone()
             };
-            let ping_msg = generate_text_msg(
-                MSG_TYPE_PING,
-                PING.as_bytes().to_vec(),
-                SYSTEM.to_string(),
-                me,
-            )
-            .expect("");
+            let ping_msg =
+                generate_text_msg(MSG_TYPE_PING, PING.as_bytes().to_vec(), SYSTEM.to_string(), me)
+                    .expect("generate_text_msg error");
             {
                 let mut send_stream = send_stream_ping.lock().await;
-                send_stream.write_all(&ping_msg).await.unwrap();
+                send_stream.write_all(&ping_msg).await.unwrap_or_else(|e| error!("发送ping消息失败: {:?}", e));
             }
             //一分钟发送心跳
             tokio::time::sleep(Duration::from_secs(2)).await;

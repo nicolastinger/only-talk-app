@@ -1,26 +1,24 @@
+use std::collections::HashMap;
+use std::net::SocketAddr;
+
+use anyhow::anyhow;
+use log::{error, info, warn};
+
+use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
+use crate::dao::init_db::init_sqlite;
+use crate::dao::session_db::update_chat_session_db;
 use crate::dto::add_read_chat_record::AddReadChatRecord;
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_session::ChatSession;
-use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_quic_client::run_client;
 use crate::service::friend_service::update_friend_list;
-use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
-use crate::dao::init_db::init_sqlite;
-use crate::utils::http_utils::post_request;
-use crate::{GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE};
-use anyhow::anyhow;
-use log::{error, info, warn};
-use std::collections::HashMap;
-use std::net::SocketAddr;
-
-use crate::dao::session_db::update_chat_session_db;
 use crate::utils::dns::resolve_ipv4;
-use crate::utils::global_static_str::{DOMAIN_NAME, QUIC_SERVER_ADDR, TALK_API};
-use crate::vo::friend_vo::FriendListVO;
-use crate::vo::http_response::Response;
+use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
+use crate::{GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE};
+use crate::cmd::auth_controller::post_request;
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -32,13 +30,9 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
         error!("获取好友列表失败 {:?}", e);
     });
     //2、获取未读消息
-    get_unread_message()
-        .await
-        .unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
+    get_unread_message().await.unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
     //3、获取未读通知
-    get_unread_notification()
-        .await
-        .unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
+    get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
     //4、启动定时已读任务
     let handle = start_read_task().await?;
     // 保存任务句柄到全局变量
@@ -70,19 +64,14 @@ pub async fn get_user_info(key: &str) -> Result<String, anyhow::Error> {
 
 /// 插入用户信息
 pub async fn insert_user_info(key: &str, value: &str) -> Result<(), anyhow::Error> {
-    GLOBAL_QUIC_USER_INFO
-        .write()
-        .await
-        .insert(key.to_string(), value.to_string());
+    GLOBAL_QUIC_USER_INFO.write().await.insert(key.to_string(), value.to_string());
     Ok(())
 }
 
 /// 获取未读消息
 pub async fn get_unread_message() -> Result<(), anyhow::Error> {
     let url = format!("{}/msg/get_unread_chat_record", TALK_API);
-    let result = post_request(url, String::new())
-        .await
-        .map_err(|e| anyhow!(e))?;
+    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     let data = result.body;
     let result = serde_json::from_str::<HttpResult>(&data)?;
@@ -99,7 +88,7 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
     info!("获取未读消息结果 {:?}", text_quic_msg_vec);
     // 未读消息计数
     let mut unread_count_map: HashMap<String, ChatSession> = HashMap::new();
-    let uuid = get_user_info(&"uuid".to_string()).await?;
+    let uuid = get_user_info("uuid").await?;
 
     for text_quic_msg in text_quic_msg_vec {
         //保存未读消息
@@ -153,15 +142,12 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
 /// 启动定时已读任务
 pub async fn start_read_task() -> Result<tokio::task::JoinHandle<()>, anyhow::Error> {
     let handle = tokio::spawn(async move {
-        let uuid = get_user_info(&"uuid".to_string())
-            .await
-            .expect("获取uuid失败");
+        let uuid = get_user_info("uuid").await.expect("获取uuid失败");
 
         let mut timestamp = 0;
         loop {
-            let last_chat_record = query_last_read_msg(&uuid, timestamp)
-                .await
-                .expect("获取会话失败");
+            let last_chat_record =
+                query_last_read_msg(&uuid, timestamp).await.expect("获取会话失败");
             if !last_chat_record.is_empty() {
                 let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
                 for item in last_chat_record {
@@ -202,9 +188,7 @@ pub async fn start_read_task() -> Result<tokio::task::JoinHandle<()>, anyhow::Er
 /// 获取未读通知
 async fn get_unread_notification() -> Result<(), anyhow::Error> {
     let url = format!("{}/notify/get_user_unread_notification", TALK_API);
-    let result = post_request(url, String::new())
-        .await
-        .map_err(|e| anyhow!(e))?;
+    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
     let data = result.body;
     let result = serde_json::from_str::<HttpResult>(&data)?;
     if result.code != 200 {
@@ -222,10 +206,19 @@ async fn get_unread_notification() -> Result<(), anyhow::Error> {
         match SystemNotification::insert(&system_notification).await {
             Ok(_) => {}
             Err(e) => {
-                warn!("插入系统通知失败 {}", e.to_string());
+                warn!("插入系统通知失败 {}", e);
                 continue;
             }
         }
     }
+    Ok(())
+}
+
+pub async fn get_user_map(key: &str) -> Result<String, String> {
+    Ok(GLOBAL_QUIC_USER_INFO.read().await.get(key).cloned().ok_or("not found")?.to_string())
+}
+
+pub async fn add_user_map(key: &str, value: &str) -> Result<(), String> {
+    GLOBAL_QUIC_USER_INFO.write().await.insert(key.to_string(), value.to_string());
     Ok(())
 }

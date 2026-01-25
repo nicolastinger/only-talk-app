@@ -48,7 +48,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "register",
       "type": "preset",
@@ -74,7 +74,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 14
+        "register": 13
       },
       "enableBy": "register",
       "type": "preset",
@@ -91,7 +91,7 @@
             0
           ]
         },
-        "register": 7
+        "register": 4
       },
       "enableBy": "register",
       "type": "plugin",
@@ -105,7 +105,7 @@
       "time": {
         "hooks": {
           "onStart": [
-            1
+            2
           ]
         },
         "register": 1
@@ -139,10 +139,10 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            167
+            163
           ]
         },
-        "register": 28
+        "register": 27
       },
       "enableBy": "register",
       "type": "plugin",
@@ -192,7 +192,7 @@
             0
           ]
         },
-        "register": 1
+        "register": 0
       },
       "enableBy": "register",
       "type": "plugin",
@@ -222,7 +222,7 @@
             0
           ]
         },
-        "register": 19
+        "register": 18
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1088,7 +1088,7 @@
       "time": {
         "hooks": {
           "onStart": [
-            1
+            0
           ]
         },
         "register": 2
@@ -1117,7 +1117,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 75
+        "register": 73
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1143,7 +1143,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 26
+        "register": 25
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1157,7 +1157,7 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            0
+            1
           ]
         },
         "register": 1
@@ -1203,7 +1203,7 @@
             1
           ]
         },
-        "register": 37
+        "register": 39
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/mock/mock.js",
@@ -1215,7 +1215,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 2
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1240,7 +1240,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1267,10 +1267,10 @@
       "time": {
         "hooks": {
           "modifyConfig": [
-            1
+            2
           ]
         },
-        "register": 4
+        "register": 3
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/polyfill/polyfill.js",
@@ -1282,7 +1282,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 0
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1295,7 +1295,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 3
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1321,7 +1321,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1360,7 +1360,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routeProps/routeProps.js",
@@ -1385,7 +1385,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 6
+        "register": 7
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1411,7 +1411,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 5
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1487,7 +1487,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 3
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1513,7 +1513,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/webpack/webpack.js",
@@ -1591,7 +1591,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 2
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1604,7 +1604,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 4
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1617,7 +1617,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 34
+        "register": 31
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1630,7 +1630,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 44
+        "register": 45
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1644,13 +1644,13 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            26
+            25
           ],
           "onStart": [
-            0
+            1
           ]
         },
-        "register": 77
+        "register": 74
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/dev/dev.js",
@@ -1714,7 +1714,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1727,7 +1727,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 5
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1740,7 +1740,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1766,7 +1766,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1805,7 +1805,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1966,7 +1966,7 @@
             8
           ],
           "modifyAppData": [
-            1
+            0
           ]
         },
         "register": 8
@@ -1981,7 +1981,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 12
+        "register": 11
       },
       "enableBy": "config",
       "type": "plugin",
@@ -2035,7 +2035,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 4
       },
       "enableBy": "config",
       "type": "plugin",
@@ -2180,7 +2180,7 @@
             0
           ]
         },
-        "register": 1
+        "register": 0
       },
       "enableBy": "register",
       "type": "plugin",
@@ -2197,7 +2197,7 @@
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -3749,7 +3749,7 @@
   "faviconFiles": [],
   "port": 8080,
   "host": "0.0.0.0",
-  "ip": "192.168.57.250",
+  "ip": "172.29.192.1",
   "antd": {
     "pkgPath": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\node_modules\\antd",
     "version": "5.26.0"

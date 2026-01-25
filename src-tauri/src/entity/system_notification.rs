@@ -1,8 +1,9 @@
 use anyhow::Error;
-use crate::dao::get_db_client;
 use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+
+use crate::dao::get_db_client;
 use crate::dao::store::SqliteStore;
 
 /// 系统通知
@@ -46,17 +47,17 @@ impl SystemNotification {
             .bind(&system_notification.id)
             .bind(&system_notification.title)
             .bind(&system_notification.content)
-            .bind(&system_notification.created_at)
-            .bind(&system_notification.content_type)
+            .bind(system_notification.created_at)
+            .bind(system_notification.content_type)
             .bind(&system_notification.user_id)
             .bind(&system_notification.biz_id)
-            .bind(&system_notification.is_read)
-            .bind(&system_notification.level1)
-            .bind(&system_notification.level2)
-            .bind(&system_notification.level3)
-            .bind(&system_notification.level4)
-            .bind(&system_notification.unread_count)
-            .bind(&system_notification.priority)
+            .bind(system_notification.is_read)
+            .bind(system_notification.level1)
+            .bind(system_notification.level2)
+            .bind(system_notification.level3)
+            .bind(system_notification.level4)
+            .bind(system_notification.unread_count)
+            .bind(system_notification.priority)
             .execute(&pool_sqlite)
             .await?;
         Ok(())
@@ -106,10 +107,7 @@ impl SystemNotification {
         let result = query.execute(&pool_sqlite).await?;
         let effect_row = result.rows_affected() as i32;
 
-        info!(
-            "批量已读系统通知完成，user_id: {}, effect_row: {}",
-            user_id, effect_row
-        );
+        info!("批量已读系统通知完成，user_id: {}, effect_row: {}", user_id, effect_row);
 
         Ok(effect_row)
     }
@@ -135,8 +133,8 @@ impl SqliteStore for SystemNotification {
             priority INTEGER NOT NULL DEFAULT 0
         )"#,
         )
-            .execute(pool_sqlite)
-            .await?;
+        .execute(pool_sqlite)
+        .await?;
         Ok(())
     }
 
@@ -157,7 +155,7 @@ impl SqliteStore for SystemNotification {
         Ok(())
     }
 
-    async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn drop_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
         Ok(())
     }
 }

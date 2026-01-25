@@ -67,13 +67,3 @@ pub struct P2pMsg {
     // 序列化
     pub raw: String,
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum P2pMsgType {
-    // 接收到p2p请求
-    P2pRequest = 102,
-    // 同意p2p请求
-    AcceptRequest = 103,
-    // 拒绝p2p请求
-    RejectRequest = 104,
-}

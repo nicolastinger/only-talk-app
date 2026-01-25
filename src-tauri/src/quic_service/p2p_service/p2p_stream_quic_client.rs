@@ -1,17 +1,19 @@
 //TODO p2p内网穿透 客户端
 
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+use log::{error, info};
+use quinn::{ClientConfig, Endpoint};
+use rustls::ClientConfig as RustlsClientConfig;
+use tokio::sync::Mutex;
+
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::models::TargetSendStream;
 use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg};
 use crate::utils::message_types::MSG_TYPE_TEXT;
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
-use log::{error, info};
-use quinn::{ClientConfig, Endpoint};
-use rustls::ClientConfig as RustlsClientConfig;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 pub async fn run_client(
     local_addr: SocketAddr,
@@ -27,17 +29,12 @@ pub async fn run_client(
         .with_no_client_auth();
 
     // 禁用证书验证
-    crypto
-        .dangerous()
-        .set_certificate_verifier(Arc::new(danger::NoCertificateVerification {}));
+    crypto.dangerous().set_certificate_verifier(Arc::new(danger::NoCertificateVerification {}));
 
     let config = ClientConfig::new(Arc::new(crypto));
     endpoint.set_default_client_config(config);
 
-    info!(
-        "Connecting to server at {} from local port 19898",
-        server_addr
-    );
+    info!("Connecting to server at {} from local port 19898", server_addr);
     // 连接到服务器
     let connection = endpoint.connect(server_addr, "localhost")?.await?;
     info!("Connected to server at {}", connection.remote_address());
@@ -47,8 +44,8 @@ pub async fn run_client(
 
     let (p2p_request_token, target_uuid) = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let p2p_request_token = guard.get("p2p_request_token").unwrap();
-        let target_uuid = guard.get("target_uuid").unwrap();
+        let p2p_request_token = guard.get("p2p_request_token").expect("p2p_request_token");
+        let target_uuid = guard.get("target_uuid").expect("target_uuid");
         (p2p_request_token.clone(), target_uuid.clone())
     };
     let ping_uuid = target_uuid.clone();
@@ -59,8 +56,7 @@ pub async fn run_client(
         serde_json::to_vec(&p2p_request_token)?,
         "".to_string(),
         "".to_string(),
-    )
-    .unwrap();
+    )?;
     send.write_all(&verify_msg).await?;
     //send.finish().await?;
 
@@ -113,8 +109,9 @@ pub async fn run_client(
 
 // 实现不安全的证书验证器
 mod danger {
-    use rustls::client::ServerCertVerifier;
     use std::time::SystemTime;
+
+    use rustls::client::ServerCertVerifier;
 
     pub struct NoCertificateVerification {}
 

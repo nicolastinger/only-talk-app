@@ -1,16 +1,18 @@
-use crate::dao::init_common_db::init_common_sqlite;
-use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
-use crate::utils::global_static_str::{APP_PATH, LOG_FILE_NAME, LOG_PATH, PACKAGE_NAME, RESOURCE_PATH, SQLITE_PATH, UDP_SOCKET_V6};
+use std::fs;
+use std::net::SocketAddrV6;
+use std::path::{Path, PathBuf};
+
 use fast_log::plugin::file_split::{DateType, KeepType, Rolling, RollingType};
 use fast_log::plugin::packer::LogPacker;
 use fast_log::Config;
 use log::{info, warn, LevelFilter};
-use std::fs;
-use std::net::SocketAddrV6;
-use std::path::{Path, PathBuf};
-use tauri::path;
-use tauri::path::BaseDirectory;
+
 use crate::config::set_config;
+use crate::dao::init_common_db::init_common_sqlite;
+use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
+use crate::utils::global_static_str::{
+    APP_PATH, LOG_FILE_NAME, LOG_PATH, RESOURCE_PATH, SQLITE_PATH, UDP_SOCKET_V6,
+};
 
 pub async fn init_app(root_path: PathBuf) -> Result<(), anyhow::Error> {
     // 获取应用的路径
@@ -40,7 +42,7 @@ pub async fn init_app(root_path: PathBuf) -> Result<(), anyhow::Error> {
         fs::create_dir(&resource_path).expect("创建文件目录失败");
         info!("已创建目录: {}", RESOURCE_PATH);
     }
-    
+
     // 初始化sqlite文件夹
     let sqlite_path = Path::new(&app_path).join(SQLITE_PATH);
     if !sqlite_path.exists() {
@@ -49,20 +51,15 @@ pub async fn init_app(root_path: PathBuf) -> Result<(), anyhow::Error> {
     }
     // 初始化公共数据库
     init_common_sqlite(sqlite_path).await.expect("初始化公共数据库失败!");
-    
-    
+
     // 监测ipv6是否支持
     let addr_v6 = "[::]:10086";
     let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>().expect("解析ipv6地址失败");
-    let udp_socket_v6 = UDP_SOCKET_V6
-        .parse::<SocketAddrV6>()
-        .expect("解析ipv6地址失败");
+    let udp_socket_v6 = UDP_SOCKET_V6.parse::<SocketAddrV6>().expect("解析ipv6地址失败");
     let addr_json = Vec::new();
-    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json)
-        .await
-        .unwrap_or_else(|x| {
-            warn!("本机不支持ipv6传输 {}", x.to_string());
-        });
+    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(|x| {
+        warn!("本机不支持ipv6传输 {}", x);
+    });
     info!("应用启动成功");
     Ok(())
 }
@@ -81,7 +78,7 @@ pub fn init_log(log_file_path: &str) {
             )
             .chan_len(Some(10)),
     )
-        .expect("初始化日志失败");
+    .expect("初始化日志失败");
 
     info!("日志初始化完成");
 }

@@ -1,10 +1,3 @@
-use crate::cmd::api_controller::get_user_map;
-use crate::dao::create_table::init_user_ddl;
-use crate::utils::global_static_str::{APP_PATH, SQLITE_PATH, USER_DB};
-use crate::{config, GLOBAL_SQL_POOL};
-use anyhow::anyhow;
-use log::info;
-use sqlx::sqlite::SqlitePoolOptions;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
@@ -12,16 +5,22 @@ use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 
+use anyhow::anyhow;
+use log::info;
+use sqlx::sqlite::SqlitePoolOptions;
+
+use crate::dao::create_table::init_user_ddl;
+use crate::utils::global_static_str::{APP_PATH, SQLITE_PATH, USER_DB};
+use crate::{config, GLOBAL_SQL_POOL};
+use crate::cmd::user_controller::get_user_map;
+
 pub async fn init_sqlite() -> Result<(), anyhow::Error> {
     let db_path = get_db_path().await;
 
     let db_url = format!("sqlite://{}", db_path);
 
     // 创建数据库连接池
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await?;
+    let pool = SqlitePoolOptions::new().max_connections(5).connect(&db_url).await?;
 
     let pool_arc = Arc::new(pool);
 
@@ -48,9 +47,7 @@ async fn get_db_path() -> String {
         sleep(Duration::from_secs(3));
         panic!("获取应用路径失败");
     });
-    let account = get_user_map("account".to_string())
-        .await
-        .expect("获取用户信息失败");
+    let account = get_user_map("account".to_string()).await.expect("获取用户信息失败");
     let sqlite_path = Path::new(&app_path).join(SQLITE_PATH);
 
     let db_data_dir = Path::new(&app_path).join(SQLITE_PATH).join(&account);

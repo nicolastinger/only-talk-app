@@ -15,6 +15,12 @@ pub const MSG_TYPE_JSON: u16 = 88;
 /// P2P消息
 pub const MSG_TYPE_P2P: u16 = 4;
 
+
+/// 接受P2P请求
+pub const P2P_ACCEPT_REQUEST: u16 = 103;
+/// 拒绝P2P请求
+pub const P2P_REJECT_REQUEST: u16 = 104;
+
 /// P2P视频呼叫
 pub const MSG_TYPE_P2P_VIDEO_CALL: u16 = 5;
 

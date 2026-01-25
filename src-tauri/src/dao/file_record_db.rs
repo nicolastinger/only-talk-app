@@ -1,7 +1,8 @@
 use chrono::Local;
 use log::info;
-use crate::dao::get_common_db_client;
 use sqlx::query;
+
+use crate::dao::get_common_db_client;
 
 // 将文件记录插入数据库
 pub async fn insert_file_record(
@@ -13,7 +14,6 @@ pub async fn insert_file_record(
     mime_type: &str,
     file_hash: &str,
 ) -> Result<(), anyhow::Error> {
-
     let pool = get_common_db_client().await?;
     let now = Local::now().timestamp();
 

@@ -1,37 +1,39 @@
 use tauri::{generate_handler, AppHandle, Manager};
 mod quic_service;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
+
 use crc::Crc;
 use dashmap::DashMap;
 use lazy_static::lazy_static;
 use sqlx::SqlitePool;
-use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
 use tauri::path::BaseDirectory;
 use tokio::sync::RwLock;
 mod cmd;
+mod config;
+mod dao;
 mod dto;
 mod emit_app;
 mod entity;
 mod init_app;
 mod service;
-mod dao;
 pub mod utils;
 mod vo;
-mod config;
+
+use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
-    add_user_map, batch_read_system_notification, create_chat_session, get_chat_record_from_store,
-    get_chat_session_from_store, get_system_notification, get_user_map, mark_read,
+    batch_read_system_notification, create_chat_session, get_chat_record_from_store,
+    get_chat_session_from_store, get_system_notification, mark_read,
     mark_read_chat_session, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg,
     send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame,
 };
-use crate::cmd::auth_controller::{clear_user_info, logout};
+use crate::cmd::auth_controller::{clear_user_info, get_request, logout, post_request, sign_in};
 use crate::cmd::file_controller::{get_file_by_biz_id, get_local_file};
 use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
+use crate::cmd::user_controller::{add_user_map, get_user_map};
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
-use entity::quic_connection::QuicConnection;
-use utils::http_utils::{get_request, post_request, sign_in};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 // 创建CRC-16/X25计算器
@@ -70,13 +72,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
-                let handle = app.handle();
-                let root_path = handle.path().resolve("", BaseDirectory::AppLocalData).expect("获取路径失败");
-                tauri::async_runtime::spawn(async move {
-                    if let Err(e) = init_app(root_path).await {
-                        eprintln!("初始化失败: {}", e);
-                    }
-                });
+            let handle = app.handle();
+            let root_path =
+                handle.path().resolve("", BaseDirectory::AppLocalData).expect("获取路径失败");
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = init_app(root_path).await {
+                    eprintln!("初始化失败: {}", e);
+                }
+            });
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())

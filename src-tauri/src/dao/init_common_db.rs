@@ -1,13 +1,14 @@
-use crate::dao::create_table::init_common_ddl;
-use crate::utils::global_static_str::{COMMON_DB, SQLITE_PATH};
-use crate::GLOBAL_COMMON_SQL_POOL;
+use std::fs::File;
+use std::path::{PathBuf};
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use log::info;
 use sqlx::sqlite::SqlitePoolOptions;
-use std::fs;
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+
+use crate::dao::create_table::init_common_ddl;
+use crate::utils::global_static_str::{COMMON_DB};
+use crate::GLOBAL_COMMON_SQL_POOL;
 
 pub async fn init_common_sqlite(common_db_path: PathBuf) -> Result<(), anyhow::Error> {
     let db_path = get_common_db_path(common_db_path).await;
@@ -15,10 +16,7 @@ pub async fn init_common_sqlite(common_db_path: PathBuf) -> Result<(), anyhow::E
     let db_url = format!("sqlite://{}", db_path);
 
     // 创建数据库连接池
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await?;
+    let pool = SqlitePoolOptions::new().max_connections(5).connect(&db_url).await?;
 
     let pool_arc = Arc::new(pool);
 
@@ -39,7 +37,6 @@ pub async fn init_common_sqlite(common_db_path: PathBuf) -> Result<(), anyhow::E
 }
 
 async fn get_common_db_path(sqlite_path: PathBuf) -> String {
-
     let db_file_path = sqlite_path.join(COMMON_DB); // 路径拼接
 
     // 检查文件是否存在，不存在则新建

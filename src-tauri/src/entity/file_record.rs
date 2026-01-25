@@ -1,9 +1,10 @@
-use crate::dao::store::SqliteStore;
 use anyhow::Error;
 use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+
 use crate::dao::get_common_db_client;
+use crate::dao::store::SqliteStore;
 
 /// 本地文件记录表
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
@@ -55,12 +56,12 @@ impl SqliteStore for FileRecord {
         Ok(())
     }
 
-    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
         info!("更新文件记录表...");
         Ok(())
     }
 
-    async fn drop_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn drop_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
         info!("删除文件记录表...");
         Ok(())
     }

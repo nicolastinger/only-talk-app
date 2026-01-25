@@ -1,24 +1,21 @@
-use crate::entity::p2p_models::{P2pVideoConfig, UserAddressInfo};
+use std::net::{SocketAddr, SocketAddrV6, UdpSocket};
+use std::sync::Arc;
+use anyhow::anyhow;
+use log::{error, info};
+use quinn::Endpoint;
+use tokio::sync::Mutex;
+
+use crate::entity::p2p_models::{UserAddressInfo};
 use crate::entity::quic_connection::ConnectionType;
-use crate::entity::text_msg::TextQuicMsg;
-use crate::quic_service::center_service::text_msg_service::get_text_msg;
 use crate::quic_service::dangerous_configuration::configure_server;
 use crate::quic_service::models::TargetSendStream;
 use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg};
-use crate::service::user_service::insert_user_info;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
-use anyhow::anyhow;
-use log::{error, info, warn};
-use quinn::Endpoint;
-use std::net::{SocketAddr, SocketAddrV6, UdpSocket};
-use std::sync::Arc;
-use tauri::Emitter;
-use tokio::sync::Mutex;
+use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
 pub async fn udp_port_forward(
     local: SocketAddr,
     remote: SocketAddr,
-    raw: &Vec<u8>,
+    raw: &[u8],
 ) -> Result<(), std::io::Error> {
     // 创建 UDP 套接字，绑定随机本地端口
     {
@@ -34,7 +31,7 @@ pub async fn udp_port_forward(
 pub async fn udp_port_forward_ipv6(
     local: SocketAddrV6,
     remote: SocketAddrV6,
-    raw: &Vec<u8>,
+    raw: &[u8],
 ) -> Result<(), std::io::Error> {
     // 创建 UDP 套接字，绑定随机本地端口
     let socket = UdpSocket::bind(local)?;
@@ -53,11 +50,8 @@ pub async fn get_user_address_info(
     let empty_token = "".to_string();
     let (uuid, target_uuid) = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let target_uuid = guard
-            .get("target_uuid")
-            .unwrap_or_else(|| &empty_token)
-            .clone();
-        let uuid = guard.get("uuid").unwrap_or_else(|| &empty_token).clone();
+        let target_uuid = guard.get("target_uuid").unwrap_or(&empty_token).clone();
+        let uuid = guard.get("uuid").unwrap_or(&empty_token).clone();
         (uuid, target_uuid)
     };
     let user_address_info = UserAddressInfo {
@@ -74,6 +68,7 @@ pub async fn get_user_address_info(
     Ok(user_address_info)
 }
 
+#[allow(dead_code)]
 pub async fn udp_p2p_port_forward(
     local: SocketAddr,
     remote: SocketAddr,
@@ -82,12 +77,8 @@ pub async fn udp_p2p_port_forward(
     let socket = UdpSocket::bind(local)?;
 
     let empty_token = "ping".to_string();
-    let token = GLOBAL_QUIC_USER_INFO
-        .read()
-        .await
-        .get("uuid")
-        .unwrap_or_else(|| &empty_token)
-        .clone();
+    let token =
+        GLOBAL_QUIC_USER_INFO.read().await.get("uuid").unwrap_or(&empty_token).clone();
     // 发送 UDP 数据（发送 "ping" 字符串）
     info!("发送ping信息 {}", remote);
     socket.send_to(token.as_bytes(), remote)?;
@@ -119,11 +110,11 @@ pub async fn run_server(addr: SocketAddr) -> Result<(), anyhow::Error> {
 
 async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::Error> {
     // 处理连接逻辑
-    while let Ok((mut send, mut recv)) = connection.accept_bi().await {
+    while let Ok((send, mut recv)) = connection.accept_bi().await {
         let send_stream = Arc::new(Mutex::new(send));
         let target_uuid = {
             let guard = GLOBAL_QUIC_USER_INFO.read().await;
-            let target_uuid = guard.get("target_uuid").unwrap();
+            let target_uuid = guard.get("target_uuid").ok_or(anyhow!("no target uuid"))?;
             target_uuid.clone()
         };
         send_ping_msg(send_stream.clone(), target_uuid.clone());

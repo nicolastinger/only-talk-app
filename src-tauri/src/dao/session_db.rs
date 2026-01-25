@@ -1,13 +1,14 @@
+use log::{error, info};
+
+use crate::dao::get_db_client;
 use crate::entity::chat_session::ChatSession;
 use crate::service::user_service::get_user_info;
-use crate::dao::get_db_client;
 use crate::vo::chat_session_vo::ChatSessionVo;
-use log::{error, info};
 
 /// 会话消息更新
 pub async fn update_chat_session_db(chat_session: &ChatSession) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let me = get_user_info(&"uuid".to_string()).await?;
+    let me = get_user_info("uuid").await?;
     let send_user = match chat_session.send_user == me {
         true => chat_session.recv_user.clone(),
         false => chat_session.send_user.clone(),
@@ -48,7 +49,7 @@ pub async fn update_chat_session_db(chat_session: &ChatSession) -> Result<(), an
 
 /// 本地更新会话
 pub async fn update_chat_session_local_db(chat_session: &ChatSession) -> Result<(), anyhow::Error> {
-    let me = get_user_info(&"uuid".to_string()).await?;
+    let me = get_user_info("uuid").await?;
     let send_user = match chat_session.send_user == me {
         true => chat_session.recv_user.clone(),
         false => chat_session.send_user.clone(),

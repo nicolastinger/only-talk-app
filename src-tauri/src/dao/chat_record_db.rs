@@ -1,16 +1,17 @@
 // 本地聊天记录sql
 
+use anyhow::anyhow;
+
+use crate::dao::get_db_client;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::Page;
-use crate::dao::get_db_client;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::GLOBAL_SQL_POOL;
-use anyhow::anyhow;
 
 /// 分页获取聊天记录
 pub async fn query_chat_record_from_db(
     text_quic_msg: TextQuicMsgVo,
-    page: Page,
+    _page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by timestamp"#)
@@ -120,8 +121,6 @@ pub async fn query_last_chat_record(
         .await?;
     Ok(record)
 }
-
-
 
 /// 查询ack表中是否存在某条信息
 pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {

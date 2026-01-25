@@ -1,4 +1,14 @@
-use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pMsgType, P2pVideoConfig, UserAddressInfo};
+use std::collections::HashMap;
+use std::io;
+use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
+use std::time::Duration;
+
+use anyhow::anyhow;
+use log::{info, warn};
+use nanoid::nanoid;
+use tauri::Emitter;
+
+use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
@@ -10,20 +20,9 @@ use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };
-use crate::utils::http_utils::post;
-use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG,
-};
+use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST};
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use anyhow::anyhow;
-use log::{info, warn};
-use nanoid::nanoid;
-use serde_json::Value;
-use std::collections::HashMap;
-use std::io;
-use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
-use std::time::Duration;
-use tauri::Emitter;
+use crate::cmd::auth_controller::post;
 
 /// 获取10000以上首个可用UDP端口
 pub fn find_available_udp_port(start_port: u16) -> Option<u16> {
@@ -32,7 +31,7 @@ pub fn find_available_udp_port(start_port: u16) -> Option<u16> {
 
 /// 检查指定端口是否可用
 fn is_udp_port_available(port: u16) -> io::Result<bool> {
-    let addr = SocketAddrV4::new("0.0.0.0".parse().unwrap(), port);
+    let addr = SocketAddrV4::new("0.0.0.0".parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid IP address"))?, port);
     match UdpSocket::bind(addr) {
         Ok(_) => Ok(true),                                           // 绑定成功，端口可用
         Err(e) if e.kind() == io::ErrorKind::AddrInUse => Ok(false), // 端口被占用
@@ -51,10 +50,7 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
     };
 
     //插入token到服务器，供连接端验证
-    let url = format!(
-        "{}/user/add_p2p_token/{}/{}",
-        TALK_API, accept_user, request_token
-    );
+    let url = format!("{}/user/add_p2p_token/{}/{}", TALK_API, accept_user, request_token);
     post(url, HashMap::new()).await?;
 
     // 本机作为服务端
@@ -77,16 +73,12 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
         step: 0,
         is_server: false,
     };
-    let p2p_msg = generate_text_msg(
-        MSG_TYPE_P2P,
-        serde_json::to_vec(&p2p_init_msg)?,
-        accept_user,
-        sender,
-    )?;
+    let p2p_msg =
+        generate_text_msg(MSG_TYPE_P2P, serde_json::to_vec(&p2p_init_msg)?, accept_user, sender)?;
 
     let send_stream = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").unwrap().send_stream.clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.send_stream.clone()
     };
     send_stream.write().await.write_all(&p2p_msg).await?;
     Ok(())
@@ -107,11 +99,7 @@ pub async fn reject_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
     )?;
     let send_stream = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book
-            .get("SERVER_TEXT")
-            .ok_or(anyhow!("找不到连接"))?
-            .send_stream
-            .clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.send_stream.clone()
     };
     send_stream.write().await.write_all(&p2p_msg).await?;
 
@@ -128,10 +116,7 @@ pub async fn access_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
         guard.insert("target_uuid".to_string(), p2p_init_msg.request_uuid.clone());
-        guard.insert(
-            "p2p_request_token".to_string(),
-            p2p_init_msg.request_token.clone(),
-        );
+        guard.insert("p2p_request_token".to_string(), p2p_init_msg.request_token.clone());
     }
 
     check_user_ip_type().await?;
@@ -145,39 +130,18 @@ pub async fn access_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
     // 发送确认接收信息给服务器
     let send_stream = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book
-            .get("SERVER_TEXT")
-            .ok_or(anyhow!("找不到连接"))?
-            .send_stream
-            .clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.send_stream.clone()
     };
     send_stream.write().await.write_all(&p2p_msg).await?;
     info!("发送接收信息");
     Ok(())
 }
 
-/// 获取请求用户的ip地址
-async fn get_request_user_ip(
-    request_uuid: String,
-    request_token: String,
-) -> Result<String, anyhow::Error> {
-    // 获取请求用户的ip地址
-    let url = format!(
-        "{}/user/verify_p2p_token/{}/{}",
-        TALK_API, request_uuid, request_token
-    );
-    let response = post(url, HashMap::new()).await?;
-    let res = response.text().await?;
-    let json_value: Value = serde_json::from_str(&res)?;
-    let data = json_value["data"].as_str().ok_or(anyhow!("ip为空"))?;
-    Ok(data.to_string())
-}
-
 /// 检测用户的IP类型
 pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     // ipv4连接
     let udp_port = find_available_udp_port(10024).ok_or(anyhow!("no available UDP port"))?;
-    let port = udp_port.clone();
+    let port = udp_port;
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
         guard.insert("p2p_port_v4".to_string(), port.to_string());
@@ -209,16 +173,12 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>()?;
     let udp_socket_v6 = UDP_SOCKET_V6.parse::<SocketAddrV6>()?;
     let udp_socket_v6_2 = UDP_SOCKET_V6_2.parse::<SocketAddrV6>()?;
-    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json)
-        .await
-        .unwrap_or_else(|x| {
-            warn!("本机不支持ipv6传输 {}", x.to_string());
-        });
-    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json)
-        .await
-        .unwrap_or_else(|x| {
-            warn!("本机不支持ipv6传输 {}", x.to_string());
-        });
+    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(|x| {
+        warn!("本机不支持ipv6传输 {}", x);
+    });
+    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json).await.unwrap_or_else(|x| {
+        warn!("本机不支持ipv6传输 {}", x);
+    });
     Ok(())
 }
 
@@ -234,12 +194,8 @@ pub async fn send_p2p_video_frame_service(
         sender
     };
 
-    let video_data = generate_text_msg(
-        MSG_TYPE_P2P_VIDEO_CALL,
-        frame_data,
-        target_uuid.clone(),
-        sender,
-    )?;
+    let video_data =
+        generate_text_msg(MSG_TYPE_P2P_VIDEO_CALL, frame_data, target_uuid.clone(), sender)?;
 
     // 发送帧数据
     {
@@ -259,7 +215,7 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
     // 打开视频窗口
     if let Some(handle) = APP_HANDLE.get() {
         let p2p_msg = P2pMsg {
-            r#type: P2pMsgType::AcceptRequest as u16,
+            r#type: P2P_ACCEPT_REQUEST,
             raw: target_address_info.uuid.clone(),
         };
         handle.emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
@@ -268,9 +224,7 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
         info!("收到 {:?}", target_address_info);
         // 开启ipv4服务端
         if target_address_info.ip_type == 1 {
-            run_p2p_serer_v4(target_address_info)
-                .await
-                .expect("运行ipv4版本p2p服务端失败");
+            run_p2p_serer_v4(target_address_info).await.expect("运行ipv4版本p2p服务端失败");
         }
     });
     Ok(())
@@ -279,14 +233,11 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
 /// 建立p2p客户端
 pub async fn run_p2p_client(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     tokio::spawn(async move {
-        let target_address_info: UserAddressInfo =
-            serde_json::from_slice(&text_quic_msg.raw).unwrap();
-        info!("收到2 {:?}", target_address_info);
+        let target_address_info = serde_json::from_slice::<UserAddressInfo>(&text_quic_msg.raw).expect("反序列化失败");
+        info!("收到 {:?}", target_address_info);
         // 开启ipv4客户端
         if target_address_info.ip_type == 1 {
-            run_p2p_client_v4(target_address_info)
-                .await
-                .expect("创建ipv4版p2p客户失败");
+            run_p2p_client_v4(target_address_info).await.expect("创建ipv4版p2p客户失败");
         }
     });
     Ok(())
@@ -296,18 +247,14 @@ pub async fn run_p2p_client(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
 async fn run_p2p_serer_v4(target_address_info: UserAddressInfo) -> Result<(), anyhow::Error> {
     let port = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let res = guard.get("p2p_port_v4").unwrap();
+        let res = guard.get("p2p_port_v4").ok_or(anyhow!("no p2p port"))?;
         res.clone()
     };
     let addr = format!("0.0.0.0:{}", port);
     let vec_to = Vec::new();
     // 发送一次udp消息给客户端
-    udp_port_forward(
-        addr.parse()?,
-        target_address_info.address.to_string().parse()?,
-        &vec_to,
-    )
-    .await?;
+    udp_port_forward(addr.parse()?, target_address_info.address.to_string().parse()?, &vec_to)
+        .await?;
     run_server(addr.parse()?).await?;
     Ok(())
 }
@@ -316,24 +263,16 @@ async fn run_p2p_serer_v4(target_address_info: UserAddressInfo) -> Result<(), an
 async fn run_p2p_client_v4(target_address_info: UserAddressInfo) -> Result<(), anyhow::Error> {
     let port = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let res = guard.get("p2p_port_v4").unwrap();
+        let res = guard.get("p2p_port_v4").ok_or(anyhow!("no p2p port"))?;
         res.clone()
     };
     let addr = format!("0.0.0.0:{}", port);
     let vec_to = Vec::new();
     // 发送一次udp消息给客户端
-    udp_port_forward(
-        addr.parse()?,
-        target_address_info.address.to_string().parse()?,
-        &vec_to,
-    )
-    .await?;
+    udp_port_forward(addr.parse()?, target_address_info.address.to_string().parse()?, &vec_to)
+        .await?;
     tokio::time::sleep(Duration::from_millis(100)).await;
-    run_client(
-        addr.parse()?,
-        target_address_info.address.to_string().parse()?,
-    )
-    .await?;
+    run_client(addr.parse()?, target_address_info.address.to_string().parse()?).await?;
     Ok(())
 }
 
@@ -345,13 +284,9 @@ pub async fn send_p2p_video_config_service(
     info!("开始发送配置信息 {}", uuid);
     let video_config = serde_json::from_str::<P2pVideoConfig>(&video_config)?;
     let video_config_vec = serde_json::to_vec(&video_config)?;
-    let me = get_user_info(&"uuid".to_string()).await?;
-    let p2p_data = generate_text_msg(
-        MSG_TYPE_P2P_VIDEO_CONFIG,
-        video_config_vec,
-        String::new(),
-        me,
-    )?;
+    let me = get_user_info("uuid").await?;
+    let p2p_data =
+        generate_text_msg(MSG_TYPE_P2P_VIDEO_CONFIG, video_config_vec, String::new(), me)?;
     for _ in 0..10 {
         info!("等待p2p连接 {}", uuid);
         {
@@ -363,7 +298,7 @@ pub async fn send_p2p_video_config_service(
                     return Ok(());
                 }
                 Err(e) => {
-                    warn!("找不到发送流，等待下一次获取 {}", e.to_string());
+                    warn!("找不到发送流，等待下一次获取 {}", e);
                 }
             };
         }
