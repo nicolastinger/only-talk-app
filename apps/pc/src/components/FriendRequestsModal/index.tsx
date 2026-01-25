@@ -4,7 +4,7 @@ import {
   process_friend_request,
 } from '@/services/userService';
 import { useBearStore } from '@/store/store';
-import { FriendRequestInfo, FriendRequestInfoDTO } from '@/types/friend';
+import { FriendRequestInfo, FriendRequestInfoDTO } from '@workspace/types';
 import { CheckOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Avatar, Button, List, Modal, Tabs } from 'antd';

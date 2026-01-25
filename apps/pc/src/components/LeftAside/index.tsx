@@ -2,7 +2,7 @@
 import defaultImg from '@/assets/png/default.png';
 import LayoutBtn from '@/components/Button/LayoutBtn';
 import { useBearStore } from '@/store/store';
-import { LayoutBtnProps } from '@/types/user/common';
+import { LayoutBtnProps } from '@workspace/types';
 import {
   MessageOutlined,
   SettingOutlined,
@@ -13,8 +13,6 @@ import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
 import { useChatsUnread } from '@/hooks/useChatsUnread';
-import { invoke } from '@tauri-apps/api/core';
-import { FileVo } from '@/types/backend/vo';
 import { getImageFiles } from '@/services/FileService';
 
 const LeftAside = () => {

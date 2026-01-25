@@ -1,8 +1,8 @@
 [package]
 name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.0.0"
+description = "Instant Messaging App"
+authors = ["nico"]
 license = ""
 repository = ""
 edition = "2021"
@@ -45,6 +45,7 @@ rcgen = "0.11.3"
 webpki-roots = "1.0.2"
 uuid = { version = "1.11.0", features = ["v4", "v7"] }
 tauri-plugin-dialog = "2.0.0-rc"
+tauri-plugin-fs = "2"
 sha2 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6.0"

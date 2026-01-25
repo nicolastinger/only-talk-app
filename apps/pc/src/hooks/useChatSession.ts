@@ -1,6 +1,4 @@
-import { useBearStore } from '@/store/store';
-import { ChatSessionEvent } from '@/types/backend/vo';
-import { invoke } from '@tauri-apps/api/core';
+import { ChatSessionEvent } from '@workspace/types';
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
 

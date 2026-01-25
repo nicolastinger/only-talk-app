@@ -1,4 +1,4 @@
-import { ChatMessage } from '@/types/user/common';
+import { ChatMessage } from '@workspace/types';
 import React from 'react';
 import styles from './styles/CustomerChatBox.less';
 

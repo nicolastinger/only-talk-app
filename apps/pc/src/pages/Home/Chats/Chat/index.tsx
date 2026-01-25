@@ -1,10 +1,10 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useBearStore } from '@/store/store';
-import { Page } from '@/types/backend';
-import { ResponseData } from '@/types/backend/httpRust';
-import { FriendVo } from '@/types/backend/vo';
-import { ChatMessage, MessageFrom, TextMsgRaw } from '@/types/user/common';
+import { Page } from '@workspace/types';
+import { ResponseData } from '@workspace/types';
+import { FriendVo } from '@workspace/types';
+import { ChatMessage, MessageFrom, TextMsgRaw } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { useLocation } from '@umijs/max';
 import React, { useEffect, useState } from 'react';

@@ -1,4 +1,4 @@
-import { RustResponse } from '@/types/backend/httpRust';
+import { RustResponse } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { notification } from 'antd'; // 导入通知组件
 import { HttpStatusMap, TALK_API } from '@/constants';

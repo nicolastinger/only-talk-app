@@ -1,5 +1,5 @@
 import { useBearStore } from '@/store/store';
-import { SystemNotification } from '@/types/backend/system';
+import { SystemNotification } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useEffect } from 'react';

@@ -6,7 +6,7 @@ import { Button } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
 import { invoke } from '@tauri-apps/api/core';
-import { VideoConfig } from '@/types/p2p';
+import { VideoConfig } from '@workspace/types';
 
 const VideoCallPage: React.FC = () => {
   const location = useLocation();

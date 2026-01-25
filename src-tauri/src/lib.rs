@@ -29,11 +29,12 @@ use crate::cmd::api_controller::{
     send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame,
 };
 use crate::cmd::auth_controller::{clear_user_info, get_request, logout, post_request, sign_in};
-use crate::cmd::file_controller::{get_file_by_biz_id, get_local_file};
+use crate::cmd::file_controller::{debug_resource_paths, get_file_by_biz_id, get_local_file};
 use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
 use crate::cmd::user_controller::{add_user_map, get_user_map};
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
+use crate::utils::global_static_str::APP_NAME;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 // 创建CRC-16/X25计算器
@@ -70,13 +71,14 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
-            let handle = app.handle();
+            let handle = app.handle().clone();
             let root_path =
-                handle.path().resolve("", BaseDirectory::AppLocalData).expect("获取路径失败");
+                handle.path().resolve(APP_NAME, BaseDirectory::Document).expect("获取路径失败");
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = init_app(root_path).await {
+                if let Err(e) = init_app(root_path, Some(handle)).await {
                     eprintln!("初始化失败: {}", e);
                 }
             });
@@ -109,7 +111,8 @@ pub fn run() {
             batch_read_system_notification,
             mark_read_chat_session,
             get_local_file,
-            get_file_by_biz_id
+            get_file_by_biz_id,
+            debug_resource_paths
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

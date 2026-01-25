@@ -15,8 +15,7 @@ pub struct FileVo {
     pub description: Option<String>,
     pub original_file_name: Option<String>,
     pub original_file_path: Option<String>,
-    pub relative_path: Option<String>,
-    pub relative_file_name: Option<String>,
+    pub absolute_file_path: Option<String>,
     pub raw: Option<Vec<u8>>,
     pub is_del: Option<i32>,
 }

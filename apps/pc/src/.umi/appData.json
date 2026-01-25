@@ -1,11 +1,11 @@
 {
   "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
   "pkg": {
-    "private": true,
-    "author": "huang <2737484812@qq.com>",
     "name": "@workspace/app-pc",
     "version": "1.0.0",
+    "private": true,
     "description": "Mobile app with Vue3 + Vant + Vapor + Less + TypeScript",
+    "author": "huang <2737484812@qq.com>",
     "type": "module",
     "scripts": {
       "build": "max build",
@@ -23,6 +23,7 @@
       "@tauri-apps/api": "^2.5.0",
       "@tauri-apps/plugin-dialog": "^2.4.2",
       "@umijs/max": "^4.4.11",
+      "@workspace/types": "workspace:*",
       "antd": "^5.4.0",
       "dayjs": "^1.11.13",
       "dva": "^2.4.1",
@@ -61,7 +62,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 30
+        "register": 33
       },
       "enableBy": "register",
       "type": "preset",
@@ -74,7 +75,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 13
+        "register": 14
       },
       "enableBy": "register",
       "type": "preset",
@@ -91,7 +92,7 @@
             0
           ]
         },
-        "register": 4
+        "register": 6
       },
       "enableBy": "register",
       "type": "plugin",
@@ -105,7 +106,7 @@
       "time": {
         "hooks": {
           "onStart": [
-            2
+            1
           ]
         },
         "register": 1
@@ -139,10 +140,10 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            163
+            278
           ]
         },
-        "register": 27
+        "register": 29
       },
       "enableBy": "register",
       "type": "plugin",
@@ -175,7 +176,7 @@
             0
           ]
         },
-        "register": 2
+        "register": 3
       },
       "enableBy": "register",
       "type": "plugin",
@@ -192,7 +193,7 @@
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -222,7 +223,7 @@
             0
           ]
         },
-        "register": 18
+        "register": 19
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1074,7 +1075,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1088,7 +1089,7 @@
       "time": {
         "hooks": {
           "onStart": [
-            0
+            1
           ]
         },
         "register": 2
@@ -1104,7 +1105,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1117,7 +1118,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 73
+        "register": 77
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1130,7 +1131,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 203
+        "register": 224
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1143,7 +1144,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 25
+        "register": 29
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1157,7 +1158,7 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            1
+            0
           ]
         },
         "register": 1
@@ -1228,7 +1229,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/okam/okam.js",
@@ -1270,7 +1271,7 @@
             2
           ]
         },
-        "register": 3
+        "register": 5
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/polyfill/polyfill.js",
@@ -1295,7 +1296,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 5
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1308,7 +1309,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1321,7 +1322,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1334,7 +1335,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 10
+        "register": 11
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1360,7 +1361,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routeProps/routeProps.js",
@@ -1398,7 +1399,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 6
+        "register": 7
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1437,7 +1438,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 14
+        "register": 15
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/apiRoute/apiRoute.js",
@@ -1449,7 +1450,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 24
+        "register": 25
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1462,7 +1463,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 2
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/test/test.js",
@@ -1487,7 +1488,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 4
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1500,7 +1501,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1513,7 +1514,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/webpack/webpack.js",
@@ -1554,7 +1555,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1567,7 +1568,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 5
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian.js",
@@ -1591,7 +1592,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 3
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1604,7 +1605,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 3
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1617,7 +1618,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 31
+        "register": 40
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1630,7 +1631,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 45
+        "register": 48
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1644,13 +1645,13 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            25
+            28
           ],
           "onStart": [
-            1
+            0
           ]
         },
-        "register": 74
+        "register": 83
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/dev/dev.js",
@@ -1675,7 +1676,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1714,7 +1715,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 0
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1740,7 +1741,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1766,7 +1767,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1805,7 +1806,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1896,7 +1897,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 23
+        "register": 25
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1922,7 +1923,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 7
+        "register": 8
       },
       "enableBy": "register",
       "type": "plugin",
@@ -1935,7 +1936,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 3
       },
       "enableBy": "config",
       "type": "plugin",
@@ -1950,7 +1951,7 @@
       },
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/analytics.js",
@@ -1969,7 +1970,7 @@
             0
           ]
         },
-        "register": 8
+        "register": 10
       },
       "type": "plugin",
       "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/antd.js",
@@ -1981,7 +1982,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 11
+        "register": 12
       },
       "enableBy": "config",
       "type": "plugin",
@@ -2022,7 +2023,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 5
       },
       "enableBy": "config",
       "type": "plugin",
@@ -2035,7 +2036,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 3
       },
       "enableBy": "config",
       "type": "plugin",
@@ -2061,7 +2062,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "config",
       "type": "plugin",
@@ -2074,7 +2075,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 3
       },
       "enableBy": "register",
       "type": "plugin",
@@ -2180,7 +2181,7 @@
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register",
       "type": "plugin",
@@ -2197,7 +2198,7 @@
             0
           ]
         },
-        "register": 1
+        "register": 0
       },
       "enableBy": "register",
       "type": "plugin",
@@ -3489,7 +3490,7 @@
       "parentId": "1",
       "id": "3",
       "absPath": "/fakeHome",
-      "__content": "import DraggableHeader from '@/components/DraggableHeader';\r\nimport { CamouflageButton } from '@/components/ToolButtons';\r\nimport { TALK_API } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse, ResponseData } from '@/types/backend/httpRust';\r\nimport { UserInfo } from '@/types/user/common';\r\nimport { CloseOutlined, MinusOutlined } from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { Outlet } from '@umijs/max';\r\nimport { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { useSystemNotify } from '@/hooks/useSystemNotify';\r\n\r\nconst HomeLayout = () => {\r\n  const [isHovered, setIsHovered] = useState(false);\r\n  const setUserInfo = useBearStore((state) => state.setUserInfo);\r\n  const userInfo = useBearStore((state) => state.userInfo);\r\n\r\n  // 使用系统通知hook\r\n  useSystemNotify(userInfo.uuid);\r\n\r\n  // 最小化\r\n  const minimizeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.minimize();\r\n  };\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  const initUserInfo = async () => {\r\n    // 先从本地缓存获取\r\n    try { \r\n      const uuid: string = await invoke('get_user_map', {\r\n        key: 'uuid',\r\n      });\r\n      const me: string = await invoke('get_user_map', {\r\n        key: 'me',\r\n      });\r\n      const userInfo: UserInfo = JSON.parse(me);\r\n      if (uuid === userInfo.uuid) {\r\n        setUserInfo(userInfo);\r\n        return;\r\n      }\r\n    } catch (error) {\r\n      console.log(\"本地缓存获取用户信息失败\", error);\r\n    }\r\n    // 从服务器获取用户信息\r\n    try {\r\n      const res: HttpResponse = await invoke('post_request', {\r\n        url: TALK_API + '/user/me',\r\n        body: '',\r\n      });\r\n      const data: ResponseData = JSON.parse(res.body);\r\n      const userInfo: UserInfo = data.data;\r\n      await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });\r\n      setUserInfo(userInfo);\r\n    } catch (error) {\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  //初始化用户信息\r\n  useEffect(() => {\r\n    initUserInfo();\r\n  }, []);\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.sideBar}>\r\n        <div className={styles.barTool}>\r\n          <div className={styles.tools}\r\n            onMouseEnter={() => setIsHovered(true)}\r\n            onMouseLeave={() => setIsHovered(false)}\r\n          >\r\n            WPS文字\r\n            {isHovered && (\r\n              <>\r\n                <CamouflageButton />\r\n              </>\r\n            )}\r\n          </div>\r\n          <div className={styles.sideBarToolDraggable}>\r\n            <DraggableHeader />\r\n          </div>\r\n          <div className={styles.sideBarToolButton}>\r\n            <div className={styles.sideBarToolButtonList}>\r\n              <div onClick={minimizeWindow} className={styles.rightButton}>\r\n                <MinusOutlined />\r\n              </div>\r\n              <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n                <CloseOutlined />\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n        <div className={styles.content}>\r\n          <Outlet />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\nexport default HomeLayout;",
+      "__content": "import DraggableHeader from '@/components/DraggableHeader';\r\nimport { CamouflageButton } from '@/components/ToolButtons';\r\nimport { TALK_API } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse, ResponseData } from '@workspace/types';\r\nimport { UserInfo } from '@workspace/types';\r\nimport { CloseOutlined, MinusOutlined } from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { Outlet } from '@umijs/max';\r\nimport { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { useSystemNotify } from '@/hooks/useSystemNotify';\r\n\r\nconst HomeLayout = () => {\r\n  const [isHovered, setIsHovered] = useState(false);\r\n  const setUserInfo = useBearStore((state) => state.setUserInfo);\r\n  const userInfo = useBearStore((state) => state.userInfo);\r\n\r\n  // 使用系统通知hook\r\n  useSystemNotify(userInfo.uuid);\r\n\r\n  // 最小化\r\n  const minimizeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.minimize();\r\n  };\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  const initUserInfo = async () => {\r\n    // 先从本地缓存获取\r\n    try { \r\n      const uuid: string = await invoke('get_user_map', {\r\n        key: 'uuid',\r\n      });\r\n      const me: string = await invoke('get_user_map', {\r\n        key: 'me',\r\n      });\r\n      const userInfo: UserInfo = JSON.parse(me);\r\n      if (uuid === userInfo.uuid) {\r\n        setUserInfo(userInfo);\r\n        return;\r\n      }\r\n    } catch (error) {\r\n      console.log(\"本地缓存获取用户信息失败\", error);\r\n    }\r\n    // 从服务器获取用户信息\r\n    try {\r\n      const res: HttpResponse = await invoke('post_request', {\r\n        url: TALK_API + '/user/me',\r\n        body: '',\r\n      });\r\n      const data: ResponseData = JSON.parse(res.body);\r\n      const userInfo: UserInfo = data.data;\r\n      await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });\r\n      setUserInfo(userInfo);\r\n    } catch (error) {\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  //初始化用户信息\r\n  useEffect(() => {\r\n    initUserInfo();\r\n  }, []);\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.sideBar}>\r\n        <div className={styles.barTool}>\r\n          <div className={styles.tools}\r\n            onMouseEnter={() => setIsHovered(true)}\r\n            onMouseLeave={() => setIsHovered(false)}\r\n          >\r\n            WPS文字\r\n            {isHovered && (\r\n              <>\r\n                <CamouflageButton />\r\n              </>\r\n            )}\r\n          </div>\r\n          <div className={styles.sideBarToolDraggable}>\r\n            <DraggableHeader />\r\n          </div>\r\n          <div className={styles.sideBarToolButton}>\r\n            <div className={styles.sideBarToolButtonList}>\r\n              <div onClick={minimizeWindow} className={styles.rightButton}>\r\n                <MinusOutlined />\r\n              </div>\r\n              <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n                <CloseOutlined />\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n        <div className={styles.content}>\r\n          <Outlet />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\nexport default HomeLayout;",
       "__isJSFile": true,
       "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/FakeLayout/index.tsx"
     },
@@ -3518,7 +3519,7 @@
       "parentId": "1",
       "id": "6",
       "absPath": "/home",
-      "__content": "import DraggableHeader from '@/components/DraggableHeader';\r\nimport { LeftAside } from '@/components/LeftAside';\r\nimport OnlineStatusSwitch from '@/components/OnlineStatusSwitch';\r\nimport { MuteButton, CamouflageButton, LanguageButton, ThemeButton } from '@/components/ToolButtons';\r\nimport { TALK_API } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse, ResponseData } from '@/types/backend/httpRust';\r\nimport { UserInfo } from '@/types/user/common';\r\nimport { CloseOutlined, MinusOutlined } from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { Outlet } from '@umijs/max';\r\nimport { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { useSystemNotify } from '@/hooks/useSystemNotify';\r\n\r\nconst HomeLayout = () => {\r\n  const [isHovered, setIsHovered] = useState(false);\r\n  const setUserInfo = useBearStore((state) => state.setUserInfo);\r\n  const userInfo = useBearStore((state) => state.userInfo);\r\n\r\n  // 使用系统通知hook\r\n  useSystemNotify(userInfo.uuid);\r\n\r\n  // 最小化\r\n  const minimizeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.minimize();\r\n  };\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  const initUserInfo = async () => {\r\n    // 先从本地缓存获取\r\n    try { \r\n      const uuid: string = await invoke('get_user_map', {\r\n        key: 'uuid',\r\n      });\r\n      const me: string = await invoke('get_user_map', {\r\n        key: 'me',\r\n      });\r\n      const userInfo: UserInfo = JSON.parse(me);\r\n      if (uuid === userInfo.uuid) {\r\n        setUserInfo(userInfo);\r\n        return;\r\n      }\r\n    } catch (error) {\r\n      console.log(\"本地缓存获取用户信息失败\", error);\r\n    }\r\n    // 从服务器获取用户信息\r\n    try {\r\n      const res: HttpResponse = await invoke('post_request', {\r\n        url: TALK_API + '/user/me',\r\n        body: '',\r\n      });\r\n      const data: ResponseData = JSON.parse(res.body);\r\n      const userInfo: UserInfo = data.data;\r\n      await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });\r\n      setUserInfo(userInfo);\r\n    } catch (error) {\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  //初始化用户信息\r\n  useEffect(() => {\r\n    initUserInfo();\r\n  }, []);\r\n\r\n  return (\r\n    <div className={styles.userHomeContainer}>\r\n      <div className={styles.leftSideBar}>\r\n        <LeftAside />\r\n      </div>\r\n      <div className={styles.rightSideBar}>\r\n        <div className={styles.rightSideBarTool}>\r\n          <div className={styles.tools}\r\n            onMouseEnter={() => setIsHovered(true)}\r\n            onMouseLeave={() => setIsHovered(false)}\r\n          >\r\n            <OnlineStatusSwitch />\r\n            {isHovered && (\r\n              <>\r\n                <MuteButton />\r\n                <CamouflageButton />\r\n                <LanguageButton />\r\n                <ThemeButton />\r\n              </>\r\n            )}\r\n          </div>\r\n          <div className={styles.rightSideBarToolDraggable}>\r\n            <DraggableHeader />\r\n          </div>\r\n          <div className={styles.rightSideBarToolButton}>\r\n            <div className={styles.rightSideBarToolButtonList}>\r\n              <div onClick={minimizeWindow} className={styles.rightButton}>\r\n                <MinusOutlined />\r\n              </div>\r\n              <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n                <CloseOutlined />\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n        <div className={styles.rightSideBarContent}>\r\n          <Outlet />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\nexport default HomeLayout;\r\n",
+      "__content": "import DraggableHeader from '@/components/DraggableHeader';\r\nimport { LeftAside } from '@/components/LeftAside';\r\nimport OnlineStatusSwitch from '@/components/OnlineStatusSwitch';\r\nimport { MuteButton, CamouflageButton, LanguageButton, ThemeButton } from '@/components/ToolButtons';\r\nimport { TALK_API } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse, ResponseData } from '@workspace/types';\r\nimport { UserInfo } from '@workspace/types';\r\nimport { CloseOutlined, MinusOutlined } from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { Outlet } from '@umijs/max';\r\nimport { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { useSystemNotify } from '@/hooks/useSystemNotify';\r\n\r\nconst HomeLayout = () => {\r\n  const [isHovered, setIsHovered] = useState(false);\r\n  const setUserInfo = useBearStore((state) => state.setUserInfo);\r\n  const userInfo = useBearStore((state) => state.userInfo);\r\n\r\n  // 使用系统通知hook\r\n  useSystemNotify(userInfo.uuid);\r\n\r\n  // 最小化\r\n  const minimizeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.minimize();\r\n  };\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  const initUserInfo = async () => {\r\n    // 先从本地缓存获取\r\n    try { \r\n      const uuid: string = await invoke('get_user_map', {\r\n        key: 'uuid',\r\n      });\r\n      const me: string = await invoke('get_user_map', {\r\n        key: 'me',\r\n      });\r\n      const userInfo: UserInfo = JSON.parse(me);\r\n      if (uuid === userInfo.uuid) {\r\n        setUserInfo(userInfo);\r\n        return;\r\n      }\r\n    } catch (error) {\r\n      console.log(\"本地缓存获取用户信息失败\", error);\r\n    }\r\n    // 从服务器获取用户信息\r\n    try {\r\n      const res: HttpResponse = await invoke('post_request', {\r\n        url: TALK_API + '/user/me',\r\n        body: '',\r\n      });\r\n      const data: ResponseData = JSON.parse(res.body);\r\n      const userInfo: UserInfo = data.data;\r\n      await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });\r\n      setUserInfo(userInfo);\r\n    } catch (error) {\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  //初始化用户信息\r\n  useEffect(() => {\r\n    initUserInfo();\r\n  }, []);\r\n\r\n  return (\r\n    <div className={styles.userHomeContainer}>\r\n      <div className={styles.leftSideBar}>\r\n        <LeftAside />\r\n      </div>\r\n      <div className={styles.rightSideBar}>\r\n        <div className={styles.rightSideBarTool}>\r\n          <div className={styles.tools}\r\n            onMouseEnter={() => setIsHovered(true)}\r\n            onMouseLeave={() => setIsHovered(false)}\r\n          >\r\n            <OnlineStatusSwitch />\r\n            {isHovered && (\r\n              <>\r\n                <MuteButton />\r\n                <CamouflageButton />\r\n                <LanguageButton />\r\n                <ThemeButton />\r\n              </>\r\n            )}\r\n          </div>\r\n          <div className={styles.rightSideBarToolDraggable}>\r\n            <DraggableHeader />\r\n          </div>\r\n          <div className={styles.rightSideBarToolButton}>\r\n            <div className={styles.rightSideBarToolButtonList}>\r\n              <div onClick={minimizeWindow} className={styles.rightButton}>\r\n                <MinusOutlined />\r\n              </div>\r\n              <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n                <CloseOutlined />\r\n              </div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n        <div className={styles.rightSideBarContent}>\r\n          <Outlet />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\nexport default HomeLayout;\r\n",
       "__isJSFile": true,
       "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/HomeLayout/index.tsx"
     },
@@ -3547,7 +3548,7 @@
       "parentId": "6",
       "id": "9",
       "absPath": "/home/chats",
-      "__content": "import { useChatSession } from '@/hooks/useChatSession';\r\nimport Message from '@/pages/Home/Chats/components/MessageBox';\r\nimport Search from '@/pages/Home/Chats/components/Search';\r\nimport { useBearStore } from '@/store/store';\r\nimport { ChatSessionVo } from '@/types/backend/vo';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Splitter } from 'antd';\r\nimport { history, Outlet } from '@umijs/max';\r\nimport React, { useEffect } from 'react';\r\nimport styles from './index.less';\r\n\r\nconst ChatsLayout = () => {\r\n  const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(\r\n    [],\r\n  );\r\n\r\n  const { userInfo } = useBearStore();\r\n  const { chatSessionEvent } = useChatSession(userInfo.uuid);\r\n  const routeToChat = (item: ChatSessionVo) => {\r\n    console.log('userInfo', userInfo, item);\r\n    let uuid =\r\n      item.send_user === userInfo?.uuid ? item.recv_user : item.send_user;\r\n    history.push('/home/chats/chat?currentFriend=' + uuid);\r\n  };\r\n\r\n  useEffect(() => {\r\n    console.log('本次chatSessionEvent', chatSessionEvent);\r\n    setChatSessionList((prevList) => {\r\n      if (!chatSessionEvent?.data) {\r\n        return prevList;\r\n      }\r\n      console.log('prevList', prevList);\r\n\r\n      const index = prevList.findIndex((item) => {\r\n        if (\r\n          item.send_user === chatSessionEvent.data.send_user &&\r\n          item.recv_user === chatSessionEvent.data.recv_user\r\n        ) {\r\n          return true;\r\n        } else if (\r\n          item.send_user === chatSessionEvent.data.recv_user &&\r\n          item.recv_user === chatSessionEvent.data.send_user\r\n        ) {\r\n          return true;\r\n        } else {\r\n          return false;\r\n        }\r\n      });\r\n\r\n      console.log('index', index);\r\n      // 创建新的数组，避免直接修改原数组\r\n      const newList = [...prevList];\r\n\r\n      let friend_icon = newList[index]?.friend_icon;\r\n      let friend_name = newList[index]?.friend_name;\r\n      if (chatSessionEvent.type === 0) {\r\n        if (index !== -1) {\r\n          // 更新现有会话\r\n          newList[index] = chatSessionEvent.data;\r\n          newList[index] = {\r\n            ...newList[index],\r\n            friend_icon: friend_icon,\r\n            friend_name: friend_name,\r\n          };\r\n        } else {\r\n          // 添加新会话\r\n          newList.push(chatSessionEvent.data);\r\n        }\r\n      } else {\r\n        if (index !== -1) {\r\n          // 更新现有会话的属性\r\n          newList[index] = {\r\n            ...newList[index],\r\n            unread_count: newList[index].unread_count + 1,\r\n            last_message: chatSessionEvent.data.last_message,\r\n            timestamp: chatSessionEvent.data.timestamp,\r\n            is_show: chatSessionEvent.data.is_show,\r\n            is_top: chatSessionEvent.data.is_top,\r\n            nano_id: chatSessionEvent.data.nano_id,\r\n            session_type: chatSessionEvent.data.session_type,\r\n            text_type: chatSessionEvent.data.text_type,\r\n            friend_icon: newList[index].friend_icon,\r\n          };\r\n        } else {\r\n          // 添加新会话\r\n          newList.push(chatSessionEvent.data);\r\n        }\r\n      }\r\n\r\n      return newList;\r\n    });\r\n  }, [chatSessionEvent]);\r\n\r\n  useEffect(() => {\r\n    get_chat_session();\r\n  }, []);\r\n\r\n  useEffect(() => {\r\n    console.log('chatSessionList', chatSessionList);\r\n  }, [chatSessionList]);\r\n\r\n  const get_chat_session = async () => {\r\n    try {\r\n      const res = (await invoke(\r\n        'get_chat_session_from_store',\r\n        {},\r\n      )) as ChatSessionVo[];\r\n      console.log('get_chat_session', res);\r\n      setChatSessionList(res);\r\n    } catch (e) {\r\n      console.log(e);\r\n    }\r\n  };\r\n\r\n  return (\r\n    <Splitter>\r\n      <Splitter.Panel\r\n        min=\"20%\"\r\n        max=\"50%\"\r\n        defaultSize=\"32%\"\r\n        className={styles.left}\r\n      >\r\n        <div className={styles.header}>\r\n          <Search />\r\n        </div>\r\n        <div className={styles.item} key=\"chat\">\r\n          {chatSessionList.map((item: ChatSessionVo) => {\r\n            return (\r\n              <div key={item.nano_id} onClick={() => routeToChat(item)}>\r\n                <Message\r\n                  message={item.last_message}\r\n                  img={item.friend_icon}\r\n                  key={item.nano_id}\r\n                  time={item.timestamp}\r\n                  title={item.friend_name}\r\n                  count={item.unread_count}\r\n                />\r\n              </div>\r\n            );\r\n          })}\r\n        </div>\r\n      </Splitter.Panel>\r\n      <Splitter.Panel className={styles.right}>\r\n        <Outlet />\r\n      </Splitter.Panel>\r\n    </Splitter>\r\n  );\r\n};\r\n\r\nexport default ChatsLayout;\r\n",
+      "__content": "import { useChatSession } from '@/hooks/useChatSession';\r\nimport Message from '@/pages/Home/Chats/components/MessageBox';\r\nimport Search from '@/pages/Home/Chats/components/Search';\r\nimport { useBearStore } from '@/store/store';\r\nimport { ChatSessionVo } from '@workspace/types';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { Splitter } from 'antd';\r\nimport { history, Outlet } from '@umijs/max';\r\nimport React, { useEffect } from 'react';\r\nimport styles from './index.less';\r\n\r\nconst ChatsLayout = () => {\r\n  const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(\r\n    [],\r\n  );\r\n\r\n  const { userInfo } = useBearStore();\r\n  const { chatSessionEvent } = useChatSession(userInfo.uuid);\r\n  const routeToChat = (item: ChatSessionVo) => {\r\n    console.log('userInfo', userInfo, item);\r\n    let uuid =\r\n      item.send_user === userInfo?.uuid ? item.recv_user : item.send_user;\r\n    history.push('/home/chats/chat?currentFriend=' + uuid);\r\n  };\r\n\r\n  useEffect(() => {\r\n    console.log('本次chatSessionEvent', chatSessionEvent);\r\n    setChatSessionList((prevList) => {\r\n      if (!chatSessionEvent?.data) {\r\n        return prevList;\r\n      }\r\n      console.log('prevList', prevList);\r\n\r\n      const index = prevList.findIndex((item) => {\r\n        if (\r\n          item.send_user === chatSessionEvent.data.send_user &&\r\n          item.recv_user === chatSessionEvent.data.recv_user\r\n        ) {\r\n          return true;\r\n        } else if (\r\n          item.send_user === chatSessionEvent.data.recv_user &&\r\n          item.recv_user === chatSessionEvent.data.send_user\r\n        ) {\r\n          return true;\r\n        } else {\r\n          return false;\r\n        }\r\n      });\r\n\r\n      console.log('index', index);\r\n      // 创建新的数组，避免直接修改原数组\r\n      const newList = [...prevList];\r\n\r\n      let friend_icon = newList[index]?.friend_icon;\r\n      let friend_name = newList[index]?.friend_name;\r\n      if (chatSessionEvent.type === 0) {\r\n        if (index !== -1) {\r\n          // 更新现有会话\r\n          newList[index] = chatSessionEvent.data;\r\n          newList[index] = {\r\n            ...newList[index],\r\n            friend_icon: friend_icon,\r\n            friend_name: friend_name,\r\n          };\r\n        } else {\r\n          // 添加新会话\r\n          newList.push(chatSessionEvent.data);\r\n        }\r\n      } else {\r\n        if (index !== -1) {\r\n          // 更新现有会话的属性\r\n          newList[index] = {\r\n            ...newList[index],\r\n            unread_count: newList[index].unread_count + 1,\r\n            last_message: chatSessionEvent.data.last_message,\r\n            timestamp: chatSessionEvent.data.timestamp,\r\n            is_show: chatSessionEvent.data.is_show,\r\n            is_top: chatSessionEvent.data.is_top,\r\n            nano_id: chatSessionEvent.data.nano_id,\r\n            session_type: chatSessionEvent.data.session_type,\r\n            text_type: chatSessionEvent.data.text_type,\r\n            friend_icon: newList[index].friend_icon,\r\n          };\r\n        } else {\r\n          // 添加新会话\r\n          newList.push(chatSessionEvent.data);\r\n        }\r\n      }\r\n\r\n      return newList;\r\n    });\r\n  }, [chatSessionEvent]);\r\n\r\n  useEffect(() => {\r\n    get_chat_session();\r\n  }, []);\r\n\r\n  useEffect(() => {\r\n    console.log('chatSessionList', chatSessionList);\r\n  }, [chatSessionList]);\r\n\r\n  const get_chat_session = async () => {\r\n    try {\r\n      const res = (await invoke(\r\n        'get_chat_session_from_store',\r\n        {},\r\n      )) as ChatSessionVo[];\r\n      console.log('get_chat_session', res);\r\n      setChatSessionList(res);\r\n    } catch (e) {\r\n      console.log(e);\r\n    }\r\n  };\r\n\r\n  return (\r\n    <Splitter>\r\n      <Splitter.Panel\r\n        min=\"20%\"\r\n        max=\"50%\"\r\n        defaultSize=\"32%\"\r\n        className={styles.left}\r\n      >\r\n        <div className={styles.header}>\r\n          <Search />\r\n        </div>\r\n        <div className={styles.item} key=\"chat\">\r\n          {chatSessionList.map((item: ChatSessionVo) => {\r\n            return (\r\n              <div key={item.nano_id} onClick={() => routeToChat(item)}>\r\n                <Message\r\n                  message={item.last_message}\r\n                  img={item.friend_icon}\r\n                  key={item.nano_id}\r\n                  time={item.timestamp}\r\n                  title={item.friend_name}\r\n                  count={item.unread_count}\r\n                />\r\n              </div>\r\n            );\r\n          })}\r\n        </div>\r\n      </Splitter.Panel>\r\n      <Splitter.Panel className={styles.right}>\r\n        <Outlet />\r\n      </Splitter.Panel>\r\n    </Splitter>\r\n  );\r\n};\r\n\r\nexport default ChatsLayout;\r\n",
       "__isJSFile": true,
       "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/layouts/HomeLayout/ChatsLayout/index.tsx"
     },
@@ -3565,7 +3566,7 @@
       "parentId": "9",
       "id": "11",
       "absPath": "/home/chats/chat",
-      "__content": "import { SYSTEM_ACCOUNT } from '@/constants';\r\nimport { useMessageApi } from '@/hooks/useMessageApi';\r\nimport { useBearStore } from '@/store/store';\r\nimport { Page } from '@/types/backend';\r\nimport { ResponseData } from '@/types/backend/httpRust';\r\nimport { FriendVo } from '@/types/backend/vo';\r\nimport { ChatMessage, MessageFrom, TextMsgRaw } from '@/types/user/common';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { useLocation } from '@umijs/max';\r\nimport React, { useEffect, useState } from 'react';\r\nimport ChatFooter from '../components/Footer';\r\nimport MessageList from '../components/MessageList';\r\nimport ChatTopBar from '../components/TopBar';\r\nimport Splitter from '../components/Splitter';\r\nimport styles from './index.less';\r\n\r\nconst ChatPage: React.FC = () => {\r\n  const [messageList, setMessageList] = useState<ChatMessage[]>([]);\r\n  const [currentFriend, setCurrentFriend] = useState<FriendVo>();\r\n  const [footerHeight, setFooterHeight] = useState(180); // 默认高度180px\r\n  const [realFootHeight, setRealFooterHeight] = useState(186);\r\n  const location = useLocation();\r\n  const params = new URLSearchParams(location.search);\r\n  const friendUuid = params.get('currentFriend') || '';\r\n\r\n  const meUuid = useBearStore((state) => state.userInfo.uuid) || '';\r\n  const { textMessage } = useMessageApi(friendUuid, meUuid);\r\n\r\n  const handleHeightChange = (heightPercent: number) => {\r\n    // 将百分比转换为像素值，限制在最小20px和最大80%之间\r\n    const containerHeight = window.innerHeight;\r\n    const minHeightPx = 20;\r\n    const maxHeightPx = containerHeight * 0.8;\r\n    const heightPx = Math.max(minHeightPx, Math.min(maxHeightPx, (heightPercent / 100) * containerHeight));\r\n    setFooterHeight(heightPx);\r\n  };\r\n\r\n  useEffect(() => {\r\n    setRealFooterHeight(footerHeight + 6)\r\n  }, [footerHeight])\r\n\r\n  // 更新已读记录\r\n  useEffect(() => {\r\n    if (messageList.length > 1) {\r\n      let last_nano_id: string = '';\r\n      const last_message = messageList[messageList.length - 1];\r\n      last_nano_id = last_message.text_msg_raw.nano_id;\r\n      if (last_nano_id !== '' && last_message.ack === undefined) {\r\n        // 消息已读\r\n        console.log('已读', messageList);\r\n        markRead(last_nano_id);\r\n      }\r\n    }\r\n  }, [messageList]);\r\n\r\n  // 获取聊天记录\r\n  useEffect(() => {\r\n    getChatRecordFromStore(meUuid, friendUuid);\r\n    getFriendInfo(friendUuid);\r\n    markReadFriend(friendUuid);\r\n    setCurrentFriendSession(friendUuid);\r\n    \r\n    // 组件卸载时清理当前好友会话\r\n    return () => {\r\n      setCurrentFriendSession('-1');\r\n    };\r\n  }, [meUuid, friendUuid]);\r\n\r\n  // 设置当前好友会话\r\n  const setCurrentFriendSession = async (friend: string) => {\r\n    try {\r\n      const res = await invoke('add_user_map', {\r\n        map: {\r\n          current_session_friend: friend\r\n        }\r\n      });\r\n      console.log('设置当前好友会话', res);\r\n    }catch (err){\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 已读好友会话\r\n  const markReadFriend = async (friendUuid: string) => {\r\n    if (friendUuid == null ||friendUuid === '') {\r\n      return;\r\n    }\r\n    try {\r\n      const data: ResponseData = await invoke('mark_read_chat_session', {\r\n        friendUuid,\r\n      });\r\n      console.log('已读好友会话', data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 已读当前会话聊天记录\r\n  const markRead = async (last_read_record: string) => {\r\n    try {\r\n      let lastList = [] as string[];\r\n      if (last_read_record) {\r\n        lastList.push(last_read_record);\r\n      }\r\n      const data: ResponseData = await invoke('mark_read', {\r\n        textQuicMsgVec: lastList,\r\n      });\r\n      console.log('已读', data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 获取好友信息\r\n  const getFriendInfo = async (friendUuid: string) => {\r\n    try {\r\n      const data: FriendVo = await invoke('get_friend_info', {\r\n        friendUuid,\r\n      });\r\n      console.log('好友信息', data);\r\n      setCurrentFriend(data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  const getChatRecordFromStore = async (meUuid: string, friendUuid: string) => {\r\n    try {\r\n      let textRawText: TextMsgRaw = {\r\n        nano_id: '',\r\n        raw: '',\r\n        recv_user: meUuid,\r\n        send_user: friendUuid,\r\n        text_type: 0,\r\n        timestamp: 0,\r\n      };\r\n      let page: Page = {\r\n        size: 50,\r\n        current: 1,\r\n        total: 0,\r\n      };\r\n      const data: TextMsgRaw[] = await invoke('get_chat_record_from_store', {\r\n        textQuicMsg: textRawText,\r\n        page,\r\n      });\r\n      if (data.length === 0) {\r\n        return;\r\n      }\r\n\r\n      let chatMessages: ChatMessage[] = data.map((item) => {\r\n        let from =\r\n          item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;\r\n        const temp: ChatMessage = {\r\n          from,\r\n          text_msg_raw: item,\r\n          ack: undefined,\r\n        };\r\n        return temp;\r\n      });\r\n      setMessageList(chatMessages);\r\n      // 使用reduce()直接找到最大值（性能更好）\r\n      if (chatMessages.length > 0) {\r\n        const last_read_record = chatMessages.reduce((latest, current) =>\r\n          latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp\r\n            ? latest\r\n            : current,\r\n        )?.text_msg_raw.nano_id;\r\n        markRead(last_read_record);\r\n      }\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 接收到外部消息\r\n  useEffect(() => {\r\n    if (textMessage) {\r\n      let from = MessageFrom.Customer;\r\n      if (textMessage.send_user == SYSTEM_ACCOUNT) {\r\n        from = MessageFrom.System;\r\n      }\r\n      const temp: ChatMessage = {\r\n        from,\r\n        text_msg_raw: textMessage,\r\n        ack: undefined,\r\n      };\r\n      // ack消息\r\n      if (textMessage.text_type === 201) {\r\n        setMessageList((prevState) => {\r\n          const index = prevState.findIndex(\r\n            (item) => item.text_msg_raw.nano_id === textMessage.raw,\r\n          );\r\n          if (index !== -1) {\r\n            prevState[index].ack = true;\r\n          }\r\n          return [...prevState, temp];\r\n        });\r\n      } else {\r\n        setMessageList((prevState) => [...prevState, temp]);\r\n      }\r\n    }\r\n  }, [textMessage]);\r\n\r\n  const anchorSmooth = () => {\r\n    const anchorTop = document.getElementById('anchor');\r\n    if (anchorTop) {\r\n      anchorTop.scrollIntoView({ behavior: 'smooth' });\r\n    }\r\n  };\r\n\r\n  useEffect(() => {\r\n    anchorSmooth();\r\n  }, [messageList]);\r\n\r\n  const handleMessageSent = (message: string) => {\r\n    const temp: ChatMessage = JSON.parse(message);\r\n\r\n    setMessageList((prev) => [...prev, temp]);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.header}>\r\n        <ChatTopBar title={currentFriend?.friend_name || ''} />\r\n      </div>\r\n      <div className={styles.mainContainer}>\r\n        <div \r\n          className={styles.messageContainer}\r\n          style={{ height: `calc(100% - ${realFootHeight}px)` }}\r\n        >\r\n          <MessageList\r\n            messages={messageList}\r\n            friendIcon={currentFriend?.friend_icon}\r\n          />\r\n          <div id=\"anchor\"></div>\r\n        </div>\r\n        <Splitter \r\n          onHeightChange={handleHeightChange}\r\n          minHeight={20}\r\n          maxHeight={80}\r\n        />\r\n        <div style={{ height: `${footerHeight}px` }}>\r\n          <ChatFooter friendUuid={friendUuid} onMessageSent={handleMessageSent} />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default ChatPage;\r\n",
+      "__content": "import { SYSTEM_ACCOUNT } from '@/constants';\r\nimport { useMessageApi } from '@/hooks/useMessageApi';\r\nimport { useBearStore } from '@/store/store';\r\nimport { Page } from '@workspace/types';\r\nimport { ResponseData } from '@workspace/types';\r\nimport { FriendVo } from '@workspace/types';\r\nimport { ChatMessage, MessageFrom, TextMsgRaw } from '@workspace/types';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { useLocation } from '@umijs/max';\r\nimport React, { useEffect, useState } from 'react';\r\nimport ChatFooter from '../components/Footer';\r\nimport MessageList from '../components/MessageList';\r\nimport ChatTopBar from '../components/TopBar';\r\nimport Splitter from '../components/Splitter';\r\nimport styles from './index.less';\r\n\r\nconst ChatPage: React.FC = () => {\r\n  const [messageList, setMessageList] = useState<ChatMessage[]>([]);\r\n  const [currentFriend, setCurrentFriend] = useState<FriendVo>();\r\n  const [footerHeight, setFooterHeight] = useState(180); // 默认高度180px\r\n  const [realFootHeight, setRealFooterHeight] = useState(186);\r\n  const location = useLocation();\r\n  const params = new URLSearchParams(location.search);\r\n  const friendUuid = params.get('currentFriend') || '';\r\n\r\n  const meUuid = useBearStore((state) => state.userInfo.uuid) || '';\r\n  const { textMessage } = useMessageApi(friendUuid, meUuid);\r\n\r\n  const handleHeightChange = (heightPercent: number) => {\r\n    // 将百分比转换为像素值，限制在最小20px和最大80%之间\r\n    const containerHeight = window.innerHeight;\r\n    const minHeightPx = 20;\r\n    const maxHeightPx = containerHeight * 0.8;\r\n    const heightPx = Math.max(minHeightPx, Math.min(maxHeightPx, (heightPercent / 100) * containerHeight));\r\n    setFooterHeight(heightPx);\r\n  };\r\n\r\n  useEffect(() => {\r\n    setRealFooterHeight(footerHeight + 6)\r\n  }, [footerHeight])\r\n\r\n  // 更新已读记录\r\n  useEffect(() => {\r\n    if (messageList.length > 1) {\r\n      let last_nano_id: string = '';\r\n      const last_message = messageList[messageList.length - 1];\r\n      last_nano_id = last_message.text_msg_raw.nano_id;\r\n      if (last_nano_id !== '' && last_message.ack === undefined) {\r\n        // 消息已读\r\n        console.log('已读', messageList);\r\n        markRead(last_nano_id);\r\n      }\r\n    }\r\n  }, [messageList]);\r\n\r\n  // 获取聊天记录\r\n  useEffect(() => {\r\n    getChatRecordFromStore(meUuid, friendUuid);\r\n    getFriendInfo(friendUuid);\r\n    markReadFriend(friendUuid);\r\n    setCurrentFriendSession(friendUuid);\r\n    \r\n    // 组件卸载时清理当前好友会话\r\n    return () => {\r\n      setCurrentFriendSession('-1');\r\n    };\r\n  }, [meUuid, friendUuid]);\r\n\r\n  // 设置当前好友会话\r\n  const setCurrentFriendSession = async (friend: string) => {\r\n    try {\r\n      const res = await invoke('add_user_map', {\r\n        map: {\r\n          current_session_friend: friend\r\n        }\r\n      });\r\n      console.log('设置当前好友会话', res);\r\n    }catch (err){\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 已读好友会话\r\n  const markReadFriend = async (friendUuid: string) => {\r\n    if (friendUuid == null ||friendUuid === '') {\r\n      return;\r\n    }\r\n    try {\r\n      const data: ResponseData = await invoke('mark_read_chat_session', {\r\n        friendUuid,\r\n      });\r\n      console.log('已读好友会话', data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 已读当前会话聊天记录\r\n  const markRead = async (last_read_record: string) => {\r\n    try {\r\n      let lastList = [] as string[];\r\n      if (last_read_record) {\r\n        lastList.push(last_read_record);\r\n      }\r\n      const data: ResponseData = await invoke('mark_read', {\r\n        textQuicMsgVec: lastList,\r\n      });\r\n      console.log('已读', data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 获取好友信息\r\n  const getFriendInfo = async (friendUuid: string) => {\r\n    try {\r\n      const data: FriendVo = await invoke('get_friend_info', {\r\n        friendUuid,\r\n      });\r\n      console.log('好友信息', data);\r\n      setCurrentFriend(data);\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  const getChatRecordFromStore = async (meUuid: string, friendUuid: string) => {\r\n    try {\r\n      let textRawText: TextMsgRaw = {\r\n        nano_id: '',\r\n        raw: '',\r\n        recv_user: meUuid,\r\n        send_user: friendUuid,\r\n        text_type: 0,\r\n        timestamp: 0,\r\n      };\r\n      let page: Page = {\r\n        size: 50,\r\n        current: 1,\r\n        total: 0,\r\n      };\r\n      const data: TextMsgRaw[] = await invoke('get_chat_record_from_store', {\r\n        textQuicMsg: textRawText,\r\n        page,\r\n      });\r\n      if (data.length === 0) {\r\n        return;\r\n      }\r\n\r\n      let chatMessages: ChatMessage[] = data.map((item) => {\r\n        let from =\r\n          item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;\r\n        const temp: ChatMessage = {\r\n          from,\r\n          text_msg_raw: item,\r\n          ack: undefined,\r\n        };\r\n        return temp;\r\n      });\r\n      setMessageList(chatMessages);\r\n      // 使用reduce()直接找到最大值（性能更好）\r\n      if (chatMessages.length > 0) {\r\n        const last_read_record = chatMessages.reduce((latest, current) =>\r\n          latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp\r\n            ? latest\r\n            : current,\r\n        )?.text_msg_raw.nano_id;\r\n        markRead(last_read_record);\r\n      }\r\n    } catch (err) {\r\n      console.log(err);\r\n    }\r\n  };\r\n\r\n  // 接收到外部消息\r\n  useEffect(() => {\r\n    if (textMessage) {\r\n      let from = MessageFrom.Customer;\r\n      if (textMessage.send_user == SYSTEM_ACCOUNT) {\r\n        from = MessageFrom.System;\r\n      }\r\n      const temp: ChatMessage = {\r\n        from,\r\n        text_msg_raw: textMessage,\r\n        ack: undefined,\r\n      };\r\n      // ack消息\r\n      if (textMessage.text_type === 201) {\r\n        setMessageList((prevState) => {\r\n          const index = prevState.findIndex(\r\n            (item) => item.text_msg_raw.nano_id === textMessage.raw,\r\n          );\r\n          if (index !== -1) {\r\n            prevState[index].ack = true;\r\n          }\r\n          return [...prevState, temp];\r\n        });\r\n      } else {\r\n        setMessageList((prevState) => [...prevState, temp]);\r\n      }\r\n    }\r\n  }, [textMessage]);\r\n\r\n  const anchorSmooth = () => {\r\n    const anchorTop = document.getElementById('anchor');\r\n    if (anchorTop) {\r\n      anchorTop.scrollIntoView({ behavior: 'smooth' });\r\n    }\r\n  };\r\n\r\n  useEffect(() => {\r\n    anchorSmooth();\r\n  }, [messageList]);\r\n\r\n  const handleMessageSent = (message: string) => {\r\n    const temp: ChatMessage = JSON.parse(message);\r\n\r\n    setMessageList((prev) => [...prev, temp]);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.header}>\r\n        <ChatTopBar title={currentFriend?.friend_name || ''} />\r\n      </div>\r\n      <div className={styles.mainContainer}>\r\n        <div \r\n          className={styles.messageContainer}\r\n          style={{ height: `calc(100% - ${realFootHeight}px)` }}\r\n        >\r\n          <MessageList\r\n            messages={messageList}\r\n            friendIcon={currentFriend?.friend_icon}\r\n          />\r\n          <div id=\"anchor\"></div>\r\n        </div>\r\n        <Splitter \r\n          onHeightChange={handleHeightChange}\r\n          minHeight={20}\r\n          maxHeight={80}\r\n        />\r\n        <div style={{ height: `${footerHeight}px` }}>\r\n          <ChatFooter friendUuid={friendUuid} onMessageSent={handleMessageSent} />\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default ChatPage;\r\n",
       "__isJSFile": true,
       "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Home/Chats/Chat/index.tsx"
     },
@@ -3638,7 +3639,7 @@
       "parentId": "1",
       "id": "18",
       "absPath": "/signIn",
-      "__content": "import LanguageSwitcher from '@/components/LanguageSwitch';\r\nimport LocalImage from '@/components/LocalImage';\r\nimport MarkdownRenderer from '@/components/MarkdownRenderer';\r\nimport { openNewWindow } from '@/components/Window/OpenWindow';\r\nimport { TALK_API } from '@/constants';\r\nimport { useWindowDrag } from '@/hooks';\r\nimport { HttpResponse, ResponseData } from '@/types/backend/httpRust';\r\nimport { FormattedMessage } from '@@/exports';\r\nimport {\r\n  CloseOutlined,\r\n  EyeInvisibleOutlined,\r\n  EyeTwoTone,\r\n  LockOutlined,\r\n  UserOutlined,\r\n} from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { WebviewOptions } from '@tauri-apps/api/webview';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { history, useIntl } from '@umijs/max';\r\nimport { Button, Checkbox, Input, message, Modal } from 'antd';\r\nimport React, { useState } from 'react';\r\nimport styles from './index.less';\r\n\r\nconst AVATAR_URL =\r\n  'https://ss2.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=16890549,1598107895&fm=253&gp=0.jpg';\r\n\r\nconst LoginPage: React.FC = () => {\r\n  const [messageApi, contextHolder] = message.useMessage();\r\n  const [userCode, setUserCode] = useState('');\r\n  const [password, setPassword] = useState('');\r\n  const [rememberMe, setRememberMe] = useState(true);\r\n  const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);\r\n  const [privacyContent, setPrivacyContent] = useState('');\r\n  const intl = useIntl();\r\n  const dragRef = useWindowDrag();\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  // 跳转到注册页面\r\n  const goToSignUp = async () => {\r\n    history.push('/signUp');\r\n  };\r\n\r\n  const fetchData = async (account: string, password: string) => {\r\n    try {\r\n      const response: HttpResponse = await invoke('sign_in', {\r\n        url: TALK_API + '/user/sign_in',\r\n        body: {\r\n          account,\r\n          password,\r\n        },\r\n      });\r\n\r\n      const data: ResponseData = JSON.parse(response.body);\r\n\r\n      if (data.code === 200) {\r\n        messageApi.open({\r\n          type: 'success',\r\n          content: <FormattedMessage id=\"signIn.success\" />,\r\n        });\r\n        const webviewOptions: WebviewOptions = {\r\n          url: '/home/chats',\r\n          height: 600,\r\n          width: 800,\r\n          x: 200,\r\n          y: 200,\r\n        };\r\n        await openNewWindow(\r\n          intl.formatMessage({ id: 'menu.home' }),\r\n          webviewOptions,\r\n          Window.getCurrent(),\r\n        );\r\n      } else {\r\n        messageApi.error(\r\n          <FormattedMessage id=\"signIn.errors.invalidCredentials\" />,\r\n        );\r\n      }\r\n    } catch (error: unknown) {\r\n      if (error != null && typeof error === 'string') {\r\n        try {\r\n          const result = JSON.parse(error);\r\n          if (result.code === 500) {\r\n            messageApi.error(\r\n              <FormattedMessage id=\"signIn.errors.invalidCredentials\" />,\r\n            );\r\n          }\r\n        } catch (e) {\r\n          messageApi.error(\r\n            <FormattedMessage id=\"signIn.errors.networkError\" />,\r\n          );\r\n        }\r\n      } else {\r\n        messageApi.error(<FormattedMessage id=\"signIn.errors.networkError\" />);\r\n      }\r\n\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  const onFinish = () => {\r\n    console.log('userCode:', userCode, 'password:', password);\r\n    fetchData(userCode, password);\r\n  };\r\n\r\n  // 读取md内容\r\n  const loadPrivacyMd = async () => {\r\n    // 这里用fetch读取public下的md文件\r\n    const res = await fetch('/markdown/privacy.md');\r\n    const text = await res.text();\r\n    setPrivacyContent(text);\r\n  };\r\n\r\n  const openPrivacyModal = async () => {\r\n    await loadPrivacyMd();\r\n    setPrivacyModalOpen(true);\r\n  };\r\n\r\n  const closePrivacyModal = () => {\r\n    setPrivacyModalOpen(false);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      {contextHolder}\r\n      <div className={styles.closeBtn}>\r\n        <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n          <CloseOutlined />\r\n        </div>\r\n      </div>\r\n      <div className={styles.content} ref={dragRef}>\r\n        <div className={styles.langSwitcher}>\r\n          <LanguageSwitcher />\r\n        </div>\r\n\r\n        <div className={styles.avatarContainer}>\r\n          {/* <Avatar size={80} icon={<UserOutlined />} src={AVATAR_URL} /> */}\r\n          {/* 自定义尺寸 */}\r\n          {/*<LocalImage width={100} height={100} />*/}\r\n        </div>\r\n\r\n        <div className={styles.inputContainer}>\r\n          <Input\r\n            size=\"large\"\r\n            prefix={<UserOutlined className={styles.icon} />}\r\n            placeholder={intl.formatMessage({ id: 'signIn.username' })}\r\n            value={userCode}\r\n            onChange={(e) => setUserCode(e.target.value)}\r\n          />\r\n          <Input.Password\r\n            prefix={<LockOutlined className={styles.icon} />}\r\n            type=\"password\"\r\n            iconRender={(visible) =>\r\n              visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />\r\n            }\r\n            size=\"large\"\r\n            value={password}\r\n            placeholder={intl.formatMessage({ id: 'signIn.password' })}\r\n            onChange={(e) => setPassword(e.target.value)}\r\n          />\r\n          <div className={styles.agreement}>\r\n            <Checkbox\r\n              checked={rememberMe}\r\n              onChange={(e) => setRememberMe(e.target.checked)}\r\n              style={{ marginRight: 8 }}\r\n            />\r\n            <span>\r\n              <FormattedMessage id=\"signIn.agreement\" />\r\n              <a\r\n                href=\"#\"\r\n                className={styles.highlight}\r\n                onClick={openPrivacyModal}\r\n              >\r\n                <FormattedMessage id=\"signIn.termsOfService\" />\r\n              </a>\r\n              <FormattedMessage id=\"signIn.and\" defaultMessage=\"和\" />\r\n              <a\r\n                href=\"#\"\r\n                className={styles.highlight}\r\n                onClick={openPrivacyModal}\r\n              >\r\n                <FormattedMessage id=\"signIn.privacyPolicy\" />\r\n              </a>\r\n            </span>\r\n          </div>\r\n          <div className={styles.buttonContainer}>\r\n            <Button\r\n              type=\"primary\"\r\n              onClick={onFinish}\r\n              className={styles.button}\r\n              block\r\n              size=\"large\"\r\n            >\r\n              {intl.formatMessage({ id: 'signIn.submit' })}\r\n            </Button>\r\n          </div>\r\n        </div>\r\n\r\n        <div className={styles.bottomOptions}>\r\n          <span className={styles.highlight}>\r\n            <FormattedMessage id=\"signIn.forgotPassword\" />\r\n          </span>\r\n          <span className={styles.highlight} onClick={goToSignUp}>\r\n            <FormattedMessage id=\"signUp.title\" />\r\n          </span>\r\n        </div>\r\n      </div>\r\n      <Modal\r\n        open={isPrivacyModalOpen}\r\n        onOk={closePrivacyModal}\r\n        onCancel={closePrivacyModal}\r\n        closable={false}\r\n        title=\"\"\r\n        className={styles.scrollbarHidden}\r\n        footer={[\r\n          <Button key=\"close\" onClick={closePrivacyModal}>\r\n            <FormattedMessage id=\"signIn.close\" />\r\n          </Button>,\r\n          <Button key=\"ok\" type=\"primary\" onClick={closePrivacyModal}>\r\n            <FormattedMessage id=\"signIn.confirm\" />\r\n          </Button>,\r\n        ]}\r\n        width={'100%'}\r\n        height={'60vh'}\r\n      >\r\n        <MarkdownRenderer content={privacyContent} />\r\n      </Modal>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default LoginPage;\r\n",
+      "__content": "import LanguageSwitcher from '@/components/LanguageSwitch';\r\nimport LocalImage from '@/components/LocalImage';\r\nimport MarkdownRenderer from '@/components/MarkdownRenderer';\r\nimport { openNewWindow } from '@/components/Window/OpenWindow';\r\nimport { TALK_API } from '@/constants';\r\nimport { useWindowDrag } from '@/hooks';\r\nimport { HttpResponse, ResponseData } from '@workspace/types';\r\nimport { FormattedMessage } from '@@/exports';\r\nimport {\r\n  CloseOutlined,\r\n  EyeInvisibleOutlined,\r\n  EyeTwoTone,\r\n  LockOutlined,\r\n  UserOutlined,\r\n} from '@ant-design/icons';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { WebviewOptions } from '@tauri-apps/api/webview';\r\nimport { Window } from '@tauri-apps/api/window';\r\nimport { history, useIntl } from '@umijs/max';\r\nimport { Button, Checkbox, Input, message, Modal } from 'antd';\r\nimport React, { useState } from 'react';\r\nimport styles from './index.less';\r\n\r\nconst AVATAR_URL =\r\n  'https://ss2.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=16890549,1598107895&fm=253&gp=0.jpg';\r\n\r\nconst LoginPage: React.FC = () => {\r\n  const [messageApi, contextHolder] = message.useMessage();\r\n  const [userCode, setUserCode] = useState('');\r\n  const [password, setPassword] = useState('');\r\n  const [rememberMe, setRememberMe] = useState(true);\r\n  const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);\r\n  const [privacyContent, setPrivacyContent] = useState('');\r\n  const intl = useIntl();\r\n  const dragRef = useWindowDrag();\r\n\r\n  // 关闭窗口\r\n  const closeWindow = async () => {\r\n    const currentWindow = Window.getCurrent();\r\n    await currentWindow.close();\r\n  };\r\n\r\n  // 跳转到注册页面\r\n  const goToSignUp = async () => {\r\n    history.push('/signUp');\r\n  };\r\n\r\n  const fetchData = async (account: string, password: string) => {\r\n    try {\r\n      const response: HttpResponse = await invoke('sign_in', {\r\n        url: TALK_API + '/user/sign_in',\r\n        body: {\r\n          account,\r\n          password,\r\n        },\r\n      });\r\n\r\n      const data: ResponseData = JSON.parse(response.body);\r\n\r\n      if (data.code === 200) {\r\n        messageApi.open({\r\n          type: 'success',\r\n          content: <FormattedMessage id=\"signIn.success\" />,\r\n        });\r\n        const webviewOptions: WebviewOptions = {\r\n          url: '/home/chats',\r\n          height: 600,\r\n          width: 800,\r\n          x: 200,\r\n          y: 200,\r\n        };\r\n        await openNewWindow(\r\n          intl.formatMessage({ id: 'menu.home' }),\r\n          webviewOptions,\r\n          Window.getCurrent(),\r\n        );\r\n      } else {\r\n        messageApi.error(\r\n          <FormattedMessage id=\"signIn.errors.invalidCredentials\" />,\r\n        );\r\n      }\r\n    } catch (error: unknown) {\r\n      if (error != null && typeof error === 'string') {\r\n        try {\r\n          const result = JSON.parse(error);\r\n          if (result.code === 500) {\r\n            messageApi.error(\r\n              <FormattedMessage id=\"signIn.errors.invalidCredentials\" />,\r\n            );\r\n          }\r\n        } catch (e) {\r\n          messageApi.error(\r\n            <FormattedMessage id=\"signIn.errors.networkError\" />,\r\n          );\r\n        }\r\n      } else {\r\n        messageApi.error(<FormattedMessage id=\"signIn.errors.networkError\" />);\r\n      }\r\n\r\n      console.log(error);\r\n    }\r\n  };\r\n\r\n  const onFinish = () => {\r\n    console.log('userCode:', userCode, 'password:', password);\r\n    fetchData(userCode, password);\r\n  };\r\n\r\n  // 读取md内容\r\n  const loadPrivacyMd = async () => {\r\n    // 这里用fetch读取public下的md文件\r\n    const res = await fetch('/markdown/privacy.md');\r\n    const text = await res.text();\r\n    setPrivacyContent(text);\r\n  };\r\n\r\n  const openPrivacyModal = async () => {\r\n    await loadPrivacyMd();\r\n    setPrivacyModalOpen(true);\r\n  };\r\n\r\n  const closePrivacyModal = () => {\r\n    setPrivacyModalOpen(false);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      {contextHolder}\r\n      <div className={styles.closeBtn}>\r\n        <div onClick={closeWindow} className={styles.rightButtonDanger}>\r\n          <CloseOutlined />\r\n        </div>\r\n      </div>\r\n      <div className={styles.content} ref={dragRef}>\r\n        <div className={styles.langSwitcher}>\r\n          <LanguageSwitcher />\r\n        </div>\r\n\r\n        <div className={styles.avatarContainer}>\r\n          {/* <Avatar size={80} icon={<UserOutlined />} src={AVATAR_URL} /> */}\r\n          {/* 自定义尺寸 */}\r\n          {<LocalImage width={100} height={100} />}\r\n        </div>\r\n\r\n        <div className={styles.inputContainer}>\r\n          <Input\r\n            size=\"large\"\r\n            prefix={<UserOutlined className={styles.icon} />}\r\n            placeholder={intl.formatMessage({ id: 'signIn.username' })}\r\n            value={userCode}\r\n            onChange={(e) => setUserCode(e.target.value)}\r\n          />\r\n          <Input.Password\r\n            prefix={<LockOutlined className={styles.icon} />}\r\n            type=\"password\"\r\n            iconRender={(visible) =>\r\n              visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />\r\n            }\r\n            size=\"large\"\r\n            value={password}\r\n            placeholder={intl.formatMessage({ id: 'signIn.password' })}\r\n            onChange={(e) => setPassword(e.target.value)}\r\n          />\r\n          <div className={styles.agreement}>\r\n            <Checkbox\r\n              checked={rememberMe}\r\n              onChange={(e) => setRememberMe(e.target.checked)}\r\n              style={{ marginRight: 8 }}\r\n            />\r\n            <span>\r\n              <FormattedMessage id=\"signIn.agreement\" />\r\n              <a\r\n                href=\"#\"\r\n                className={styles.highlight}\r\n                onClick={openPrivacyModal}\r\n              >\r\n                <FormattedMessage id=\"signIn.termsOfService\" />\r\n              </a>\r\n              <FormattedMessage id=\"signIn.and\" defaultMessage=\"和\" />\r\n              <a\r\n                href=\"#\"\r\n                className={styles.highlight}\r\n                onClick={openPrivacyModal}\r\n              >\r\n                <FormattedMessage id=\"signIn.privacyPolicy\" />\r\n              </a>\r\n            </span>\r\n          </div>\r\n          <div className={styles.buttonContainer}>\r\n            <Button\r\n              type=\"primary\"\r\n              onClick={onFinish}\r\n              className={styles.button}\r\n              block\r\n              size=\"large\"\r\n            >\r\n              {intl.formatMessage({ id: 'signIn.submit' })}\r\n            </Button>\r\n          </div>\r\n        </div>\r\n\r\n        <div className={styles.bottomOptions}>\r\n          <span className={styles.highlight}>\r\n            <FormattedMessage id=\"signIn.forgotPassword\" />\r\n          </span>\r\n          <span className={styles.highlight} onClick={goToSignUp}>\r\n            <FormattedMessage id=\"signUp.title\" />\r\n          </span>\r\n        </div>\r\n      </div>\r\n      <Modal\r\n        open={isPrivacyModalOpen}\r\n        onOk={closePrivacyModal}\r\n        onCancel={closePrivacyModal}\r\n        closable={false}\r\n        title=\"\"\r\n        className={styles.scrollbarHidden}\r\n        footer={[\r\n          <Button key=\"close\" onClick={closePrivacyModal}>\r\n            <FormattedMessage id=\"signIn.close\" />\r\n          </Button>,\r\n          <Button key=\"ok\" type=\"primary\" onClick={closePrivacyModal}>\r\n            <FormattedMessage id=\"signIn.confirm\" />\r\n          </Button>,\r\n        ]}\r\n        width={'100%'}\r\n        height={'60vh'}\r\n      >\r\n        <MarkdownRenderer content={privacyContent} />\r\n      </Modal>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default LoginPage;\r\n",
       "__isJSFile": true,
       "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Sign/SignIn/index.tsx"
     },
@@ -3669,7 +3670,7 @@
       "file": "@/pages/Media/Handler/index.tsx",
       "id": "21",
       "absPath": "/media/handler",
-      "__content": "import { openNewWindow } from '@/components/Window/OpenWindow';\r\nimport { DEFAULT_ICON } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse } from '@/types/backend/httpRust';\r\nimport { FriendInfo, P2pInitMsg } from '@/types/user/common';\r\nimport { CheckOutlined, CloseOutlined } from '@ant-design/icons';\r\nimport { window } from '@tauri-apps/api';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { WebviewOptions } from '@tauri-apps/api/webview';\r\nimport { Button } from 'antd';\r\nimport React, { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\n\r\n//用户视频接收处理组件\r\nconst MediaPage: React.FC = () => {\r\n  const setRequestMediaMsg = useBearStore((state) => state.setRequestMediaMsg);\r\n  const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);\r\n\r\n  console.log('requestMediaMsg', requestMediaMsg);\r\n  const [userInfo, setUserInfo] = useState<FriendInfo>();\r\n  const [localP2pInitMsg, setLocalP2pInitMsg] = useState<P2pInitMsg | null>(\r\n    null,\r\n  );\r\n  const [localMediaType, setLocalMediaType] = useState<number>(0);\r\n\r\n  const currentWindow = window.getCurrentWindow();\r\n\r\n  // 从URL参数读取数据\r\n  useEffect(() => {\r\n    const urlParams = new URLSearchParams(location.search);\r\n    const p2pInitMsgParam = urlParams.get('p2pInitMsg');\r\n    const mediaTypeParam = urlParams.get('mediaType');\r\n\r\n    if (p2pInitMsgParam) {\r\n      try {\r\n        const p2pInitMsg = JSON.parse(p2pInitMsgParam) as P2pInitMsg;\r\n        setLocalP2pInitMsg(p2pInitMsg);\r\n        console.log('从URL参数读取到p2pInitMsg:', p2pInitMsg);\r\n      } catch (e) {\r\n        console.error('解析URL参数失败:', e);\r\n      }\r\n    }\r\n\r\n    if (mediaTypeParam) {\r\n      setLocalMediaType(parseInt(mediaTypeParam));\r\n    }\r\n  }, []);\r\n\r\n  // 接受好友视频/音频请求\r\n  const confirm = async () => {\r\n    // 优先使用本地状态，如果没有则使用store中的状态\r\n    let p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;\r\n\r\n    p2pInitMsg.accept = true;\r\n    try {\r\n      const response: HttpResponse = await invoke('process_init_p2p_request', {\r\n        p2pInitMsg: JSON.stringify(p2pInitMsg),\r\n      });\r\n      console.log('response', response);\r\n      const webviewOptions: WebviewOptions = {\r\n        url: '/media/videoCall?friendId=' + p2pInitMsg.request_uuid,\r\n        height: 600,\r\n        width: 800,\r\n        x: 0,\r\n        y: 0,\r\n      };\r\n      await openNewWindow('视频通话', webviewOptions, currentWindow);\r\n    } catch (e) {\r\n      console.log('处理请求失败', e);\r\n    }\r\n  };\r\n\r\n  // 拒绝请求\r\n  const cancel = async () => {\r\n    //TODO\r\n    await currentWindow.close();\r\n  };\r\n\r\n  useEffect(() => {\r\n    // 监听requestMediaMsg的变化（作为备用）\r\n    console.log('Handler组件接收到新的requestMediaMsg:', requestMediaMsg);\r\n\r\n    // TODO获取好友信息\r\n    // 这里可以根据requestMediaMsg中的信息来获取好友信息\r\n    const p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;\r\n    if (p2pInitMsg?.request_addr) {\r\n      // 根据request_addr获取好友信息\r\n      // setUserInfo(friendInfo);\r\n    }\r\n  }, [requestMediaMsg, localP2pInitMsg]);\r\n\r\n  // 如果没有任何数据，显示加载状态\r\n  if (!localP2pInitMsg && !requestMediaMsg?.p2pInitMsg) {\r\n    return (\r\n      <div className={styles.container}>\r\n        <div className={styles.content}>\r\n          <div>加载中...</div>\r\n        </div>\r\n      </div>\r\n    );\r\n  }\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.content}>\r\n        <div className={styles.left}>\r\n          <div>{userInfo?.account || '蔡徐坤'}</div>\r\n          <img\r\n            src={userInfo?.icon || DEFAULT_ICON}\r\n            alt=\"用户头像\"\r\n            className={styles.imgItem}\r\n          />\r\n        </div>\r\n        <div className={styles.right}>\r\n          发起了视频通话\r\n          <div className={styles.btn}>\r\n            <div className={styles.cancelBtn}>\r\n              <Button\r\n                onClick={cancel}\r\n                variant=\"solid\"\r\n                color=\"danger\"\r\n                shape=\"circle\"\r\n                icon={<CloseOutlined />}\r\n              />\r\n            </div>\r\n            <div className={styles.confirmBtn}>\r\n              <Button\r\n                onClick={confirm}\r\n                variant=\"solid\"\r\n                color=\"cyan\"\r\n                shape=\"circle\"\r\n                icon={<CheckOutlined />}\r\n              />\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default MediaPage;\r\n",
+      "__content": "import { openNewWindow } from '@/components/Window/OpenWindow';\r\nimport { DEFAULT_ICON } from '@/constants';\r\nimport { useBearStore } from '@/store/store';\r\nimport { HttpResponse } from '@workspace/types';\r\nimport { FriendInfo, P2pInitMsg } from '@workspace/types';\r\nimport { CheckOutlined, CloseOutlined } from '@ant-design/icons';\r\nimport { window } from '@tauri-apps/api';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { WebviewOptions } from '@tauri-apps/api/webview';\r\nimport { Button } from 'antd';\r\nimport React, { useEffect, useState } from 'react';\r\nimport styles from './index.less';\r\n\r\n//用户视频接收处理组件\r\nconst MediaPage: React.FC = () => {\r\n  const setRequestMediaMsg = useBearStore((state) => state.setRequestMediaMsg);\r\n  const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);\r\n\r\n  console.log('requestMediaMsg', requestMediaMsg);\r\n  const [userInfo, setUserInfo] = useState<FriendInfo>();\r\n  const [localP2pInitMsg, setLocalP2pInitMsg] = useState<P2pInitMsg | null>(\r\n    null,\r\n  );\r\n  const [localMediaType, setLocalMediaType] = useState<number>(0);\r\n\r\n  const currentWindow = window.getCurrentWindow();\r\n\r\n  // 从URL参数读取数据\r\n  useEffect(() => {\r\n    const urlParams = new URLSearchParams(location.search);\r\n    const p2pInitMsgParam = urlParams.get('p2pInitMsg');\r\n    const mediaTypeParam = urlParams.get('mediaType');\r\n\r\n    if (p2pInitMsgParam) {\r\n      try {\r\n        const p2pInitMsg = JSON.parse(p2pInitMsgParam) as P2pInitMsg;\r\n        setLocalP2pInitMsg(p2pInitMsg);\r\n        console.log('从URL参数读取到p2pInitMsg:', p2pInitMsg);\r\n      } catch (e) {\r\n        console.error('解析URL参数失败:', e);\r\n      }\r\n    }\r\n\r\n    if (mediaTypeParam) {\r\n      setLocalMediaType(parseInt(mediaTypeParam));\r\n    }\r\n  }, []);\r\n\r\n  // 接受好友视频/音频请求\r\n  const confirm = async () => {\r\n    // 优先使用本地状态，如果没有则使用store中的状态\r\n    let p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;\r\n\r\n    p2pInitMsg.accept = true;\r\n    try {\r\n      const response: HttpResponse = await invoke('process_init_p2p_request', {\r\n        p2pInitMsg: JSON.stringify(p2pInitMsg),\r\n      });\r\n      console.log('response', response);\r\n      const webviewOptions: WebviewOptions = {\r\n        url: '/media/videoCall?friendId=' + p2pInitMsg.request_uuid,\r\n        height: 600,\r\n        width: 800,\r\n        x: 0,\r\n        y: 0,\r\n      };\r\n      await openNewWindow('视频通话', webviewOptions, currentWindow);\r\n    } catch (e) {\r\n      console.log('处理请求失败', e);\r\n    }\r\n  };\r\n\r\n  // 拒绝请求\r\n  const cancel = async () => {\r\n    //TODO\r\n    await currentWindow.close();\r\n  };\r\n\r\n  useEffect(() => {\r\n    // 监听requestMediaMsg的变化（作为备用）\r\n    console.log('Handler组件接收到新的requestMediaMsg:', requestMediaMsg);\r\n\r\n    // TODO获取好友信息\r\n    // 这里可以根据requestMediaMsg中的信息来获取好友信息\r\n    const p2pInitMsg = localP2pInitMsg || requestMediaMsg.p2pInitMsg;\r\n    if (p2pInitMsg?.request_addr) {\r\n      // 根据request_addr获取好友信息\r\n      // setUserInfo(friendInfo);\r\n    }\r\n  }, [requestMediaMsg, localP2pInitMsg]);\r\n\r\n  // 如果没有任何数据，显示加载状态\r\n  if (!localP2pInitMsg && !requestMediaMsg?.p2pInitMsg) {\r\n    return (\r\n      <div className={styles.container}>\r\n        <div className={styles.content}>\r\n          <div>加载中...</div>\r\n        </div>\r\n      </div>\r\n    );\r\n  }\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div className={styles.content}>\r\n        <div className={styles.left}>\r\n          <div>{userInfo?.account || '蔡徐坤'}</div>\r\n          <img\r\n            src={userInfo?.icon || DEFAULT_ICON}\r\n            alt=\"用户头像\"\r\n            className={styles.imgItem}\r\n          />\r\n        </div>\r\n        <div className={styles.right}>\r\n          发起了视频通话\r\n          <div className={styles.btn}>\r\n            <div className={styles.cancelBtn}>\r\n              <Button\r\n                onClick={cancel}\r\n                variant=\"solid\"\r\n                color=\"danger\"\r\n                shape=\"circle\"\r\n                icon={<CloseOutlined />}\r\n              />\r\n            </div>\r\n            <div className={styles.confirmBtn}>\r\n              <Button\r\n                onClick={confirm}\r\n                variant=\"solid\"\r\n                color=\"cyan\"\r\n                shape=\"circle\"\r\n                icon={<CheckOutlined />}\r\n              />\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default MediaPage;\r\n",
       "__isJSFile": true,
       "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Media/Handler/index.tsx"
     },
@@ -3678,7 +3679,7 @@
       "file": "@/pages/Media/VideoCall/index.tsx",
       "id": "22",
       "absPath": "/media/videoCall",
-      "__content": "import CameraControl from '@/components/Media/CameraControl';\r\nimport VideoReceiver from '@/components/Media/VideoReceiver';\r\nimport { CheckOutlined, CloseOutlined } from '@ant-design/icons';\r\nimport { useLocation } from '@umijs/max';\r\nimport { Button } from 'antd';\r\nimport React, { useEffect, useRef, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { VideoConfig } from '@/types/p2p';\r\n\r\nconst VideoCallPage: React.FC = () => {\r\n  const location = useLocation();\r\n  const params = new URLSearchParams(location.search);\r\n  const friendId = params.get('friendId') || \"\";\r\n  // 默认接受,1-客户端,0-服务端\r\n  const callType = params.get('callType') || '1';\r\n  console.log('callType', callType, friendId);\r\n  const [showMe, setShowMe] = useState(false);\r\n  const cameraRef = useRef<any>(null);\r\n  const [isReceiver, setIsReceiver] = useState(false);\r\n\r\n  useEffect(()=>{\r\n    // 获取对方的视频流配置\r\n    getTargetVideoConfig()\r\n  }, [])\r\n\r\n  // 获取对方的视频流配置\r\n  const getTargetVideoConfig = async () =>{\r\n    let flag = false;\r\n    for (let i = 0; i < 50; i++) {\r\n      await new Promise(resolve => setTimeout(resolve, 200));\r\n      // 调用方法获取flag的值\r\n      let data = await getVideoConfig(friendId);\r\n      if (data !== null) {\r\n        console.log('对方视频配置:', data);\r\n        setIsReceiver(true);\r\n        flag = true;\r\n        break;\r\n      }\r\n    }\r\n    if (!flag) {\r\n      alert('对方未开启视频');\r\n    }\r\n  }\r\n\r\n  const getVideoConfig = async (uuid: string): Promise<string | null> => {\r\n     try {\r\n      const data: string = await invoke('get_user_map', { key: \"p2p_video_config_\"+uuid });\r\n      console.log('视频配置', data);\r\n      return data;\r\n    } catch (e) {\r\n       console.log('获取视频配置失败:', e);\r\n      return null;\r\n    }\r\n  }\r\n\r\n  const handleStreamReady = (stream: MediaStream) => {\r\n    console.log('摄像头流已就绪:', stream);\r\n  };\r\n\r\n  const handleStartCamera = async () => {\r\n    if (cameraRef.current) {\r\n      await cameraRef.current.startCamera();\r\n    }\r\n  };\r\n\r\n  const handleStopCamera = () => {\r\n    if (cameraRef.current) {\r\n      cameraRef.current.stopCamera();\r\n    }\r\n  };\r\n\r\n  const handleSwitchCamera = () => {\r\n    if (cameraRef.current) {\r\n      cameraRef.current.switchCamera();\r\n    }\r\n  };\r\n\r\n  const handleVideoConfig = (config: VideoConfig) => {\r\n    console.log('对方视频配置:', config);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div\r\n        onClick={() => setShowMe(!showMe)}\r\n        className={showMe ? styles.mainVideo : styles.miniVideo}\r\n      >\r\n        <div>捕获</div>\r\n        <CameraControl isReceiver={isReceiver} callType={callType} uuid={friendId} ref={cameraRef} onStreamReady={handleStreamReady} />\r\n      </div>\r\n\r\n      {isReceiver && <div className={styles.btnList}>\r\n        <div className={styles.btnContainer}>\r\n        <Button\r\n          onClick={handleStopCamera}\r\n          variant=\"solid\"\r\n          color=\"danger\"\r\n          icon={<CloseOutlined />}\r\n         >关闭摄像头\r\n         </Button>\r\n         <Button\r\n          onClick={handleStartCamera}\r\n          variant=\"solid\"\r\n          color=\"cyan\"\r\n          icon={<CheckOutlined />}\r\n        >开启摄像头\r\n        </Button>\r\n        </div>\r\n      </div>}\r\n\r\n      <div\r\n        onClick={() => setShowMe(!showMe)}\r\n        className={showMe ? styles.miniVideo : styles.mainVideo}\r\n      >\r\n        <div>接收</div>\r\n        <VideoReceiver />\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default VideoCallPage;",
+      "__content": "import CameraControl from '@/components/Media/CameraControl';\r\nimport VideoReceiver from '@/components/Media/VideoReceiver';\r\nimport { CheckOutlined, CloseOutlined } from '@ant-design/icons';\r\nimport { useLocation } from '@umijs/max';\r\nimport { Button } from 'antd';\r\nimport React, { useEffect, useRef, useState } from 'react';\r\nimport styles from './index.less';\r\nimport { invoke } from '@tauri-apps/api/core';\r\nimport { VideoConfig } from '@workspace/types';\r\n\r\nconst VideoCallPage: React.FC = () => {\r\n  const location = useLocation();\r\n  const params = new URLSearchParams(location.search);\r\n  const friendId = params.get('friendId') || \"\";\r\n  // 默认接受,1-客户端,0-服务端\r\n  const callType = params.get('callType') || '1';\r\n  console.log('callType', callType, friendId);\r\n  const [showMe, setShowMe] = useState(false);\r\n  const cameraRef = useRef<any>(null);\r\n  const [isReceiver, setIsReceiver] = useState(false);\r\n\r\n  useEffect(()=>{\r\n    // 获取对方的视频流配置\r\n    getTargetVideoConfig()\r\n  }, [])\r\n\r\n  // 获取对方的视频流配置\r\n  const getTargetVideoConfig = async () =>{\r\n    let flag = false;\r\n    for (let i = 0; i < 50; i++) {\r\n      await new Promise(resolve => setTimeout(resolve, 200));\r\n      // 调用方法获取flag的值\r\n      let data = await getVideoConfig(friendId);\r\n      if (data !== null) {\r\n        console.log('对方视频配置:', data);\r\n        setIsReceiver(true);\r\n        flag = true;\r\n        break;\r\n      }\r\n    }\r\n    if (!flag) {\r\n      alert('对方未开启视频');\r\n    }\r\n  }\r\n\r\n  const getVideoConfig = async (uuid: string): Promise<string | null> => {\r\n     try {\r\n      const data: string = await invoke('get_user_map', { key: \"p2p_video_config_\"+uuid });\r\n      console.log('视频配置', data);\r\n      return data;\r\n    } catch (e) {\r\n       console.log('获取视频配置失败:', e);\r\n      return null;\r\n    }\r\n  }\r\n\r\n  const handleStreamReady = (stream: MediaStream) => {\r\n    console.log('摄像头流已就绪:', stream);\r\n  };\r\n\r\n  const handleStartCamera = async () => {\r\n    if (cameraRef.current) {\r\n      await cameraRef.current.startCamera();\r\n    }\r\n  };\r\n\r\n  const handleStopCamera = () => {\r\n    if (cameraRef.current) {\r\n      cameraRef.current.stopCamera();\r\n    }\r\n  };\r\n\r\n  const handleSwitchCamera = () => {\r\n    if (cameraRef.current) {\r\n      cameraRef.current.switchCamera();\r\n    }\r\n  };\r\n\r\n  const handleVideoConfig = (config: VideoConfig) => {\r\n    console.log('对方视频配置:', config);\r\n  };\r\n\r\n  return (\r\n    <div className={styles.container}>\r\n      <div\r\n        onClick={() => setShowMe(!showMe)}\r\n        className={showMe ? styles.mainVideo : styles.miniVideo}\r\n      >\r\n        <div>捕获</div>\r\n        <CameraControl isReceiver={isReceiver} callType={callType} uuid={friendId} ref={cameraRef} onStreamReady={handleStreamReady} />\r\n      </div>\r\n\r\n      {isReceiver && <div className={styles.btnList}>\r\n        <div className={styles.btnContainer}>\r\n        <Button\r\n          onClick={handleStopCamera}\r\n          variant=\"solid\"\r\n          color=\"danger\"\r\n          icon={<CloseOutlined />}\r\n         >关闭摄像头\r\n         </Button>\r\n         <Button\r\n          onClick={handleStartCamera}\r\n          variant=\"solid\"\r\n          color=\"cyan\"\r\n          icon={<CheckOutlined />}\r\n        >开启摄像头\r\n        </Button>\r\n        </div>\r\n      </div>}\r\n\r\n      <div\r\n        onClick={() => setShowMe(!showMe)}\r\n        className={showMe ? styles.miniVideo : styles.mainVideo}\r\n      >\r\n        <div>接收</div>\r\n        <VideoReceiver />\r\n      </div>\r\n    </div>\r\n  );\r\n};\r\n\r\nexport default VideoCallPage;",
       "__isJSFile": true,
       "__absFile": "I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/pages/Media/VideoCall/index.tsx"
     },

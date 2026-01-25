@@ -4,7 +4,7 @@ import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { TALK_API } from '@/constants';
 import { useWindowDrag } from '@/hooks';
-import { HttpResponse, ResponseData } from '@/types/backend/httpRust';
+import { HttpResponse, ResponseData } from '@workspace/types';
 import { FormattedMessage } from '@@/exports';
 import {
   CloseOutlined,
@@ -139,7 +139,7 @@ const LoginPage: React.FC = () => {
         <div className={styles.avatarContainer}>
           {/* <Avatar size={80} icon={<UserOutlined />} src={AVATAR_URL} /> */}
           {/* 自定义尺寸 */}
-          {/*<LocalImage width={100} height={100} />*/}
+          {<LocalImage width={100} height={100} />}
         </div>
 
         <div className={styles.inputContainer}>

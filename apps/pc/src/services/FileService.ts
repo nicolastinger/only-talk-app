@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { FileVo } from '@/types/backend/vo';
+import { FileVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core'; // 文件管理器选择文件
 
 // 文件管理器选择文件

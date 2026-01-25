@@ -1,4 +1,4 @@
-import { VideoConfig } from '@/types/p2p';
+import { VideoConfig } from '@workspace/types';
 import { useState } from 'react';
 
 const useP2pVideoConfig = () => {

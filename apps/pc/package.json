@@ -1,9 +1,9 @@
 {
-  "private": true,
-  "author": "huang <2737484812@qq.com>",
   "name": "@workspace/app-pc",
   "version": "1.0.0",
+  "private": true,
   "description": "Mobile app with Vue3 + Vant + Vapor + Less + TypeScript",
+  "author": "huang <2737484812@qq.com>",
   "type": "module",
   "scripts": {
     "build": "max build",
@@ -21,6 +21,7 @@
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-dialog": "^2.4.2",
     "@umijs/max": "^4.4.11",
+    "@workspace/types": "workspace:*",
     "antd": "^5.4.0",
     "dayjs": "^1.11.13",
     "dva": "^2.4.1",

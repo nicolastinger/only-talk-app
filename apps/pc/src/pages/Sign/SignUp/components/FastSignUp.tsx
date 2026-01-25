@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, message } from 'antd';
 import { useIntl } from '@umijs/max';
 import { UserOutlined, LockOutlined, SmileOutlined } from '@ant-design/icons';
-import { BasicUser } from '@/types/user/common';
+import { BasicUser } from '@workspace/types';
 import { sign_up } from '@/services/userService';
 
 const FastSignUp: React.FC = () => {

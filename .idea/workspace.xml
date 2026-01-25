@@ -11,69 +11,66 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="fix:修复安卓平台下的报错">
-      <change afterPath="$PROJECT_DIR$/src-tauri/clippy.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src-tauri/src/cmd/user_controller.rs" afterDir="false" />
+    <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="fmt: 代码格式化">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/appData.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/appData.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/appData.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/appData.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/api_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/api_controller.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/Button/LayoutBtn.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/Button/LayoutBtn.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/FriendRequestsModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/FriendRequestsModal/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/LeftAside/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/LeftAside/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/LocalImage/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/LocalImage/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/SearchFriend/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/SearchFriend/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/hooks/useChatSession.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/hooks/useChatSession.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/hooks/useChatsUnread.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/hooks/useChatsUnread.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/hooks/useMessageApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/hooks/useMessageApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/hooks/useP2pMessageApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/hooks/useP2pMessageApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/hooks/useSystemNotify.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/hooks/useSystemNotify.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/layouts/FakeLayout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/layouts/FakeLayout/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/layouts/HomeLayout/ChatsLayout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/layouts/HomeLayout/ChatsLayout/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/layouts/HomeLayout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/layouts/HomeLayout/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/models/p2pVideoConfig.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/models/p2pVideoConfig.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/Chat/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/Chat/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/CustomerChatBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/CustomerChatBox.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/Footer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/Footer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MessageBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MessageBox.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MessageList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MessageList.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MineChatBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MineChatBox.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendBox.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendInfo.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendInfo.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendList.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Media/Handler/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Media/Handler/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Media/VideoCall/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Media/VideoCall/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Sign/SignIn/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Sign/SignIn/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Sign/SignUp/components/FastSignUp.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Sign/SignUp/components/FastSignUp.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/FileService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/services/FileService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/services/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/userService/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/services/userService/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/store/store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/store/store.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/backend/httpRust.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/backend/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/backend/po/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/backend/record.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/backend/system/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/backend/vo/index.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/friend/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/menu/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/p2p/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/theme.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/types/user/common.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/types/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/types/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/Cargo.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/auth_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/auth_controller.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/file_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/file_controller.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/friend_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/friend_controller.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/cmd/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/cmd/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/config.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/config.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/chat_record_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/chat_record_db.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/create_table.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/create_table.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/file_record_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/file_record_db.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/friend_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/friend_db.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/init_common_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/init_common_db.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/init_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/init_db.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/session_db.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/session_db.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/dao/store.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/dao/store.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/emit_app/emit_controller.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/emit_controller.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/emit_app/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/emit_app/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_record.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_record.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_ack.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_ack.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_read.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_record_read.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/chat_session.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/chat_session.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/file_record.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/file_record.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/friend.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/friend.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/p2p_models.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/p2p_models.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/quic_connection.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/quic_connection.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/system_notification.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/entity/text_msg.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/init_app.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/init_app.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/media_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/media_quic_client.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/process_text_msg_from_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/process_text_msg_from_server.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_msg_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_msg_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/center_service/text_quic_client.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/dangerous_configuration.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/dangerous_configuration.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/models.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/models.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/safe_configuration.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/safe_configuration.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/quic_service/udp_utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/quic_service/udp_utils.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/chat_service.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/service/file_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/file_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/friend_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/friend_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/p2p_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/p2p_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/service/user_service.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/android_utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/android_utils.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/dns.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/dns.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/http_utils.rs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/message_types.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/message_types.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/time.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/time.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/chat_session_vo.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/chat_session_vo.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/src/utils/global_static_str.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/utils/global_static_str.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/file_vo.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/file_vo.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/friend_vo.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/friend_vo.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src-tauri/src/vo/text_quic_msg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/src/vo/text_quic_msg.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src-tauri/tauri.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/src-tauri/tauri.conf.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,34 +104,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.rust.reset.selective.auto.import": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "dev__1.0.0",
-    "last_opened_file_path": "I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "pnpm",
-    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
-    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
-    "org.rust.hideNoCargoProjectNotificationsI:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/function/back_end.rs": "true",
-    "prettierjs.PrettierConfiguration.Package": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\prettier",
-    "settings.editor.selected.configurable": "language.rust.cargo.check",
-    "ts.external.directory.path": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev__1.0.0&quot;,
+    &quot;last_opened_file_path&quot;: &quot;I:/code/rust/umi_gitee/rust-tauri-umi/src-tauri&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
+    &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
+    &quot;org.rust.hideNoCargoProjectNotificationsI:/code/rust/umi_gitee/rust-tauri-umi/src-tauri/src/function/back_end.rs&quot;: &quot;true&quot;,
+    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\prettier&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;language.rust.cargo.check&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "sqlite"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;sqlite&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="I:\code\rust\umi_gitee\rust-tauri-umi\src-tauri" />
@@ -177,7 +174,7 @@
       <workItem from="1769266053636" duration="5089000" />
       <workItem from="1769309882393" duration="6819000" />
       <workItem from="1769318712486" duration="63000" />
-      <workItem from="1769318804301" duration="1742000" />
+      <workItem from="1769318804301" duration="15397000" />
     </task>
     <task id="LOCAL-00001" summary="fix:修复安卓平台下的报错">
       <option name="closed" value="true" />
@@ -187,7 +184,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769271545017</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="fmt: 代码格式化">
+      <option name="closed" value="true" />
+      <created>1769320786463</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1769320786463</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -195,6 +200,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="fix:修复安卓平台下的报错" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix:修复安卓平台下的报错" />
+    <MESSAGE value="fmt: 代码格式化" />
+    <option name="LAST_COMMIT_MESSAGE" value="fmt: 代码格式化" />
   </component>
 </project>

@@ -1,6 +1,6 @@
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
 import { useBearStore } from '@/store/store';
-import { P2pInitMsg, P2pMsg } from '@/types/user/common';
+import { P2pInitMsg, P2pMsg } from '@workspace/types';
 import { listen } from '@tauri-apps/api/event';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import type { WindowOptions } from '@tauri-apps/api/window';

@@ -1,7 +1,0 @@
-interface Page {
-  size?: number;
-  current?: number;
-  total?: number;
-}
-
-export { Page };

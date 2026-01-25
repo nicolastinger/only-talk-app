@@ -38,6 +38,7 @@ pub async fn post_request(url: String, body: String) -> Result<ApiResponse, Stri
     let client = Client::new();
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    info!("token: {}", token);
     // 创建请求头
     let mut headers = HeaderMap::new();
     headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);

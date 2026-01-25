@@ -1,4 +1,4 @@
-import { TextMsgRaw } from '@/types/user/common';
+import { TextMsgRaw } from '@workspace/types';
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useMemo, useState } from 'react';
 

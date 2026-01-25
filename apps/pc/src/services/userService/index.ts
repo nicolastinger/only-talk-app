@@ -1,8 +1,8 @@
 import { HTTP_METHOD, TALK_API } from '@/constants';
 import { invoke_rust } from '@/services';
-import { FriendRequestInfoDTO } from '@/types/friend';
+import { FriendRequestInfoDTO } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
-import { BasicUser, UserInfo } from '@/types/user/common';
+import { BasicUser, UserInfo } from '@workspace/types';
 
 const get_friend_list = async () => {
   return await invoke_rust(

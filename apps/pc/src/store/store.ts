@@ -1,6 +1,6 @@
-import { VideoConfig } from '@/types/p2p';
-import { RequestMediaMsg, UserInfo } from '@/types/user/common';
-import { UnreadCount } from '@/types/menu';
+import { VideoConfig } from '@workspace/types';
+import { RequestMediaMsg, UserInfo } from '@workspace/types';
+import { UnreadCount } from '@workspace/types';
 import { create } from 'zustand';
 
 interface BearState {

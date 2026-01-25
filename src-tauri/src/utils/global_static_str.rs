@@ -21,6 +21,8 @@ pub static QUIC_SERVER_ADDR: &str = "REDACTED_SERVER_IP_1:4433";
 pub static USER_ADD_FRIEND: &str = "USER_ADD_FRIEND_REQUEST";
 // 用户处理好友申请
 pub static USER_PROCESS_FRIEND: &str = "USER_PROCESS_FRIEND_REQUEST";
+// 软件名
+pub static APP_NAME: &str = "OnlyTalk";
 // 软件包名
 pub static PACKAGE_NAME: &str = "com.only-talk.app";
 // 本地数据库文件夹
@@ -37,3 +39,5 @@ pub static APP_PATH: &str = "app_path";
 pub static USER_DB: &str = "user.db";
 // 公共数据库
 pub static COMMON_DB: &str = "common.db";
+// 默认图片
+pub static DEFAULT_IMAGE: &str = "default.jpg";

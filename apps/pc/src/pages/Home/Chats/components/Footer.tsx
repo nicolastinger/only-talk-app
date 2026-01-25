@@ -1,4 +1,4 @@
-import { ChatMessage, MessageFrom, TextMsgRaw } from '@/types/user/common';
+import { ChatMessage, MessageFrom, TextMsgRaw } from '@workspace/types';
 import { SmileOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Button, Input } from 'antd';

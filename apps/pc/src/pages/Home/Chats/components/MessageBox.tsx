@@ -1,4 +1,4 @@
-import { MessageQueueProps } from '@/types/user/common';
+import { MessageQueueProps } from '@workspace/types';
 import { Badge } from 'antd';
 import dayjs from 'dayjs';
 import styles from './styles/MessageBox.less';

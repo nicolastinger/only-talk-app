@@ -1,4 +1,4 @@
-import { FriendVo } from '@/types/backend/vo';
+import { FriendVo } from '@workspace/types';
 import { history } from '@umijs/max';
 import { Badge } from 'antd';
 import styles from './styles/FriendBox.less';

@@ -49,6 +49,7 @@ const LocalImage: React.FC<LocalImageProps> = ({
         setError(null);
 
         const result: FileVo = await invoke('get_local_file');
+        console.log('文件记录', result);
 
         if (result.raw && result.raw.length > 0) {
           const uint8Array = new Uint8Array(result.raw);

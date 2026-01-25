@@ -1,4 +1,4 @@
-import { ChatMessage, MessageFrom } from '@/types/user/common';
+import { ChatMessage, MessageFrom } from '@workspace/types';
 import React from 'react';
 import CustomerChatBox from './CustomerChatBox';
 import MineChatBox from './MineChatBox';

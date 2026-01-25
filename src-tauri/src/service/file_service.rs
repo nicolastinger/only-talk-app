@@ -8,6 +8,7 @@ use log::{error, info};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use crate::cmd::auth_controller::post;
+use crate::config::get_config;
 use crate::dao::file_record_db::{delete_file_record_by_id, insert_file_record};
 use crate::dto::http_result::HttpResult;
 use crate::entity::file_record::FileRecord;
@@ -57,8 +58,7 @@ pub async fn get_file_by_biz_id_service(biz_id: String) -> Result<Vec<FileVo>, a
             description: None,
             original_file_name: None,
             original_file_path: None,
-            relative_path: None,
-            relative_file_name: None,
+            absolute_file_path: None,
             raw: Some(raw?),
             size: None,
             is_del: None,
@@ -147,9 +147,11 @@ pub async fn download_file_by_biz_service(biz_id: &str) -> Result<(), anyhow::Er
             error!("无法获取原始文件的扩展名");
             return Err(anyhow!("无法保存文件"));
         };
+        let resource_path = get_config(RESOURCE_PATH).ok_or(anyhow!("无法获取资源路径"))?;
 
         // 构建文件路径
-        let file_path = format!("{}/{}", RESOURCE_PATH, file_name);
+        let file_path = format!("{}/{}", resource_path, file_name);
+        info!("文件保存路径: {}", file_path);
 
         // 保存文件到本地
         let mut file = fs::File::create(&file_path)?;

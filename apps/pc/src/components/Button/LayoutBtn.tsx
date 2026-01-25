@@ -1,4 +1,4 @@
-import { LayoutBtnProps } from '@/types/user/common';
+import { LayoutBtnProps } from '@workspace/types';
 import styles from './style/index.less';
 const LayoutBtn = (props: LayoutBtnProps) => {
   const { icon, active, unreadCount } = props;

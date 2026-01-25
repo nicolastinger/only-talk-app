@@ -1,6 +1,6 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { ChatMessage } from '@/types/user/common';
+import { ChatMessage } from '@workspace/types';
 import React, { useEffect, useRef } from 'react';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';

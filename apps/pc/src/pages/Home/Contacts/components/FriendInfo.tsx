@@ -1,5 +1,5 @@
 import { get_friend_info } from '@/services/userService';
-import { FriendVo } from '@/types/backend/vo';
+import { FriendVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { history } from '@umijs/max';
 import { Button } from 'antd';

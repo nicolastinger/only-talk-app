@@ -1,10 +1,10 @@
 import { add_friend, search_user_by_account } from '@/services/userService';
-import { FriendRequestInfoDTO } from '@/types/friend';
+import { FriendRequestInfoDTO } from '@workspace/types';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
 import { useState, useEffect } from 'react';
 import styles from './index.less';
-import { UserInfo } from '@/types/user/common';
+import { UserInfo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { getImageFiles } from '@/services/FileService';
 
