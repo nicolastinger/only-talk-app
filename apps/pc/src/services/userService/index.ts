@@ -1,5 +1,5 @@
 import { HTTP_METHOD, TALK_API } from '@/constants';
-import { invoke_rust } from '@/services';
+import { invoke_rust } from '@/services/httpService';
 import { FriendRequestInfoDTO } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { BasicUser, UserInfo } from '@workspace/types';

@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import styles from './index.less';
 import { UserInfo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
-import { getImageFiles } from '@/services/FileService';
+import { getImageFiles } from '@/services/fileService';
 
 const SearchFriend = () => {
   const [form] = Form.useForm();

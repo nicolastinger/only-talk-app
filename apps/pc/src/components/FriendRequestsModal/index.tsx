@@ -10,7 +10,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Avatar, Button, List, Modal, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
-import { readContactsNotification } from '@/services/ReadSystemMotification';
+import { readContactsNotification } from '@/services/notificationService';
 
 const FriendRequestsModal = ({
   visible,
