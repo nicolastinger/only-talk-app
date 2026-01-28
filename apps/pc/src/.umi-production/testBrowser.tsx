@@ -3,7 +3,7 @@
 // DO NOT CHANGE IT MANUALLY!
 import React, { useEffect, useState } from 'react';
 import { ApplyPluginsType } from 'umi';
-import { renderClient, RenderClientOpts } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.4.1_5d37cdc93ae4c557f74cbc834d273583/node_modules/@umijs/renderer-react';
+import { renderClient, RenderClientOpts } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.6.2_031ce76bd072575f474afb3c4c4bdad4/node_modules/@umijs/renderer-react';
 import { createHistory } from './core/history';
 import { createPluginManager } from './core/plugin';
 import { getRoutes } from './core/route';

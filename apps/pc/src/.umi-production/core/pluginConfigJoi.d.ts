@@ -3,5 +3,5 @@
 // Created by Umi Plugin
 
 export interface IConfigFromPluginsJoi {
-
+stagewise?: unknown
 }

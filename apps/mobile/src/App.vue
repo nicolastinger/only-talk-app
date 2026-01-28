@@ -1,65 +1,59 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Button, Cell, CellGroup } from 'vant';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import BottomNav from '@/components/BottomNav/index.vue';
 
-const count = ref(0);
+const route = useRoute();
 
-const increment = () => {
-  count.value++;
-};
+const showNav = computed(() => {
+  return ['/', '/recommend', '/discover', '/profile'].includes(route.path);
+});
 </script>
 
 <template>
-  <div class="app">
-    <div class="header">
-      <h1>Mobile App</h1>
-      <p>Vue 3 + Vant + Vapor + Less + TypeScript</p>
-    </div>
-    
-    <div class="content">
-      <CellGroup>
-        <Cell title="Count" :value="count" />
-      </CellGroup>
-      
-      <div class="button-group">
-        <Button type="primary" @click="increment">
-          Increment
-        </Button>
-      </div>
-    </div>
+  <div class="app-container">
+    <router-view v-slot="{ Component }">
+      <transition name="fade" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
+    <BottomNav v-if="showNav" />
   </div>
 </template>
 
-<style scoped lang="less">
-.app {
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #0f0f23;
+  color: #f1f5f9;
+}
+
+#app {
   min-height: 100vh;
-  background-color: #f7f8fa;
-  
-  .header {
-    padding: 40px 20px;
-    text-align: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    
-    h1 {
-      margin: 0 0 10px 0;
-      font-size: 28px;
-    }
-    
-    p {
-      margin: 0;
-      font-size: 14px;
-      opacity: 0.9;
-    }
-  }
-  
-  .content {
-    padding: 20px;
-    
-    .button-group {
-      margin-top: 20px;
-      text-align: center;
-    }
-  }
+}
+</style>
+
+<style scoped lang="less">
+.app-container {
+  min-height: 100vh;
+  background: #0f0f23;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

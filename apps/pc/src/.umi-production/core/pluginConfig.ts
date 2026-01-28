@@ -297,6 +297,9 @@ interface IConfigTypes {
     skipModules?: (boolean | undefined);
 } | undefined);
 };
+    utoopack: {
+
+};
     hmrGuardian: boolean;
     forget: {
     ReactCompilerConfig?: ({

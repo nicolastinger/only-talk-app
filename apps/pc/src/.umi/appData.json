@@ -46,45 +46,50 @@
   "pkgPath": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\package.json",
   "plugins": {
     "@umijs/core/dist/service/servicePlugin": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "preset",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+core@4.6.25/node_modules/@umijs/core/dist/service/servicePlugin.js",
+      "id": "@umijs/core/dist/service/servicePlugin",
+      "key": "servicePlugin",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "register",
-      "type": "preset",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+core@4.4.11/node_modules/@umijs/core/dist/service/servicePlugin.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/core/dist/service/servicePlugin",
-      "key": "servicePlugin"
+      "enableBy": "register"
     },
     "@umijs/preset-umi": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "preset",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/index.js",
+      "id": "@umijs/preset-umi",
+      "key": "umi",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 59
+        "register": 32
       },
-      "enableBy": "register",
-      "type": "preset",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/index.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi",
-      "key": "umi"
+      "enableBy": "register"
     },
     "@umijs/max/dist/preset": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "preset",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.6.25_@babel+co_4ebc3b9ab9a1fee284f97ec0b170856a/node_modules/@umijs/max/dist/preset.js",
+      "id": "@umijs/max/dist/preset",
+      "key": "preset",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 77
+        "register": 16
       },
-      "enableBy": "register",
-      "type": "preset",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/preset.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/max/dist/preset",
-      "key": "preset"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/registerMethods": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/registerMethods.js",
+      "id": "@umijs/preset-umi/dist/registerMethods",
+      "key": "registerMethods",
       "config": {},
       "time": {
         "hooks": {
@@ -92,16 +97,16 @@
             0
           ]
         },
-        "register": 10
+        "register": 6
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/registerMethods.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/registerMethods",
-      "key": "registerMethods"
+      "enableBy": "register"
     },
     "@umijs/did-you-know": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+did-you-know@1.0.4/node_modules/@umijs/did-you-know/dist/plugin.js",
+      "id": "@umijs/did-you-know",
+      "key": "umijsDidYouKnow",
       "config": {},
       "time": {
         "hooks": {
@@ -109,16 +114,16 @@
             2
           ]
         },
-        "register": 2
+        "register": 3
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+did-you-know@1.0.3/node_modules/@umijs/did-you-know/dist/plugin.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/did-you-know",
-      "key": "umijsDidYouKnow"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/404/404": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/404/404.js",
+      "id": "@umijs/preset-umi/dist/features/404/404",
+      "key": "404",
       "config": {},
       "time": {
         "hooks": {
@@ -126,46 +131,59 @@
             0
           ]
         },
-        "register": 2
+        "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/404/404.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/404/404",
-      "key": "404"
+      "enableBy": "register"
     },
-    "@umijs/preset-umi/dist/features/appData/appData": {
-      "config": {},
-      "time": {
-        "hooks": {
-          "modifyAppData": [
-            193
-          ]
-        },
-        "register": 48
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/appData/appData.js",
+    "@umijs/preset-umi/dist/features/aiDev/aiDev": {
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/appData/appData",
-      "key": "appData"
-    },
-    "@umijs/preset-umi/dist/features/appData/umiInfo": {
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/aiDev/aiDev.js",
+      "id": "@umijs/preset-umi/dist/features/aiDev/aiDev",
+      "key": "aiDev",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/appData/umiInfo.js",
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/features/appData/appData": {
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/appData/appData.js",
+      "id": "@umijs/preset-umi/dist/features/appData/appData",
+      "key": "appData",
+      "config": {},
+      "time": {
+        "hooks": {
+          "modifyAppData": [
+            50
+          ]
+        },
+        "register": 26
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/features/appData/umiInfo": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/appData/umiInfo.js",
       "id": "@umijs/preset-umi/dist/features/appData/umiInfo",
-      "key": "umiInfo"
+      "key": "umiInfo",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/check/check": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/check/check.js",
+      "id": "@umijs/preset-umi/dist/features/check/check",
+      "key": "check",
       "config": {},
       "time": {
         "hooks": {
@@ -176,46 +194,46 @@
             0
           ]
         },
-        "register": 3
+        "register": 2
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/check/check.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/check/check",
-      "key": "check"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/check/babel722": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/check/babel722.js",
+      "id": "@umijs/preset-umi/dist/features/check/babel722",
+      "key": "babel722",
       "config": {},
       "time": {
         "hooks": {
           "onCheck": [
-            0
+            1
           ]
         },
-        "register": 1
+        "register": 2
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/check/babel722.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/check/babel722",
-      "key": "babel722"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/codeSplitting/codeSplitting": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/codeSplitting/codeSplitting.js",
+      "id": "@umijs/preset-umi/dist/features/codeSplitting/codeSplitting",
+      "key": "codeSplitting",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/codeSplitting/codeSplitting.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/codeSplitting/codeSplitting",
-      "key": "codeSplitting"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/configPlugins/configPlugins": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/configPlugins/configPlugins.js",
+      "id": "@umijs/preset-umi/dist/features/configPlugins/configPlugins",
+      "key": "configPlugins",
       "config": {},
       "time": {
         "hooks": {
@@ -223,14 +241,9 @@
             0
           ]
         },
-        "register": 28
+        "register": 21
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/configPlugins/configPlugins.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/configPlugins/configPlugins",
-      "key": "configPlugins"
+      "enableBy": "register"
     },
     "virtual: config-title": {
       "id": "virtual: config-title",
@@ -1072,19 +1085,24 @@
       }
     },
     "@umijs/preset-umi/dist/features/crossorigin/crossorigin": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/crossorigin/crossorigin.js",
+      "id": "@umijs/preset-umi/dist/features/crossorigin/crossorigin",
+      "key": "crossorigin",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/crossorigin/crossorigin.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/crossorigin/crossorigin",
-      "key": "crossorigin"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand.js",
+      "id": "@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand",
+      "key": "depsOnDemand",
       "config": {},
       "time": {
         "hooks": {
@@ -1094,176 +1112,172 @@
         },
         "register": 3
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/depsOnDemand/depsOnDemand",
-      "key": "depsOnDemand"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/devTool/devTool": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/devTool/devTool.js",
+      "id": "@umijs/preset-umi/dist/features/devTool/devTool",
+      "key": "devTool",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/devTool/devTool.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/devTool/devTool",
-      "key": "devTool"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker.js",
+      "id": "@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker",
+      "key": "esbuildHelperChecker",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 115
+        "register": 66
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/esbuildHelperChecker/esbuildHelperChecker",
-      "key": "esbuildHelperChecker"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/esmi/esmi": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/esmi/esmi.js",
+      "id": "@umijs/preset-umi/dist/features/esmi/esmi",
+      "key": "esmi",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 304
+        "register": 96
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/esmi/esmi.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/esmi/esmi",
-      "key": "esmi"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/exportStatic/exportStatic": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/exportStatic/exportStatic.js",
+      "id": "@umijs/preset-umi/dist/features/exportStatic/exportStatic",
+      "key": "exportStatic",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 38
+        "register": 25
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/exportStatic/exportStatic.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/exportStatic/exportStatic",
-      "key": "exportStatic"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/favicons/favicons": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/favicons/favicons.js",
+      "id": "@umijs/preset-umi/dist/features/favicons/favicons",
+      "key": "favicons",
       "config": {},
       "time": {
         "hooks": {
           "modifyAppData": [
-            1
+            0
           ]
         },
         "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/favicons/favicons.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/favicons/favicons",
-      "key": "favicons"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/helmet/helmet": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/helmet/helmet.js",
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/helmet/helmet.js",
       "id": "@umijs/preset-umi/dist/features/helmet/helmet",
-      "key": "helmet"
-    },
-    "@umijs/preset-umi/dist/features/icons/icons": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 5
-      },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/icons/icons.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/icons/icons",
-      "key": "icons"
-    },
-    "@umijs/preset-umi/dist/features/mock/mock": {
-      "config": {},
-      "time": {
-        "hooks": {
-          "onStart": [
-            2
-          ]
-        },
-        "register": 46
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/mock/mock.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/mock/mock",
-      "key": "mock"
-    },
-    "@umijs/preset-umi/dist/features/mpa/mpa": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 3
-      },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/mpa/mpa.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/mpa/mpa",
-      "key": "mpa"
-    },
-    "@umijs/preset-umi/dist/features/okam/okam": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/okam/okam.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/okam/okam",
-      "key": "okam"
-    },
-    "@umijs/preset-umi/dist/features/overrides/overrides": {
+      "key": "helmet",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/overrides/overrides.js",
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/features/icons/icons": {
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/icons/icons.js",
+      "id": "@umijs/preset-umi/dist/features/icons/icons",
+      "key": "icons",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 4
+      },
+      "enableBy": "config"
+    },
+    "@umijs/preset-umi/dist/features/mock/mock": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/mock/mock.js",
+      "id": "@umijs/preset-umi/dist/features/mock/mock",
+      "key": "mock",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 34
+      }
+    },
+    "@umijs/preset-umi/dist/features/mpa/mpa": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/mpa/mpa.js",
+      "id": "@umijs/preset-umi/dist/features/mpa/mpa",
+      "key": "mpa",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config"
+    },
+    "@umijs/preset-umi/dist/features/okam/okam": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/okam/okam.js",
+      "id": "@umijs/preset-umi/dist/features/okam/okam",
+      "key": "okam",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      }
+    },
+    "@umijs/preset-umi/dist/features/overrides/overrides": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/overrides/overrides.js",
       "id": "@umijs/preset-umi/dist/features/overrides/overrides",
-      "key": "overrides"
+      "key": "overrides",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/phantomDependency/phantomDependency": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/phantomDependency/phantomDependency.js",
+      "id": "@umijs/preset-umi/dist/features/phantomDependency/phantomDependency",
+      "key": "phantomDependency",
       "config": {},
       "time": {
         "hooks": {},
         "register": 2
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/phantomDependency/phantomDependency.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/phantomDependency/phantomDependency",
-      "key": "phantomDependency"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/polyfill/polyfill": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/polyfill/polyfill.js",
+      "id": "@umijs/preset-umi/dist/features/polyfill/polyfill",
+      "key": "polyfill",
       "config": {},
       "time": {
         "hooks": {
@@ -1272,257 +1286,270 @@
           ]
         },
         "register": 5
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/polyfill/polyfill.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/polyfill/polyfill",
-      "key": "polyfill"
+      }
     },
     "@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 0
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill.js",
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill.js",
       "id": "@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill",
-      "key": "publicPathPolyfill"
-    },
-    "@umijs/preset-umi/dist/features/prepare/prepare": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 5
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/prepare/prepare.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/prepare/prepare",
-      "key": "prepare"
-    },
-    "@umijs/preset-umi/dist/features/routePrefetch/routePrefetch": {
+      "key": "publicPathPolyfill",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routePrefetch/routePrefetch.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/routePrefetch/routePrefetch",
-      "key": "routePrefetch"
+      "enableBy": "register"
     },
-    "@umijs/preset-umi/dist/features/terminal/terminal": {
+    "@umijs/preset-umi/dist/features/prepare/prepare": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/prepare/prepare.js",
+      "id": "@umijs/preset-umi/dist/features/prepare/prepare",
+      "key": "prepare",
       "config": {},
       "time": {
         "hooks": {},
         "register": 3
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/terminal/terminal.js",
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/features/routePrefetch/routePrefetch": {
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/routePrefetch/routePrefetch.js",
+      "id": "@umijs/preset-umi/dist/features/routePrefetch/routePrefetch",
+      "key": "routePrefetch",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config"
+    },
+    "@umijs/preset-umi/dist/features/stagewise/stagewise": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/stagewise/stagewise.js",
+      "id": "@umijs/preset-umi/dist/features/stagewise/stagewise",
+      "key": "stagewise",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config"
+    },
+    "@umijs/preset-umi/dist/features/terminal/terminal": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/terminal/terminal.js",
       "id": "@umijs/preset-umi/dist/features/terminal/terminal",
-      "key": "terminal"
+      "key": "terminal",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/tmpFiles/tmpFiles": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/tmpFiles/tmpFiles.js",
+      "id": "@umijs/preset-umi/dist/features/tmpFiles/tmpFiles",
+      "key": "tmpFiles",
       "config": {},
       "time": {
         "hooks": {},
         "register": 11
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/tmpFiles/tmpFiles.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/tmpFiles/tmpFiles",
-      "key": "tmpFiles"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/clientLoader/clientLoader": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/clientLoader/clientLoader.js",
+      "id": "@umijs/preset-umi/dist/features/clientLoader/clientLoader",
+      "key": "clientLoader",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 2
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/clientLoader/clientLoader.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/clientLoader/clientLoader",
-      "key": "clientLoader"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/routeProps/routeProps": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/routeProps/routeProps.js",
+      "id": "@umijs/preset-umi/dist/features/routeProps/routeProps",
+      "key": "routeProps",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routeProps/routeProps.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/routeProps/routeProps",
-      "key": "routeProps"
+      }
     },
     "@umijs/preset-umi/dist/features/ssr/ssr": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 7
-      },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/ssr/ssr.js",
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/ssr/ssr.js",
       "id": "@umijs/preset-umi/dist/features/ssr/ssr",
-      "key": "ssr"
-    },
-    "@umijs/preset-umi/dist/features/tmpFiles/configTypes": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 7
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/tmpFiles/configTypes.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/tmpFiles/configTypes",
-      "key": "configTypes"
-    },
-    "@umijs/preset-umi/dist/features/transform/transform": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 7
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/transform/transform.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/transform/transform",
-      "key": "transform"
-    },
-    "@umijs/preset-umi/dist/features/lowImport/lowImport": {
+      "key": "ssr",
       "config": {},
       "time": {
         "hooks": {},
         "register": 6
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/lowImport/lowImport.js",
+      "enableBy": "config"
+    },
+    "@umijs/preset-umi/dist/features/tmpFiles/configTypes": {
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/tmpFiles/configTypes.js",
+      "id": "@umijs/preset-umi/dist/features/tmpFiles/configTypes",
+      "key": "configTypes",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 7
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/features/transform/transform": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/transform/transform.js",
+      "id": "@umijs/preset-umi/dist/features/transform/transform",
+      "key": "transform",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 7
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/features/lowImport/lowImport": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/lowImport/lowImport.js",
       "id": "@umijs/preset-umi/dist/features/lowImport/lowImport",
-      "key": "lowImport"
+      "key": "lowImport",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 7
+      },
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/vite/vite": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/vite/vite.js",
+      "id": "@umijs/preset-umi/dist/features/vite/vite",
+      "key": "vite",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/vite/vite.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/vite/vite",
-      "key": "vite"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/apiRoute/apiRoute": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/apiRoute/apiRoute.js",
+      "id": "@umijs/preset-umi/dist/features/apiRoute/apiRoute",
+      "key": "apiRoute",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 16
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/apiRoute/apiRoute.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/apiRoute/apiRoute",
-      "key": "apiRoute"
+        "register": 15
+      }
     },
     "@umijs/preset-umi/dist/features/monorepo/redirect": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/monorepo/redirect.js",
+      "id": "@umijs/preset-umi/dist/features/monorepo/redirect",
+      "key": "monorepoRedirect",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 27
+        "register": 21
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/monorepo/redirect.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/monorepo/redirect",
-      "key": "monorepoRedirect"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/test/test": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/test/test.js",
+      "id": "@umijs/preset-umi/dist/features/test/test",
+      "key": "test",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/test/test.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/test/test",
-      "key": "test"
+        "register": 2
+      }
     },
     "@umijs/preset-umi/dist/features/clickToComponent/clickToComponent": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/clickToComponent/clickToComponent.js",
+      "id": "@umijs/preset-umi/dist/features/clickToComponent/clickToComponent",
+      "key": "clickToComponent",
       "config": {},
       "time": {
         "hooks": {},
         "register": 2
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/clickToComponent/clickToComponent.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/clickToComponent/clickToComponent",
-      "key": "clickToComponent"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/legacy/legacy": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/legacy/legacy.js",
+      "id": "@umijs/preset-umi/dist/features/legacy/legacy",
+      "key": "legacy",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 2
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/legacy/legacy.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/legacy/legacy",
-      "key": "legacy"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose.js",
+      "id": "@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose",
+      "key": "classPropertiesLoose",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/classPropertiesLoose/classPropertiesLoose",
-      "key": "classPropertiesLoose"
+      "enableBy": "config"
     },
     "@umijs/preset-umi/dist/features/webpack/webpack": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/webpack/webpack.js",
+      "id": "@umijs/preset-umi/dist/features/webpack/webpack",
+      "key": "preset-umi:webpack",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/webpack/webpack.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/webpack/webpack",
-      "key": "preset-umi:webpack"
+        "register": 1
+      }
     },
     "@umijs/preset-umi/dist/features/swc/swc": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/swc/swc.js",
+      "id": "@umijs/preset-umi/dist/features/swc/swc",
+      "key": "swc",
       "config": {},
       "time": {
         "hooks": {
@@ -1530,650 +1557,658 @@
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/swc/swc.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/swc/swc",
-      "key": "swc"
+      "enableBy": "register"
     },
     "@umijs/preset-umi/dist/features/ui/ui": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/ui/ui.js",
+      "id": "@umijs/preset-umi/dist/features/ui/ui",
+      "key": "ui",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 5
+      }
+    },
+    "@umijs/preset-umi/dist/features/mako/mako": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/mako/mako.js",
+      "id": "@umijs/preset-umi/dist/features/mako/mako",
+      "key": "mako",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config"
+    },
+    "@umijs/preset-umi/dist/features/utoopack/utoopack": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/utoopack/utoopack.js",
+      "id": "@umijs/preset-umi/dist/features/utoopack/utoopack",
+      "key": "utoopack",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      }
+    },
+    "@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian.js",
+      "id": "@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian",
+      "key": "hmrGuardian",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      }
+    },
+    "@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad.js",
+      "id": "@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad",
+      "key": "routePreloadOnLoad",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 27
+      }
+    },
+    "@umijs/preset-umi/dist/features/forget/forget": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/forget/forget.js",
+      "id": "@umijs/preset-umi/dist/features/forget/forget",
+      "key": "forget",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "config"
+    },
+    "@umijs/preset-umi/dist/features/bundler/bundler": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/features/bundler/bundler.js",
+      "id": "@umijs/preset-umi/dist/features/bundler/bundler",
+      "key": "preset-umi:bundler",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 3
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/build": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/build.js",
+      "id": "@umijs/preset-umi/dist/commands/build",
+      "key": "build",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 39
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/config/config": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/config/config.js",
+      "id": "@umijs/preset-umi/dist/commands/config/config",
+      "key": "config",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 48
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/dev/dev": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/dev/dev.js",
+      "id": "@umijs/preset-umi/dist/commands/dev/dev",
+      "key": "dev",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 83
+      }
+    },
+    "@umijs/preset-umi/dist/commands/help": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/help.js",
+      "id": "@umijs/preset-umi/dist/commands/help",
+      "key": "help",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/lint": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/lint.js",
+      "id": "@umijs/preset-umi/dist/commands/lint",
+      "key": "lint",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/setup": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/setup.js",
+      "id": "@umijs/preset-umi/dist/commands/setup",
+      "key": "setup",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 0
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/deadcode": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/deadcode.js",
+      "id": "@umijs/preset-umi/dist/commands/deadcode",
+      "key": "deadcode",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/version": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/version.js",
+      "id": "@umijs/preset-umi/dist/commands/version",
+      "key": "version",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/page": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/page.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/page",
+      "key": "generator:page",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 4
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/prettier": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/prettier.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/prettier",
+      "key": "generator:prettier",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/tsconfig": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/tsconfig.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/tsconfig",
+      "key": "generator:tsconfig",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/jest": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/jest.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/jest",
+      "key": "generator:jest",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/tailwindcss": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/tailwindcss.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/tailwindcss",
+      "key": "generator:tailwindcss",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/dva": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/dva.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/dva",
+      "key": "generator:dva",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/component": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/component.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/component",
+      "key": "generator:component",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/mock": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/mock.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/mock",
+      "key": "generator:mock",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/cypress": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/cypress.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/cypress",
+      "key": "generator:cypress",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/api": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/api.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/api",
+      "key": "generator:api",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/generators/precommit": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/generators/precommit.js",
+      "id": "@umijs/preset-umi/dist/commands/generators/precommit",
+      "key": "generator:precommit",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/plugin": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/plugin.js",
+      "id": "@umijs/preset-umi/dist/commands/plugin",
+      "key": "command:plugin",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/verify-commit": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/verify-commit.js",
+      "id": "@umijs/preset-umi/dist/commands/verify-commit",
+      "key": "verifyCommit",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/preview": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/preview.js",
+      "id": "@umijs/preset-umi/dist/commands/preview",
+      "key": "preview",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 20
+      },
+      "enableBy": "register"
+    },
+    "@umijs/preset-umi/dist/commands/mfsu/mfsu": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.6.25_@t_991c4d88659078c540220018d715d120/node_modules/@umijs/preset-umi/dist/commands/mfsu/mfsu.js",
+      "id": "@umijs/preset-umi/dist/commands/mfsu/mfsu",
+      "key": "mfsu-cli",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "register"
+    },
+    "@umijs/plugin-run": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugin-run@4.6.25/node_modules/@umijs/plugin-run/dist/index.js",
+      "id": "@umijs/plugin-run",
+      "key": "run",
       "config": {},
       "time": {
         "hooks": {},
         "register": 6
       },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/ui/ui.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/ui/ui",
-      "key": "ui"
-    },
-    "@umijs/preset-umi/dist/features/mako/mako": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/mako/mako.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/mako/mako",
-      "key": "mako"
-    },
-    "@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 5
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/hmrGuardian/hmrGuardian",
-      "key": "hmrGuardian"
-    },
-    "@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 3
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad",
-      "key": "routePreloadOnLoad"
-    },
-    "@umijs/preset-umi/dist/features/forget/forget": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 4
-      },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/forget/forget.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/forget/forget",
-      "key": "forget"
-    },
-    "@umijs/preset-umi/dist/features/bundler/bundler": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 4
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/features/bundler/bundler.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/features/bundler/bundler",
-      "key": "preset-umi:bundler"
-    },
-    "@umijs/preset-umi/dist/commands/build": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 43
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/build.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/build",
-      "key": "build"
-    },
-    "@umijs/preset-umi/dist/commands/config/config": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 57
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/config/config.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/config/config",
-      "key": "config"
-    },
-    "@umijs/preset-umi/dist/commands/dev/dev": {
-      "config": {},
-      "time": {
-        "hooks": {
-          "modifyAppData": [
-            30
-          ],
-          "onStart": [
-            0
-          ]
-        },
-        "register": 94
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/dev/dev.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/dev/dev",
-      "key": "dev"
-    },
-    "@umijs/preset-umi/dist/commands/help": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/help.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/help",
-      "key": "help"
-    },
-    "@umijs/preset-umi/dist/commands/lint": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/lint.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/lint",
-      "key": "lint"
-    },
-    "@umijs/preset-umi/dist/commands/setup": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 0
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/setup.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/setup",
-      "key": "setup"
-    },
-    "@umijs/preset-umi/dist/commands/deadcode": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/deadcode.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/deadcode",
-      "key": "deadcode"
-    },
-    "@umijs/preset-umi/dist/commands/version": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/version.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/version",
-      "key": "version"
-    },
-    "@umijs/preset-umi/dist/commands/generators/page": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 5
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/page.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/page",
-      "key": "generator:page"
-    },
-    "@umijs/preset-umi/dist/commands/generators/prettier": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/prettier.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/prettier",
-      "key": "generator:prettier"
-    },
-    "@umijs/preset-umi/dist/commands/generators/tsconfig": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/tsconfig.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/tsconfig",
-      "key": "generator:tsconfig"
-    },
-    "@umijs/preset-umi/dist/commands/generators/jest": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/jest.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/jest",
-      "key": "generator:jest"
-    },
-    "@umijs/preset-umi/dist/commands/generators/tailwindcss": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/tailwindcss.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/tailwindcss",
-      "key": "generator:tailwindcss"
-    },
-    "@umijs/preset-umi/dist/commands/generators/dva": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/dva.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/dva",
-      "key": "generator:dva"
-    },
-    "@umijs/preset-umi/dist/commands/generators/component": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/component.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/component",
-      "key": "generator:component"
-    },
-    "@umijs/preset-umi/dist/commands/generators/mock": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/mock.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/mock",
-      "key": "generator:mock"
-    },
-    "@umijs/preset-umi/dist/commands/generators/cypress": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/cypress.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/cypress",
-      "key": "generator:cypress"
-    },
-    "@umijs/preset-umi/dist/commands/generators/api": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/api.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/api",
-      "key": "generator:api"
-    },
-    "@umijs/preset-umi/dist/commands/generators/precommit": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/generators/precommit.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/generators/precommit",
-      "key": "generator:precommit"
-    },
-    "@umijs/preset-umi/dist/commands/plugin": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/plugin.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/plugin",
-      "key": "command:plugin"
-    },
-    "@umijs/preset-umi/dist/commands/verify-commit": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 1
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/verify-commit.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/verify-commit",
-      "key": "verifyCommit"
-    },
-    "@umijs/preset-umi/dist/commands/preview": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 25
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/preview.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/preview",
-      "key": "preview"
-    },
-    "@umijs/preset-umi/dist/commands/mfsu/mfsu": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 3
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+preset-umi@4.4.11_@t_4150128c4fe0a648280f42920c664435/node_modules/@umijs/preset-umi/dist/commands/mfsu/mfsu.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/preset-umi/dist/commands/mfsu/mfsu",
-      "key": "mfsu-cli"
-    },
-    "@umijs/plugin-run": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 9
-      },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugin-run@4.4.11/node_modules/@umijs/plugin-run/dist/index.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugin-run",
-      "key": "run"
+      "enableBy": "register"
     },
     "@umijs/plugins/dist/access": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/access.js",
+      "id": "@umijs/plugins/dist/access",
+      "key": "access",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 3
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/access.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/access",
-      "key": "access"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/analytics": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/analytics.js",
+      "id": "@umijs/plugins/dist/analytics",
+      "key": "analytics",
       "config": {
         "onChange": "reload"
       },
       "time": {
         "hooks": {},
         "register": 1
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/analytics.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/analytics",
-      "key": "analytics"
+      }
     },
     "@umijs/plugins/dist/antd": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/antd.js",
+      "id": "@umijs/plugins/dist/antd",
+      "key": "antd",
       "config": {},
       "time": {
         "hooks": {
           "modifyConfig": [
-            9
+            5
           ],
           "modifyAppData": [
             0
+          ],
+          "onCheck": [
+            0
           ]
         },
-        "register": 11
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/antd.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/antd",
-      "key": "antd"
+        "register": 10
+      }
     },
     "@umijs/plugins/dist/dva": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/dva.js",
+      "id": "@umijs/plugins/dist/dva",
+      "key": "dva",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 18
+        "register": 14
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/dva.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/dva",
-      "key": "dva"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/initial-state": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/initial-state.js",
+      "id": "@umijs/plugins/dist/initial-state",
+      "key": "initialState",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 0
+        "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/initial-state.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/initial-state",
-      "key": "initialState"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/layout": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/layout.js",
+      "id": "@umijs/plugins/dist/layout",
+      "key": "layout",
       "config": {
         "onChange": "regenerateTmpFiles"
       },
       "time": {
         "hooks": {},
-        "register": 7
+        "register": 5
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/layout.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/layout",
-      "key": "layout"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/locale": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/locale.js",
+      "id": "@umijs/plugins/dist/locale",
+      "key": "locale",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 6
+        "register": 7
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/locale.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/locale",
-      "key": "locale"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/mf": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 3
-      },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/mf.js",
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/mf.js",
       "id": "@umijs/plugins/dist/mf",
-      "key": "mf"
-    },
-    "@umijs/plugins/dist/model": {
+      "key": "mf",
       "config": {},
       "time": {
         "hooks": {},
         "register": 2
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/model.js",
+      "enableBy": "config"
+    },
+    "@umijs/plugins/dist/model": {
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/model.js",
       "id": "@umijs/plugins/dist/model",
-      "key": "model"
+      "key": "model",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 2
+      },
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/moment2dayjs": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/moment2dayjs.js",
+      "id": "@umijs/plugins/dist/moment2dayjs",
+      "key": "moment2dayjs",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/moment2dayjs.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/moment2dayjs",
-      "key": "moment2dayjs"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/qiankun": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/qiankun.js",
+      "id": "@umijs/plugins/dist/qiankun",
+      "key": "qiankun",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/qiankun.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/qiankun",
-      "key": "qiankun"
+      "enableBy": "register"
     },
     "@umijs/plugins/dist/qiankun/master": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/qiankun/master.js",
+      "id": "@umijs/plugins/dist/qiankun/master",
+      "key": "qiankun-master",
       "config": {},
       "time": {
         "hooks": {},
         "register": 2
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/qiankun/master.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/qiankun/master",
-      "key": "qiankun-master"
+      }
     },
     "@umijs/plugins/dist/qiankun/slave": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/qiankun/slave.js",
+      "id": "@umijs/plugins/dist/qiankun/slave",
+      "key": "qiankun-slave",
       "config": {},
       "time": {
         "hooks": {},
         "register": 4
-      },
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/qiankun/slave.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/qiankun/slave",
-      "key": "qiankun-slave"
+      }
     },
     "@umijs/plugins/dist/react-query": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/react-query.js",
+      "id": "@umijs/plugins/dist/react-query",
+      "key": "reactQuery",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/react-query.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/react-query",
-      "key": "reactQuery"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/request": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/request.js",
+      "id": "@umijs/plugins/dist/request",
+      "key": "request",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/request.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/request",
-      "key": "request"
+      "enableBy": "config"
     },
     "@umijs/plugins/dist/styled-components": {
-      "config": {},
-      "time": {
-        "hooks": {},
-        "register": 2
-      },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/styled-components.js",
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/styled-components.js",
       "id": "@umijs/plugins/dist/styled-components",
-      "key": "styledComponents"
-    },
-    "@umijs/plugins/dist/tailwindcss": {
+      "key": "styledComponents",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/tailwindcss.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/plugins/dist/tailwindcss",
-      "key": "tailwindcss"
+      "enableBy": "config"
     },
-    "@umijs/plugins/dist/valtio": {
+    "@umijs/plugins/dist/tailwindcss": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/tailwindcss.js",
+      "id": "@umijs/plugins/dist/tailwindcss",
+      "key": "tailwindcss",
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       },
-      "enableBy": "config",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.4.11_@babe_8d8a4fbc1370d11978c015907a26c457/node_modules/@umijs/plugins/dist/valtio.js",
+      "enableBy": "config"
+    },
+    "@umijs/plugins/dist/valtio": {
       "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+plugins@4.6.25_@babe_52486c6a85b93f0c20ab0b1ecbc2f120/node_modules/@umijs/plugins/dist/valtio.js",
       "id": "@umijs/plugins/dist/valtio",
-      "key": "valtio"
+      "key": "valtio",
+      "config": {},
+      "time": {
+        "hooks": {},
+        "register": 1
+      },
+      "enableBy": "config"
     },
     "@umijs/max/dist/plugins/maxAlias": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.6.25_@babel+co_4ebc3b9ab9a1fee284f97ec0b170856a/node_modules/@umijs/max/dist/plugins/maxAlias.js",
+      "id": "@umijs/max/dist/plugins/maxAlias",
+      "key": "maxAlias",
       "config": {},
       "time": {
         "hooks": {
@@ -2181,16 +2216,16 @@
             0
           ]
         },
-        "register": 1
+        "register": 0
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/plugins/maxAlias.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/max/dist/plugins/maxAlias",
-      "key": "maxAlias"
+      "enableBy": "register"
     },
     "@umijs/max/dist/plugins/maxAppData": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.6.25_@babel+co_4ebc3b9ab9a1fee284f97ec0b170856a/node_modules/@umijs/max/dist/plugins/maxAppData.js",
+      "id": "@umijs/max/dist/plugins/maxAppData",
+      "key": "maxAppData",
       "config": {},
       "time": {
         "hooks": {
@@ -2200,46 +2235,37 @@
         },
         "register": 0
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/plugins/maxAppData.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/max/dist/plugins/maxAppData",
-      "key": "maxAppData"
+      "enableBy": "register"
     },
     "@umijs/max/dist/plugins/maxChecker": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.6.25_@babel+co_4ebc3b9ab9a1fee284f97ec0b170856a/node_modules/@umijs/max/dist/plugins/maxChecker.js",
+      "id": "@umijs/max/dist/plugins/maxChecker",
+      "key": "maxChecker",
       "config": {},
       "time": {
-        "hooks": {
-          "onCheckPkgJSON": [
-            0
-          ]
-        },
-        "register": 1
+        "hooks": {},
+        "register": 0
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+max@4.4.11_@babel+co_56c9631d5400f7418b5a5817d6ce931f/node_modules/@umijs/max/dist/plugins/maxChecker.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/max/dist/plugins/maxChecker",
-      "key": "maxChecker"
+      "enableBy": "register"
     },
     "@umijs/core/dist/service/generatePlugin": {
+      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
+      "type": "plugin",
+      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+core@4.6.25/node_modules/@umijs/core/dist/service/generatePlugin.js",
+      "id": "@umijs/core/dist/service/generatePlugin",
+      "key": "generatePlugin",
       "config": {},
       "time": {
         "hooks": {},
         "register": 1
       },
-      "enableBy": "register",
-      "type": "plugin",
-      "path": "I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+core@4.4.11/node_modules/@umijs/core/dist/service/generatePlugin.js",
-      "cwd": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc",
-      "id": "@umijs/core/dist/service/generatePlugin",
-      "key": "generatePlugin"
+      "enableBy": "register"
     }
   },
   "presets": [],
-  "name": "dev",
+  "name": "setup",
   "args": {
     "_": []
   },
@@ -3706,7 +3732,7 @@
   "hasSrcDir": true,
   "npmClient": "pnpm",
   "umi": {
-    "version": "4.4.11",
+    "version": "4.6.25",
     "name": "Umi Max",
     "importSource": "@umijs/max",
     "cliName": "max"
@@ -3744,15 +3770,12 @@
   },
   "framework": "react",
   "typescript": {
-    "tsVersion": "5.8.3",
+    "tsVersion": "5.9.3",
     "tslibVersion": "2.8.1"
   },
   "faviconFiles": [],
-  "port": 8080,
-  "host": "0.0.0.0",
-  "ip": "172.29.192.1",
   "antd": {
     "pkgPath": "I:\\code\\rust\\umi_gitee\\rust-tauri-umi\\apps\\pc\\node_modules\\antd",
-    "version": "5.26.0"
+    "version": "5.29.3"
   }
 }

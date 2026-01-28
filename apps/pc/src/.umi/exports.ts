@@ -14,10 +14,10 @@ export * from 'I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/.umi/plugin-acc
 export * from 'I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/.umi/plugin-antd/types.d';
 export * from 'I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/.umi/plugin-request/types.d';
 // @umijs/renderer-*
-export { createBrowserHistory, createHashHistory, createMemoryHistory, Helmet, HelmetProvider, createSearchParams, generatePath, matchPath, matchRoutes, Navigate, NavLink, Outlet, resolvePath, useLocation, useMatch, useNavigate, useOutlet, useOutletContext, useParams, useResolvedPath, useRoutes, useSearchParams, useAppData, useClientLoaderData, useLoaderData, useRouteProps, useSelectedRoutes, useServerLoaderData, renderClient, __getRoot, Link, useRouteData, __useFetcher, withRouter } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.4.1_5d37cdc93ae4c557f74cbc834d273583/node_modules/@umijs/renderer-react';
-export type { History, ClientLoader } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.4.1_5d37cdc93ae4c557f74cbc834d273583/node_modules/@umijs/renderer-react'
+export { createBrowserHistory, createHashHistory, createMemoryHistory, Helmet, HelmetProvider, createSearchParams, generatePath, matchPath, matchRoutes, Navigate, NavLink, Outlet, resolvePath, useLocation, useMatch, useNavigate, useOutlet, useOutletContext, useParams, useResolvedPath, useRoutes, useSearchParams, useAppData, useClientLoaderData, useLoaderData, useRouteProps, useSelectedRoutes, useServerLoaderData, renderClient, __getRoot, Link, useRouteData, __useFetcher, withRouter } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.6.2_031ce76bd072575f474afb3c4c4bdad4/node_modules/@umijs/renderer-react';
+export type { History, ClientLoader } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.6.2_031ce76bd072575f474afb3c4c4bdad4/node_modules/@umijs/renderer-react'
 // umi/client/client/plugin
-export { ApplyPluginsType, PluginManager } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/umi@4.4.11_@babel+core@7.27_957e71320604f1d56bab0fec0649309d/node_modules/umi/client/client/plugin.js';
+export { ApplyPluginsType, PluginManager } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/umi@4.6.25_@babel+core@7.28_128041de3ace62e8b32adf2c39e8421f/node_modules/umi/client/client/plugin.js';
 export { history, createHistory } from './core/history';
 export { terminal } from './core/terminal';
 // react ssr

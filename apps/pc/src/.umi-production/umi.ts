@@ -4,7 +4,7 @@
 import './core/polyfill';
 import 'I:/code/rust/umi_gitee/rust-tauri-umi/apps/pc/src/global.less';
 import 'antd/dist/reset.css';
-import { renderClient } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.4.1_5d37cdc93ae4c557f74cbc834d273583/node_modules/@umijs/renderer-react';
+import { renderClient } from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/@umijs+renderer-react@4.6.2_031ce76bd072575f474afb3c4c4bdad4/node_modules/@umijs/renderer-react';
 import { getRoutes } from './core/route';
 import { createPluginManager } from './core/plugin';
 import { createHistory } from './core/history';
@@ -77,6 +77,6 @@ render();
 
     if (typeof window !== 'undefined') {
       window.g_umi = {
-        version: '4.4.11',
+        version: '4.6.25',
       };
     }

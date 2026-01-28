@@ -2,12 +2,12 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "only-talk",
   "version": "1.0.0",
-  "identifier": "com.only-talk.app",
+  "identifier": "com.only.talk.app",
   "build": {
-    "frontendDist": "../dist",
+    "frontendDist": "../apps/mobile/dist",
     "devUrl": "http://localhost:8080",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "pnpm --filter @workspace/app-mobile dev",
+    "beforeBuildCommand": "pnpm --filter @workspace/app-mobile build"
   },
   "app": {
     "windows": [

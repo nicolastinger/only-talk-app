@@ -4,4 +4,7 @@ node_modules/
 target/
 dist/
 resource/
+.umi/
+.umi-production/
+logs/
 

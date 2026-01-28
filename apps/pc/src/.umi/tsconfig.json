@@ -27,7 +27,7 @@
         "src/.umi/*"
       ],
       "@umijs/max": [
-        "../../../../node_modules/.pnpm/umi@4.4.11_@babel+core@7.27_957e71320604f1d56bab0fec0649309d/node_modules/umi"
+        "../../../../node_modules/.pnpm/umi@4.6.25_@babel+core@7.28_128041de3ace62e8b32adf2c39e8421f/node_modules/umi"
       ],
       "@umijs/max/typings": [
         "src/.umi/typings"

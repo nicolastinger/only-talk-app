@@ -5,7 +5,7 @@ import {
   createIntl,
   IntlShape,
   MessageDescriptor,
-} from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/react-intl@3.12.1_react@18.3.1/node_modules/react-intl';
+} from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/react-intl@3.12.1_@types+react@18.3.27_react@18.3.1/node_modules/react-intl';
 import { getPluginManager } from '../core/plugin';
 import EventEmitter from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/event-emitter@0.3.5/node_modules/event-emitter';
 // @ts-ignore
@@ -34,7 +34,7 @@ export {
   defineMessages,
   injectIntl,
   useIntl,
-} from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/react-intl@3.12.1_react@18.3.1/node_modules/react-intl';
+} from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/react-intl@3.12.1_@types+react@18.3.27_react@18.3.1/node_modules/react-intl';
 
 let g_intl: IntlShape;
 

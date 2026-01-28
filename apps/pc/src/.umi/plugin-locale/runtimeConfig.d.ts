@@ -3,7 +3,7 @@
 import {
   IntlCache,
   createIntl,
-} from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/react-intl@3.12.1_react@18.3.1/node_modules/react-intl';
+} from 'I:/code/rust/umi_gitee/rust-tauri-umi/node_modules/.pnpm/react-intl@3.12.1_@types+react@18.3.27_react@18.3.1/node_modules/react-intl';
 type OptionalIntlConfig = Omit<Parameters<typeof createIntl>[0], 'locale' | 'defaultLocale'>;
 export interface IRuntimeConfig {
     locale?: {

@@ -11,22 +11,40 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="rebuild: 项目依赖重构">
+    <list default="true" id="1eefc57c-20fe-4aeb-8e2d-482fa209c4d2" name="更改" comment="fix: 项目依赖重构">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/mobile/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/mobile/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/mobile/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/apps/mobile/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/mobile/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/mobile/src/main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/appData.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/appData.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/helmet.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/helmet.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/history.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/history.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/historyIntelli.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/historyIntelli.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/pluginConfig.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/pluginConfig.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/pluginConfigJoi.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/core/pluginConfigJoi.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/exports.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/exports.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/plugin-locale/SelectLang.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/plugin-locale/SelectLang.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/plugin-locale/localeExports.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/plugin-locale/localeExports.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/plugin-locale/runtimeConfig.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/plugin-locale/runtimeConfig.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/testBrowser.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/testBrowser.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi-production/umi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi-production/umi.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/appData.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/appData.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/FriendRequestsModal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/FriendRequestsModal/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/LeftAside/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/LeftAside/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/components/SearchFriend/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/components/SearchFriend/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MineChatBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Chats/components/MineChatBox.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendBox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/Home/Contacts/components/FriendBox.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/pages/TestComponent/components/FileSelectorTest.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/pages/TestComponent/components/FileSelectorTest.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/FileService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/services/fileService/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/ReadSystemMotification.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/services/notificationService/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/demo/UserController.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/demo/index.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/demo/typings.d.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/services/httpService/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/pc/src/services/userService/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/services/userService/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/core/helmet.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/core/helmet.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/core/history.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/core/history.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/core/historyIntelli.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/core/historyIntelli.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/core/pluginConfig.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/core/pluginConfig.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/core/pluginConfigJoi.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/core/pluginConfigJoi.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/exports.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/exports.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/plugin-locale/SelectLang.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/plugin-locale/SelectLang.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/plugin-locale/localeExports.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/plugin-locale/localeExports.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/plugin-locale/runtimeConfig.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/plugin-locale/runtimeConfig.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/testBrowser.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/testBrowser.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/pc/src/.umi/umi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/pc/src/.umi/umi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -135,6 +153,8 @@
       <workItem from="1769318712486" duration="63000" />
       <workItem from="1769318804301" duration="15513000" />
       <workItem from="1769439071525" duration="928000" />
+      <workItem from="1769518499837" duration="49000" />
+      <workItem from="1769524150207" duration="1259000" />
     </task>
     <task id="LOCAL-00001" summary="fix:修复安卓平台下的报错">
       <option name="closed" value="true" />
@@ -160,7 +180,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769350651945</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="fix: 项目依赖重构">
+      <option name="closed" value="true" />
+      <created>1769518534188</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1769518534188</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -170,6 +198,7 @@
     <MESSAGE value="fix:修复安卓平台下的报错" />
     <MESSAGE value="fmt: 代码格式化" />
     <MESSAGE value="rebuild: 项目依赖重构" />
-    <option name="LAST_COMMIT_MESSAGE" value="rebuild: 项目依赖重构" />
+    <MESSAGE value="fix: 项目依赖重构" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix: 项目依赖重构" />
   </component>
 </project>
