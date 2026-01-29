@@ -7,4 +7,5 @@ resource/
 .umi/
 .umi-production/
 logs/
-
+dbData/
+resource/
