@@ -2,7 +2,7 @@
   "name": "@workspace/only-talk-app",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @workspace/app-mobile dev",
+    "dev": "pnpm --filter @workspace/app-pc dev",
     "dev:mobile": "pnpm --filter @workspace/app-mobile dev",
     "build": "pnpm --filter @workspace/app-pc build",
     "build:mobile": "pnpm --filter @workspace/app-mobile build",
