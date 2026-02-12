@@ -39,5 +39,9 @@ pub static APP_PATH: &str = "app_path";
 pub static USER_DB: &str = "user.db";
 // 公共数据库
 pub static COMMON_DB: &str = "common.db";
+// 加密数据库
+pub static PRIVATE_DB: &str = "private.db";
+// 加密key
+pub static PRIVATE_DB_KEY: &str = "REDACTED_DB_ENCRYPTION_KEY";
 // 默认图片
 pub static DEFAULT_IMAGE: &str = "default.jpg";

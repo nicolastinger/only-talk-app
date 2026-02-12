@@ -40,7 +40,8 @@ nanoid = "0.4.0"
 crc = { version = "3.0" }  # 当前最新稳定版（2025年5月）
 crc-catalog = "2.0"  # 可选，用于预置标准CRC算法
 sqlx = { version = "=0.8.1", features = ["sqlite", "runtime-tokio", "macros"] }
-rusqlite = "=0.32.1"
+# 开启 bundled-sqlcipher 特性
+rusqlite = { version = "0.32.1", features = ["bundled-sqlcipher"] }
 rcgen = "0.11.3"
 webpki-roots = "1.0.2"
 uuid = { version = "1.11.0", features = ["v4", "v7"] }

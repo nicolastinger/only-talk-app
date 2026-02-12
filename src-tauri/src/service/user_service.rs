@@ -19,12 +19,15 @@ use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE};
 use crate::cmd::auth_controller::post_request;
+use crate::dao::init_private_db::init_private_db;
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
     info!("用户登录开始");
     // 初始化数据库
     init_sqlite().await.expect("初始化数据库失败!");
+    // 初始化私有数据库
+    init_private_db().await.expect("初始化私有数据库失败");
     //1、获取好友列表
     update_friend_list().await.unwrap_or_else(|e| {
         error!("获取好友列表失败 {:?}", e);

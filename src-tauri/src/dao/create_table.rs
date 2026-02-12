@@ -36,3 +36,14 @@ pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error
     }
     Ok(())
 }
+
+/// 初始化加密数据库
+pub async fn init_private_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
+    init_sqlite::<ChatRecord>(pool_sqlite).await?;
+    {
+        // 本地存储初始化成功
+        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+        guard.insert("private_store_init".to_string(), "1".to_string());
+    }
+    Ok(())
+}

@@ -52,6 +52,7 @@ const LoginPage: React.FC = () => {
         body: {
           account,
           password,
+          platform: 'PC',
         },
       });
 

@@ -51,6 +51,7 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
+    pub static ref GLOBAL_PRIVATE_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     // 全局配置DashMap
     pub static ref GLOBAL_CONFIG: Arc<DashMap<String, String>> = Arc::new(DashMap::new());
 }
@@ -75,8 +76,15 @@ pub fn run() {
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
             let handle = app.handle().clone();
-            let root_path =
-                handle.path().resolve(APP_NAME, BaseDirectory::Document).expect("获取路径失败");
+            let root_path = handle
+                .path()
+                .resolve(APP_NAME, BaseDirectory::Document)
+                .or_else(|_| handle.path().resolve(APP_NAME, BaseDirectory::AppData))
+                .unwrap_or_else(|_| {
+                    std::env::current_dir()
+                        .expect("无法获取当前目录")
+                        .join(APP_NAME)
+                });
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = init_app(root_path, Some(handle)).await {
                     eprintln!("初始化失败: {}", e);
