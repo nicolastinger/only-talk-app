@@ -9,7 +9,7 @@ use crate::dao::store::SqliteStore;
 pub struct ChatRecord {
     pub id: i64,
     pub nano_id: String,
-    pub text_type: u16,    //消息类型
+    pub text_type: u16,    //消息类型, 0: 原生文本, 1: JSON文本等等，详细请参考
     pub raw: String,       //数据
     pub recv_user: String, //接收用户
     pub send_user: String, //发送用户
@@ -35,19 +35,6 @@ impl SqliteStore for ChatRecord {
     }
 
     async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
-        sqlx::query(
-            r#"CREATE TABLE IF NOT EXISTS chat_record (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nano_id TEXT NOT NULL UNIQUE,
-            raw TEXT NOT NULL,
-            timestamp INTEGER NOT NULL,
-            send_user TEXT NOT NULL,
-            recv_user TEXT NOT NULL,
-            text_type INTEGER NOT NULL DEFAULT 0
-        )"#,
-        )
-            .execute(_pool_sqlite)
-            .await?;
         Ok(())
     }
 

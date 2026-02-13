@@ -23,7 +23,6 @@ pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Err
 
 /// 初始化数据库
 pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
-    init_sqlite::<ChatRecord>(pool_sqlite).await?;
     init_sqlite::<ChatRecordRead>(pool_sqlite).await?;
     init_sqlite::<ChatRecordAck>(pool_sqlite).await?;
     init_sqlite::<ChatSession>(pool_sqlite).await?;
