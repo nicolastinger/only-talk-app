@@ -1,4 +1,4 @@
-import { get_friend_info } from '@/services/userService';
+import { get_friend_info } from '@workspace/services';
 import { FriendVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { history } from '@umijs/max';

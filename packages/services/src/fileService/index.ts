@@ -1,23 +1,20 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import { FileVo } from '@workspace/types';
-import { invoke } from '@tauri-apps/api/core'; // 文件管理器选择文件
+import { invoke } from '@tauri-apps/api/core';
 
-// 文件管理器选择文件
 export const selectFile = async (
   isMultiple: boolean = false,
   isDirectory: boolean = false,
 ): Promise<string[] | null> => {
   try {
-    // 打开文件选择器（支持单文件选择）
     const filePath = await open({
-      multiple: isMultiple, // 是否允许多选（false=单选）
-      directory: isDirectory, // 是否选择目录（false=文件）
+      multiple: isMultiple,
+      directory: isDirectory,
       filters: [
-        { name: 'All Files', extensions: ['*'] }, // 文件过滤器
+        { name: 'All Files', extensions: ['*'] },
       ],
     });
 
-    // filePath 是绝对路径（例如：C:/Users/user/file.txt 或 /home/user/file.txt）
     console.log('Selected file path:', filePath);
     return filePath ? [filePath] : null;
   } catch (error) {
@@ -26,7 +23,6 @@ export const selectFile = async (
   }
 };
 
-// 传入业务id获取图片文件
 export const getImageFiles = async (
   bizId: string,
 ): Promise<FileVo[] | null> => {
@@ -40,7 +36,6 @@ export const getImageFiles = async (
       FileVos.forEach((file) => {
         const bytes = file.raw;
         if (bytes && bytes.length > 0) {
-          // 将二进制数据转换为Base64字符串，然后创建data URL
           const uint8Array = new Uint8Array(bytes);
           const blob = new Blob([uint8Array], {
             type: FileVos[0].mime_type || 'image/webp',

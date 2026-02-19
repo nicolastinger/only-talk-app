@@ -4,7 +4,7 @@ import { ChatMessage } from '@workspace/types';
 import React, { useEffect, useRef } from 'react';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
-import { getImageFiles } from '@/services/fileService';
+import { getImageFiles } from '@workspace/services';
 
 type MineChatBoxProps = {
   msg: ChatMessage;

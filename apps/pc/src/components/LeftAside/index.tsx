@@ -13,7 +13,7 @@ import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
 import { useChatsUnread } from '@/hooks/useChatsUnread';
-import { getImageFiles } from '@/services/fileService';
+import { getImageFiles } from '@workspace/services';
 
 const LeftAside = () => {
   const [topBtnList, setTopBtnList] = React.useState<LayoutBtnProps[]>([]);

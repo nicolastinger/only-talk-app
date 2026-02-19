@@ -3,7 +3,7 @@ import { Form, Input, Button, message } from 'antd';
 import { useIntl } from '@umijs/max';
 import { UserOutlined, LockOutlined, SmileOutlined } from '@ant-design/icons';
 import { BasicUser } from '@workspace/types';
-import { sign_up } from '@/services/userService';
+import { sign_up } from '@workspace/services';
 
 const FastSignUp: React.FC = () => {
   const [form] = Form.useForm();

@@ -2,7 +2,7 @@ import { FriendVo } from '@workspace/types';
 import { history } from '@umijs/max';
 import { Badge } from 'antd';
 import styles from './styles/FriendBox.less';
-import { getImageFiles } from '@/services/fileService';
+import { getImageFiles } from '@workspace/services';
 import { useEffect, useState } from 'react';
 
 const FriendBox = (props: { friend: FriendVo }) => {

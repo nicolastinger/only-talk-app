@@ -1,4 +1,4 @@
-import { add_friend, search_user_by_account } from '@/services/userService';
+import { add_friend, search_user_by_account, getImageFiles } from '@workspace/services';
 import { FriendRequestInfoDTO } from '@workspace/types';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import styles from './index.less';
 import { UserInfo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
-import { getImageFiles } from '@/services/fileService';
 
 const SearchFriend = () => {
   const [form] = Form.useForm();

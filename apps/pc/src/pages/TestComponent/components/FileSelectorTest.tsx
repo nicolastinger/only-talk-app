@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Card, Space, Typography, List, Tag } from 'antd';
-import { selectFile } from '@/services/fileService';
+import { selectFile } from '@workspace/services';
 
 const { Title, Text } = Typography;
 
