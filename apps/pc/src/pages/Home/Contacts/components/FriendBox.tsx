@@ -2,7 +2,7 @@ import { FriendVo } from '@workspace/types';
 import { history } from '@umijs/max';
 import { Badge } from 'antd';
 import styles from './styles/FriendBox.less';
-import { getImageFiles } from '@workspace/services';
+import { getFiles } from '@workspace/services';
 import { useEffect, useState } from 'react';
 
 const FriendBox = (props: { friend: FriendVo }) => {
@@ -17,8 +17,8 @@ const FriendBox = (props: { friend: FriendVo }) => {
   // 获取用户头像
   const getUserIcon = async (icon: string) => {
     try {
-      const FileVos = await getImageFiles(icon);
-      setUserIcon(FileVos?.[0]?.blob_url || null);
+      const FileVos = await getFiles(icon);
+      setUserIcon(FileVos?.[0]?.tauri_file_path || null);
     } catch (error) {
       console.log(error);
     }

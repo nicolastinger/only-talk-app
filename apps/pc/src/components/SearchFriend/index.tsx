@@ -1,4 +1,4 @@
-import { add_friend, search_user_by_account, getImageFiles } from '@workspace/services';
+import { add_friend, search_user_by_account, getFiles } from '@workspace/services';
 import { FriendRequestInfoDTO } from '@workspace/types';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
@@ -85,9 +85,11 @@ const SearchFriend = () => {
   // 获取用户头像
   const getUserIcon = async (icon: string): Promise<string> => {
     try {
-      const FileVos = await getImageFiles(icon);
+      alert(icon);
+      const FileVos = await getFiles(icon);
+      alert(FileVos?.[0]?.tauri_file_path || '');
 
-      return FileVos?.[0]?.blob_url || '';
+      return FileVos?.[0]?.tauri_file_path || '';
     } catch (error) {
       message.error('获取用户头像时出现错误');
 

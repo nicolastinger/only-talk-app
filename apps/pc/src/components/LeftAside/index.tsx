@@ -13,7 +13,7 @@ import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
 import { useChatsUnread } from '@/hooks/useChatsUnread';
-import { getImageFiles } from '@workspace/services';
+import { getFiles } from '@workspace/services';
 
 const LeftAside = () => {
   const [topBtnList, setTopBtnList] = React.useState<LayoutBtnProps[]>([]);
@@ -153,8 +153,8 @@ const LeftAside = () => {
   // 获取用户头像
   const getUserIcon = async () => {
     try {
-      const FileVos = await getImageFiles(userInfo.icon || '');
-      setUserIcon(FileVos?.[0]?.blob_url || null);
+      const FileVos = await getFiles(userInfo.icon || '');
+      setUserIcon(FileVos?.[0]?.tauri_file_path || null);
       console.log("用户信息", userInfo)
     } catch (error) {
       console.log(error);

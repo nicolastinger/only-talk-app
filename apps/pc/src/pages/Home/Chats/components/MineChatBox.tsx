@@ -4,7 +4,7 @@ import { ChatMessage } from '@workspace/types';
 import React, { useEffect, useRef } from 'react';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
-import { getImageFiles } from '@workspace/services';
+import { getFiles } from '@workspace/services';
 
 type MineChatBoxProps = {
   msg: ChatMessage;
@@ -59,8 +59,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   // 获取用户头像
   const getUserIcon = async (icon: string) => {
     try {
-      const FileVos = await getImageFiles(icon);
-      setUserIcon(FileVos?.[0]?.blob_url || null);
+      const FileVos = await getFiles(icon);
+      setUserIcon(FileVos?.[0]?.tauri_file_path || null);
       console.log('用户信息', userInfo);
     } catch (error) {
       console.log(error);

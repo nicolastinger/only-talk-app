@@ -1,7 +1,13 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import { FileVo } from '@workspace/types';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 
+/**
+ * 选择文件
+ * @param isMultiple 是否多选
+ * @param isDirectory 是否选择目录
+ * @returns 文件路径列表
+ */
 export const selectFile = async (
   isMultiple: boolean = false,
   isDirectory: boolean = false,
@@ -23,7 +29,26 @@ export const selectFile = async (
   }
 };
 
-export const getImageFiles = async (
+/**
+ * 转换文件绝对路径为tauri文件路径
+ * @param absolutePath 文件绝对路径
+ * @returns tauri文件路径
+ */
+export const convertPathToTauriUrl = (absolutePath: string): string | null => {
+  try {
+    return convertFileSrc(absolutePath);
+  } catch (error) {
+    console.error('Convert path to tauri url failed:', error);
+    return null;
+  }
+};
+
+/**
+ * 获取文件列表
+ * @param bizId 业务ID
+ * @returns 文件列表
+ */
+export const getFiles = async (
   bizId: string,
 ): Promise<FileVo[] | null> => {
   try {
@@ -34,21 +59,16 @@ export const getImageFiles = async (
 
     if (FileVos.length > 0) {
       FileVos.forEach((file) => {
-        const bytes = file.raw;
-        if (bytes && bytes.length > 0) {
-          const uint8Array = new Uint8Array(bytes);
-          const blob = new Blob([uint8Array], {
-            type: FileVos[0].mime_type || 'image/webp',
-          });
-          
-          file.blob_url = URL.createObjectURL(blob);
+        const tauriFilePath = convertPathToTauriUrl(file.original_file_path || '');
+        if (tauriFilePath) {
+          file.tauri_file_path = tauriFilePath;
           files.push(file);
         }
       });
     }
     return files;
   } catch (error: any) {
-    console.error('Get image files failed:', error);
+    console.error('Get files failed:', error);
     return null;
   }
 };

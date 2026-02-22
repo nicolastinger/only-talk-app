@@ -51,6 +51,7 @@ interface FileVo {
   raw?: number[];
   blob_url?: string;
   is_del?: number;
+  tauri_file_path?: string;
 }
 
 export { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo };

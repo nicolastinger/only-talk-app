@@ -12,7 +12,8 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@workspace/*": ["packages/*/src"]
     }
   },
   "include": ["src/**/*", "typings.d.ts"],
