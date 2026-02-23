@@ -7,13 +7,13 @@ use crate::dao::store::SqliteStore;
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatRecordAck {
     pub id: i64,
-    pub nano_id: String,  // 消息id
+    pub nano_id: String,      // 消息id
     pub last_nano_id: String, // 上一条消息id
-    pub ack_status: u16, // 0: 未确认, 1: 已确认
-    pub recv_user: String, // 接收用户
-    pub send_user: String, // 发送用户
-    pub timestamp: i64,  // 消息时间戳
-    pub retry_count: i32, // 重试次数
+    pub ack_status: u16,      // 0: 未确认, 1: 已确认
+    pub recv_user: String,    // 接收用户
+    pub send_user: String,    // 发送用户
+    pub timestamp: i64,       // 消息时间戳
+    pub retry_count: i32,     // 重试次数
 }
 
 impl SqliteStore for ChatRecordAck {

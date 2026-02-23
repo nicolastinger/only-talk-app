@@ -1,18 +1,19 @@
 use std::collections::HashMap;
+
 use log::info;
-use reqwest::{Client, Response, Url};
 use reqwest::header::HeaderMap;
+use reqwest::{Client, Response, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::command;
 
+use crate::entity::user::SignInResult;
+use crate::service::user_service::{add_user_map, user_login};
+use crate::utils::global_static_str::DOMAIN_NAME;
 use crate::{
     GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE, GLOBAL_SQL_POOL,
     P2P_STREAM_SENDER,
 };
-use crate::entity::user::SignInResult;
-use crate::service::user_service::{add_user_map, user_login};
-use crate::utils::global_static_str::DOMAIN_NAME;
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiResponse {
@@ -30,8 +31,6 @@ pub async fn get_request(url: String) -> Result<ApiResponse, String> {
 
     Ok(ApiResponse { status, body })
 }
-
-
 
 #[command]
 pub async fn post_request(url: String, body: String) -> Result<ApiResponse, String> {
@@ -61,7 +60,8 @@ pub async fn post_request(url: String, body: String) -> Result<ApiResponse, Stri
 }
 
 pub async fn post(url: String, body: HashMap<String, String>) -> Result<Response, anyhow::Error> {
-    let client = Client::new();
+    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
     // 创建请求头
@@ -69,6 +69,19 @@ pub async fn post(url: String, body: HashMap<String, String>) -> Result<Response
     headers.insert("Authorization", token.parse()?);
 
     let response = client.post(&url).json(&body).headers(headers).send().await?;
+    Ok(response)
+}
+
+pub async fn get(url: String) -> Result<Response, anyhow::Error> {
+    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+
+    let empty_token = String::new();
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    // 创建请求头
+    let mut headers = HeaderMap::new();
+    headers.insert("Authorization", token.parse()?);
+
+    let response = client.get(&url).headers(headers).send().await?;
     Ok(response)
 }
 

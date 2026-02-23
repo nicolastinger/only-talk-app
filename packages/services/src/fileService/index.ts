@@ -59,7 +59,7 @@ export const getFiles = async (
 
     if (FileVos.length > 0) {
       FileVos.forEach((file) => {
-        const tauriFilePath = convertPathToTauriUrl(file.original_file_path || '');
+        const tauriFilePath = convertPathToTauriUrl(file.absolute_file_path || '');
         if (tauriFilePath) {
           file.tauri_file_path = tauriFilePath;
           files.push(file);

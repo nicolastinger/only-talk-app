@@ -59,7 +59,9 @@ pub fn configure_client() -> ClientConfig {
     // 创建QUIC客户端配置
     let mut config = ClientConfig::new(Arc::new(crypto));
     let mut time_out_config = TransportConfig::default();
-    time_out_config.max_idle_timeout(Some(Duration::from_secs(1800).try_into().expect("Duration::from_secs(1800).try_into() failed")));
+    time_out_config.max_idle_timeout(Some(
+        Duration::from_secs(1800).try_into().expect("Duration::from_secs(1800).try_into() failed"),
+    ));
     // 获取传输配置并设置最大空闲超时时间（例如3分钟）
     config.transport_config(Arc::from(time_out_config));
     config

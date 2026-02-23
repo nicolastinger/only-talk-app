@@ -48,6 +48,7 @@ interface FileVo {
   original_file_path?: string;
   relative_path?: string;
   relative_file_name?: string;
+  absolute_file_path?: string;
   raw?: number[];
   blob_url?: string;
   is_del?: number;

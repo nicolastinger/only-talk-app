@@ -4,8 +4,10 @@ use std::net::SocketAddr;
 use anyhow::anyhow;
 use log::{error, info, warn};
 
+use crate::cmd::auth_controller::post_request;
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::init_db::init_sqlite;
+use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
 use crate::dto::add_read_chat_record::AddReadChatRecord;
 use crate::dto::http_result::HttpResult;
@@ -18,8 +20,6 @@ use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE};
-use crate::cmd::auth_controller::post_request;
-use crate::dao::init_private_db::init_private_db;
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {

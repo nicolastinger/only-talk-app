@@ -85,9 +85,7 @@ const SearchFriend = () => {
   // 获取用户头像
   const getUserIcon = async (icon: string): Promise<string> => {
     try {
-      alert(icon);
       const FileVos = await getFiles(icon);
-      alert(FileVos?.[0]?.tauri_file_path || '');
 
       return FileVos?.[0]?.tauri_file_path || '';
     } catch (error) {

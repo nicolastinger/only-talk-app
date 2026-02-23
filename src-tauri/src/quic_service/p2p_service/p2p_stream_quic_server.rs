@@ -1,11 +1,12 @@
 use std::net::{SocketAddr, SocketAddrV6, UdpSocket};
 use std::sync::Arc;
+
 use anyhow::anyhow;
 use log::{error, info};
 use quinn::Endpoint;
 use tokio::sync::Mutex;
 
-use crate::entity::p2p_models::{UserAddressInfo};
+use crate::entity::p2p_models::UserAddressInfo;
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::dangerous_configuration::configure_server;
 use crate::quic_service::models::TargetSendStream;
@@ -77,8 +78,7 @@ pub async fn udp_p2p_port_forward(
     let socket = UdpSocket::bind(local)?;
 
     let empty_token = "ping".to_string();
-    let token =
-        GLOBAL_QUIC_USER_INFO.read().await.get("uuid").unwrap_or(&empty_token).clone();
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").unwrap_or(&empty_token).clone();
     // 发送 UDP 数据（发送 "ping" 字符串）
     info!("发送ping信息 {}", remote);
     socket.send_to(token.as_bytes(), remote)?;

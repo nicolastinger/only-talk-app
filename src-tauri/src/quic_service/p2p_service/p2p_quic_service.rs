@@ -16,8 +16,7 @@ use crate::quic_service::center_service::text_msg_service::{generate_text_msg, g
 use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
-    MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
-    MSG_TYPE_PING,
+    MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
@@ -136,7 +135,10 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
                     .expect("generate_text_msg error");
             {
                 let mut send_stream = send_stream_ping.lock().await;
-                send_stream.write_all(&ping_msg).await.unwrap_or_else(|e| error!("发送ping消息失败: {:?}", e));
+                send_stream
+                    .write_all(&ping_msg)
+                    .await
+                    .unwrap_or_else(|e| error!("发送ping消息失败: {:?}", e));
             }
             //一分钟发送心跳
             tokio::time::sleep(Duration::from_secs(2)).await;

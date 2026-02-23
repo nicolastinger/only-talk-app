@@ -15,7 +15,10 @@ use crate::utils::global_static_str::{
     APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, RESOURCE_PATH, SQLITE_PATH, UDP_SOCKET_V6,
 };
 
-pub async fn init_app(root_path: PathBuf, app_handle: Option<tauri::AppHandle>) -> Result<(), anyhow::Error> {
+pub async fn init_app(
+    root_path: PathBuf,
+    app_handle: Option<tauri::AppHandle>,
+) -> Result<(), anyhow::Error> {
     // 获取应用的路径
     let app_path = root_path.to_str().expect("获取应用路径失败");
     set_config(APP_PATH, app_path);
@@ -118,7 +121,9 @@ async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle, target_dir: &P
             Err(e) => {
                 error!("复制资源文件失败: {}", e);
                 // 尝试列出打包目录中的文件
-                if let Ok(resource_dir) = app_handle.path().resolve(RESOURCE_PATH, BaseDirectory::Resource) {
+                if let Ok(resource_dir) =
+                    app_handle.path().resolve(RESOURCE_PATH, BaseDirectory::Resource)
+                {
                     info!("资源目录: {:?}", resource_dir);
                     if let Ok(entries) = fs::read_dir(&resource_dir) {
                         for entry in entries.flatten() {
@@ -131,7 +136,8 @@ async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle, target_dir: &P
     } else {
         error!("源资源文件不存在: {:?}", source_path);
         // 尝试列出资源目录
-        if let Ok(resource_dir) = app_handle.path().resolve(RESOURCE_PATH, BaseDirectory::Resource) {
+        if let Ok(resource_dir) = app_handle.path().resolve(RESOURCE_PATH, BaseDirectory::Resource)
+        {
             info!("尝试列出资源目录: {:?}", resource_dir);
             if resource_dir.exists() {
                 if let Ok(entries) = fs::read_dir(&resource_dir) {

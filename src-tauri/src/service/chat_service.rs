@@ -5,6 +5,7 @@ use log::{error, info};
 use quinn::SendStream;
 use tauri::Emitter;
 use tokio::sync::RwLock;
+
 use crate::dao::chat_record_db::{query_last_chat_record, update_last_read_msg};
 use crate::dao::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db,
@@ -13,11 +14,11 @@ use crate::dao::session_db::{
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
+use crate::service::user_service::get_user_map;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
-use crate::service::user_service::get_user_map;
 
 /// 获取会话列表
 pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use quinn::{SendStream};
+use quinn::SendStream;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 

@@ -9,10 +9,10 @@ use anyhow::anyhow;
 use log::info;
 use sqlx::sqlite::SqlitePoolOptions;
 
+use crate::cmd::user_controller::get_user_map;
 use crate::dao::create_table::init_user_ddl;
 use crate::utils::global_static_str::{APP_PATH, SQLITE_PATH, USER_DB};
 use crate::{config, GLOBAL_SQL_POOL};
-use crate::cmd::user_controller::get_user_map;
 
 pub async fn init_sqlite() -> Result<(), anyhow::Error> {
     let db_path = get_db_path().await;

@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::dao::get_db_client;
+use crate::dao::{get_db_client, get_private_db_client};
 use crate::dao::store::SqliteStore;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -49,7 +49,7 @@ impl ChatRecord {
         uuid: &str,
         friend_id: &str,
     ) -> Result<i32, anyhow::Error> {
-        let pool_sqlite = get_db_client().await?;
+        let pool_sqlite = get_private_db_client().await?;
         let record: (i32,) = sqlx::query_as(r#"select count(*) from chat_record where (send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1)"#)
             .bind(uuid)
             .bind(friend_id)

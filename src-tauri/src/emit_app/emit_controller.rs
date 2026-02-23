@@ -24,7 +24,8 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
             match p2p_init_msg.accept {
                 true => {
                     // 开始处理p2p通道连接
-                    if 2 == p2p_init_msg.step {                         // 探索本机的ip类型
+                    if 2 == p2p_init_msg.step {
+                        // 探索本机的ip类型
                         check_user_ip_type().await?;
                     }
                 }

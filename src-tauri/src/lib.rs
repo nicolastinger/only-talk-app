@@ -24,9 +24,9 @@ use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
     batch_read_system_notification, create_chat_session, get_chat_record_from_store,
-    get_chat_session_from_store, get_system_notification, mark_read,
-    mark_read_chat_session, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg,
-    send_p2p_video_config, send_p2p_video_frame, send_text_msg, send_video_frame,
+    get_chat_session_from_store, get_system_notification, mark_read, mark_read_chat_session,
+    process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config,
+    send_p2p_video_frame, send_text_msg, send_video_frame,
 };
 use crate::cmd::auth_controller::{clear_user_info, get_request, logout, post_request, sign_in};
 use crate::cmd::file_controller::{debug_resource_paths, get_file_by_biz_id, get_local_file};
@@ -81,9 +81,7 @@ pub fn run() {
                 .resolve(APP_NAME, BaseDirectory::Document)
                 .or_else(|_| handle.path().resolve(APP_NAME, BaseDirectory::AppData))
                 .unwrap_or_else(|_| {
-                    std::env::current_dir()
-                        .expect("无法获取当前目录")
-                        .join(APP_NAME)
+                    std::env::current_dir().expect("无法获取当前目录").join(APP_NAME)
                 });
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = init_app(root_path, Some(handle)).await {

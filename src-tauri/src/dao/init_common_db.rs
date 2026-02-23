@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -7,7 +7,7 @@ use log::info;
 use sqlx::sqlite::SqlitePoolOptions;
 
 use crate::dao::create_table::init_common_ddl;
-use crate::utils::global_static_str::{COMMON_DB};
+use crate::utils::global_static_str::COMMON_DB;
 use crate::GLOBAL_COMMON_SQL_POOL;
 
 pub async fn init_common_sqlite(common_db_path: PathBuf) -> Result<(), anyhow::Error> {

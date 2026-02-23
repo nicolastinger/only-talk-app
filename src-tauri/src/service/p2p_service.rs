@@ -8,6 +8,7 @@ use log::{info, warn};
 use nanoid::nanoid;
 use tauri::Emitter;
 
+use crate::cmd::auth_controller::post;
 use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
@@ -20,9 +21,10 @@ use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };
-use crate::utils::message_types::{MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST};
+use crate::utils::message_types::{
+    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
+};
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use crate::cmd::auth_controller::post;
 
 /// 获取10000以上首个可用UDP端口
 pub fn find_available_udp_port(start_port: u16) -> Option<u16> {
@@ -31,7 +33,12 @@ pub fn find_available_udp_port(start_port: u16) -> Option<u16> {
 
 /// 检查指定端口是否可用
 fn is_udp_port_available(port: u16) -> io::Result<bool> {
-    let addr = SocketAddrV4::new("0.0.0.0".parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid IP address"))?, port);
+    let addr = SocketAddrV4::new(
+        "0.0.0.0"
+            .parse()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid IP address"))?,
+        port,
+    );
     match UdpSocket::bind(addr) {
         Ok(_) => Ok(true),                                           // 绑定成功，端口可用
         Err(e) if e.kind() == io::ErrorKind::AddrInUse => Ok(false), // 端口被占用
@@ -214,10 +221,7 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
     let target_address_info: UserAddressInfo = serde_json::from_slice(&text_quic_msg.raw)?;
     // 打开视频窗口
     if let Some(handle) = APP_HANDLE.get() {
-        let p2p_msg = P2pMsg {
-            r#type: P2P_ACCEPT_REQUEST,
-            raw: target_address_info.uuid.clone(),
-        };
+        let p2p_msg = P2pMsg { r#type: P2P_ACCEPT_REQUEST, raw: target_address_info.uuid.clone() };
         handle.emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
     }
     tokio::spawn(async move {
@@ -233,7 +237,8 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
 /// 建立p2p客户端
 pub async fn run_p2p_client(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     tokio::spawn(async move {
-        let target_address_info = serde_json::from_slice::<UserAddressInfo>(&text_quic_msg.raw).expect("反序列化失败");
+        let target_address_info =
+            serde_json::from_slice::<UserAddressInfo>(&text_quic_msg.raw).expect("反序列化失败");
         info!("收到 {:?}", target_address_info);
         // 开启ipv4客户端
         if target_address_info.ip_type == 1 {

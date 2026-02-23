@@ -5,14 +5,16 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
+
 use anyhow::anyhow;
 use log::info;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+
+use crate::cmd::user_controller::get_user_map;
 use crate::config::get_config;
 use crate::dao::create_table::{init_private_ddl, init_user_ddl};
-use crate::{config, GLOBAL_PRIVATE_SQL_POOL, GLOBAL_SQL_POOL};
-use crate::cmd::user_controller::get_user_map;
 use crate::utils::global_static_str::{APP_PATH, PRIVATE_DB, PRIVATE_DB_KEY, SQLITE_PATH, USER_DB};
+use crate::{config, GLOBAL_PRIVATE_SQL_POOL, GLOBAL_SQL_POOL};
 
 /// 初始化加密的私有数据库
 /// 使用 SQLCipher 静态链接编译实现数据库级加密
@@ -35,9 +37,7 @@ pub async fn init_private_db() -> Result<(), anyhow::Error> {
         .execute(&pool)
         .await?;
     // 插入测试数据
-    sqlx::query("INSERT INTO test (name) VALUES (?)")
-        .execute(&pool)
-        .await?;
+    sqlx::query("INSERT INTO test (name) VALUES (?)").execute(&pool).await?;
     // 查询测试数据
     let rows = sqlx::query("SELECT * FROM test").fetch_all(&pool).await?;
     println!("{:?}", rows.len());

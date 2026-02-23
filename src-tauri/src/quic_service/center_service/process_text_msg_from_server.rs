@@ -13,7 +13,7 @@ use crate::service::chat_service::clear_chat_session;
 use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::{SYSTEM};
+use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT,
     MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM,

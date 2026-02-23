@@ -1,4 +1,4 @@
-use log::{debug};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

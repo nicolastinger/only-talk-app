@@ -2,12 +2,13 @@ use anyhow::anyhow;
 use log::{error, info};
 use serde_json::Value;
 use uuid::Uuid;
+
 use crate::cmd::auth_controller::post_request;
 use crate::dao::friend_db::{query_friend_info_db, update_friend_info_db};
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::{TALK_API};
+use crate::utils::global_static_str::TALK_API;
 use crate::vo::friend_vo::FriendListVO;
 use crate::vo::http_response::Response;
 

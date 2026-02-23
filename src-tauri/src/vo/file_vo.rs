@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileVo {
     pub file_id: Option<String>,
-    pub size: Option<u64>,
+    pub size: Option<i64>,
     pub file_hash: Option<String>,
     pub created_at: Option<i64>,
     pub updated_at: Option<i64>,
