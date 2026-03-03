@@ -1,14 +1,15 @@
-import { get_friend_info } from '@workspace/services';
+import { get_friend_info, getFiles } from '@workspace/services';
 import { FriendVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { history } from '@umijs/max';
-import { Button } from 'antd';
+import { Button, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/FriendInfo.less';
 
 const FriendInfo = (props: { uuid: string }) => {
   const { uuid } = props;
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
+  const [ friendIcon, setFriendIcon ] = useState<string>('');
 
   useEffect(() => {
     console.log('uuid', uuid);
@@ -20,8 +21,25 @@ const FriendInfo = (props: { uuid: string }) => {
       const res = (await get_friend_info(uuid)) as FriendVo;
       console.log('res', res);
       setCurrentFriend(res);
+      // 获取用户头像
+      const icon = await getUserIcon(res.friend_icon || '');
+      setFriendIcon(icon);
     } catch (err) {
       console.log(err);
+    }
+  };
+
+  // 获取用户头像
+  const getUserIcon = async (icon: string): Promise<string> => {
+    try {
+      const FileVos = await getFiles(icon);
+
+      return FileVos?.[0]?.tauri_file_path || '';
+    } catch (error) {
+      message.error('获取用户头像时出现错误');
+
+      console.log(error);
+      return '';
     }
   };
 
@@ -49,7 +67,7 @@ const FriendInfo = (props: { uuid: string }) => {
         <div className={styles.header}>
           <img
             className={styles.icon}
-            src={currentFriend?.friend_icon || ''}
+            src={friendIcon || ''}
             alt="icon"
           />
         </div>

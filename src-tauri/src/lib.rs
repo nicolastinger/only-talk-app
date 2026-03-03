@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use lazy_static::lazy_static;
 use sqlx::SqlitePool;
 use tauri::path::BaseDirectory;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 mod cmd;
 mod config;
 mod dao;
@@ -45,8 +45,6 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_QUIC_USER_INFO: Arc<RwLock<HashMap<String, String>>> =
         Arc::new(RwLock::new(HashMap::new()));
-    pub static ref GLOBAL_READ_TASK_HANDLE: Arc<RwLock<Option<tokio::task::JoinHandle<()>>>> =
-        Arc::new(RwLock::new(None));
     pub static ref P2P_STREAM_SENDER: Arc<RwLock<HashMap<String, TargetSendStream>>> =
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
@@ -54,6 +52,8 @@ lazy_static! {
     pub static ref GLOBAL_PRIVATE_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     // 全局配置DashMap
     pub static ref GLOBAL_CONFIG: Arc<DashMap<String, String>> = Arc::new(DashMap::new());
+    // 消息发送，全局mutex锁
+    pub static ref GLOBAL_MSG_SEND_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

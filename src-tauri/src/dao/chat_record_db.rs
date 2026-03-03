@@ -67,42 +67,7 @@ pub async fn query_last_read_msg(
     Ok(record)
 }
 
-/// 更新已读消息
-pub async fn update_last_read_msg(chat_record_read: &ChatRecordRead) -> Result<(), anyhow::Error> {
-    let pool_sqlite = get_db_client().await?;
-    let update_res = sqlx::query(r#"UPDATE chat_record_read SET nano_id = ?1, timestamp = ?2, send_user = ?3, recv_user = ?4 WHERE send_user = ?3 and recv_user = ?4"#)
-        .bind(&chat_record_read.nano_id)
-        .bind(chat_record_read.timestamp)
-        .bind(&chat_record_read.send_user)
-        .bind(&chat_record_read.recv_user)
-        .execute(&pool_sqlite)
-        .await;
-    if update_res?.rows_affected() < 1 {
-        sqlx::query(r#"INSERT INTO chat_record_read (nano_id, timestamp, send_user, recv_user) VALUES (?1, ?2, ?3, ?4)"#)
-            .bind(&chat_record_read.nano_id)
-            .bind(chat_record_read.timestamp)
-            .bind(&chat_record_read.send_user)
-            .bind(&chat_record_read.recv_user)
-            .execute(&pool_sqlite)
-            .await?;
-    }
-    Ok(())
-}
 
-/// 添加本地ack信息
-pub async fn insert_local_ack_to_db(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
-    let pool_sqlite = get_db_client().await?;
-    sqlx::query(r#"INSERT INTO chat_record_ack (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
-        .bind(&text_quic_msg.nano_id)
-        .bind(&text_quic_msg.raw)
-        .bind(text_quic_msg.timestamp)
-        .bind(&text_quic_msg.send_user)
-        .bind(&text_quic_msg.recv_user)
-        .bind(text_quic_msg.text_type)
-        .execute(&pool_sqlite)
-        .await?;
-    Ok(())
-}
 
 /// 获取目标用户最新一条聊天消息
 pub async fn query_last_chat_record(
@@ -115,16 +80,5 @@ pub async fn query_last_chat_record(
         .bind(friend_id)
         .fetch_optional(&pool_sqlite)
         .await?;
-    Ok(record)
-}
-
-/// 查询ack表中是否存在某条信息
-pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {
-    let pool_sqlite = get_db_client().await?;
-    let record =
-        sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record_ack WHERE nano_id = ?1"#)
-            .bind(nanoid)
-            .fetch_one(&pool_sqlite)
-            .await?;
     Ok(record)
 }

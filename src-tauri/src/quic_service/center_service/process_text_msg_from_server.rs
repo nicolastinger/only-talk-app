@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
 
-use crate::dao::chat_record_db::{insert_chat_record, query_ack_record_from_db};
+use crate::dao::chat_record_db::{insert_chat_record};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::chat_session::ChatSession;
@@ -14,21 +14,18 @@ use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::SYSTEM;
-use crate::utils::message_types::{
-    CURRENT_SESSION_FRIEND, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT,
-    MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM,
-    MSG_TYPE_TEXT, NOTIFY_TYPE_MSG,
-};
+use crate::utils::message_types::{CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::APP_HANDLE;
+use crate::dao::chat_record_ack::query_ack_record_from_db;
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
     for msg in text_vec {
         match msg.text_type {
-            // 纯文本
-            MSG_TYPE_TEXT => {
+            // 聊天消息
+            MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE=> {
                 process_text_type(msg).await?;
             }
             // JSON信息

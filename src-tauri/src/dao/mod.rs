@@ -11,6 +11,9 @@ pub mod init_db;
 pub mod init_private_db;
 pub mod session_db;
 pub mod store;
+pub mod chat_record_ack;
+pub mod chat_record_read;
+pub mod chat_record_send;
 
 // 用户数据库
 pub async fn get_db_client() -> Result<sqlx::SqlitePool, anyhow::Error> {

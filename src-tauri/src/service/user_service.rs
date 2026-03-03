@@ -19,7 +19,7 @@ use crate::service::friend_service::update_friend_list;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE};
+use crate::{GLOBAL_QUIC_USER_INFO};
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -36,22 +36,14 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
     get_unread_message().await.unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
     //3、获取未读通知
     get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
-    //4、启动定时已读任务
-    let handle = start_read_task().await?;
-    // 保存任务句柄到全局变量
-    {
-        let mut task_handle = GLOBAL_READ_TASK_HANDLE.write().await;
-        *task_handle = Some(handle);
-    }
-    //启动quic服务
-    let addr = resolve_ipv4(DOMAIN_NAME, 4433).await?;
+    //启动定时任务
     tokio::spawn(async move {
-        match run_client(SocketAddr::from(addr)).await {
-            Ok(_) => {}
-            Err(e) => {
-                error!("创建quic客户端失败 {:?}", e);
-            }
-        }
+        start_read_task().await.unwrap_or_else(|e| error!("启动定时任务失败 {:?}", e));
+    });
+    //启动quic服务
+    tokio::spawn(async move {
+        let addr = resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败");
+        run_client(SocketAddr::from(addr)).await.expect("quic服务启动失败");
     });
     Ok(())
 }
@@ -143,49 +135,95 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
 }
 
 /// 启动定时已读任务
-pub async fn start_read_task() -> Result<tokio::task::JoinHandle<()>, anyhow::Error> {
-    let handle = tokio::spawn(async move {
-        let uuid = get_user_info("uuid").await.expect("获取uuid失败");
+pub async fn start_read_task() -> Result<(), anyhow::Error> {
+    let schedule_key = uuid::Uuid::new_v4().to_string();
+    // 设置定时任务key
+    insert_user_info("schedule_key", &schedule_key).await?;
+    
+    let read_task_key = schedule_key.clone();
+    // 用户消息已读任务
+    tokio::spawn(async move {
+        send_read_message(read_task_key).await.expect("消息已读任务失败");
+    });
+    let mut count = 0;
+    while count < 1000000 {
+        // 校验定时任务key
+        check_schedule_key(&schedule_key).await?;
+        count += 1;
+        
+        // 处理未发送消息
+        tokio::spawn(async move {
+            // TODO
+        });
+        
+        // 20秒触发一次
+        if count % 2 == 0 { 
+            
+        }
 
-        let mut timestamp = 0;
-        loop {
-            let last_chat_record =
-                query_last_read_msg(&uuid, timestamp).await.expect("获取会话失败");
-            if !last_chat_record.is_empty() {
-                let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
-                for item in last_chat_record {
-                    if item.timestamp > timestamp {
-                        timestamp = item.timestamp;
-                    }
-                    let read_record = AddReadChatRecord {
-                        nano_id: item.nano_id,
-                        timestamp: item.timestamp,
-                        send_user: item.send_user,
-                        recv_user: item.recv_user,
-                    };
-                    read_record_vec.push(read_record);
+        // 30秒触发一次
+        if count % 3 == 0 {
+
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    }
+    Ok(())
+}
+
+// 校验定时任务key
+pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
+    let schedule_key = get_user_info("schedule_key").await?;
+    if schedule_key.is_empty() || key != schedule_key {
+        return Err(anyhow!("定时任务key不匹配"));
+    }
+    Ok(())
+}
+
+// 发送已读消息
+pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+
+    let mut timestamp = 0;
+    let count = 0;
+    while count < 1000000 {
+        // 校验定时任务key
+        check_schedule_key(&key).await?;
+        let last_chat_record =
+            query_last_read_msg(&uuid, timestamp).await?;
+        if !last_chat_record.is_empty() {
+            let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
+            for item in last_chat_record {
+                if item.timestamp > timestamp {
+                    timestamp = item.timestamp;
                 }
+                let read_record = AddReadChatRecord {
+                    nano_id: item.nano_id,
+                    timestamp: item.timestamp,
+                    send_user: item.send_user,
+                    recv_user: item.recv_user,
+                };
+                read_record_vec.push(read_record);
+            }
 
-                info!("发送已读消息 {:?}", read_record_vec);
+            info!("发送已读消息 {:?}", read_record_vec);
 
-                match post_request(
-                    format!("{}/msg/add_read_chat_record", TALK_API),
-                    serde_json::to_string(&read_record_vec).expect("序列化已读消息失败"),
-                )
+            match post_request(
+                format!("{}/msg/add_read_chat_record", TALK_API),
+                serde_json::to_string(&read_record_vec).expect("序列化已读消息失败"),
+            )
                 .await
-                {
-                    Ok(m) => {
-                        info!("发送已读消息成功 {:?}", m.body)
-                    }
-                    Err(e) => {
-                        error!("发送已读消息失败 {:?}", e);
-                    }
+            {
+                Ok(m) => {
+                    info!("发送已读消息成功 {:?}", m.body)
+                }
+                Err(e) => {
+                    error!("发送已读消息失败 {:?}", e);
                 }
             }
-            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
         }
-    });
-    Ok(handle)
+    }
+    Ok(())
 }
 
 /// 获取未读通知

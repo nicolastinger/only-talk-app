@@ -6,12 +6,12 @@ use crate::entity::text_msg::TextQuicMsg;
 //文本信息消息体
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct TextQuicMsgVo {
-    pub nano_id: String,
+    pub nano_id: String,   //消息id
     pub text_type: u16,    //消息类型
     pub raw: String,       //数据
     pub recv_user: String, //接收用户
     pub send_user: String, //发送用户
-    pub timestamp: i64,
+    pub timestamp: i64,    //消息时间戳
 }
 
 impl TextQuicMsgVo {

@@ -2,11 +2,12 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use log::{error, info};
+use nanoid::nanoid;
 use quinn::SendStream;
 use tauri::Emitter;
 use tokio::sync::RwLock;
 
-use crate::dao::chat_record_db::{query_last_chat_record, update_last_read_msg};
+use crate::dao::chat_record_db::{query_last_chat_record};
 use crate::dao::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db,
     update_chat_session_local_db,
@@ -14,11 +15,19 @@ use crate::dao::session_db::{
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
-use crate::service::user_service::get_user_map;
+use crate::service::user_service::{get_user_info, get_user_map};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::dao::chat_record_ack::{insert_chat_record_ack, query_chat_record_by_send_id};
+use crate::dao::chat_record_read::update_last_read_msg;
+use crate::dao::chat_record_send::{insert_chat_record_send, query_chat_record_send_by_user};
+use crate::entity::chat_record_ack::ChatRecordAck;
+use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord};
+use crate::entity::chat_record_send::ChatRecordSend;
+use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
+use crate::utils::global_static_str::{PLATFORM, ZERO_UUID};
 
 /// 获取会话列表
 pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
@@ -202,4 +211,94 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
     // 创建会话窗口
     update_chat_session_db(&chat_session).await?;
     Ok(())
+}
+
+
+/// 发送文本消息
+pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
+    let now = get_now_time_stamp_as_millis()?;
+
+    let msg = text_quic_msg.raw;
+    let mut prev_id = ZERO_UUID.to_string();
+
+    // 查询本地最新一条已发送成功的消息
+    let last_send_success_msg = query_chat_record_send_by_user(&sender, &text_quic_msg.recv_user, vec![3]).await?;
+    if !last_send_success_msg.is_empty() {
+        let send_id = &last_send_success_msg.first().ok_or(anyhow!("last_send_success_msg is empty"))?.send_id;
+        let prev_ack = query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await?;
+        prev_id = prev_ack.prev_id;
+    }
+    
+    let prev_id_clone = prev_id.clone();
+    
+    let msg_raw = set_prev_id(&msg, text_quic_msg.text_type, prev_id)?;
+
+    let chat_record_send = ChatRecordSend {
+        id: 0,
+        send_id: text_quic_msg.nano_id.clone(),
+        msg_id: "".to_string(),
+        platform: PLATFORM.to_string(),
+        recv_user: text_quic_msg.recv_user,
+        send_user: sender,
+        timestamp: now,
+        raw: msg_raw,
+        send_status: 0,
+        retry_count: 0,
+    };
+    
+    
+
+    // 检查当前接收用户，本地是否有未发送完成的消息
+    let no_send_success_msg = query_chat_record_send_by_user(&chat_record_send.send_user, &chat_record_send.recv_user, vec![0, 1]).await?;
+    insert_chat_record_send(&chat_record_send).await?;
+    let chat_record_ack = ChatRecordAck {
+        id: 0,
+        msg_id: "".to_string(),
+        prev_id: prev_id_clone,
+        send_id: chat_record_send.send_id,
+        platform: chat_record_send.platform,
+        ack_status: 0,
+        recv_user: chat_record_send.recv_user,
+        send_user: chat_record_send.send_user,
+        timestamp: now,
+    };
+    insert_chat_record_ack(&chat_record_ack).await?;
+    
+    // 如果有，直接插入到本地发送表中，等待回调ack后发送或者定时任务检查发送
+    if !no_send_success_msg.is_empty() {
+        return Ok("插入等待队列".to_string());
+    }
+    // 如果没有，则直接发送消息
+    let raw: Vec<u8> = Vec::from(chat_record_send.raw);
+    let test_msg = generate_text_msg_without_nano(
+        text_quic_msg.text_type,
+        raw,
+        chat_record_ack.recv_user,
+        chat_record_ack.send_user,
+        chat_record_ack.send_id
+    )?;
+    let send_stream = {
+        let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").send_stream.clone()
+    };
+
+    send_msg(test_msg, send_stream).await
+}
+
+// 设置消息prev_id
+pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String, anyhow::Error> {
+    match text_type {
+        1 => {
+            let mut chat_record_raw = TextRecord::deserialize(raw)?;
+            chat_record_raw.set_prev_id(prev_id);
+            chat_record_raw.json_serialize()
+        },
+        2 => {
+            let mut chat_record_raw = ImageRecord::deserialize(raw)?;
+            chat_record_raw.set_prev_id(prev_id);
+            chat_record_raw.json_serialize()
+        },
+        _ => Err(anyhow!("不支持的消息类型: {}", text_type))
+    }
 }

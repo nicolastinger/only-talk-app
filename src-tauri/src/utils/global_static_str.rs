@@ -45,3 +45,12 @@ pub static PRIVATE_DB: &str = "private.db";
 pub static PRIVATE_DB_KEY: &str = "REDACTED_DB_ENCRYPTION_KEY";
 // 默认图片
 pub static DEFAULT_IMAGE: &str = "default.jpg";
+// 消息链第一个节点
+pub static MSG_LINK_FIRST_NODE: &str = "first_node";
+// 全0的UUID
+pub static ZERO_UUID: &str = "00000000-0000-0000-0000-000000000000";
+// 平台
+#[cfg(desktop)]
+pub static PLATFORM: &str = "PC";
+#[cfg(not(desktop))]
+pub static PLATFORM: &str = "MOBILE";

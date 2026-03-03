@@ -1,18 +1,15 @@
-use log::info;
-
+use std::time::Duration;
+use log::{error, info};
+use tokio::time::timeout;
 use crate::dao::chat_record_db::{
-    insert_local_ack_to_db, query_chat_record_by_id_from_db, query_chat_record_from_db,
+    query_chat_record_by_id_from_db, query_chat_record_from_db,
 };
 use crate::entity::p2p_models::{P2pInitMsg, P2pVideoData};
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::Page;
-use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
-use crate::service::chat_service::{
-    create_chat_session_service, get_chat_session_service, send_msg, update_last_read_msg_from_db,
-    update_last_read_msg_service,
-};
+use crate::service::chat_service::{create_chat_session_service, get_chat_session_service, send_text_msg_service, update_last_read_msg_from_db, update_last_read_msg_service};
 use crate::service::p2p_service::{
     access_p2p_request, find_available_udp_port, reject_p2p_request,
     send_p2p_init_msg as send_p2p_init_msg_service, send_p2p_video_config_service,
@@ -20,10 +17,9 @@ use crate::service::p2p_service::{
 };
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::UDP_SOCKET;
-use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::ChatSessionVo;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::{GLOBAL_MSG_SEND_LOCK};
 
 /// 发送p2p请求给好友
 #[tauri::command]
@@ -113,43 +109,23 @@ pub async fn get_chat_session_from_store() -> Result<Vec<ChatSessionVo>, String>
 /// 发送文本消息
 #[tauri::command]
 pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
-    let me = GLOBAL_QUIC_USER_INFO.read().await;
-    let sender = me.get("uuid").ok_or("获取用户信息失败")?.clone();
-    let now = get_now_time_stamp_as_millis().map_err(|e| e.to_string())?;
-
-    let msg = text_quic_msg.raw;
-    let ack_raw = msg.clone();
-    let ack_recv = text_quic_msg.recv_user.clone().clone();
-    let ack_me = sender.clone();
-    let raw: Vec<u8> = Vec::from(msg);
-    let ack_id = text_quic_msg.nano_id.clone();
-
-    // 插入本地ack
-    let text_msg_vo = TextQuicMsgVo {
-        nano_id: ack_id,
-        text_type: text_quic_msg.text_type,
-        raw: ack_raw,
-        recv_user: ack_recv,
-        send_user: ack_me,
-        timestamp: now,
-    };
-    insert_local_ack_to_db(text_msg_vo).await.map_err(|e| e.to_string())?;
-
-    // 发送消息
-    let test_msg = generate_text_msg_without_nano(
-        text_quic_msg.text_type,
-        raw,
-        text_quic_msg.recv_user.clone(),
-        sender,
-        text_quic_msg.nano_id.clone(),
-    )
-    .map_err(|e| e.to_string())?;
-    let send_stream = {
-        let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").send_stream.clone()
-    };
-
-    send_msg(test_msg, send_stream.clone()).await.map_err(|e| e.to_string())
+    // 获取全局消息发送锁，保证数据库最新消息，超过10秒后获取不到锁就返回错误
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        let res = send_text_msg_service(text_quic_msg).await;
+        res
+    }).await;
+    match result {
+        Ok(Ok(_)) => Ok("success".to_string()),
+        Ok(Err(e)) => {
+            error!("获取锁时发生意外错误,{}", e);
+            Err(e.to_string())
+        },
+        Err(elapsed) => {
+            error!("超时：10秒内未能获取锁 {}", elapsed);
+            Err("获取锁超时".to_string())
+        }
+    }
 }
 
 /// 已读当前记录

@@ -11,7 +11,7 @@ use crate::entity::user::SignInResult;
 use crate::service::user_service::{add_user_map, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
 use crate::{
-    GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_READ_TASK_HANDLE, GLOBAL_SQL_POOL,
+    GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL,
     P2P_STREAM_SENDER,
 };
 
@@ -157,23 +157,6 @@ pub async fn logout() -> Result<String, String> {
         let mut guard = GLOBAL_SQL_POOL.write().await;
         guard.take();
         info!("数据库连接已清空")
-    }
-
-    // 清空p2p连接
-    {
-        let mut guard = P2P_STREAM_SENDER.write().await;
-        guard.clear();
-        info!("p2p连接已清空")
-    }
-
-    // 停止定时任务
-    {
-        let mut task_handle = GLOBAL_READ_TASK_HANDLE.write().await;
-        if let Some(handle) = task_handle.take() {
-            handle.abort();
-            info!("定时任务已停止");
-        }
-        drop(task_handle); // 释放锁
     }
 
     info!("用户已登出");
