@@ -226,7 +226,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     if !last_send_success_msg.is_empty() {
         let send_id = &last_send_success_msg.first().ok_or(anyhow!("last_send_success_msg is empty"))?.send_id;
         let prev_ack = query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await?;
-        prev_id = prev_ack.prev_id;
+        prev_id = prev_ack.msg_id;
     }
     
     let prev_id_clone = prev_id.clone();
@@ -253,6 +253,18 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     if !no_send_success_msg.is_empty() {
         chat_record_send.send_status = 0;
         insert_chat_record_send(&chat_record_send).await?;
+        let chat_record_ack = ChatRecordAck {
+            id: 0,
+            msg_id: "".to_string(),
+            prev_id: "".to_string(),
+            send_id: chat_record_send.send_id,
+            platform: chat_record_send.platform,
+            ack_status: 0,
+            recv_user: chat_record_send.recv_user,
+            send_user: chat_record_send.send_user,
+            timestamp: now,
+        };
+        insert_chat_record_ack(&chat_record_ack).await?;
         return Ok("插入等待队列".to_string());
     }
 
@@ -318,22 +330,46 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             let retry_count = item.retry_count;
             let timestamp = item.timestamp;
             let diff_time = now - timestamp;
+            let send_user = &item.send_user;
+            let recv_user = &item.recv_user;
             if status == 0 && no_send_success_msg_option.is_none() {
-                no_send_success_msg_option = Some(item);
-                continue;
+                // 检查当前接收用户，本地是否有未发送完成的消息
+                let no_send_success_msg = query_chat_record_send_by_user(send_user, recv_user, vec![0, 1]).await?;
+                if no_send_success_msg.is_empty() {
+                    no_send_success_msg_option = Some(item);
+                    continue;
+                }
             }
             if status == 1 && no_send_success_msg_option.is_none() && retry_count < 3 && diff_time > 8000{
-                no_send_success_msg_option = Some(item);
-                continue;
+                // 检查当前接收用户，本地是否有未发送完成的消息
+                let no_send_success_msg = query_chat_record_send_by_user(send_user, recv_user, vec![0, 1]).await?;
+                if no_send_success_msg.is_empty() {
+                    no_send_success_msg_option = Some(item);
+                    continue;
+                }
             }
             if status == 1 && retry_count >= 3 {
                 item.send_status = 2;
                 update_chat_record_send(&item.send_id, "", 2, 3, now).await?;
             }
         }
-        if let Some(item) = no_send_success_msg_option {
+        if let Some(mut item) = no_send_success_msg_option {
             info!("存在未发送完成的消息, 发送消息: {}", item.send_id);
             let retry_count = item.retry_count + 1;
+            let mut prev_id = ZERO_UUID.to_string();
+            let sender = &item.send_user;
+            let recv_user = &item.recv_user;
+            // 查询本地最新一条已发送成功的消息
+            let last_send_success_msg = query_chat_record_send_by_user(&sender, &recv_user, vec![3]).await?;
+            if !last_send_success_msg.is_empty() {
+                let send_id = &last_send_success_msg.first().ok_or(anyhow!("last_send_success_msg is empty"))?.send_id;
+                let prev_ack = query_chat_record_by_send_id(send_id, &recv_user).await?;
+                prev_id = prev_ack.msg_id;
+            }
+            let raw = &item.raw;
+            let text_type = item.text_type;
+            let msg_raw = set_prev_id(&raw, text_type, prev_id)?;
+            item.raw = msg_raw;
             // 更新消息状态为发送中
             update_chat_record_send(&item.send_id, "", 1, retry_count, now).await?;
 
