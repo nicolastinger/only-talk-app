@@ -53,3 +53,14 @@ pub async fn update_chat_record_ack(send_id: &str, ack_status: u16, mag_id: &str
         .await?;
     Ok(())
 }
+
+// 更新prev_id
+pub async fn update_chat_record_ack_prev_id(send_id: &str, prev_id: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query(r#"UPDATE chat_record_ack SET prev_id = ?1 WHERE send_id = ?2"#)
+        .bind(prev_id)
+        .bind(send_id)
+        .execute(&pool_sqlite)
+        .await?;
+    Ok(())
+}

@@ -19,7 +19,7 @@ use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use crate::dao::chat_record_ack::{insert_chat_record_ack, query_chat_record_by_send_id};
+use crate::dao::chat_record_ack::{insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id};
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send};
 use crate::entity::chat_record_ack::ChatRecordAck;
@@ -368,6 +368,8 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             }
             let raw = &item.raw;
             let text_type = item.text_type;
+            // 更新ack的prev_id
+            update_chat_record_ack_prev_id(&item.send_id, &prev_id).await?;
             let msg_raw = set_prev_id(&raw, text_type, prev_id)?;
             item.raw = msg_raw;
             // 更新消息状态为发送中
