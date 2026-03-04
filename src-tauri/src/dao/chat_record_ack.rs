@@ -1,4 +1,4 @@
-use crate::dao::{get_db_client, get_private_db_client};
+use crate::dao::{get_private_db_client};
 use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
@@ -23,7 +23,7 @@ pub async fn insert_chat_record_ack(chat_record_ack: &ChatRecordAck) -> Result<(
 pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let record =
-        sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record_ack WHERE nano_id = ?1"#)
+        sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record_ack WHERE send_id = ?1"#)
             .bind(nanoid)
             .fetch_one(&pool_sqlite)
             .await?;
@@ -40,4 +40,16 @@ pub async fn query_chat_record_by_send_id(send_id: &str, recv_user: &str, ) -> R
             .fetch_one(&pool_sqlite)
             .await?;
     Ok(record)
+}
+
+/// 更新ack表中某条信息为已确认
+pub async fn update_chat_record_ack(send_id: &str, ack_status: u16, mag_id: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query(r#"UPDATE chat_record_ack SET ack_status = ?1, msg_id = ?2 WHERE send_id = ?3"#)
+        .bind(ack_status)
+        .bind(mag_id)
+        .bind(send_id)
+        .execute(&pool_sqlite)
+        .await?;
+    Ok(())
 }

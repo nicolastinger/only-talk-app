@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
-
+use std::time::Duration;
 use anyhow::anyhow;
 use log::{error, info, warn};
-
+use tokio::time::timeout;
 use crate::cmd::auth_controller::post_request;
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::init_db::init_sqlite;
@@ -19,7 +19,8 @@ use crate::service::friend_service::update_friend_list;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{GLOBAL_QUIC_USER_INFO};
+use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
+use crate::service::chat_service::{process_no_send_success_msg};
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -153,7 +154,11 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
         
         // 处理未发送消息
         tokio::spawn(async move {
-            // TODO
+            // 处理未发送消息
+            timeout(Duration::from_secs(10), async {
+                let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+                process_no_send_success_msg().await.expect("处理未发送消息失败");
+            }).await.expect("定时任务，处理未发送消息超时");
         });
         
         // 20秒触发一次

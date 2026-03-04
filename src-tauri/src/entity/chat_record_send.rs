@@ -9,6 +9,7 @@ pub struct ChatRecordSend {
     pub id: i64,
     pub send_id: String,      // 发送id
     pub msg_id: String,       // 消息id
+    pub text_type: u16,       // 消息类型
     pub platform: String,     // 平台
     pub recv_user: String,    // 接收用户
     pub send_user: String,    // 发送用户
@@ -26,6 +27,7 @@ impl SqliteStore for ChatRecordSend {
             send_id TEXT NOT NULL,
             msg_id TEXT NOT NULL,
             platform TEXT NOT NULL,
+            text_type INTEGER NOT NULL DEFAULT 0,
             recv_user TEXT NOT NULL,
             send_user TEXT NOT NULL,
             raw TEXT NOT NULL,

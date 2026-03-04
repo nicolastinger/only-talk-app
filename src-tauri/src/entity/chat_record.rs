@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::dao::{get_db_client, get_private_db_client};
+use crate::dao::{get_private_db_client};
 use crate::dao::store::SqliteStore;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]

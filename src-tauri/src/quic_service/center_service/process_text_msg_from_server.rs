@@ -1,7 +1,8 @@
+use std::time::Duration;
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
-
+use tokio::time::timeout;
 use crate::dao::chat_record_db::{insert_chat_record};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
@@ -9,7 +10,7 @@ use crate::entity::chat_session::ChatSession;
 use crate::entity::p2p_models::P2pInitMsg;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
-use crate::service::chat_service::clear_chat_session;
+use crate::service::chat_service::{clear_chat_session, process_no_send_success_msg};
 use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::get_user_info;
@@ -17,8 +18,9 @@ use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG};
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::APP_HANDLE;
-use crate::dao::chat_record_ack::query_ack_record_from_db;
+use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
+use crate::dao::chat_record_ack::{query_ack_record_from_db, update_chat_record_ack};
+use crate::dao::chat_record_send::update_chat_record_send_success;
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -162,11 +164,27 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let payload = serde_json::to_string(&msg)?;
     //1.查询ack表中该条消息
-    let mut ack_record = query_ack_record_from_db(&msg.raw).await?;
+    let ack_record = query_ack_record_from_db(&msg.raw).await;
+    if ack_record.is_err() {
+        warn!("查询ack表中该条消息失败 {:?}", ack_record.err());
+        return Ok(())
+    }
+    let mut ack_record = ack_record?;
     ack_record.nano_id = msg.nano_id;
     ack_record.timestamp = msg.timestamp;
-    //2.插入数据库
+    // 2.聊天插入数据库
     insert_chat_record(&ack_record).await?;
+    // 3. 标记ack表中该条消息为已确认
+    update_chat_record_ack(&ack_record.raw, 1, &ack_record.nano_id).await?;
+    // 4. 标记发送列表中某条消息为已确认
+    update_chat_record_send_success(&ack_record.raw, &ack_record.nano_id).await?;
+    tokio::spawn(async move {
+        // 处理未发送的消息，ack返回
+        timeout(Duration::from_secs(10), async {
+            let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+            process_no_send_success_msg().await.expect("处理未发送消息失败");
+        }).await.expect("ack返回，处理未发送消息超时");
+    });
     // 发送消息给前端
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;

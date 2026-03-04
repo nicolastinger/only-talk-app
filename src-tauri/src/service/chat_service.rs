@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use log::{error, info};
-use nanoid::nanoid;
 use quinn::SendStream;
 use tauri::Emitter;
 use tokio::sync::RwLock;
@@ -22,7 +21,7 @@ use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use crate::dao::chat_record_ack::{insert_chat_record_ack, query_chat_record_by_send_id};
 use crate::dao::chat_record_read::update_last_read_msg;
-use crate::dao::chat_record_send::{insert_chat_record_send, query_chat_record_send_by_user};
+use crate::dao::chat_record_send::{insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send};
 use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord};
 use crate::entity::chat_record_send::ChatRecordSend;
@@ -234,23 +233,29 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     
     let msg_raw = set_prev_id(&msg, text_quic_msg.text_type, prev_id)?;
 
-    let chat_record_send = ChatRecordSend {
+    let mut chat_record_send = ChatRecordSend {
         id: 0,
         send_id: text_quic_msg.nano_id.clone(),
         msg_id: "".to_string(),
+        text_type: text_quic_msg.text_type,
         platform: PLATFORM.to_string(),
         recv_user: text_quic_msg.recv_user,
         send_user: sender,
         timestamp: now,
         raw: msg_raw,
-        send_status: 0,
+        send_status: 1,
         retry_count: 0,
     };
-    
-    
 
     // 检查当前接收用户，本地是否有未发送完成的消息
     let no_send_success_msg = query_chat_record_send_by_user(&chat_record_send.send_user, &chat_record_send.recv_user, vec![0, 1]).await?;
+    // 如果有，直接插入到本地发送表中，等待回调ack后发送或者定时任务检查发送
+    if !no_send_success_msg.is_empty() {
+        chat_record_send.send_status = 0;
+        insert_chat_record_send(&chat_record_send).await?;
+        return Ok("插入等待队列".to_string());
+    }
+
     insert_chat_record_send(&chat_record_send).await?;
     let chat_record_ack = ChatRecordAck {
         id: 0,
@@ -265,10 +270,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     };
     insert_chat_record_ack(&chat_record_ack).await?;
     
-    // 如果有，直接插入到本地发送表中，等待回调ack后发送或者定时任务检查发送
-    if !no_send_success_msg.is_empty() {
-        return Ok("插入等待队列".to_string());
-    }
+
     // 如果没有，则直接发送消息
     let raw: Vec<u8> = Vec::from(chat_record_send.raw);
     let test_msg = generate_text_msg_without_nano(
@@ -301,4 +303,56 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
         },
         _ => Err(anyhow!("不支持的消息类型: {}", text_type))
     }
+}
+
+// 处理本地未发送完成的消息
+pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let recv_user = String::from("");
+    let no_send_success_msg = query_chat_record_send_by_user(&me, &recv_user, vec![0, 1]).await?;
+    let now = get_now_time_stamp_as_millis()?;
+    if !no_send_success_msg.is_empty() {
+        let mut no_send_success_msg_option: Option<ChatRecordSend> = None;
+        for mut item in no_send_success_msg {
+            let status = item.send_status;
+            let retry_count = item.retry_count;
+            let timestamp = item.timestamp;
+            let diff_time = now - timestamp;
+            if status == 0 && no_send_success_msg_option.is_none() {
+                no_send_success_msg_option = Some(item);
+                continue;
+            }
+            if status == 1 && no_send_success_msg_option.is_none() && retry_count < 3 && diff_time > 8000{
+                no_send_success_msg_option = Some(item);
+                continue;
+            }
+            if status == 1 && retry_count >= 3 {
+                item.send_status = 2;
+                update_chat_record_send(&item.send_id, "", 2, 3, now).await?;
+            }
+        }
+        if let Some(item) = no_send_success_msg_option {
+            info!("存在未发送完成的消息, 发送消息: {}", item.send_id);
+            let retry_count = item.retry_count + 1;
+            // 更新消息状态为发送中
+            update_chat_record_send(&item.send_id, "", 1, retry_count, now).await?;
+
+            let raw: Vec<u8> = Vec::from(item.raw);
+            let test_msg = generate_text_msg_without_nano(
+                item.text_type,
+                raw,
+                item.recv_user,
+                item.send_user,
+                item.send_id
+            )?;
+            let send_stream = {
+                let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+                server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").send_stream.clone()
+            };
+
+            send_msg(test_msg, send_stream).await?;
+        }
+    }
+
+    Ok(())
 }

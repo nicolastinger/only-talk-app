@@ -4,9 +4,10 @@ use crate::entity::chat_record_send::ChatRecordSend;
 /// 插入一条发送记录
 pub async fn insert_chat_record_send(chat_record_send: &ChatRecordSend) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    sqlx::query(r#"INSERT INTO chat_record_send (send_id, msg_id, platform, recv_user, send_user, timestamp, raw, send_status, retry_count) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"#)
+    sqlx::query(r#"INSERT INTO chat_record_send (send_id, msg_id, text_type, platform, recv_user, send_user, timestamp, raw, send_status, retry_count) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"#)
         .bind(&chat_record_send.send_id)
         .bind(&chat_record_send.msg_id)
+        .bind(chat_record_send.text_type)
         .bind(&chat_record_send.platform)
         .bind(&chat_record_send.recv_user)
         .bind(&chat_record_send.send_user)
@@ -15,6 +16,31 @@ pub async fn insert_chat_record_send(chat_record_send: &ChatRecordSend) -> Resul
         .bind(chat_record_send.send_status)
         .bind(chat_record_send.retry_count)
         .fetch_optional(&pool_sqlite)
+        .await?;
+    Ok(())
+}
+
+// 标记消息已发送完成
+pub async fn update_chat_record_send_success(send_id: &str, msg_id: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query(r#"UPDATE chat_record_send SET send_status = 3, msg_id = ?1 WHERE send_id = ?2"#)
+        .bind(send_id)
+        .bind(msg_id)
+        .execute(&pool_sqlite)
+        .await?;
+    Ok(())
+}
+
+// 更新发送消息
+pub async fn update_chat_record_send(send_id: &str, msg_id: &str, send_status: u16, retry_count: i32, timestamp: i64) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query(r#"UPDATE chat_record_send SET send_status = ?1, msg_id = ?2, retry_count = ?3 timestamp = ?4 WHERE send_id = ?5"#)
+        .bind(send_status)
+        .bind(msg_id)
+        .bind(retry_count)
+        .bind(timestamp)
+        .bind(send_id)
+        .execute(&pool_sqlite)
         .await?;
     Ok(())
 }
@@ -31,7 +57,7 @@ pub async fn query_chat_record_send_by_user(uuid: &str, recv_user: &str, send_st
         .join(", ");
     
     let query = format!(
-        "SELECT * FROM chat_record_send WHERE send_user = ?1 AND recv_user = ?2 AND send_status IN ({})",
+        "SELECT * FROM chat_record_send WHERE send_user = ?1 AND (recv_user = ?2 or ?2 = '') AND send_status IN ({}) ORDER BY id DESC",
         placeholders
     );
     
