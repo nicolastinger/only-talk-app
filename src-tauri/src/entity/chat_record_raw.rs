@@ -14,6 +14,7 @@ pub trait ChatRecordRaw {
 pub struct TextRecord {
     pub prev_id: String,
     pub text: String,
+    pub platform: u8,
 }
 
 impl ChatRecordRaw for TextRecord {
@@ -45,7 +46,8 @@ pub struct ImageRecord {
     pub is_preview: bool,
     pub img_width: i32,
     pub img_height: i32,
-    pub img_size: i32
+    pub img_size: i32,
+    pub platform: u8,
 }
 
 impl ChatRecordRaw for ImageRecord {

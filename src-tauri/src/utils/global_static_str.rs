@@ -51,6 +51,6 @@ pub static MSG_LINK_FIRST_NODE: &str = "first_node";
 pub static ZERO_UUID: &str = "00000000-0000-0000-0000-000000000000";
 // 平台
 #[cfg(desktop)]
-pub static PLATFORM: &str = "PC";
+pub static PLATFORM: u8 = 0;  // PC
 #[cfg(not(desktop))]
-pub static PLATFORM: &str = "MOBILE";
+pub static PLATFORM: u8 = 1;  // MOBILE;

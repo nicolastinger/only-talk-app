@@ -1,4 +1,5 @@
 import React from 'react';
+import { TextQuicMsgVo } from "../backend";
 
 interface LayoutBtnProps {
   text: string;
@@ -26,7 +27,7 @@ interface ChatMessage {
   from: MessageFrom;
   ack: boolean | undefined;
   img?: string;
-  text_msg_raw: TextMsgRaw;
+  text_msg_raw: TextQuicMsgVo;
 }
 
 export enum MessageFrom {
@@ -79,15 +80,6 @@ interface P2pMsg {
   raw: string;
 }
 
-interface TextMsgRaw {
-  nano_id: string;
-  text_type: number;
-  raw: string;
-  recv_user: string;
-  send_user: string;
-  timestamp: number;
-}
-
 interface P2pInitMsg {
   accept_addr: string;
   request_addr: string;
@@ -111,7 +103,6 @@ export type {
   P2pInitMsg,
   P2pMsg,
   RequestMediaMsg,
-  TextMsgRaw,
   UserInfo,
   BasicUser
 };

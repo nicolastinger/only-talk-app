@@ -17,6 +17,5 @@ export default defineConfig({
   },
   routes,
   npmClient: 'pnpm',
-  esbuildMinifyIIFE: true,
-  mfsu: false,
+  esbuildMinifyIIFE: true
 });

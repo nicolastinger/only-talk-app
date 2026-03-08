@@ -20,7 +20,8 @@ use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
 use crate::dao::chat_record_ack::{query_ack_record_from_db, update_chat_record_ack};
-use crate::dao::chat_record_send::update_chat_record_send_success;
+use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
+use crate::utils::time::get_now_time_stamp_as_millis;
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -164,20 +165,26 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let payload = serde_json::to_string(&msg)?;
     //1.查询ack表中该条消息
-    let ack_record = query_ack_record_from_db(&msg.raw).await;
+    let ack_record = query_record_send_from_db(&msg.raw).await;
     if ack_record.is_err() {
         warn!("查询ack表中该条消息失败 {:?}", ack_record.err());
         return Ok(())
     }
-    let mut ack_record = ack_record?;
-    ack_record.nano_id = msg.nano_id;
-    ack_record.timestamp = msg.timestamp;
+    let ack_record = ack_record?;
+    let text_quic_msg_vo = TextQuicMsgVo {
+        nano_id: msg.nano_id,
+        text_type: ack_record.text_type,
+        raw: ack_record.raw,
+        recv_user: ack_record.recv_user,
+        send_user: ack_record.send_user,
+        timestamp: msg.timestamp,
+    };
     // 2.聊天插入数据库
-    insert_chat_record(&ack_record).await?;
+    insert_chat_record(&text_quic_msg_vo).await?;
     // 3. 标记ack表中该条消息为已确认
-    update_chat_record_ack(&ack_record.raw, 1, &ack_record.nano_id).await?;
+    update_chat_record_ack(&ack_record.send_id, 1, &text_quic_msg_vo.nano_id).await?;
     // 4. 标记发送列表中某条消息为已确认
-    update_chat_record_send_success(&ack_record.raw, &ack_record.nano_id).await?;
+    update_chat_record_send_success(&ack_record.send_id, &text_quic_msg_vo.nano_id).await?;
     tokio::spawn(async move {
         // 处理未发送的消息，ack返回
         timeout(Duration::from_secs(10), async {
@@ -192,13 +199,13 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     // 清除未读计数
     let chat_session = ChatSession {
         id: 0,
-        nano_id: ack_record.nano_id,
+        nano_id: text_quic_msg_vo.nano_id,
         timestamp: ack_record.timestamp,
         text_type: ack_record.text_type,
         unread_count: 0,
-        last_message: ack_record.raw,
-        recv_user: ack_record.recv_user,
-        send_user: ack_record.send_user,
+        last_message: text_quic_msg_vo.raw,
+        recv_user: text_quic_msg_vo.recv_user,
+        send_user: text_quic_msg_vo.send_user,
         session_type: 1,
         is_show: 1,
         is_top: 0,

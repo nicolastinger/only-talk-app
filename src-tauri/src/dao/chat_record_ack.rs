@@ -20,10 +20,10 @@ pub async fn insert_chat_record_ack(chat_record_ack: &ChatRecordAck) -> Result<(
 }
 
 /// 查询ack表中是否存在某条信息
-pub async fn query_ack_record_from_db(nanoid: &str) -> Result<TextQuicMsgVo, anyhow::Error> {
+pub async fn query_ack_record_from_db(nanoid: &str) -> Result<ChatRecordAck, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let record =
-        sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record_ack WHERE send_id = ?1"#)
+        sqlx::query_as::<_, ChatRecordAck>(r#"SELECT * FROM chat_record_ack WHERE send_id = ?1"#)
             .bind(nanoid)
             .fetch_one(&pool_sqlite)
             .await?;

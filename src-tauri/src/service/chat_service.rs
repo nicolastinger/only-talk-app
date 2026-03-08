@@ -222,7 +222,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     let mut prev_id = ZERO_UUID.to_string();
 
     // 查询本地最新一条已发送成功的消息
-    let last_send_success_msg = query_chat_record_send_by_user(&sender, &text_quic_msg.recv_user, vec![3]).await?;
+    let last_send_success_msg = query_chat_record_send_by_user(&sender, &text_quic_msg.recv_user, vec![3], false).await?;
     if !last_send_success_msg.is_empty() {
         let send_id = &last_send_success_msg.first().ok_or(anyhow!("last_send_success_msg is empty"))?.send_id;
         let prev_ack = query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await?;
@@ -238,7 +238,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
         send_id: text_quic_msg.nano_id.clone(),
         msg_id: "".to_string(),
         text_type: text_quic_msg.text_type,
-        platform: PLATFORM.to_string(),
+        platform: PLATFORM,
         recv_user: text_quic_msg.recv_user,
         send_user: sender,
         timestamp: now,
@@ -248,7 +248,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     };
 
     // 检查当前接收用户，本地是否有未发送完成的消息
-    let no_send_success_msg = query_chat_record_send_by_user(&chat_record_send.send_user, &chat_record_send.recv_user, vec![0, 1]).await?;
+    let no_send_success_msg = query_chat_record_send_by_user(&chat_record_send.send_user, &chat_record_send.recv_user, vec![0, 1], true).await?;
     // 如果有，直接插入到本地发送表中，等待回调ack后发送或者定时任务检查发送
     if !no_send_success_msg.is_empty() {
         chat_record_send.send_status = 0;
@@ -321,9 +321,10 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
 pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
     let me = get_user_info("uuid").await?;
     let recv_user = String::from("");
-    let no_send_success_msg = query_chat_record_send_by_user(&me, &recv_user, vec![0, 1]).await?;
+    let no_send_success_msg = query_chat_record_send_by_user(&me, &recv_user, vec![0, 1], true).await?;
     let now = get_now_time_stamp_as_millis()?;
     if !no_send_success_msg.is_empty() {
+        info!("存在未发送完成的消息, 发送消息条数: {}", no_send_success_msg.len());
         let mut no_send_success_msg_option: Option<ChatRecordSend> = None;
         for mut item in no_send_success_msg {
             let status = item.send_status;
@@ -332,18 +333,21 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             let diff_time = now - timestamp;
             let send_user = &item.send_user;
             let recv_user = &item.recv_user;
+
+            // 检查当前接收用户，本地是否有未发送完成的消息
+            let no_send_success_msg = query_chat_record_send_by_user(send_user, recv_user, vec![1], true).await?;
+            let mut no_send_success_time = 0i64;
+            if !no_send_success_msg.is_empty() {
+                no_send_success_time = no_send_success_msg.first().ok_or(anyhow!("no_send_success_msg is empty"))?.timestamp;
+            }
             if status == 0 && no_send_success_msg_option.is_none() {
-                // 检查当前接收用户，本地是否有未发送完成的消息
-                let no_send_success_msg = query_chat_record_send_by_user(send_user, recv_user, vec![0, 1]).await?;
-                if no_send_success_msg.is_empty() {
+                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time{
                     no_send_success_msg_option = Some(item);
                     continue;
                 }
             }
             if status == 1 && no_send_success_msg_option.is_none() && retry_count < 3 && diff_time > 8000{
-                // 检查当前接收用户，本地是否有未发送完成的消息
-                let no_send_success_msg = query_chat_record_send_by_user(send_user, recv_user, vec![0, 1]).await?;
-                if no_send_success_msg.is_empty() {
+                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time{
                     no_send_success_msg_option = Some(item);
                     continue;
                 }
@@ -360,7 +364,7 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             let sender = &item.send_user;
             let recv_user = &item.recv_user;
             // 查询本地最新一条已发送成功的消息
-            let last_send_success_msg = query_chat_record_send_by_user(&sender, &recv_user, vec![3]).await?;
+            let last_send_success_msg = query_chat_record_send_by_user(&sender, &recv_user, vec![3], false).await?;
             if !last_send_success_msg.is_empty() {
                 let send_id = &last_send_success_msg.first().ok_or(anyhow!("last_send_success_msg is empty"))?.send_id;
                 let prev_ack = query_chat_record_by_send_id(send_id, &recv_user).await?;

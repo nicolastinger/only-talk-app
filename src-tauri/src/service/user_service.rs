@@ -37,15 +37,16 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
     get_unread_message().await.unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
     //3、获取未读通知
     get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
-    //启动定时任务
-    tokio::spawn(async move {
-        start_read_task().await.unwrap_or_else(|e| error!("启动定时任务失败 {:?}", e));
-    });
     //启动quic服务
     tokio::spawn(async move {
         let addr = resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败");
         run_client(SocketAddr::from(addr)).await.expect("quic服务启动失败");
     });
+    //启动定时任务
+    tokio::spawn(async move {
+        start_read_task().await.unwrap_or_else(|e| error!("启动定时任务失败 {:?}", e));
+    });
+    
     Ok(())
 }
 
@@ -137,9 +138,11 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
 
 /// 启动定时已读任务
 pub async fn start_read_task() -> Result<(), anyhow::Error> {
+    tokio::time::sleep(Duration::from_secs(10)).await;
     let schedule_key = uuid::Uuid::new_v4().to_string();
     // 设置定时任务key
     insert_user_info("schedule_key", &schedule_key).await?;
+    info!("定时任务key: {}, 启动", schedule_key);
     
     let read_task_key = schedule_key.clone();
     // 用户消息已读任务
@@ -171,16 +174,25 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
 
         }
 
-        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        tokio::time::sleep(Duration::from_secs(10)).await;
     }
+    info!("定时任务结束");
     Ok(())
 }
 
 // 校验定时任务key
 pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
-    let schedule_key = get_user_info("schedule_key").await?;
-    if schedule_key.is_empty() || key != schedule_key {
-        return Err(anyhow!("定时任务key不匹配"));
+    let schedule_key = get_user_info("schedule_key").await;
+    match schedule_key { 
+        Ok(schedule_key) => {
+            if key != schedule_key {
+                return Err(anyhow!("定时任务key不匹配"));
+            }
+        }
+        Err(err) => {
+            error!("获取定时任务key失败 {:?}", err);
+            return Err(err);
+        }
     }
     Ok(())
 }

@@ -10,7 +10,7 @@ pub struct ChatRecordAck {
     pub msg_id: String,      // 消息id
     pub prev_id: String,      // 上一条消息id
     pub send_id: String,      // 发送id
-    pub platform: String,     // 平台
+    pub platform: u8,     // 平台
     pub ack_status: u16,      // 0: 未确认, 1: 已确认
     pub recv_user: String,    // 接收用户
     pub send_user: String,    // 发送用户
@@ -25,7 +25,7 @@ impl SqliteStore for ChatRecordAck {
             msg_id TEXT NOT NULL,
             prev_id TEXT NOT NULL,
             send_id TEXT NOT NULL,
-            platform TEXT NOT NULL,
+            platform INTEGER NOT NULL,
             ack_status INTEGER NOT NULL DEFAULT 0,
             recv_user TEXT NOT NULL,
             send_user TEXT NOT NULL,

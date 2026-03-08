@@ -1,4 +1,8 @@
-import { ChatMessage, MessageFrom, TextMsgRaw } from '@workspace/types';
+import {
+  ChatMessage,
+  MessageFrom, TextMsgRaw,
+  TextQuicMsgVo,
+} from '@workspace/types';
 import { SmileOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Button, Input } from 'antd';
@@ -22,10 +26,16 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
   const sendMessage = async () => {
     if (!message.trim()) return;
 
-    let text_msg_raw: TextMsgRaw = {
+    let raw: TextMsgRaw = {
+      text: message,
+      prev_id: "",
+      platform: 0
+    };
+
+    let text_msg_raw: TextQuicMsgVo = {
       nano_id: nanoid(),
       text_type: 1,
-      raw: message,
+      raw: JSON.stringify(raw),
       recv_user: friendUuid,
       send_user: '',
       timestamp: new Date().getTime(),
