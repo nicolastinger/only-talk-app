@@ -1,5 +1,4 @@
 use crate::dao::get_private_db_client;
-use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::entity::chat_record_send::ChatRecordSend;
 
 /// 插入一条发送记录
@@ -56,7 +55,7 @@ pub async fn query_chat_record_send_by_user(uuid: &str, recv_user: &str, send_st
         .map(|(i, _)| format!("?{}", i + 3))
         .collect::<Vec<_>>()
         .join(", ");
-    
+
     let order_by = if asc { "ASC" } else { "DESC" };
     
     let query = format!(

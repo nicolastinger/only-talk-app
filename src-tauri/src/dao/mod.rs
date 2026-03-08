@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 
-use crate::{GLOBAL_COMMON_SQL_POOL, GLOBAL_PRIVATE_SQL_POOL, GLOBAL_SQL_POOL};
+use crate::{GLOBAL_COMMON_SQL_POOL, GLOBAL_SQL_POOL};
 
 pub mod chat_record_db;
 mod create_table;

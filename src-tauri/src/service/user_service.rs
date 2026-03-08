@@ -4,7 +4,6 @@ use std::time::Duration;
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tokio::time::timeout;
-use crate::cmd::auth_controller::post_request;
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
@@ -20,6 +19,7 @@ use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
+use crate::cmd::api_controller::post_request;
 use crate::service::chat_service::{process_no_send_success_msg};
 
 /// 用户登录执行操作
@@ -46,7 +46,7 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
     tokio::spawn(async move {
         start_read_task().await.unwrap_or_else(|e| error!("启动定时任务失败 {:?}", e));
     });
-    
+
     Ok(())
 }
 
@@ -183,7 +183,7 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
 // 校验定时任务key
 pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
     let schedule_key = get_user_info("schedule_key").await;
-    match schedule_key { 
+    match schedule_key {
         Ok(schedule_key) => {
             if key != schedule_key {
                 return Err(anyhow!("定时任务key不匹配"));

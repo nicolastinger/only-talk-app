@@ -8,11 +8,11 @@ use log::{error, info};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::cmd::auth_controller::{get, post};
 use crate::config::get_config;
 use crate::dao::file_record_db::{delete_file_record_by_id, insert_file_record};
 use crate::dto::http_result::HttpResult;
 use crate::entity::file_record::FileRecord;
+use crate::service::api_service::{get_with_token, post_with_body};
 use crate::utils::global_static_str::{RESOURCE_PATH, TALK_API};
 use crate::utils::uuid_utils;
 use crate::vo::file_vo::FileVo;
@@ -93,7 +93,7 @@ pub async fn download_file_by_biz_service(biz_id: &str) -> Result<(), anyhow::Er
     let params = HashMap::new();
 
     // 发送POST请求
-    let response = post(url, params).await?;
+    let response = post_with_body(url, params).await?;
 
     // 检查响应状态码
     if !response.status().is_success() {
@@ -110,7 +110,7 @@ pub async fn download_file_by_biz_service(biz_id: &str) -> Result<(), anyhow::Er
                 let file_url_str = format!("{}{}", TALK_API, file_url_str);
                 info!("下载文件URL: {}", file_url_str);
 
-                let response = get(file_url_str).await?;
+                let response = get_with_token(file_url_str).await?;
 
                 // 首先提取必要的header值，因为一旦使用bytes()方法后就无法再访问headers
                 let content_type = response

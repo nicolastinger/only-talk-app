@@ -1,6 +1,5 @@
 use crate::dao::{get_private_db_client};
 use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 添加本地ack信息
 pub async fn insert_chat_record_ack(chat_record_ack: &ChatRecordAck) -> Result<(), anyhow::Error> {

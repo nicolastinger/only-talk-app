@@ -3,3 +3,7 @@ pub mod auth_controller;
 pub mod file_controller;
 pub mod friend_controller;
 pub mod user_controller;
+pub mod notification_controller;
+pub mod chat_session_controller;
+pub mod chat_record_controller;
+pub mod p2p_controller;

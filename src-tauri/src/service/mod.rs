@@ -3,3 +3,4 @@ pub mod file_service;
 pub mod friend_service;
 pub mod p2p_service;
 pub mod user_service;
+pub mod api_service;

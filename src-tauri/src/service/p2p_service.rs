@@ -8,7 +8,6 @@ use log::{info, warn};
 use nanoid::nanoid;
 use tauri::Emitter;
 
-use crate::cmd::auth_controller::post;
 use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
@@ -25,6 +24,7 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::service::api_service::{post_with_body};
 
 /// 获取10000以上首个可用UDP端口
 pub fn find_available_udp_port(start_port: u16) -> Option<u16> {
@@ -58,7 +58,7 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
 
     //插入token到服务器，供连接端验证
     let url = format!("{}/user/add_p2p_token/{}/{}", TALK_API, accept_user, request_token);
-    post(url, HashMap::new()).await?;
+    post_with_body(url, HashMap::new()).await?;
 
     // 本机作为服务端
 
