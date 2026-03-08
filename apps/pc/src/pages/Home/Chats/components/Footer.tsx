@@ -3,11 +3,11 @@ import {
   MessageFrom, TextMsgRaw,
   TextQuicMsgVo,
 } from '@workspace/types';
-import { SmileOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Button, Input } from 'antd';
 import { nanoid } from 'nanoid';
 import React, { useState } from 'react';
+import FooterToolBar from './FooterToolBar';
 import styles from './styles/Footer.less';
 
 const { TextArea } = Input;
@@ -54,30 +54,13 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
     }
   };
 
-  const sendRequestToP2p = async () => {
-    try {
-      // 发送udp给服务器
-      const res: string = await invoke('send_init_p2p_udp');
-      console.log('发送结果', res);
-      const quicRes: string = await invoke('send_p2p_init_msg', {
-        acceptUser: friendUuid,
-      });
-      console.log('quic结果', quicRes);
-    } catch (e) {
-      console.log('发送失败', e);
-    }
+  const handleEmojiSelect = (emoji: string) => {
+    setMessage(prevMessage => prevMessage + emoji);
   };
 
   return (
     <div className={styles.footer}>
-      <div className={styles.footerBtnBar}>
-        <div className={styles.footerBtn}>
-          <SmileOutlined />
-        </div>
-        <div className={styles.footerBtn} onClick={sendRequestToP2p}>
-          <VideoCameraOutlined />
-        </div>
-      </div>
+      <FooterToolBar friendUuid={friendUuid} onEmojiSelect={handleEmojiSelect} />
       <div className={styles.footerMessage}>
         <TextArea
           onPressEnter={sendMessage}
