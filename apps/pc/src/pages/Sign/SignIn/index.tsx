@@ -140,7 +140,9 @@ const LoginPage: React.FC = () => {
         <div className={styles.avatarContainer}>
           {/* <Avatar size={80} icon={<UserOutlined />} src={AVATAR_URL} /> */}
           {/* 自定义尺寸 */}
-          {<LocalImage width={100} height={100} />}
+          <div className={styles.avatarWrapper}>
+            <LocalImage width={100} height={100} />
+          </div>
         </div>
 
         <div className={styles.inputContainer}>

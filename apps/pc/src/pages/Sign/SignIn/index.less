@@ -58,39 +58,59 @@
   height: 200%;
   background: linear-gradient(
     45deg,
-    #9be8ff 20%,
-    /* 深科技蓝 */ #d2f1fd 40%,
-    /* 主科技蓝 */ #f2fdfd 60%,
-    /* 浅科技蓝 */ #d2f1fd 80%,
-    /* 青蓝过渡色 */ #9be8ff 100% /* 循环深蓝 */
+     #001122 0%,
+    #003366 20%,
+    #001fcc 40%,
+    #0051ff 50%,
+    #7742f3 60%,
+    #5f00cc 70%,
+    #003366 80%,
+    #001122 100%
   );
-  animation: gradient-flow 20s linear infinite;
-  filter: blur(20px); /* 柔化边缘 */
+  animation: gradient-flow 20s ease-in-out infinite;
+  filter: blur(40px); /* 柔化边缘 */
+  background-size: 400% 400%;
 }
 
 .content::after {
   background: linear-gradient(
     -45deg,
-    #97d4fd 10%,
-    #bfe2f8 30%,
-    #dbf2fb 50%,
-    #bfe2f8 70%,
-    #97d4fd 90%
+    #001122 0%,
+    #004488 20%,
+    #0088ff 40%,
+    #3399ff 60%,
+    #99ccff 80%,
+    #004488 90%,
+    #001122 100%
   );
-  animation-delay: -10s;
+  animation-delay: -6s;
+  background-size: 400% 400%;
 }
 
 @keyframes gradient-flow {
   0% {
     transform: rotate(0deg) scale(1);
+    background-position: 0% 50%;
+  }
+
+  25% {
+    transform: rotate(90deg) scale(1.4);
+    background-position: 100% 50%;
   }
 
   50% {
     transform: rotate(180deg) scale(1.2);
+    background-position: 100% 100%;
+  }
+
+  75% {
+    transform: rotate(270deg) scale(1.5);
+    background-position: 0% 100%;
   }
 
   100% {
     transform: rotate(360deg) scale(1);
+    background-position: 0% 50%;
   }
 }
 
@@ -109,6 +129,24 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.avatarWrapper {
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(0, 153, 255, 0.6);
+  border: 3px solid rgba(0, 153, 255, 0.8);
+  animation: avatar-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes avatar-glow {
+  0% {
+    box-shadow: 0 0 20px rgba(0, 153, 255, 0.4), 0 0 40px rgba(0, 153, 255, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(0, 153, 255, 0.8), 0 0 60px rgba(0, 153, 255, 0.4);
+  }
 }
 
 .inputContainer {

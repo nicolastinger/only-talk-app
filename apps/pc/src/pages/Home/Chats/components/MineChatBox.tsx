@@ -1,10 +1,13 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { ChatMessage } from '@workspace/types';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
 import { getFiles } from '@workspace/services';
+
+// 图片缓存
+const imageCache = new Map<string, string>();
 
 type MineChatBoxProps = {
   msg: ChatMessage;
@@ -21,6 +24,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     icon
   } = props;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const userInfo = useBearStore((state) => state.userInfo);
   // 初始化ackFlag
@@ -59,17 +63,34 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   // 获取用户头像
   const getUserIcon = async (icon: string) => {
     try {
+      // 检查缓存
+      if (imageCache.has(icon)) {
+        setUserIcon(imageCache.get(icon)!);
+        return;
+      }
+      
+      setLoading(true);
       const FileVos = await getFiles(icon);
-      setUserIcon(FileVos?.[0]?.tauri_file_path || null);
-      console.log('用户信息', userInfo);
+      const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
+      
+      // 存入缓存
+      if (tauriFilePath) {
+        imageCache.set(icon, tauriFilePath);
+      }
+      
+      setUserIcon(tauriFilePath);
+      setLoading(false);
     } catch (error) {
       console.log(error);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    getUserIcon(userInfo?.icon || '');
-  }, [userInfo])
+    if (userInfo?.icon) {
+      getUserIcon(userInfo.icon);
+    }
+  }, [userInfo?.icon])
 
   const renderMessage = (message: string) => {
     switch (text_type) {
@@ -95,6 +116,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           height={40}
           className={styles.imgItem}
           alt="icon"
+          style={{ opacity: loading ? 0.7 : 1 }}
         />
       </div>
     </div>
