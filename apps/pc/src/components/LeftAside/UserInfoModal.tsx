@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Avatar, Typography, Divider, Space, message, Spin } from 'antd';
 import { UserOutlined, MailOutlined, PhoneOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useBearStore } from '@/store/store';
-import { selectFile, convertPathToTauriUrl } from '@workspace/services';
+import { selectFile, convertPathToTauriUrl, getFiles } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
 import { TALK_API } from '@/constants';
 import styles from './index.less';
@@ -20,6 +20,24 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const [loading, setLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const getUserIcon = async (icon: string) => {
+    try {
+      const FileVos = await getFiles(icon);
+      const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
+      setAvatarUrl(tauriFilePath);
+    } catch (error) {
+      console.error('获取头像失败:', error);
+      setAvatarUrl(null);
+    }
+  };
+
+  useEffect(() => {
+    if (userInfo?.icon) {
+      getUserIcon(userInfo.icon);
+    }
+  }, [userInfo?.icon]);
 
   const handleAvatarClick = async () => {
     try {
@@ -56,8 +74,20 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       if (uploadResult.status === 200) {
         const responseBody = JSON.parse(uploadResult.body);
-        if (responseBody.code === 204) {
-          message.success('头像更新成功');
+        if (responseBody.code === 200 && responseBody.data) {
+          const bizId = responseBody.data;
+          
+          const FileVos = await getFiles(bizId);
+          const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
+          
+          if (tauriFilePath) {
+            const updatedUserInfo = { ...userInfo, icon: bizId };
+            setUserInfo(updatedUserInfo);
+            getUserIcon(bizId);
+            message.success('头像更新成功');
+          } else {
+            message.error('获取头像文件失败');
+          }
         } else {
           message.error(responseBody.msg || '头像上传失败');
         }
@@ -88,7 +118,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} spinning={loading}>
               <Avatar
                 size={80}
-                src={previewUrl || userInfo?.icon}
+                src={previewUrl || avatarUrl}
                 icon={<UserOutlined />}
                 className={styles.largeAvatar}
               />
