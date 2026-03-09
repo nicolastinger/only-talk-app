@@ -1,10 +1,14 @@
-import React from 'react';
-import { Modal, Avatar, Typography, Divider, Space } from 'antd';
-import { UserOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Modal, Avatar, Typography, Divider, Space, message, Spin } from 'antd';
+import { UserOutlined, MailOutlined, PhoneOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useBearStore } from '@/store/store';
+import { selectFile, convertPathToTauriUrl } from '@workspace/services';
+import { invoke } from '@tauri-apps/api/core';
+import { TALK_API } from '@/constants';
 import styles from './index.less';
 
 const { Text, Title } = Typography;
+const TIMEOUT_MS = 30000;
 
 interface UserInfoModalProps {
   visible: boolean;
@@ -13,6 +17,61 @@ interface UserInfoModalProps {
 
 const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
   const userInfo = useBearStore((state) => state.userInfo);
+  const setUserInfo = useBearStore((state) => state.setUserInfo);
+  const [loading, setLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handleAvatarClick = async () => {
+    try {
+      const files = await selectFile(false);
+      if (!files || files.length === 0) {
+        return;
+      }
+
+      const filePath = files[0];
+      setLoading(true);
+
+      const compressedResult = await Promise.race([
+        invoke<string>('compress_image_to_webp_command', { inputPath: filePath }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('压缩超时（30秒）')), TIMEOUT_MS)
+        )
+      ]);
+
+      const preview = convertPathToTauriUrl(compressedResult);
+      if (preview) {
+        setPreviewUrl(preview);
+      }
+      
+      const uploadResult = await Promise.race([
+        invoke<{ status: number; body: string }>('upload_file_request', {
+          url: `${TALK_API}/file_integrated/upload/user_avatar`,
+          filePath: compressedResult,
+          fieldName: 'file',
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('上传超时（30秒）')), TIMEOUT_MS)
+        )
+      ]);
+
+      if (uploadResult.status === 200) {
+        const responseBody = JSON.parse(uploadResult.body);
+        if (responseBody.code === 204) {
+          message.success('头像更新成功');
+        } else {
+          message.error(responseBody.msg || '头像上传失败');
+        }
+      } else {
+        message.error('头像上传失败');
+      }
+    } catch (error: any) {
+      console.error('头像更新失败:', error);
+      message.error(error.message || '头像更新失败');
+    } finally {
+      setLoading(false);
+      setPreviewUrl(null);
+    }
+  };
 
   return (
     <Modal
@@ -25,12 +84,21 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
     >
       <div className={styles.modalContent}>
         <div className={styles.avatarSection}>
-          <Avatar
-            size={80}
-            src={userInfo?.icon}
-            icon={<UserOutlined />}
-            className={styles.largeAvatar}
-          />
+          <div className={styles.avatarWrapper} onClick={loading ? undefined : handleAvatarClick}>
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} spinning={loading}>
+              <Avatar
+                size={80}
+                src={previewUrl || userInfo?.icon}
+                icon={<UserOutlined />}
+                className={styles.largeAvatar}
+              />
+            </Spin>
+            {!loading && (
+              <div className={styles.avatarOverlay}>
+                <CameraOutlined className={styles.cameraIcon} />
+              </div>
+            )}
+          </div>
           <Title level={4} className={styles.username}>
             {userInfo?.username || '未知用户'}
           </Title>

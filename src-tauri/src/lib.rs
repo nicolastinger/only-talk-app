@@ -9,19 +9,19 @@ use lazy_static::lazy_static;
 use sqlx::SqlitePool;
 use tauri::path::BaseDirectory;
 use tokio::sync::{Mutex, RwLock};
-mod cmd;
+pub mod cmd;
 mod config;
 mod dao;
 mod dto;
 mod emit_app;
 mod entity;
 mod init_app;
-mod service;
+pub mod service;
 pub mod utils;
 mod vo;
 
 use entity::quic_connection::QuicConnection;
-use crate::cmd::api_controller::{get_request, post_request};
+use crate::cmd::api_controller::{get_request, post_request, upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request, upload_multiple_files_with_extra_fields_request, post_form_data_request, compress_image_to_webp_command};
 use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
 use crate::cmd::chat_record_controller::{get_chat_record_from_store, mark_read, send_text_msg};
 use crate::cmd::chat_session_controller::{create_chat_session, get_chat_session_from_store, mark_read_chat_session};
@@ -93,6 +93,12 @@ pub fn run() {
             send_text_msg,
             get_request,
             post_request,
+            upload_file_request,
+            upload_file_with_extra_fields_request,
+            upload_multiple_files_request,
+            upload_multiple_files_with_extra_fields_request,
+            post_form_data_request,
+            compress_image_to_webp_command,
             sign_in,
             logout,
             clear_user_info,
