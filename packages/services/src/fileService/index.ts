@@ -6,17 +6,19 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core';
  * 选择文件
  * @param isMultiple 是否多选
  * @param isDirectory 是否选择目录
+ * @param filters 文件过滤器
  * @returns 文件路径列表
  */
 export const selectFile = async (
   isMultiple: boolean = false,
   isDirectory: boolean = false,
+  filters?: Array<{ name: string; extensions: string[] }>,
 ): Promise<string[] | null> => {
   try {
     const filePath = await open({
       multiple: isMultiple,
       directory: isDirectory,
-      filters: [
+      filters: filters || [
         { name: 'All Files', extensions: ['*'] },
       ],
     });
@@ -69,6 +71,43 @@ export const getFiles = async (
     return files;
   } catch (error: any) {
     console.error('Get files failed:', error);
+    return null;
+  }
+};
+
+/**
+ * 获取聊天文件
+ * @param bizId 业务ID
+ * @returns 文件列表
+ */
+export const getChatFileByBizId = async (
+  bizId: string,
+): Promise<FileVo[] | null> => {
+  try {
+    let files = [] as FileVo[];
+    const FileVos: FileVo[] = await invoke('get_chat_file_by_biz_id', {
+      bizId,
+    });
+
+    console.log('get_chat_file_by_biz_id result:', FileVos);
+
+    if (FileVos.length > 0) {
+      FileVos.forEach((file) => {
+        const tauriFilePath = convertPathToTauriUrl(file.absolute_file_path || '');
+        console.log('File info:', file);
+        console.log('Tauri file path:', tauriFilePath);
+        if (tauriFilePath) {
+          file.tauri_file_path = tauriFilePath;
+          files.push(file);
+        } else {
+          console.error('Failed to convert path to tauri URL:', file.absolute_file_path);
+        }
+      });
+    }
+    console.log('Final files:', files);
+    return files;
+  } catch (error: any) {
+    console.error('Get chat file failed:', error);
     return null;
   }
 };

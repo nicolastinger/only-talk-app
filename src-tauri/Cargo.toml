@@ -52,3 +52,5 @@ chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6.0"
 image = "0.25"
 webp = "0.3"
+zune-image = "0.4"
+zune-jpeg = "0.4"

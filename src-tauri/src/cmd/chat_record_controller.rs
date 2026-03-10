@@ -4,7 +4,7 @@ use tokio::time::timeout;
 use crate::dao::chat_record_db::{query_chat_record_by_id_from_db, query_chat_record_from_db};
 use crate::entity::Page;
 use crate::GLOBAL_MSG_SEND_LOCK;
-use crate::service::chat_service::{send_text_msg_service, update_last_read_msg_from_db};
+use crate::service::chat_service::{send_text_msg_service, update_last_read_msg_from_db, send_image_msg_service};
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
@@ -28,6 +28,12 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
             Err("获取锁超时".to_string())
         }
     }
+}
+
+// 发送图片数据
+#[tauri::command]
+pub async fn send_image_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
+    send_image_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
 /// 已读当前记录

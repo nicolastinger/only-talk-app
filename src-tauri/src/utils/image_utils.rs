@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
-use image::{DynamicImage, ImageReader, imageops::FilterType};
+use image::{DynamicImage, ImageReader, imageops::FilterType, ImageBuffer, Rgb, Rgba, Luma};
 use log::info;
 use std::fs::File;
-use std::io::{BufReader, Write};
+use std::io::{BufReader, Write, Read};
 use std::path::Path;
 use std::time::Instant;
 
@@ -24,12 +24,7 @@ pub fn compress_image_to_webp(input_path: &Path) -> Result<File> {
     info!("[压缩] 开始解码图片...");
     let decode_start = Instant::now();
     
-    let file = File::open(input_path)?;
-    let mut buf_reader = BufReader::new(&file);
-    
-    let img = ImageReader::new(&mut buf_reader)
-        .with_guessed_format()?
-        .decode()?;
+    let img = decode_image_optimized(input_path)?;
     
     let decode_time = decode_start.elapsed();
     info!("[压缩] 解码完成，耗时: {:?}", decode_time);
@@ -93,4 +88,61 @@ fn encode_to_webp(img: &DynamicImage) -> Result<Vec<u8>> {
     let encoder = webp::Encoder::from_image(img).map_err(|e| anyhow!("WebP encoder error: {}", e))?;
     let webp_data = encoder.encode(TARGET_QUALITY as f32);
     Ok(webp_data.to_vec())
+}
+
+fn decode_image_optimized(input_path: &Path) -> Result<DynamicImage> {
+    let extension = input_path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_lowercase());
+    
+    match extension.as_deref() {
+        Some("jpg") | Some("jpeg") => {
+            info!("[压缩] 使用zune-jpeg优化JPEG解码");
+            decode_jpeg_fast(input_path)
+        }
+        _ => {
+            info!("[压缩] 使用image crate解码");
+            let file = File::open(input_path)?;
+            let mut buf_reader = BufReader::new(file);
+            let img = ImageReader::new(&mut buf_reader)
+                .with_guessed_format()?
+                .decode()?;
+            Ok(img)
+        }
+    }
+}
+
+fn decode_jpeg_fast(input_path: &Path) -> Result<DynamicImage> {
+    let mut file = File::open(input_path)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    
+    let mut decoder = zune_jpeg::JpegDecoder::new(&buffer);
+    let decoded = decoder.decode()?;
+    
+    let info = decoder.info().ok_or_else(|| anyhow!("Failed to get JPEG info"))?;
+    let width = info.width;
+    let height = info.height;
+    let components = info.components;
+    
+    match components {
+        3 => {
+            let buffer: ImageBuffer<Rgb<u8>, _> = ImageBuffer::from_raw(width as u32, height as u32, decoded.to_vec())
+                .ok_or_else(|| anyhow!("Failed to create RGB buffer"))?;
+            Ok(DynamicImage::ImageRgb8(buffer))
+        }
+        4 => {
+            let buffer: ImageBuffer<Rgba<u8>, _> = ImageBuffer::from_raw(width as u32, height as u32, decoded.to_vec())
+                .ok_or_else(|| anyhow!("Failed to create RGBA buffer"))?;
+            Ok(DynamicImage::ImageRgba8(buffer))
+        }
+        1 => {
+            let buffer: ImageBuffer<Luma<u8>, _> = ImageBuffer::from_raw(width as u32, height as u32, decoded.to_vec())
+                .ok_or_else(|| anyhow!("Failed to create Luma buffer"))?;
+            Ok(DynamicImage::ImageLuma8(buffer))
+        }
+        _ => {
+            Err(anyhow!("Unsupported JPEG components: {}", components))
+        }
+    }
 }

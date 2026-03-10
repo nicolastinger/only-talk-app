@@ -4,7 +4,7 @@ use sqlx::FromRow;
 use crate::entity::text_msg::TextQuicMsg;
 
 //文本信息消息体
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
 pub struct TextQuicMsgVo {
     pub nano_id: String,   //消息id
     pub text_type: u16,    //消息类型

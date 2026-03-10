@@ -1,7 +1,7 @@
-import { ChatMessage } from '@workspace/types';
+import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import styles from './styles/CustomerChatBox.less';
-import { getFiles } from '@workspace/services';
+import { getChatFileByBizId, getFiles } from '@workspace/services';
 
 // 图片缓存
 const imageCache = new Map<string, string>();
@@ -14,6 +14,7 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
   
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!img) return;
@@ -32,6 +33,45 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
       setLoading(false);
     });
   }, [img]);
+
+  useEffect(() => {
+    if (text_type === 2) {
+      try {
+        const imageRecord: ImageRecord = JSON.parse(raw);
+        const bizId = imageRecord.biz_id;
+        console.log('CustomerChatBox - Loading image with bizId:', bizId);
+        
+        if (imageCache.has(bizId)) {
+          console.log('CustomerChatBox - Image found in cache');
+          setImageUrl(imageCache.get(bizId)!);
+          return;
+        }
+        
+        setLoading(true);
+        getChatFileByBizId(bizId).then((files) => {
+          console.log('CustomerChatBox - Files returned:', files);
+          if (files && files.length > 0) {
+            const tauriFilePath = files[0].tauri_file_path;
+            console.log('CustomerChatBox - Tauri file path:', tauriFilePath);
+            if (tauriFilePath) {
+              imageCache.set(bizId, tauriFilePath);
+              setImageUrl(tauriFilePath);
+            } else {
+              console.error('CustomerChatBox - Tauri file path is empty');
+            }
+          } else {
+            console.error('CustomerChatBox - No files returned');
+          }
+          setLoading(false);
+        }).catch((error) => {
+          console.error('CustomerChatBox - Error loading image:', error);
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error('CustomerChatBox - Error parsing image record:', error);
+      }
+    }
+  }, [raw, text_type]);
 
   // 获取用户头像
   const getUserIcon = async (icon: string): Promise<string> => {
@@ -54,6 +94,38 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
     }
   };
 
+  const renderMessage = (message: string) => {
+    switch (text_type) {
+      case 1:
+        return <div className={styles.chatContainer}>{message}</div>;
+      case 2:
+        if (imageUrl) {
+          return (
+            <div className={styles.chatContainer}>
+              <img
+                src={imageUrl}
+                alt="图片消息"
+                style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '8px' }}
+                onLoad={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'block';
+                }}
+                onError={(e) => {
+                  console.error('图片加载失败', e);
+                }}
+              />
+            </div>
+          );
+        } else if (loading) {
+          return <div className={styles.chatContainer}>加载中...</div>;
+        } else {
+          return <div className={styles.chatContainer}>图片加载失败</div>;
+        }
+      default:
+        return <div className={styles.chatContainer}>{message}</div>;
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.userIcon}>
@@ -69,7 +141,7 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
           style={{ opacity: loading ? 0.7 : 1 }}
         />
       </div>
-      <div className={styles.chatContainer}>{raw}</div>
+      {renderMessage(raw)}
     </div>
   );
 };

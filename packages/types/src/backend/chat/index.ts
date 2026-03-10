@@ -23,4 +23,4 @@ interface TextQuicMsgVo {
   timestamp: number,    //消息时间戳
 }
 
-export { TextMsgRaw, TextQuicMsgVo };
+export { TextMsgRaw, TextQuicMsgVo, ImageRecord };

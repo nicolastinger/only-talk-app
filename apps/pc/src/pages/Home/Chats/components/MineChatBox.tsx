@@ -1,10 +1,10 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { ChatMessage } from '@workspace/types';
+import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
-import { getFiles } from '@workspace/services';
+import { getChatFileByBizId, getFiles } from '@workspace/services';
 
 // 图片缓存
 const imageCache = new Map<string, string>();
@@ -25,6 +25,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   } = props;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const userInfo = useBearStore((state) => state.userInfo);
   // 初始化ackFlag
@@ -92,10 +93,70 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     }
   }, [userInfo?.icon])
 
+  useEffect(() => {
+    if (text_type === 2) {
+      try {
+        const imageRecord: ImageRecord = JSON.parse(raw);
+        const bizId = imageRecord.biz_id;
+        console.log('MineChatBox - Loading image with bizId:', bizId);
+        
+        if (imageCache.has(bizId)) {
+          console.log('MineChatBox - Image found in cache');
+          setImageUrl(imageCache.get(bizId)!);
+          return;
+        }
+        
+        setLoading(true);
+        getChatFileByBizId(bizId).then((files) => {
+          console.log('MineChatBox - Files returned:', files);
+          if (files && files.length > 0) {
+            const tauriFilePath = files[0].tauri_file_path;
+            console.log('MineChatBox - Tauri file path:', tauriFilePath);
+            if (tauriFilePath) {
+              imageCache.set(bizId, tauriFilePath);
+              setImageUrl(tauriFilePath);
+            } else {
+              console.error('MineChatBox - Tauri file path is empty');
+            }
+          } else {
+            console.error('MineChatBox - No files returned');
+          }
+          setLoading(false);
+        }).catch((error) => {
+          console.error('MineChatBox - Error loading image:', error);
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error('MineChatBox - Error parsing image record:', error);
+      }
+    }
+  }, [raw, text_type]);
+
   const renderMessage = (message: string) => {
     switch (text_type) {
       case 1:
         return TextBox(message);
+      case 2:
+        if (imageUrl) {
+          return (
+            <img
+              src={imageUrl}
+              alt="图片消息"
+              style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '8px' }}
+              onLoad={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'block';
+              }}
+              onError={(e) => {
+                console.error('图片加载失败', e);
+              }}
+            />
+          );
+        } else if (loading) {
+          return <div>加载中...</div>;
+        } else {
+          return <div>图片加载失败</div>;
+        }
       default:
         return TextBox(message);
     }

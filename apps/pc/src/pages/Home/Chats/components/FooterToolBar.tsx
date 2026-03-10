@@ -2,11 +2,14 @@ import { PictureOutlined, SmileOutlined, VideoCameraOutlined } from '@ant-design
 import { invoke } from '@tauri-apps/api/core';
 import React, { useState, useRef, useEffect } from 'react';
 import { selectFile } from '@workspace/services';
+import { TextQuicMsgVo, ChatMessage, MessageFrom } from '@workspace/types';
+import { nanoid } from 'nanoid';
 import styles from './styles/FooterToolBar.less';
 
 interface FooterToolBarProps {
   friendUuid: string;
   onEmojiSelect?: (emoji: string) => void;
+  onMessageSent?: (message: string) => void;
 }
 
 const EMOJI_LIST = [
@@ -20,7 +23,7 @@ const EMOJI_LIST = [
   '❤️', '💔', '💯', '🔥', '⭐', '✨', '💥', '🎉'
 ];
 
-const FooterToolBar: React.FC<FooterToolBarProps> = ({ friendUuid, onEmojiSelect }) => {
+const FooterToolBar: React.FC<FooterToolBarProps> = ({ friendUuid, onEmojiSelect, onMessageSent }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -35,9 +38,35 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({ friendUuid, onEmojiSelect
   }, []);
 
   const sendImage = async () => {
-    const filePaths = await selectFile(false, false);
-    if (filePaths && filePaths.length > 0) {
-      console.log('Selected image path:', filePaths[0]);
+    try {
+      const filePaths = await selectFile(false, false, [
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+      ]);
+      
+      if (filePaths && filePaths.length > 0) {
+        const filePath = filePaths[0];
+        console.log('Selected image path:', filePath);
+        
+        let text_msg_raw: TextQuicMsgVo = {
+          nano_id: nanoid(),
+          text_type: 2,
+          raw: filePath,
+          recv_user: friendUuid,
+          send_user: '',
+          timestamp: new Date().getTime(),
+        };
+        
+        const temp: ChatMessage = {
+          from: MessageFrom.Mine,
+          text_msg_raw,
+          ack: false,
+        };
+        
+        await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
+        onMessageSent?.(JSON.stringify(temp));
+      }
+    } catch (e) {
+      console.log('发送图片失败', e);
     }
   };
 

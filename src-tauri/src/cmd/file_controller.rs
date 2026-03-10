@@ -7,7 +7,7 @@ use tauri::Manager;
 
 use crate::config::get_config;
 use crate::service::file_service::get_file_by_biz_id_service;
-use crate::utils::global_static_str::{DEFAULT_IMAGE, RESOURCE_PATH};
+use crate::utils::global_static_str::{DEFAULT_IMAGE, RESOURCE_PATH, TALK_API};
 use crate::vo::file_vo::FileVo;
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件
@@ -160,7 +160,27 @@ pub async fn get_file_by_biz_id(biz_id: String) -> Result<Vec<FileVo>, String> {
         warn!("业务id不能为空");
         return Err("业务id不能为空".to_string());
     }
-    let res = get_file_by_biz_id_service(biz_id).await;
+    let url = format!("{}/file/download_link/pub_biz/{}", TALK_API, biz_id);
+    let res = get_file_by_biz_id_service(biz_id, url).await;
+    match res {
+        Ok(file_vo) => Ok(file_vo),
+        Err(e) => {
+            error!("获取文件失败 {}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+/// 通过业务id获取聊天文件
+#[tauri::command]
+pub async fn get_chat_file_by_biz_id(biz_id: String) -> Result<Vec<FileVo>, String> {
+    info!("通过业务id获取文件 {}", biz_id);
+    if biz_id.is_empty() {
+        warn!("业务id不能为空");
+        return Err("业务id不能为空".to_string());
+    }
+    let url = format!("{}/file/download_link/chat_biz/{}/1", TALK_API, biz_id);
+    let res = get_file_by_biz_id_service(biz_id, url).await;
     match res {
         Ok(file_vo) => Ok(file_vo),
         Err(e) => {

@@ -17,7 +17,7 @@ use crate::utils::global_static_str::{RESOURCE_PATH, TALK_API};
 use crate::utils::uuid_utils;
 use crate::vo::file_vo::FileVo;
 
-pub async fn get_file_by_biz_id_service(biz_id: String) -> Result<Vec<FileVo>, anyhow::Error> {
+pub async fn get_file_by_biz_id_service(biz_id: String, url: String) -> Result<Vec<FileVo>, anyhow::Error> {
     // 0、从biz业务表获取文件列表id，biz只负责文件业务
     // 校验biz_id是否合规，是否为空，格式为uuid
     if biz_id.is_empty() {
@@ -32,7 +32,7 @@ pub async fn get_file_by_biz_id_service(biz_id: String) -> Result<Vec<FileVo>, a
     // 2、是否存在文件
     if file_list.is_empty() {
         // 2-1 从远程下载文件
-        download_file_by_biz_service(&biz_id).await?;
+        download_file_by_biz_service(&biz_id, url).await?;
         // 2-2 再重新获取文件记录
         file_list = FileRecord::get_by_biz_id(&biz_id).await?;
         // 2-3 如果还是不存在，抛出错误
@@ -84,9 +84,8 @@ pub async fn get_file_by_biz_id_service(biz_id: String) -> Result<Vec<FileVo>, a
 /**
  * 通过业务id下载文件
  */
-pub async fn download_file_by_biz_service(biz_id: &str) -> Result<(), anyhow::Error> {
+pub async fn download_file_by_biz_service(biz_id: &str, url: String) -> Result<(), anyhow::Error> {
     // 1、 从远程获取文件下载url
-    let url = format!("{}/file/download_link/pub_biz/{}", TALK_API, biz_id);
     info!("获取文件下载URL: {}", url);
 
     // 创建一个空的请求体

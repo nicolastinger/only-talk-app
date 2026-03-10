@@ -60,7 +60,7 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
 
   return (
     <div className={styles.footer}>
-      <FooterToolBar friendUuid={friendUuid} onEmojiSelect={handleEmojiSelect} />
+      <FooterToolBar friendUuid={friendUuid} onEmojiSelect={handleEmojiSelect} onMessageSent={onMessageSent} />
       <div className={styles.footerMessage}>
         <TextArea
           onPressEnter={sendMessage}

@@ -1,10 +1,15 @@
+use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::anyhow;
+use image::ImageReader;
 use log::{error, info};
 use quinn::SendStream;
+use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::sync::RwLock;
+use tokio::time::timeout;
 
 use crate::dao::chat_record_db::{query_last_chat_record};
 use crate::dao::session_db::{
@@ -14,11 +19,14 @@ use crate::dao::session_db::{
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_session::ChatSession;
+use crate::service::api_service::upload_file;
 use crate::service::user_service::{get_user_info, get_user_map};
+use crate::utils::global_static_str::TALK_API;
+use crate::utils::image_utils::compress_image_to_webp;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use crate::dao::chat_record_ack::{insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id};
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send};
@@ -27,6 +35,30 @@ use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord};
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::utils::global_static_str::{PLATFORM, ZERO_UUID};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct FileInfo {
+    biz_id: String,
+    origin_file_id: Option<String>,
+    file_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct UploadData {
+    uuid: String,
+    biz_name: String,
+    description: String,
+    biz_type: String,
+    remark: String,
+    file_infos: Vec<FileInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct UploadResponse {
+    code: i32,
+    data: UploadData,
+    message: String,
+}
 
 /// 获取会话列表
 pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
@@ -304,12 +336,12 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
 pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String, anyhow::Error> {
     match text_type {
         1 => {
-            let mut chat_record_raw = TextRecord::deserialize(raw)?;
+            let mut chat_record_raw = <TextRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         },
         2 => {
-            let mut chat_record_raw = ImageRecord::deserialize(raw)?;
+            let mut chat_record_raw = <ImageRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         },
@@ -396,5 +428,91 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
         }
     }
 
+    Ok(())
+}
+
+async fn upload_chat_file_server(file_path: &str, friend_uuid: &str) -> Result<UploadData, anyhow::Error> {
+    let url = format!("{}/file_integrated/upload/user_chat/{}", TALK_API, friend_uuid);
+    let response = upload_file(&url, file_path, "file").await?;
+    
+    let status = response.status();
+    let response_text = response.text().await?;
+    
+    if !status.is_success() {
+        return Err(anyhow!("上传失败: {}, 响应: {}", status, response_text));
+    }
+    
+    let upload_response: UploadResponse = serde_json::from_str(&response_text)
+        .map_err(|e| anyhow!("解析上传响应失败: {}, 响应内容: {}", e, response_text))?;
+    
+    if upload_response.code != 200 {
+        return Err(anyhow!("上传失败: {}", upload_response.message));
+    }
+    
+    Ok(upload_response.data)
+}
+
+// 发送图片数据
+pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+    let file_path = text_quic_msg.raw.clone();
+    
+    // 1、压缩图片
+    let _compressed_file = compress_image_to_webp(&Path::new(&file_path))?;
+    let compressed_path = Path::new(&file_path).with_extension("webp");
+    let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
+    
+    // 2、上传图片到文件服务器
+    let upload_data = upload_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+    
+    // 3、获取图片尺寸信息
+    let img = ImageReader::open(&file_path)?.decode()?;
+    let img_width = img.width() as i32;
+    let img_height = img.height() as i32;
+    
+    // 4、获取文件大小
+    let metadata = std::fs::metadata(compressed_path_str)?;
+    let img_size = metadata.len() as i32;
+    
+    // 5、获取第一个 file_info 的 biz_id
+    let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
+    let biz_id = file_info.biz_id.clone();
+    
+    // 6、组装 ImageRecord
+    let image_record = ImageRecord {
+        prev_id: ZERO_UUID.to_string(),
+        biz_id,
+        is_preview: false,
+        img_width,
+        img_height,
+        img_size,
+        platform: PLATFORM,
+    };
+    
+    let image_raw = image_record.json_serialize()?;
+    
+    // 7、创建新的 TextQuicMsgVo 用于发送
+    let mut image_msg = text_quic_msg.clone();
+    image_msg.raw = image_raw;
+    
+    // 8、调用 send_text_msg_service 发送消息
+    // 获取全局消息发送锁，保证数据库最新消息，超过10秒后获取不到锁就返回错误
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        let res = send_text_msg_service(image_msg).await;
+        res
+    }).await;
+    
+    match result {
+        Ok(Ok(_)) => {},
+        Ok(Err(e)) => {
+            error!("获取锁时发生意外错误,{}", e);
+            return Err(anyhow!("获取锁时发生意外错误,{}", e));
+        },
+        Err(elapsed) => {
+            error!("超时：10秒内未能获取锁 {}", elapsed);
+            return Err(anyhow!("超时：10秒内未能获取锁 {}", elapsed));
+        }
+    }
+    
     Ok(())
 }
