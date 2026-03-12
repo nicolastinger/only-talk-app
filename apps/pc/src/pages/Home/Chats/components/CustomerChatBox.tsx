@@ -2,6 +2,8 @@ import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import styles from './styles/CustomerChatBox.less';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
+import ChatImage from './ChatImage';
+import { TextBox } from './TextBox';
 
 // 图片缓存
 const imageCache = new Map<string, string>();
@@ -97,32 +99,11 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
   const renderMessage = (message: string) => {
     switch (text_type) {
       case 1:
-        return <div className={styles.chatContainer}>{message}</div>;
+        return TextBox(message);
       case 2:
-        if (imageUrl) {
-          return (
-            <div className={styles.chatContainer}>
-              <img
-                src={imageUrl}
-                alt="图片消息"
-                style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '8px' }}
-                onLoad={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'block';
-                }}
-                onError={(e) => {
-                  console.error('图片加载失败', e);
-                }}
-              />
-            </div>
-          );
-        } else if (loading) {
-          return <div className={styles.chatContainer}>加载中...</div>;
-        } else {
-          return <div className={styles.chatContainer}>图片加载失败</div>;
-        }
+        return <ChatImage src={imageUrl} loading={loading} />;
       default:
-        return <div className={styles.chatContainer}>{message}</div>;
+        return TextBox(message);
     }
   };
 
@@ -131,8 +112,7 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
       <div className={styles.userIcon}>
         <img
           src={
-            friendIcon ||
-            'https://pic3.zhimg.com/v2-f971a87263e64dc9f9cf0b35f2d48d62_b.jpg?consumer=ZHI_MENG'
+            friendIcon 
           }
           width={40}
           height={40}
@@ -141,7 +121,7 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
           style={{ opacity: loading ? 0.7 : 1 }}
         />
       </div>
-      {renderMessage(raw)}
+      <div className={styles.chatContainer}>{renderMessage(raw)}</div>
     </div>
   );
 };

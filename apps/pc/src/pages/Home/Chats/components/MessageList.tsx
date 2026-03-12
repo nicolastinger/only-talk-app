@@ -2,50 +2,69 @@ import { ChatMessage, MessageFrom } from '@workspace/types';
 import React from 'react';
 import CustomerChatBox from './CustomerChatBox';
 import MineChatBox from './MineChatBox';
+import MessageTimestamp from './MessageTimestamp';
 
 interface MessageListProps {
   messages: ChatMessage[];
   friendIcon?: string;
 }
 
+const TEN_MINUTES = 10 * 60 * 1000;
+
 const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
   return (
     <>
-      {messages.map((msg) => {
+      {messages.map((msg, index) => {
         let message = msg.text_msg_raw;
         if (message.text_type === 201) {
           return null;
         }
-        if (msg.from !== MessageFrom.Mine) {
-          return (
-            <CustomerChatBox
-              key={message.nano_id}
-              from={MessageFrom.System}
-              ack={undefined}
-              img={friendIcon}
-              text_msg_raw={message}
-            />
-          );
-        } else {
-          return (
-            <MineChatBox icon={friendIcon} key={message.nano_id} msg={msg} isAck={msg.ack} />
-          );
-        }
+
+        const prevMsg = index > 0 ? messages[index - 1] : null;
+        const prevTimestamp = prevMsg?.text_msg_raw.timestamp || 0;
+        const currentTimestamp = message.timestamp;
+        
+        const shouldShowTimestamp = 
+          index === 0 || 
+          Math.abs(currentTimestamp - prevTimestamp) >= TEN_MINUTES;
+
+        return (
+          <React.Fragment key={message.nano_id}>
+            {shouldShowTimestamp && <MessageTimestamp timestamp={currentTimestamp} />}
+            {msg.from !== MessageFrom.Mine ? (
+              <CustomerChatBox
+                from={MessageFrom.System}
+                ack={undefined}
+                img={friendIcon}
+                text_msg_raw={message}
+              />
+            ) : (
+              <MineChatBox icon={friendIcon} msg={msg} isAck={msg.ack} />
+            )}
+          </React.Fragment>
+        );
       })}
     </>
   );
 };
 
 export default React.memo(MessageList, (prevProps, nextProps) => {
-  // 只有当消息列表长度改变或最后一条消息改变时才重新渲染
   if (prevProps.messages.length !== nextProps.messages.length) {
     return false;
   }
-  const nextLastMessage = nextProps.messages[nextProps.messages.length - 1];
-  const prevLastMessage = prevProps.messages[prevProps.messages.length - 1];
-
-  return (
-    prevLastMessage?.text_msg_raw.nano_id ===
-    nextLastMessage?.text_msg_raw.nano_id
-  );
+  
+  for (let i = 0; i < prevProps.messages.length; i++) {
+    const prevMsg = prevProps.messages[i];
+    const nextMsg = nextProps.messages[i];
+    
+    if (prevMsg.text_msg_raw.nano_id !== nextMsg.text_msg_raw.nano_id) {
+      return false;
+    }
+    
+    if (prevMsg.text_msg_raw.timestamp !== nextMsg.text_msg_raw.timestamp) {
+      return false;
+    }
+  }
+  
+  return true;
 });

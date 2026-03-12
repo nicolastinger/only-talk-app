@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
+import ChatImage from './ChatImage';
 
 // 图片缓存
 const imageCache = new Map<string, string>();
@@ -137,26 +138,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       case 1:
         return TextBox(message);
       case 2:
-        if (imageUrl) {
-          return (
-            <img
-              src={imageUrl}
-              alt="图片消息"
-              style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '8px' }}
-              onLoad={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'block';
-              }}
-              onError={(e) => {
-                console.error('图片加载失败', e);
-              }}
-            />
-          );
-        } else if (loading) {
-          return <div>加载中...</div>;
-        } else {
-          return <div>图片加载失败</div>;
-        }
+        return <ChatImage src={imageUrl} loading={loading} />;
       default:
         return TextBox(message);
     }
