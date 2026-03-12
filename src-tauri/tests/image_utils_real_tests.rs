@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 #[test]
 fn test_compress_real_image_p1017533() {
-    let input_path = PathBuf::from(r"D:\1月31日影像咖啡屋\原图\P1017533.RW2");
+    let input_path = PathBuf::from(r"D:\漫展\P1002642.JPG");
     
     assert!(input_path.exists(), "Input file should exist");
     

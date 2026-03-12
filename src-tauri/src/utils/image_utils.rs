@@ -37,7 +37,7 @@ pub fn compress_image_to_webp(input_path: &Path) -> Result<File> {
         let new_width = ((width as f64 * scale) as u32).max(1);
         let new_height = ((height as f64 * scale) as u32).max(1);
         info!("[压缩] 缩放到: {}x{}", new_width, new_height);
-        img.resize(new_width, new_height, FilterType::Lanczos3)
+        img.resize(new_width, new_height, FilterType::Triangle)
     } else {
         img
     };
@@ -60,7 +60,7 @@ pub fn compress_image_to_webp(input_path: &Path) -> Result<File> {
         
         info!("[压缩] 继续缩放到: {}x{}", new_width, new_height);
         
-        let resized = img_to_encode.resize(new_width, new_height, FilterType::Lanczos3);
+        let resized = img_to_encode.resize(new_width, new_height, FilterType::Triangle);
         let final_data = encode_to_webp(&resized)?;
         info!("[压缩] 缩放后编码完成，大小: {} bytes", final_data.len());
         
