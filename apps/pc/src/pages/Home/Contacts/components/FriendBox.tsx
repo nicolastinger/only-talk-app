@@ -34,8 +34,6 @@ const FriendBox = (props: { friend: FriendVo }) => {
         <Badge>
           <img
             src={userIcon || ''}
-            width={100}
-            height={100}
             className={styles.imgItem}
             alt="123"
           />

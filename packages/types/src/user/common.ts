@@ -15,6 +15,7 @@ interface MessageQueueProps {
   time: number;
   title: string;
   count: number;
+  text_type?: number;
 }
 
 interface FriendQueueProps {

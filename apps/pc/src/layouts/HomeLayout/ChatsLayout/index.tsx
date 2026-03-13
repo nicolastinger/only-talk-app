@@ -134,6 +134,7 @@ const ChatsLayout = () => {
                   time={item.timestamp}
                   title={item.friend_name}
                   count={item.unread_count}
+                  text_type={item.text_type}
                 />
               </div>
             );

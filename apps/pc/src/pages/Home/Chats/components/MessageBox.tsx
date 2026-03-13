@@ -1,18 +1,35 @@
 import { MessageQueueProps } from '@workspace/types';
 import { Badge } from 'antd';
-import dayjs from 'dayjs';
 import styles from './styles/MessageBox.less';
 import { getFiles } from '@workspace/services';
 import { useEffect, useState, useMemo } from 'react';
+import { formatMessageTime } from '@/utils/format';
 
 // 图片缓存
 const imageCache = new Map<string, string>();
 
 const MessageBox = (props: MessageQueueProps) => {
-  const { message, title, time, img, count } = props;
+  const { message, title, time, img, count, text_type } = props;
 
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
+
+  const displayMessage = useMemo(() => {
+    if (text_type === 2) {
+      return '[图片]';
+    }
+    
+    try {
+      const parsed = JSON.parse(message);
+      if (parsed.text) {
+        return parsed.text;
+      }
+    } catch (e) {
+      console.error('Failed to parse message:', e);
+    }
+    
+    return message;
+  }, [message, text_type]);
 
   // 只在 img 真正变化时重新获取图片
   useEffect(() => {
@@ -54,7 +71,7 @@ const MessageBox = (props: MessageQueueProps) => {
     }
   };
 
-  const timeStr = dayjs(time).format('HH:mm:ss');
+  const timeStr = formatMessageTime(time);
   return (
     <div className={styles.container}>
       <div className={styles.left}>
@@ -72,7 +89,7 @@ const MessageBox = (props: MessageQueueProps) => {
           <div className={styles.titleText}>{title}</div>
         </div>
         <div className={styles.centerText}>
-          <div className={styles.msgText}>{message}</div>
+          <div className={styles.msgText}>{displayMessage}</div>
         </div>
       </div>
       <div className={styles.end}>
