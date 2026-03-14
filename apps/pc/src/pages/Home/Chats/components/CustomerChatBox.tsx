@@ -5,13 +5,23 @@ import { getChatFileByBizId, getFiles } from '@workspace/services';
 import ChatImage from './ChatImage';
 import { TextBox } from './TextBox';
 
-// 图片缓存
 const imageCache = new Map<string, string>();
 
-const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
+interface CustomerChatBoxProps extends ChatMessage {
+  allImageBizIds?: string[];
+  currentImageIndex?: number;
+  currentBizId?: string;
+  bizIdToUrlMap?: Map<string, string>;
+}
+
+const CustomerChatBox: React.FC<CustomerChatBoxProps> = (props: CustomerChatBoxProps) => {
   const {
     text_msg_raw: { raw, text_type },
     img,
+    allImageBizIds,
+    currentImageIndex,
+    currentBizId,
+    bizIdToUrlMap,
   } = props;
   
   const [friendIcon, setFriendIcon] = useState<string>('');
@@ -21,7 +31,6 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
   useEffect(() => {
     if (!img) return;
     
-    // 检查缓存
     if (imageCache.has(img)) {
       setFriendIcon(imageCache.get(img)!);
       return;
@@ -46,6 +55,9 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
         if (imageCache.has(bizId)) {
           console.log('CustomerChatBox - Image found in cache');
           setImageUrl(imageCache.get(bizId)!);
+          if (bizIdToUrlMap) {
+            bizIdToUrlMap.set(bizId, imageCache.get(bizId)!);
+          }
           return;
         }
         
@@ -58,6 +70,9 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
             if (tauriFilePath) {
               imageCache.set(bizId, tauriFilePath);
               setImageUrl(tauriFilePath);
+              if (bizIdToUrlMap) {
+                bizIdToUrlMap.set(bizId, tauriFilePath);
+              }
             } else {
               console.error('CustomerChatBox - Tauri file path is empty');
             }
@@ -73,12 +88,10 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
         console.error('CustomerChatBox - Error parsing image record:', error);
       }
     }
-  }, [raw, text_type]);
+  }, [raw, text_type, bizIdToUrlMap]);
 
-  // 获取用户头像
   const getUserIcon = async (icon: string): Promise<string> => {
     try {
-      // 再次检查缓存（防止并发请求）
       if (imageCache.has(icon)) {
         return imageCache.get(icon)!;
       }
@@ -86,7 +99,6 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
       const FileVos = await getFiles(icon);
       const tauriFilePath = FileVos?.[0]?.tauri_file_path || '';
       
-      // 存入缓存
       imageCache.set(icon, tauriFilePath);
       
       return tauriFilePath;
@@ -101,7 +113,15 @@ const CustomerChatBox: React.FC<ChatMessage> = (props: ChatMessage) => {
       case 1:
         return TextBox(message);
       case 2:
-        return <ChatImage src={imageUrl} loading={loading} />;
+        return (
+          <ChatImage
+            src={imageUrl}
+            loading={loading}
+            allImageBizIds={allImageBizIds}
+            currentIndex={currentImageIndex}
+            bizIdToUrlMap={bizIdToUrlMap}
+          />
+        );
       default:
         return TextBox(message);
     }

@@ -1,5 +1,5 @@
 import { ChatMessage, MessageFrom } from '@workspace/types';
-import React from 'react';
+import React, { useMemo } from 'react';
 import CustomerChatBox from './CustomerChatBox';
 import MineChatBox from './MineChatBox';
 import MessageTimestamp from './MessageTimestamp';
@@ -12,6 +12,29 @@ interface MessageListProps {
 const TEN_MINUTES = 10 * 60 * 1000;
 
 const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
+  const { allImageBizIds, imageIndexMap, bizIdToUrlMap } = useMemo(() => {
+    const bizIds: string[] = [];
+    const indexMap = new Map<string, number>();
+    const urlMap = new Map<string, string>();
+    
+    messages.forEach((msg) => {
+      if (msg.text_msg_raw.text_type === 2) {
+        try {
+          const imageRecord = JSON.parse(msg.text_msg_raw.raw);
+          const bizId = imageRecord.biz_id;
+          if (bizId && !indexMap.has(bizId)) {
+            indexMap.set(bizId, bizIds.length);
+            bizIds.push(bizId);
+          }
+        } catch (error) {
+          console.error('Failed to parse image record:', error);
+        }
+      }
+    });
+    
+    return { allImageBizIds: bizIds, imageIndexMap: indexMap, bizIdToUrlMap: urlMap };
+  }, [messages]);
+
   return (
     <>
       {messages.map((msg, index) => {
@@ -28,6 +51,18 @@ const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
           index === 0 || 
           Math.abs(currentTimestamp - prevTimestamp) >= TEN_MINUTES;
 
+        let currentImageIndex = 0;
+        let currentBizId = '';
+        if (message.text_type === 2) {
+          try {
+            const imageRecord = JSON.parse(message.raw);
+            currentBizId = imageRecord.biz_id;
+            currentImageIndex = imageIndexMap.get(currentBizId) || 0;
+          } catch (error) {
+            console.error('Failed to parse image record:', error);
+          }
+        }
+
         return (
           <React.Fragment key={message.nano_id}>
             {shouldShowTimestamp && <MessageTimestamp timestamp={currentTimestamp} />}
@@ -37,9 +72,21 @@ const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
                 ack={undefined}
                 img={friendIcon}
                 text_msg_raw={message}
+                allImageBizIds={allImageBizIds}
+                currentImageIndex={currentImageIndex}
+                currentBizId={currentBizId}
+                bizIdToUrlMap={bizIdToUrlMap}
               />
             ) : (
-              <MineChatBox icon={friendIcon} msg={msg} isAck={msg.ack} />
+              <MineChatBox 
+                icon={friendIcon} 
+                msg={msg} 
+                isAck={msg.ack}
+                allImageBizIds={allImageBizIds}
+                currentImageIndex={currentImageIndex}
+                currentBizId={currentBizId}
+                bizIdToUrlMap={bizIdToUrlMap}
+              />
             )}
           </React.Fragment>
         );

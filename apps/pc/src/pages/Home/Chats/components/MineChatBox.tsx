@@ -7,13 +7,16 @@ import { TextBox } from './TextBox';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
 import ChatImage from './ChatImage';
 
-// 图片缓存
 const imageCache = new Map<string, string>();
 
 type MineChatBoxProps = {
   msg: ChatMessage;
   isAck: boolean | undefined;
   icon?: string;
+  allImageBizIds?: string[];
+  currentImageIndex?: number;
+  currentBizId?: string;
+  bizIdToUrlMap?: Map<string, string>;
 };
 
 const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
@@ -22,7 +25,11 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       text_msg_raw: { raw, text_type },
     },
     isAck = true,
-    icon
+    icon,
+    allImageBizIds,
+    currentImageIndex,
+    currentBizId,
+    bizIdToUrlMap,
   } = props;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,6 +111,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         if (imageCache.has(bizId)) {
           console.log('MineChatBox - Image found in cache');
           setImageUrl(imageCache.get(bizId)!);
+          if (bizIdToUrlMap) {
+            bizIdToUrlMap.set(bizId, imageCache.get(bizId)!);
+          }
           return;
         }
         
@@ -116,6 +126,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             if (tauriFilePath) {
               imageCache.set(bizId, tauriFilePath);
               setImageUrl(tauriFilePath);
+              if (bizIdToUrlMap) {
+                bizIdToUrlMap.set(bizId, tauriFilePath);
+              }
             } else {
               console.error('MineChatBox - Tauri file path is empty');
             }
@@ -131,14 +144,22 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         console.error('MineChatBox - Error parsing image record:', error);
       }
     }
-  }, [raw, text_type]);
+  }, [raw, text_type, bizIdToUrlMap]);
 
   const renderMessage = (message: string) => {
     switch (text_type) {
       case 1:
         return TextBox(message);
       case 2:
-        return <ChatImage src={imageUrl} loading={loading} />;
+        return (
+          <ChatImage
+            src={imageUrl}
+            loading={loading}
+            allImageBizIds={allImageBizIds}
+            currentIndex={currentImageIndex}
+            bizIdToUrlMap={bizIdToUrlMap}
+          />
+        );
       default:
         return TextBox(message);
     }

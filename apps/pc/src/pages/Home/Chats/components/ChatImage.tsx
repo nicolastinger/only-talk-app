@@ -1,4 +1,5 @@
 import React from 'react';
+import { openImagePreviewWindow } from '@workspace/services';
 
 interface ChatImageProps {
   src: string | null;
@@ -9,6 +10,9 @@ interface ChatImageProps {
   borderRadius?: string;
   className?: string;
   style?: React.CSSProperties;
+  allImageBizIds?: string[];
+  currentIndex?: number;
+  bizIdToUrlMap?: Map<string, string>;
 }
 
 const ChatImage: React.FC<ChatImageProps> = ({
@@ -20,7 +24,19 @@ const ChatImage: React.FC<ChatImageProps> = ({
   borderRadius = '5px',
   className,
   style,
+  allImageBizIds,
+  currentIndex = 0,
+  bizIdToUrlMap,
 }) => {
+  const handleClick = () => {
+    if (src && allImageBizIds && allImageBizIds.length > 0 && bizIdToUrlMap) {
+      const imageUrls = allImageBizIds.map(bizId => bizIdToUrlMap.get(bizId) || '').filter(url => url);
+      if (imageUrls.length > 0) {
+        openImagePreviewWindow(imageUrls, currentIndex);
+      }
+    }
+  };
+
   if (src) {
     return (
       <img
@@ -32,8 +48,10 @@ const ChatImage: React.FC<ChatImageProps> = ({
           maxHeight,
           borderRadius,
           display: 'none',
+          cursor: 'pointer',
           ...style,
         }}
+        onClick={handleClick}
         onLoad={(e) => {
           const target = e.target as HTMLImageElement;
           target.style.display = 'block';

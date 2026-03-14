@@ -13,4 +13,10 @@ interface BizChatFile {
   file_infos: BizFileInfo[];
 }
 
-export { BizFileInfo, BizChatFile }
+interface ImagePreview {
+  imagePaths: string[];
+  currentIndex?: number;
+  title?: string;
+}
+
+export { BizFileInfo, BizChatFile, ImagePreview }

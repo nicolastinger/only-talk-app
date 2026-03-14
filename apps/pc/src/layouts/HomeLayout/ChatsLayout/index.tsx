@@ -48,14 +48,12 @@ const ChatsLayout = () => {
       });
 
       console.log('index', index);
-      // 创建新的数组，避免直接修改原数组
       const newList = [...prevList];
 
       let friend_icon = newList[index]?.friend_icon;
       let friend_name = newList[index]?.friend_name;
       if (chatSessionEvent.type === 0) {
         if (index !== -1) {
-          // 更新现有会话
           newList[index] = chatSessionEvent.data;
           newList[index] = {
             ...newList[index],
@@ -63,12 +61,10 @@ const ChatsLayout = () => {
             friend_name: friend_name,
           };
         } else {
-          // 添加新会话
           newList.push(chatSessionEvent.data);
         }
       } else {
         if (index !== -1) {
-          // 更新现有会话的属性
           newList[index] = {
             ...newList[index],
             unread_count: newList[index].unread_count + 1,
@@ -82,12 +78,11 @@ const ChatsLayout = () => {
             friend_icon: newList[index].friend_icon,
           };
         } else {
-          // 添加新会话
           newList.push(chatSessionEvent.data);
         }
       }
 
-      return newList;
+      return newList.sort((a, b) => b.timestamp - a.timestamp);
     });
   }, [chatSessionEvent]);
 
@@ -106,7 +101,8 @@ const ChatsLayout = () => {
         {},
       )) as ChatSessionVo[];
       console.log('get_chat_session', res);
-      setChatSessionList(res);
+      const sortedList = res.sort((a, b) => b.timestamp - a.timestamp);
+      setChatSessionList(sortedList);
     } catch (e) {
       console.log(e);
     }

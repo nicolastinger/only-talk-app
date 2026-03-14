@@ -116,6 +116,10 @@ const routes = [
     component: './Search/Friend',
   },
   {
+    path: '/imagePreview',
+    component: './ImagePreview',
+  },
+  {
     path: '/*',
     component: './Error',
   },
