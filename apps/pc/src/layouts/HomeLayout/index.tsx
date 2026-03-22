@@ -6,7 +6,7 @@ import { TALK_API } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { HttpResponse, ResponseData } from '@workspace/types';
 import { UserInfo } from '@workspace/types';
-import { CloseOutlined, MinusOutlined } from '@ant-design/icons';
+import { CloseOutlined, MinusOutlined, ExpandOutlined, CompressOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Window } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
@@ -16,6 +16,7 @@ import { useSystemNotify } from '@/hooks/useSystemNotify';
 
 const HomeLayout = () => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
 
@@ -23,13 +24,30 @@ const HomeLayout = () => {
   useSystemNotify(userInfo.uuid);
 
   // 最小化
-  const minimizeWindow = async () => {
+  const minimizeWindow = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     const currentWindow = Window.getCurrent();
     await currentWindow.minimize();
   };
 
+  // 最大化/还原
+  const toggleMaximize = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentWindow = Window.getCurrent();
+    const maximized = await currentWindow.isMaximized();
+    
+    if (maximized) {
+      await currentWindow.unmaximize();
+      setIsMaximized(false);
+    } else {
+      await currentWindow.maximize();
+      setIsMaximized(true);
+    }
+  };
+
   // 关闭窗口
-  const closeWindow = async () => {
+  const closeWindow = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     const currentWindow = Window.getCurrent();
     await currentWindow.close();
   };
@@ -97,10 +115,13 @@ const HomeLayout = () => {
           </div>
           <div className={styles.rightSideBarToolButton}>
             <div className={styles.rightSideBarToolButtonList}>
-              <div onClick={minimizeWindow} className={styles.rightButton}>
+              <div onClick={minimizeWindow} onMouseDown={(e) => e.stopPropagation()} className={styles.rightButton}>
                 <MinusOutlined />
               </div>
-              <div onClick={closeWindow} className={styles.rightButtonDanger}>
+              <div onClick={toggleMaximize} onMouseDown={(e) => e.stopPropagation()} className={styles.rightButton}>
+                {isMaximized ? <CompressOutlined /> : <ExpandOutlined />}
+              </div>
+              <div onClick={closeWindow} onMouseDown={(e) => e.stopPropagation()} className={styles.rightButtonDanger}>
                 <CloseOutlined />
               </div>
             </div>
