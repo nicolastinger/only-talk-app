@@ -2,18 +2,21 @@
 
 use crate::dao::{get_db_client, get_private_db_client};
 use crate::entity::chat_record_read::ChatRecordRead;
-use crate::entity::Page;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 分页获取聊天记录
 pub async fn query_chat_record_from_db(
-    text_quic_msg: TextQuicMsgVo,
-    _page: Page,
+    send_user: &str,
+    recv_user: &str,
+    limit: i64,
+    offset: i64,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by id asc"#)
-        .bind(text_quic_msg.send_user)
-        .bind(text_quic_msg.recv_user)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by timestamp desc limit ?3 offset ?4) order by timestamp asc"#)
+        .bind(send_user)
+        .bind(recv_user)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&pool_sqlite)
         .await?;
     Ok(record)

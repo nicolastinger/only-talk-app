@@ -1,8 +1,8 @@
 import { Page } from "./page";
-import { TextMsgRaw } from "../user/common";
+import { TextQuicMsgVo } from "./chat";
 
 interface Record {
-  text_msg_raw?: TextMsgRaw;
+  text_msg_raw?: TextQuicMsgVo;
   page: Page;
 }
 

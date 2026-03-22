@@ -11,18 +11,30 @@ import {
   ResponseData,
   TextQuicMsgVo,
 } from '@workspace/types';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ChatFooter from '../components/Footer';
 import MessageList from '../components/MessageList';
 import Splitter from '../components/Splitter';
 import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
 
+const PAGE_SIZE = 20;
+
 const ChatPage: React.FC = () => {
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
-  const [footerHeight, setFooterHeight] = useState(180); // 默认高度180px
+  const [footerHeight, setFooterHeight] = useState(180);
   const [realFootHeight, setRealFooterHeight] = useState(186);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
+  const [loadedMessageIds, setLoadedMessageIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendUuid = params.get('currentFriend') || '';
@@ -31,7 +43,6 @@ const ChatPage: React.FC = () => {
   const { textMessage } = useMessageApi(friendUuid, meUuid);
 
   const handleHeightChange = (heightPercent: number) => {
-    // 将百分比转换为像素值，限制在最小20px和最大80%之间
     const containerHeight = window.innerHeight;
     const minHeightPx = 20;
     const maxHeightPx = containerHeight * 0.8;
@@ -46,34 +57,33 @@ const ChatPage: React.FC = () => {
     setRealFooterHeight(footerHeight + 6);
   }, [footerHeight]);
 
-  // 更新已读记录
   useEffect(() => {
     if (messageList.length > 1) {
       let last_nano_id: string = '';
       const last_message = messageList[messageList.length - 1];
       last_nano_id = last_message.text_msg_raw.nano_id;
       if (last_nano_id !== '' && last_message.ack === undefined) {
-        // 消息已读
         console.log('已读', messageList);
         markRead(last_nano_id);
       }
     }
   }, [messageList]);
 
-  // 获取聊天记录
   useEffect(() => {
-    getChatRecordFromStore(meUuid, friendUuid);
+    setCurrentPage(1);
+    setHasMore(true);
+    setIsInitialLoad(true);
+    setMessageList([]);
+    loadChatRecordFromStore(meUuid, friendUuid, 1, true);
     getFriendInfo(friendUuid);
     markReadFriend(friendUuid);
     setCurrentFriendSession(friendUuid);
 
-    // 组件卸载时清理当前好友会话
     return () => {
       setCurrentFriendSession('-1');
     };
   }, [meUuid, friendUuid]);
 
-  // 设置当前好友会话
   const setCurrentFriendSession = async (friend: string) => {
     try {
       const res = await invoke('add_user_map', {
@@ -87,7 +97,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // 已读好友会话
   const markReadFriend = async (friendUuid: string) => {
     if (friendUuid == null || friendUuid === '') {
       return;
@@ -102,7 +111,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // 已读当前会话聊天记录
   const markRead = async (last_read_record: string) => {
     try {
       let lastList = [] as string[];
@@ -118,7 +126,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // 获取好友信息
   const getFriendInfo = async (friendUuid: string) => {
     try {
       const data: FriendVo = await invoke('get_friend_info', {
@@ -131,9 +138,17 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const getChatRecordFromStore = async (meUuid: string, friendUuid: string) => {
+  const loadChatRecordFromStore = async (
+    meUuid: string,
+    friendUuid: string,
+    page: number,
+    isInitial: boolean = false,
+  ) => {
+    if (isLoading) return;
+
+    setIsLoading(true);
     try {
-      let textRawText: TextQuicMsgVo = {
+      const textRawText: TextQuicMsgVo = {
         nano_id: '',
         raw: '',
         recv_user: meUuid,
@@ -141,21 +156,23 @@ const ChatPage: React.FC = () => {
         text_type: 0,
         timestamp: 0,
       };
-      let page: Page = {
-        size: 50,
-        current: 1,
+      const pageParam: Page = {
+        size: PAGE_SIZE,
+        current: page,
         total: 0,
       };
       const data: TextQuicMsgVo[] = await invoke('get_chat_record_from_store', {
         textQuicMsg: textRawText,
-        page,
+        page: pageParam,
       });
+
       if (data.length === 0) {
+        setHasMore(false);
         return;
       }
 
-      let chatMessages: ChatMessage[] = data.map((item) => {
-        let from =
+      const chatMessages: ChatMessage[] = data.map((item) => {
+        const from =
           item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;
         const temp: ChatMessage = {
           from,
@@ -164,22 +181,73 @@ const ChatPage: React.FC = () => {
         };
         return temp;
       });
-      setMessageList(chatMessages);
-      // 使用reduce()直接找到最大值（性能更好）
-      if (chatMessages.length > 0) {
-        const last_read_record = chatMessages.reduce((latest, current) =>
-          latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
-            ? latest
-            : current,
-        )?.text_msg_raw.nano_id;
-        markRead(last_read_record);
+
+      if (isInitial) {
+        setMessageList(chatMessages);
+        setIsInitialLoad(false);
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+        if (chatMessages.length > 0) {
+          const last_read_record = chatMessages.reduce((latest, current) =>
+            latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
+              ? latest
+              : current,
+          )?.text_msg_raw.nano_id;
+          markRead(last_read_record);
+        }
+      } else {
+        const container = messageContainerRef.current;
+        const prevScrollHeight = container?.scrollHeight || 0;
+
+        const newIds = new Set(chatMessages.map((msg) => msg.text_msg_raw.nano_id));
+        setLoadedMessageIds(newIds);
+
+        setMessageList((prev) => [...chatMessages, ...prev]);
+
+        setTimeout(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - prevScrollHeight;
+          }
+        }, 0);
+
+        setTimeout(() => {
+          setLoadedMessageIds(new Set());
+        }, 300);
+      }
+
+      if (data.length < PAGE_SIZE) {
+        setHasMore(false);
       }
     } catch (err) {
       console.log(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // 接收到外部消息
+  const handleScroll = useCallback(() => {
+    const container = messageContainerRef.current;
+    if (!container || isLoading || !hasMore || isInitialLoad) return;
+
+    if (container.scrollTop <= 50) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadChatRecordFromStore(meUuid, friendUuid, nextPage, false);
+    }
+  }, [currentPage, isLoading, hasMore, isInitialLoad, meUuid, friendUuid]);
+
+  useEffect(() => {
+    const container = messageContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [handleScroll]);
+
   useEffect(() => {
     if (textMessage) {
       let from = MessageFrom.Customer;
@@ -191,7 +259,6 @@ const ChatPage: React.FC = () => {
         text_msg_raw: textMessage,
         ack: undefined,
       };
-      // ack消息
       if (textMessage.text_type === 201) {
         setMessageList((prevState) => {
           const index = prevState.findIndex(
@@ -203,26 +270,35 @@ const ChatPage: React.FC = () => {
           return [...prevState, temp];
         });
       } else {
+        setNewMessageIds(new Set([textMessage.nano_id]));
         setMessageList((prevState) => [...prevState, temp]);
+        setTimeout(() => {
+          setNewMessageIds(new Set());
+        }, 300);
       }
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
     }
   }, [textMessage]);
 
-  const anchorSmooth = () => {
-    const anchorTop = document.getElementById('anchor');
-    if (anchorTop) {
-      anchorTop.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = () => {
+    const container = messageContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
     }
   };
 
-  useEffect(() => {
-    anchorSmooth();
-  }, [messageList]);
-
   const handleMessageSent = (message: string) => {
     const temp: ChatMessage = JSON.parse(message);
-
+    setNewMessageIds(new Set([temp.text_msg_raw.nano_id]));
     setMessageList((prev) => [...prev, temp]);
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    setTimeout(() => {
+      setNewMessageIds(new Set());
+    }, 300);
   };
 
   return (
@@ -232,12 +308,24 @@ const ChatPage: React.FC = () => {
       </div>
       <div className={styles.mainContainer}>
         <div
+          ref={messageContainerRef}
           className={styles.messageContainer}
           style={{ height: `calc(100% - ${realFootHeight}px)` }}
         >
+          {isLoading && !isInitialLoad && (
+            <div className={styles.loadingIndicator}>
+              <div className={styles.loadingSpinner}></div>
+              <span>加载中...</span>
+            </div>
+          )}
+          {!hasMore && messageList.length > 0 && (
+            <div className={styles.noMoreIndicator}>没有更多消息了</div>
+          )}
           <MessageList
             messages={messageList}
             friendIcon={currentFriend?.friend_icon}
+            newMessageIds={newMessageIds}
+            loadedMessageIds={loadedMessageIds}
           />
           <div id="anchor"></div>
         </div>

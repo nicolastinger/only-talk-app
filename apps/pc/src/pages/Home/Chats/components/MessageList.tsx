@@ -3,15 +3,23 @@ import React, { useMemo } from 'react';
 import CustomerChatBox from './CustomerChatBox';
 import MessageTimestamp from './MessageTimestamp';
 import MineChatBox from './MineChatBox';
+import styles from './styles/MessageBox.less';
 
 interface MessageListProps {
   messages: ChatMessage[];
   friendIcon?: string;
+  newMessageIds?: Set<string>;
+  loadedMessageIds?: Set<string>;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
 
-const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
+const MessageList: React.FC<MessageListProps> = ({
+  messages,
+  friendIcon,
+  newMessageIds,
+  loadedMessageIds,
+}) => {
   const { allImageBizIds, imageIndexMap, bizIdToUrlMap } = useMemo(() => {
     const bizIds: string[] = [];
     const indexMap = new Map<string, number>();
@@ -38,6 +46,16 @@ const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
       bizIdToUrlMap: urlMap,
     };
   }, [messages]);
+
+  const getMessageAnimationClass = (nanoId: string): string => {
+    if (newMessageIds?.has(nanoId)) {
+      return styles.newMessageAnimation;
+    }
+    if (loadedMessageIds?.has(nanoId)) {
+      return styles.messageItem;
+    }
+    return '';
+  };
 
   return (
     <>
@@ -67,33 +85,37 @@ const MessageList: React.FC<MessageListProps> = ({ messages, friendIcon }) => {
           }
         }
 
+        const animationClass = getMessageAnimationClass(message.nano_id);
+
         return (
           <React.Fragment key={message.nano_id}>
             {shouldShowTimestamp && (
               <MessageTimestamp timestamp={currentTimestamp} />
             )}
-            {msg.from !== MessageFrom.Mine ? (
-              <CustomerChatBox
-                from={MessageFrom.System}
-                ack={undefined}
-                img={friendIcon}
-                text_msg_raw={message}
-                allImageBizIds={allImageBizIds}
-                currentImageIndex={currentImageIndex}
-                currentBizId={currentBizId}
-                bizIdToUrlMap={bizIdToUrlMap}
-              />
-            ) : (
-              <MineChatBox
-                icon={friendIcon}
-                msg={msg}
-                isAck={msg.ack}
-                allImageBizIds={allImageBizIds}
-                currentImageIndex={currentImageIndex}
-                currentBizId={currentBizId}
-                bizIdToUrlMap={bizIdToUrlMap}
-              />
-            )}
+            <div className={animationClass}>
+              {msg.from !== MessageFrom.Mine ? (
+                <CustomerChatBox
+                  from={MessageFrom.System}
+                  ack={undefined}
+                  img={friendIcon}
+                  text_msg_raw={message}
+                  allImageBizIds={allImageBizIds}
+                  currentImageIndex={currentImageIndex}
+                  currentBizId={currentBizId}
+                  bizIdToUrlMap={bizIdToUrlMap}
+                />
+              ) : (
+                <MineChatBox
+                  icon={friendIcon}
+                  msg={msg}
+                  isAck={msg.ack}
+                  allImageBizIds={allImageBizIds}
+                  currentImageIndex={currentImageIndex}
+                  currentBizId={currentBizId}
+                  bizIdToUrlMap={bizIdToUrlMap}
+                />
+              )}
+            </div>
           </React.Fragment>
         );
       })}
@@ -117,6 +139,13 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
     if (prevMsg.text_msg_raw.timestamp !== nextMsg.text_msg_raw.timestamp) {
       return false;
     }
+  }
+
+  if (
+    prevProps.newMessageIds?.size !== nextProps.newMessageIds?.size ||
+    prevProps.loadedMessageIds?.size !== nextProps.loadedMessageIds?.size
+  ) {
+    return false;
   }
 
   return true;

@@ -14,7 +14,7 @@ use tokio::time::timeout;
 use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
 };
-use crate::dao::chat_record_db::query_last_chat_record;
+use crate::dao::chat_record_db::{query_chat_record_from_db, query_last_chat_record};
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
@@ -29,6 +29,7 @@ use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord};
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
+use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
 use crate::service::user_service::{get_user_info, get_user_map};
@@ -68,6 +69,17 @@ pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Er
     let uuid =
         GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
     query_chat_session_db(&uuid).await
+}
+
+/// 分页获取聊天记录
+pub async fn get_chat_record_service(
+    text_quic_msg: TextQuicMsgVo,
+    page: Page,
+) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    let limit = page.size;
+    let offset = (page.current - 1) * page.size;
+    query_chat_record_from_db(&text_quic_msg.send_user, &text_quic_msg.recv_user, limit, offset)
+        .await
 }
 
 /// 本地清空已读消息计数
