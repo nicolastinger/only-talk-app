@@ -1,11 +1,14 @@
-import { add_friend, search_user_by_account, getFiles } from '@workspace/services';
-import { FriendRequestInfoDTO } from '@workspace/types';
-import { FormattedMessage, useIntl } from '@umijs/max';
-import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
-import { useState, useEffect } from 'react';
-import styles from './index.less';
-import { UserInfo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
+import { FormattedMessage, useIntl } from '@umijs/max';
+import {
+  add_friend,
+  getFiles,
+  search_user_by_account,
+} from '@workspace/services';
+import { FriendRequestInfoDTO, UserInfo } from '@workspace/types';
+import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
+import { useEffect, useState } from 'react';
+import styles from './index.less';
 
 const SearchFriend = () => {
   const [form] = Form.useForm();
@@ -17,7 +20,7 @@ const SearchFriend = () => {
     username: string;
   } | null>(null);
   const [requestMessage, setRequestMessage] = useState('');
-  const [avatarUrls, setAvatarUrls] = useState<{[key: string]: string}>({});
+  const [avatarUrls, setAvatarUrls] = useState<{ [key: string]: string }>({});
   const intl = useIntl();
 
   const handleSearch = async (values: { searchKey: string }) => {
@@ -99,7 +102,7 @@ const SearchFriend = () => {
   // 当results更新时，预加载所有用户的头像
   useEffect(() => {
     const loadAvatars = async () => {
-      const newAvatarUrls: {[key: string]: string} = {};
+      const newAvatarUrls: { [key: string]: string } = {};
       for (const item of results) {
         if (item.icon && item.uuid) {
           newAvatarUrls[item.uuid] = await getUserIcon(item.icon);
@@ -166,7 +169,9 @@ const SearchFriend = () => {
               >
                 <List.Item.Meta
                   avatar={
-                    <Avatar src={avatarUrls[item.uuid || '']}>{item.username}</Avatar>
+                    <Avatar src={avatarUrls[item.uuid || '']}>
+                      {item.username}
+                    </Avatar>
                   }
                   title={item.username}
                   description={item.info}

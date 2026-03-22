@@ -1,5 +1,5 @@
-import { ChatSessionEvent } from '@workspace/types';
 import { listen } from '@tauri-apps/api/event';
+import { ChatSessionEvent } from '@workspace/types';
 import { useEffect, useState } from 'react';
 
 // 监听会话信息
@@ -21,7 +21,10 @@ const useChatSession = (recvUuid: string) => {
           ) as ChatSessionEvent;
           console.log('chatSessionEvent', chatSessionEvent);
           // 只监听当前用户的会话
-          if (chatSessionEvent.data.recv_user !== recvUuid && chatSessionEvent.data.send_user !== recvUuid) {
+          if (
+            chatSessionEvent.data.recv_user !== recvUuid &&
+            chatSessionEvent.data.send_user !== recvUuid
+          ) {
             return;
           }
           // 更新会话信息

@@ -12,9 +12,9 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 use crate::cmd::user_controller::get_user_map;
 use crate::config::get_config;
-use crate::dao::create_table::{init_private_ddl};
+use crate::dao::create_table::init_private_ddl;
 use crate::utils::global_static_str::{APP_PATH, PRIVATE_DB, PRIVATE_DB_KEY, SQLITE_PATH};
-use crate::{GLOBAL_PRIVATE_SQL_POOL};
+use crate::GLOBAL_PRIVATE_SQL_POOL;
 
 /// 初始化加密的私有数据库
 /// 使用 SQLCipher 静态链接编译实现数据库级加密

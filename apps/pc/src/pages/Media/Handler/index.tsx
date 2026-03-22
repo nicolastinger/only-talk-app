@@ -1,12 +1,11 @@
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { HttpResponse } from '@workspace/types';
-import { FriendInfo, P2pInitMsg } from '@workspace/types';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
+import { FriendInfo, HttpResponse, P2pInitMsg } from '@workspace/types';
 import { Button } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';

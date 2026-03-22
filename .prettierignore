@@ -1,0 +1,9 @@
+node_modules
+.umi
+.umi-production
+dist
+target
+pnpm-lock.yaml
+*.lock
+*.min.js
+*.min.css

@@ -2,10 +2,10 @@ import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
 import { useBearStore } from '@/store/store';
-import { ChatSessionVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
-import { Splitter } from 'antd';
 import { history, Outlet } from '@umijs/max';
+import { ChatSessionVo } from '@workspace/types';
+import { Splitter } from 'antd';
 import React, { useEffect } from 'react';
 import styles from './index.less';
 

@@ -19,4 +19,4 @@ export async function getInitialState() {
   return {
     // 初始化状态
   };
-};
+}

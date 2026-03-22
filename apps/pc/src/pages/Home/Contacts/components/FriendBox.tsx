@@ -1,9 +1,9 @@
-import { FriendVo } from '@workspace/types';
 import { history } from '@umijs/max';
-import { Badge } from 'antd';
-import styles from './styles/FriendBox.less';
 import { getFiles } from '@workspace/services';
+import { FriendVo } from '@workspace/types';
+import { Badge } from 'antd';
 import { useEffect, useState } from 'react';
+import styles from './styles/FriendBox.less';
 
 const FriendBox = (props: { friend: FriendVo }) => {
   const { friend_name, friend_id, friend_icon } = props.friend;
@@ -26,17 +26,13 @@ const FriendBox = (props: { friend: FriendVo }) => {
 
   useEffect(() => {
     getUserIcon(friend_icon);
-  }, [friend_icon])
+  }, [friend_icon]);
 
   return (
     <div className={styles.container}>
       <div className={styles.left}>
         <Badge>
-          <img
-            src={userIcon || ''}
-            className={styles.imgItem}
-            alt="123"
-          />
+          <img src={userIcon || ''} className={styles.imgItem} alt="123" />
         </Badge>
       </div>
       <div className={styles.center} onClick={routeToFriendInfo}>

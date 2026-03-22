@@ -1,4 +1,4 @@
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 /**
  * 打开图片预览窗口
@@ -9,14 +9,16 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 export const openImagePreviewWindow = async (
   imagePaths: string[],
   currentIndex: number = 0,
-  title: string = '图片预览',
+  title: string = "图片预览"
 ): Promise<void> => {
   try {
     const label = `image-preview-${Date.now()}`;
-    
+
     const webviewWindow = new WebviewWindow(label, {
       title,
-      url: `/imagePreview?images=${encodeURIComponent(JSON.stringify(imagePaths))}&index=${currentIndex}`,
+      url: `/imagePreview?images=${encodeURIComponent(
+        JSON.stringify(imagePaths)
+      )}&index=${currentIndex}`,
       width: 800,
       height: 600,
       center: true,
@@ -26,16 +28,16 @@ export const openImagePreviewWindow = async (
       maximizable: true,
       closable: true,
     });
-    
-    await webviewWindow.once('tauri://created', () => {
-      console.log('Image preview window created successfully!');
+
+    await webviewWindow.once("tauri://created", () => {
+      console.log("Image preview window created successfully!");
     });
-    
-    await webviewWindow.once('tauri://error', (e) => {
-      console.error('Failed to create image preview window:', e.payload);
+
+    await webviewWindow.once("tauri://error", (e) => {
+      console.error("Failed to create image preview window:", e.payload);
     });
   } catch (error) {
-    console.error('Failed to open image preview window:', error);
+    console.error("Failed to open image preview window:", error);
     throw error;
   }
 };

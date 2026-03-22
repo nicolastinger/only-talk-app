@@ -1,14 +1,19 @@
-use log::info;
-use reqwest::Client;
-use reqwest::header::HeaderMap;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+use log::info;
+use reqwest::header::HeaderMap;
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tauri::command;
-use crate::GLOBAL_QUIC_USER_INFO;
-use crate::service::api_service::{upload_file, upload_file_with_fields, upload_multiple_files, upload_multiple_files_with_fields, post_form_data};
+
+use crate::service::api_service::{
+    post_form_data, upload_file, upload_file_with_fields, upload_multiple_files,
+    upload_multiple_files_with_fields,
+};
 use crate::utils::image_utils::compress_image_to_webp;
+use crate::GLOBAL_QUIC_USER_INFO;
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiResponse {
@@ -53,10 +58,12 @@ pub async fn post_request(url: String, body: String) -> Result<ApiResponse, Stri
 }
 
 #[command]
-pub async fn upload_file_request(url: String, file_path: String, field_name: String) -> Result<ApiResponse, String> {
-    let response = upload_file(&url, &file_path, &field_name)
-        .await
-        .map_err(|e| e.to_string())?;
+pub async fn upload_file_request(
+    url: String,
+    file_path: String,
+    field_name: String,
+) -> Result<ApiResponse, String> {
+    let response = upload_file(&url, &file_path, &field_name).await.map_err(|e| e.to_string())?;
 
     let status = response.status().as_u16();
     let body = response.text().await.map_err(|e| e.to_string())?;
@@ -72,7 +79,7 @@ pub async fn upload_file_with_extra_fields_request(
     extra_fields: HashMap<String, String>,
 ) -> Result<ApiResponse, String> {
     let extra_vec: Vec<(String, String)> = extra_fields.into_iter().collect();
-    
+
     let response = upload_file_with_fields(&url, &file_path, &field_name, extra_vec)
         .await
         .map_err(|e| e.to_string())?;
@@ -89,9 +96,8 @@ pub async fn upload_multiple_files_request(
     file_paths: Vec<String>,
     field_name: String,
 ) -> Result<ApiResponse, String> {
-    let response = upload_multiple_files(&url, &file_paths, &field_name)
-        .await
-        .map_err(|e| e.to_string())?;
+    let response =
+        upload_multiple_files(&url, &file_paths, &field_name).await.map_err(|e| e.to_string())?;
 
     let status = response.status().as_u16();
     let body = response.text().await.map_err(|e| e.to_string())?;
@@ -107,7 +113,7 @@ pub async fn upload_multiple_files_with_extra_fields_request(
     extra_fields: HashMap<String, String>,
 ) -> Result<ApiResponse, String> {
     let extra_vec: Vec<(String, String)> = extra_fields.into_iter().collect();
-    
+
     let response = upload_multiple_files_with_fields(&url, &file_paths, &field_name, extra_vec)
         .await
         .map_err(|e| e.to_string())?;
@@ -123,9 +129,7 @@ pub async fn post_form_data_request(
     url: String,
     fields: HashMap<String, String>,
 ) -> Result<ApiResponse, String> {
-    let response = post_form_data(&url, fields)
-        .await
-        .map_err(|e| e.to_string())?;
+    let response = post_form_data(&url, fields).await.map_err(|e| e.to_string())?;
 
     let status = response.status().as_u16();
     let body = response.text().await.map_err(|e| e.to_string())?;
@@ -137,15 +141,13 @@ pub async fn post_form_data_request(
 pub async fn compress_image_to_webp_command(input_path: String) -> Result<String, String> {
     let input = PathBuf::from(&input_path);
     let input_clone = input.clone();
-    
-    let result = tokio::task::spawn_blocking(move || {
-        compress_image_to_webp(&input)
-    })
-    .await
-    .map_err(|e| e.to_string())?;
-    
+
+    let result = tokio::task::spawn_blocking(move || compress_image_to_webp(&input))
+        .await
+        .map_err(|e| e.to_string())?;
+
     result.map_err(|e| e.to_string())?;
-    
+
     let output_path = input_clone.with_extension("webp");
     Ok(output_path.to_string_lossy().to_string())
 }

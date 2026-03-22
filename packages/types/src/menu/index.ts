@@ -5,4 +5,4 @@ type UnreadCount = {
   settings: number;
 };
 
-export type { UnreadCount }
+export type { UnreadCount };

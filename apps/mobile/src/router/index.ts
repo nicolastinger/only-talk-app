@@ -1,26 +1,26 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import type { RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory } from "vue-router";
+import type { RouteRecordRaw } from "vue-router";
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/',
-    name: 'Home',
-    component: () => import('@/pages/Home/index.vue'),
+    path: "/",
+    name: "Home",
+    component: () => import("@/pages/Home/index.vue"),
   },
   {
-    path: '/recommend',
-    name: 'Recommend',
-    component: () => import('@/pages/Recommend/index.vue'),
+    path: "/recommend",
+    name: "Recommend",
+    component: () => import("@/pages/Recommend/index.vue"),
   },
   {
-    path: '/discover',
-    name: 'Discover',
-    component: () => import('@/pages/Discover/index.vue'),
+    path: "/discover",
+    name: "Discover",
+    component: () => import("@/pages/Discover/index.vue"),
   },
   {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/pages/Profile/index.vue'),
+    path: "/profile",
+    name: "Profile",
+    component: () => import("@/pages/Profile/index.vue"),
   },
 ];
 

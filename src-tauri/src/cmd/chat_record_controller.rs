@@ -1,12 +1,16 @@
 use std::time::Duration;
+
 use log::error;
 use tokio::time::timeout;
+
 use crate::dao::chat_record_db::{query_chat_record_by_id_from_db, query_chat_record_from_db};
 use crate::entity::Page;
-use crate::GLOBAL_MSG_SEND_LOCK;
-use crate::service::chat_service::{send_text_msg_service, update_last_read_msg_from_db, send_image_msg_service};
+use crate::service::chat_service::{
+    send_image_msg_service, send_text_msg_service, update_last_read_msg_from_db,
+};
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
+use crate::GLOBAL_MSG_SEND_LOCK;
 
 /// 发送文本消息
 #[tauri::command]
@@ -16,13 +20,14 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
         let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
         let res = send_text_msg_service(text_quic_msg).await;
         res
-    }).await;
+    })
+    .await;
     match result {
         Ok(Ok(_)) => Ok("success".to_string()),
         Ok(Err(e)) => {
             error!("获取锁时发生意外错误,{}", e);
             Err(e.to_string())
-        },
+        }
         Err(elapsed) => {
             error!("超时：10秒内未能获取锁 {}", elapsed);
             Err("获取锁超时".to_string())

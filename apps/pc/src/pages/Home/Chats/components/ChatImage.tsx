@@ -1,5 +1,5 @@
-import React from 'react';
 import { openImagePreviewWindow } from '@workspace/services';
+import React from 'react';
 
 interface ChatImageProps {
   src: string | null;
@@ -30,7 +30,9 @@ const ChatImage: React.FC<ChatImageProps> = ({
 }) => {
   const handleClick = () => {
     if (src && allImageBizIds && allImageBizIds.length > 0 && bizIdToUrlMap) {
-      const imageUrls = allImageBizIds.map(bizId => bizIdToUrlMap.get(bizId) || '').filter(url => url);
+      const imageUrls = allImageBizIds
+        .map((bizId) => bizIdToUrlMap.get(bizId) || '')
+        .filter((url) => url);
       if (imageUrls.length > 0) {
         openImagePreviewWindow(imageUrls, currentIndex);
       }

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, message } from 'antd';
+import { LockOutlined, SmileOutlined, UserOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { UserOutlined, LockOutlined, SmileOutlined } from '@ant-design/icons';
-import { BasicUser } from '@workspace/types';
 import { sign_up } from '@workspace/services';
+import { BasicUser } from '@workspace/types';
+import { Button, Form, Input, message } from 'antd';
+import React, { useState } from 'react';
 
 const FastSignUp: React.FC = () => {
   const [form] = Form.useForm();
@@ -18,12 +18,12 @@ const FastSignUp: React.FC = () => {
       username: values.nickname,
       password: values.password,
     };
-    let res = await sign_up(useInfo)
+    let res = await sign_up(useInfo);
     console.log(res);
     if (res.netSuccess && res.res.status === 200) {
-      message.success("注册成功");
+      message.success('注册成功');
     } else {
-      message.error("注册失败");
+      message.error('注册失败');
     }
     setLoading(false);
   };

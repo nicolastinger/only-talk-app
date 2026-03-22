@@ -1,6 +1,6 @@
-import { ExpandOutlined, CompressOutlined } from '@ant-design/icons';
+import { CompressOutlined, ExpandOutlined } from '@ant-design/icons';
 import { Window } from '@tauri-apps/api/window';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './MaximizeButton.less';
 
 const MaximizeButton = () => {
@@ -19,7 +19,7 @@ const MaximizeButton = () => {
   const toggleMaximize = async () => {
     const currentWindow = Window.getCurrent();
     const maximized = await currentWindow.isMaximized();
-    
+
     if (maximized) {
       await currentWindow.unmaximize();
       setIsMaximized(false);

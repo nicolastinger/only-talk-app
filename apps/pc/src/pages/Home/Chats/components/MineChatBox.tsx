@@ -1,11 +1,11 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
+import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
+import ChatImage from './ChatImage';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
-import { getChatFileByBizId, getFiles } from '@workspace/services';
-import ChatImage from './ChatImage';
 
 const imageCache = new Map<string, string>();
 
@@ -77,16 +77,16 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         setUserIcon(imageCache.get(icon)!);
         return;
       }
-      
+
       setLoading(true);
       const FileVos = await getFiles(icon);
       const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
-      
+
       // 存入缓存
       if (tauriFilePath) {
         imageCache.set(icon, tauriFilePath);
       }
-      
+
       setUserIcon(tauriFilePath);
       setLoading(false);
     } catch (error) {
@@ -99,7 +99,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     if (userInfo?.icon) {
       getUserIcon(userInfo.icon);
     }
-  }, [userInfo?.icon])
+  }, [userInfo?.icon]);
 
   useEffect(() => {
     if (text_type === 2) {
@@ -107,7 +107,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         const imageRecord: ImageRecord = JSON.parse(raw);
         const bizId = imageRecord.biz_id;
         console.log('MineChatBox - Loading image with bizId:', bizId);
-        
+
         if (imageCache.has(bizId)) {
           console.log('MineChatBox - Image found in cache');
           setImageUrl(imageCache.get(bizId)!);
@@ -116,30 +116,32 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           }
           return;
         }
-        
+
         setLoading(true);
-        getChatFileByBizId(bizId).then((files) => {
-          console.log('MineChatBox - Files returned:', files);
-          if (files && files.length > 0) {
-            const tauriFilePath = files[0].tauri_file_path;
-            console.log('MineChatBox - Tauri file path:', tauriFilePath);
-            if (tauriFilePath) {
-              imageCache.set(bizId, tauriFilePath);
-              setImageUrl(tauriFilePath);
-              if (bizIdToUrlMap) {
-                bizIdToUrlMap.set(bizId, tauriFilePath);
+        getChatFileByBizId(bizId)
+          .then((files) => {
+            console.log('MineChatBox - Files returned:', files);
+            if (files && files.length > 0) {
+              const tauriFilePath = files[0].tauri_file_path;
+              console.log('MineChatBox - Tauri file path:', tauriFilePath);
+              if (tauriFilePath) {
+                imageCache.set(bizId, tauriFilePath);
+                setImageUrl(tauriFilePath);
+                if (bizIdToUrlMap) {
+                  bizIdToUrlMap.set(bizId, tauriFilePath);
+                }
+              } else {
+                console.error('MineChatBox - Tauri file path is empty');
               }
             } else {
-              console.error('MineChatBox - Tauri file path is empty');
+              console.error('MineChatBox - No files returned');
             }
-          } else {
-            console.error('MineChatBox - No files returned');
-          }
-          setLoading(false);
-        }).catch((error) => {
-          console.error('MineChatBox - Error loading image:', error);
-          setLoading(false);
-        });
+            setLoading(false);
+          })
+          .catch((error) => {
+            console.error('MineChatBox - Error loading image:', error);
+            setLoading(false);
+          });
       } catch (error) {
         console.error('MineChatBox - Error parsing image record:', error);
       }

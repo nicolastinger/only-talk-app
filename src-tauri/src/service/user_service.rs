@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::Duration;
+
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tokio::time::timeout;
+
+use crate::cmd::api_controller::post_request;
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
@@ -14,13 +17,12 @@ use crate::entity::chat_session::ChatSession;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_quic_client::run_client;
+use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
-use crate::cmd::api_controller::post_request;
-use crate::service::chat_service::{process_no_send_success_msg};
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -143,7 +145,7 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
     // 设置定时任务key
     insert_user_info("schedule_key", &schedule_key).await?;
     info!("定时任务key: {}, 启动", schedule_key);
-    
+
     let read_task_key = schedule_key.clone();
     // 用户消息已读任务
     tokio::spawn(async move {
@@ -154,25 +156,23 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
         // 校验定时任务key
         check_schedule_key(&schedule_key).await?;
         count += 1;
-        
+
         // 处理未发送消息
         tokio::spawn(async move {
             // 处理未发送消息
             timeout(Duration::from_secs(10), async {
                 let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
                 process_no_send_success_msg().await.expect("处理未发送消息失败");
-            }).await.expect("定时任务，处理未发送消息超时");
+            })
+            .await
+            .expect("定时任务，处理未发送消息超时");
         });
-        
+
         // 20秒触发一次
-        if count % 2 == 0 { 
-            
-        }
+        if count % 2 == 0 {}
 
         // 30秒触发一次
-        if count % 3 == 0 {
-
-        }
+        if count % 3 == 0 {}
 
         tokio::time::sleep(Duration::from_secs(10)).await;
     }
@@ -206,8 +206,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     while count < 1000000 {
         // 校验定时任务key
         check_schedule_key(&key).await?;
-        let last_chat_record =
-            query_last_read_msg(&uuid, timestamp).await?;
+        let last_chat_record = query_last_read_msg(&uuid, timestamp).await?;
         if !last_chat_record.is_empty() {
             let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
             for item in last_chat_record {
@@ -229,7 +228,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
                 format!("{}/msg/add_read_chat_record", TALK_API),
                 serde_json::to_string(&read_record_vec).expect("序列化已读消息失败"),
             )
-                .await
+            .await
             {
                 Ok(m) => {
                     info!("发送已读消息成功 {:?}", m.body)

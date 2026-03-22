@@ -1,7 +1,7 @@
 interface BizFileInfo {
   biz_id?: string;
   origin_file_id?: string;
-  file_id?: string
+  file_id?: string;
 }
 
 interface BizChatFile {
@@ -19,4 +19,4 @@ interface ImagePreview {
   title?: string;
 }
 
-export { BizFileInfo, BizChatFile, ImagePreview }
+export { BizFileInfo, BizChatFile, ImagePreview };

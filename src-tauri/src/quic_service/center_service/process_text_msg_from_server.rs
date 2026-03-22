@@ -1,9 +1,13 @@
 use std::time::Duration;
+
 use anyhow::anyhow;
 use log::{error, info, warn};
 use tauri::Emitter;
 use tokio::time::timeout;
-use crate::dao::chat_record_db::{insert_chat_record};
+
+use crate::dao::chat_record_ack::{query_ack_record_from_db, update_chat_record_ack};
+use crate::dao::chat_record_db::insert_chat_record;
+use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::chat_session::ChatSession;
@@ -15,20 +19,22 @@ use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::SYSTEM;
-use crate::utils::message_types::{CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG};
+use crate::utils::message_types::{
+    CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P,
+    MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS,
+    MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG,
+};
+use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
-use crate::dao::chat_record_ack::{query_ack_record_from_db, update_chat_record_ack};
-use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
-use crate::utils::time::get_now_time_stamp_as_millis;
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
     for msg in text_vec {
         match msg.text_type {
             // 聊天消息
-            MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE=> {
+            MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE => {
                 process_text_type(msg).await?;
             }
             // JSON信息
@@ -168,7 +174,7 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     let ack_record = query_record_send_from_db(&msg.raw).await;
     if ack_record.is_err() {
         warn!("查询ack表中该条消息失败 {:?}", ack_record.err());
-        return Ok(())
+        return Ok(());
     }
     let ack_record = ack_record?;
     let text_quic_msg_vo = TextQuicMsgVo {
@@ -190,7 +196,9 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         timeout(Duration::from_secs(10), async {
             let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
             process_no_send_success_msg().await.expect("处理未发送消息失败");
-        }).await.expect("ack返回，处理未发送消息超时");
+        })
+        .await
+        .expect("ack返回，处理未发送消息超时");
     });
     // 发送消息给前端
     {

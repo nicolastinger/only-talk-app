@@ -1,8 +1,8 @@
+import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
-import styles from './styles/CustomerChatBox.less';
-import { getChatFileByBizId, getFiles } from '@workspace/services';
 import ChatImage from './ChatImage';
+import styles from './styles/CustomerChatBox.less';
 import { TextBox } from './TextBox';
 
 const imageCache = new Map<string, string>();
@@ -14,7 +14,9 @@ interface CustomerChatBoxProps extends ChatMessage {
   bizIdToUrlMap?: Map<string, string>;
 }
 
-const CustomerChatBox: React.FC<CustomerChatBoxProps> = (props: CustomerChatBoxProps) => {
+const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
+  props: CustomerChatBoxProps,
+) => {
   const {
     text_msg_raw: { raw, text_type },
     img,
@@ -23,26 +25,28 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (props: CustomerChatBoxP
     currentBizId,
     bizIdToUrlMap,
   } = props;
-  
+
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!img) return;
-    
+
     if (imageCache.has(img)) {
       setFriendIcon(imageCache.get(img)!);
       return;
     }
-    
+
     setLoading(true);
-    getUserIcon(img).then((icon) => {
-      setFriendIcon(icon);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
+    getUserIcon(img)
+      .then((icon) => {
+        setFriendIcon(icon);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, [img]);
 
   useEffect(() => {
@@ -51,7 +55,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (props: CustomerChatBoxP
         const imageRecord: ImageRecord = JSON.parse(raw);
         const bizId = imageRecord.biz_id;
         console.log('CustomerChatBox - Loading image with bizId:', bizId);
-        
+
         if (imageCache.has(bizId)) {
           console.log('CustomerChatBox - Image found in cache');
           setImageUrl(imageCache.get(bizId)!);
@@ -60,30 +64,32 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (props: CustomerChatBoxP
           }
           return;
         }
-        
+
         setLoading(true);
-        getChatFileByBizId(bizId).then((files) => {
-          console.log('CustomerChatBox - Files returned:', files);
-          if (files && files.length > 0) {
-            const tauriFilePath = files[0].tauri_file_path;
-            console.log('CustomerChatBox - Tauri file path:', tauriFilePath);
-            if (tauriFilePath) {
-              imageCache.set(bizId, tauriFilePath);
-              setImageUrl(tauriFilePath);
-              if (bizIdToUrlMap) {
-                bizIdToUrlMap.set(bizId, tauriFilePath);
+        getChatFileByBizId(bizId)
+          .then((files) => {
+            console.log('CustomerChatBox - Files returned:', files);
+            if (files && files.length > 0) {
+              const tauriFilePath = files[0].tauri_file_path;
+              console.log('CustomerChatBox - Tauri file path:', tauriFilePath);
+              if (tauriFilePath) {
+                imageCache.set(bizId, tauriFilePath);
+                setImageUrl(tauriFilePath);
+                if (bizIdToUrlMap) {
+                  bizIdToUrlMap.set(bizId, tauriFilePath);
+                }
+              } else {
+                console.error('CustomerChatBox - Tauri file path is empty');
               }
             } else {
-              console.error('CustomerChatBox - Tauri file path is empty');
+              console.error('CustomerChatBox - No files returned');
             }
-          } else {
-            console.error('CustomerChatBox - No files returned');
-          }
-          setLoading(false);
-        }).catch((error) => {
-          console.error('CustomerChatBox - Error loading image:', error);
-          setLoading(false);
-        });
+            setLoading(false);
+          })
+          .catch((error) => {
+            console.error('CustomerChatBox - Error loading image:', error);
+            setLoading(false);
+          });
       } catch (error) {
         console.error('CustomerChatBox - Error parsing image record:', error);
       }
@@ -95,12 +101,12 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (props: CustomerChatBoxP
       if (imageCache.has(icon)) {
         return imageCache.get(icon)!;
       }
-      
+
       const FileVos = await getFiles(icon);
       const tauriFilePath = FileVos?.[0]?.tauri_file_path || '';
-      
+
       imageCache.set(icon, tauriFilePath);
-      
+
       return tauriFilePath;
     } catch (error) {
       console.log(error);
@@ -131,9 +137,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (props: CustomerChatBoxP
     <div className={styles.container}>
       <div className={styles.userIcon}>
         <img
-          src={
-            friendIcon 
-          }
+          src={friendIcon}
           width={40}
           height={40}
           className={styles.imgItem}

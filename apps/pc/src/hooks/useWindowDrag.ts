@@ -1,5 +1,5 @@
 import { Window } from '@tauri-apps/api/window';
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 type DragOptions = {
   /**
@@ -49,32 +49,35 @@ export const useWindowDrag = (options: DragOptions = {}) => {
   const ref = useRef<HTMLDivElement>(null);
 
   // 判断事件是否应触发拖拽的函数
-  const shouldStartDragging = useCallback((event: MouseEvent, dragElement: HTMLElement): boolean => {
-    // 1. 如果提供了自定义判断函数，以其为准
-    if (checkIsHandle) {
-      return checkIsHandle(event, dragElement);
-    }
-
-    // 2. 如果指定了手柄选择器，检查事件目标是否匹配或在其内
-    if (handleSelector) {
-      const handleElements = dragElement.querySelectorAll(handleSelector);
-      let target = event.target as HTMLElement | null;
-
-      while (target && target !== dragElement) {
-        for (let i = 0; i < handleElements.length; i++) {
-          if (handleElements[i] === target) {
-            return true; // 事件目标在手柄元素内
-          }
-        }
-        target = target.parentElement;
+  const shouldStartDragging = useCallback(
+    (event: MouseEvent, dragElement: HTMLElement): boolean => {
+      // 1. 如果提供了自定义判断函数，以其为准
+      if (checkIsHandle) {
+        return checkIsHandle(event, dragElement);
       }
-      return false; // 事件目标不在任何手柄元素内
-    }
 
-    // 3. 默认行为：仅当事件目标是拖拽元素自身（即点击了空白区域）时触发
-    // 这对于父div内有子div的情况非常有用
-    return event.target === dragElement;
-  }, [handleSelector, checkIsHandle]);
+      // 2. 如果指定了手柄选择器，检查事件目标是否匹配或在其内
+      if (handleSelector) {
+        const handleElements = dragElement.querySelectorAll(handleSelector);
+        let target = event.target as HTMLElement | null;
+
+        while (target && target !== dragElement) {
+          for (let i = 0; i < handleElements.length; i++) {
+            if (handleElements[i] === target) {
+              return true; // 事件目标在手柄元素内
+            }
+          }
+          target = target.parentElement;
+        }
+        return false; // 事件目标不在任何手柄元素内
+      }
+
+      // 3. 默认行为：仅当事件目标是拖拽元素自身（即点击了空白区域）时触发
+      // 这对于父div内有子div的情况非常有用
+      return event.target === dragElement;
+    },
+    [handleSelector, checkIsHandle],
+  );
 
   useEffect(() => {
     if (!enabled || !ref.current) {
@@ -104,7 +107,9 @@ export const useWindowDrag = (options: DragOptions = {}) => {
     dragElement.addEventListener('mousedown', handleDrag, { capture: true });
 
     return () => {
-      dragElement.removeEventListener('mousedown', handleDrag, { capture: true });
+      dragElement.removeEventListener('mousedown', handleDrag, {
+        capture: true,
+      });
     };
   }, [enabled, shouldStartDragging]); // 依赖项中加入 shouldStartDragging
 

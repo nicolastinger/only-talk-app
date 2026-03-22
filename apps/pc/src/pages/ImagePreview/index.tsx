@@ -11,7 +11,7 @@ const ImagePreviewPage: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    
+
     const imagesParam = params.get('images');
     const indexParam = params.get('index');
 

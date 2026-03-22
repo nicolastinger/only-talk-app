@@ -67,8 +67,6 @@ pub async fn query_last_read_msg(
     Ok(record)
 }
 
-
-
 /// 获取目标用户最新一条聊天消息
 pub async fn query_last_chat_record(
     uuid: &str,

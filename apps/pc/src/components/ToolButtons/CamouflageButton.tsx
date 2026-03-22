@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
+import { useState } from 'react';
 import styles from './CamouflageButton.less';
 
 const CamouflageButton = () => {
@@ -11,9 +11,11 @@ const CamouflageButton = () => {
   };
 
   return (
-    <Tooltip title={isCamouflaged ? "取消伪装" : "伪装"} placement="bottom">
-      <div 
-        className={`${styles.camouflageButton} ${isCamouflaged ? styles.camouflaged : ''}`} 
+    <Tooltip title={isCamouflaged ? '取消伪装' : '伪装'} placement="bottom">
+      <div
+        className={`${styles.camouflageButton} ${
+          isCamouflaged ? styles.camouflaged : ''
+        }`}
         onClick={toggleCamouflage}
       >
         {isCamouflaged ? <EyeInvisibleOutlined /> : <EyeOutlined />}

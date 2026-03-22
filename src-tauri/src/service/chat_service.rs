@@ -11,30 +11,33 @@ use tauri::Emitter;
 use tokio::sync::RwLock;
 use tokio::time::timeout;
 
-use crate::dao::chat_record_db::{query_last_chat_record};
+use crate::dao::chat_record_ack::{
+    insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
+};
+use crate::dao::chat_record_db::query_last_chat_record;
+use crate::dao::chat_record_read::update_last_read_msg;
+use crate::dao::chat_record_send::{
+    insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
+};
 use crate::dao::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db,
     update_chat_session_local_db,
 };
 use crate::entity::chat_record::ChatRecord;
+use crate::entity::chat_record_ack::ChatRecordAck;
+use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord};
 use crate::entity::chat_record_read::ChatRecordRead;
+use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
+use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
 use crate::service::user_service::{get_user_info, get_user_map};
-use crate::utils::global_static_str::TALK_API;
+use crate::utils::global_static_str::{PLATFORM, TALK_API, ZERO_UUID};
 use crate::utils::image_utils::compress_image_to_webp;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use crate::dao::chat_record_ack::{insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id};
-use crate::dao::chat_record_read::update_last_read_msg;
-use crate::dao::chat_record_send::{insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send};
-use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord};
-use crate::entity::chat_record_send::ChatRecordSend;
-use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
-use crate::utils::global_static_str::{PLATFORM, ZERO_UUID};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct FileInfo {
@@ -244,7 +247,6 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
     Ok(())
 }
 
-
 /// 发送文本消息
 pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
     let sender = get_user_info("uuid").await?;
@@ -254,15 +256,19 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     let mut prev_id = ZERO_UUID.to_string();
 
     // 查询本地最新一条已发送成功的消息
-    let last_send_success_msg = query_chat_record_send_by_user(&sender, &text_quic_msg.recv_user, vec![3], false).await?;
+    let last_send_success_msg =
+        query_chat_record_send_by_user(&sender, &text_quic_msg.recv_user, vec![3], false).await?;
     if !last_send_success_msg.is_empty() {
-        let send_id = &last_send_success_msg.first().ok_or(anyhow!("last_send_success_msg is empty"))?.send_id;
+        let send_id = &last_send_success_msg
+            .first()
+            .ok_or(anyhow!("last_send_success_msg is empty"))?
+            .send_id;
         let prev_ack = query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await?;
         prev_id = prev_ack.msg_id;
     }
-    
+
     let prev_id_clone = prev_id.clone();
-    
+
     let msg_raw = set_prev_id(&msg, text_quic_msg.text_type, prev_id)?;
 
     let mut chat_record_send = ChatRecordSend {
@@ -280,7 +286,13 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     };
 
     // 检查当前接收用户，本地是否有未发送完成的消息
-    let no_send_success_msg = query_chat_record_send_by_user(&chat_record_send.send_user, &chat_record_send.recv_user, vec![0, 1], true).await?;
+    let no_send_success_msg = query_chat_record_send_by_user(
+        &chat_record_send.send_user,
+        &chat_record_send.recv_user,
+        vec![0, 1],
+        true,
+    )
+    .await?;
     // 如果有，直接插入到本地发送表中，等待回调ack后发送或者定时任务检查发送
     if !no_send_success_msg.is_empty() {
         chat_record_send.send_status = 0;
@@ -313,7 +325,6 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
         timestamp: now,
     };
     insert_chat_record_ack(&chat_record_ack).await?;
-    
 
     // 如果没有，则直接发送消息
     let raw: Vec<u8> = Vec::from(chat_record_send.raw);
@@ -322,7 +333,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
         raw,
         chat_record_ack.recv_user,
         chat_record_ack.send_user,
-        chat_record_ack.send_id
+        chat_record_ack.send_id,
     )?;
     let send_stream = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
@@ -339,13 +350,13 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
             let mut chat_record_raw = <TextRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
-        },
+        }
         2 => {
             let mut chat_record_raw = <ImageRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
-        },
-        _ => Err(anyhow!("不支持的消息类型: {}", text_type))
+        }
+        _ => Err(anyhow!("不支持的消息类型: {}", text_type)),
     }
 }
 
@@ -353,7 +364,8 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
 pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
     let me = get_user_info("uuid").await?;
     let recv_user = String::from("");
-    let no_send_success_msg = query_chat_record_send_by_user(&me, &recv_user, vec![0, 1], true).await?;
+    let no_send_success_msg =
+        query_chat_record_send_by_user(&me, &recv_user, vec![0, 1], true).await?;
     let now = get_now_time_stamp_as_millis()?;
     if !no_send_success_msg.is_empty() {
         info!("存在未发送完成的消息, 发送消息条数: {}", no_send_success_msg.len());
@@ -367,19 +379,27 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             let recv_user = &item.recv_user;
 
             // 检查当前接收用户，本地是否有未发送完成的消息
-            let no_send_success_msg = query_chat_record_send_by_user(send_user, recv_user, vec![1], true).await?;
+            let no_send_success_msg =
+                query_chat_record_send_by_user(send_user, recv_user, vec![1], true).await?;
             let mut no_send_success_time = 0i64;
             if !no_send_success_msg.is_empty() {
-                no_send_success_time = no_send_success_msg.first().ok_or(anyhow!("no_send_success_msg is empty"))?.timestamp;
+                no_send_success_time = no_send_success_msg
+                    .first()
+                    .ok_or(anyhow!("no_send_success_msg is empty"))?
+                    .timestamp;
             }
             if status == 0 && no_send_success_msg_option.is_none() {
-                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time{
+                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time {
                     no_send_success_msg_option = Some(item);
                     continue;
                 }
             }
-            if status == 1 && no_send_success_msg_option.is_none() && retry_count < 3 && diff_time > 8000{
-                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time{
+            if status == 1
+                && no_send_success_msg_option.is_none()
+                && retry_count < 3
+                && diff_time > 8000
+            {
+                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time {
                     no_send_success_msg_option = Some(item);
                     continue;
                 }
@@ -396,9 +416,13 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             let sender = &item.send_user;
             let recv_user = &item.recv_user;
             // 查询本地最新一条已发送成功的消息
-            let last_send_success_msg = query_chat_record_send_by_user(&sender, &recv_user, vec![3], false).await?;
+            let last_send_success_msg =
+                query_chat_record_send_by_user(&sender, &recv_user, vec![3], false).await?;
             if !last_send_success_msg.is_empty() {
-                let send_id = &last_send_success_msg.first().ok_or(anyhow!("last_send_success_msg is empty"))?.send_id;
+                let send_id = &last_send_success_msg
+                    .first()
+                    .ok_or(anyhow!("last_send_success_msg is empty"))?
+                    .send_id;
                 let prev_ack = query_chat_record_by_send_id(send_id, &recv_user).await?;
                 prev_id = prev_ack.msg_id;
             }
@@ -417,7 +441,7 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
                 raw,
                 item.recv_user,
                 item.send_user,
-                item.send_id
+                item.send_id,
             )?;
             let send_stream = {
                 let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
@@ -431,52 +455,56 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn upload_chat_file_server(file_path: &str, friend_uuid: &str) -> Result<UploadData, anyhow::Error> {
+async fn upload_chat_file_server(
+    file_path: &str,
+    friend_uuid: &str,
+) -> Result<UploadData, anyhow::Error> {
     let url = format!("{}/file_integrated/upload/user_chat/{}", TALK_API, friend_uuid);
     let response = upload_file(&url, file_path, "file").await?;
-    
+
     let status = response.status();
     let response_text = response.text().await?;
-    
+
     if !status.is_success() {
         return Err(anyhow!("上传失败: {}, 响应: {}", status, response_text));
     }
-    
+
     let upload_response: UploadResponse = serde_json::from_str(&response_text)
         .map_err(|e| anyhow!("解析上传响应失败: {}, 响应内容: {}", e, response_text))?;
-    
+
     if upload_response.code != 200 {
         return Err(anyhow!("上传失败: {}", upload_response.message));
     }
-    
+
     Ok(upload_response.data)
 }
 
 // 发送图片数据
 pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
-    
+
     // 1、压缩图片
     let _compressed_file = compress_image_to_webp(&Path::new(&file_path))?;
     let compressed_path = Path::new(&file_path).with_extension("webp");
     let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
-    
+
     // 2、上传图片到文件服务器
-    let upload_data = upload_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
-    
+    let upload_data =
+        upload_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+
     // 3、获取图片尺寸信息
     let img = ImageReader::open(&file_path)?.decode()?;
     let img_width = img.width() as i32;
     let img_height = img.height() as i32;
-    
+
     // 4、获取文件大小
     let metadata = std::fs::metadata(compressed_path_str)?;
     let img_size = metadata.len() as i32;
-    
+
     // 5、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
     let biz_id = file_info.biz_id.clone();
-    
+
     // 6、组装 ImageRecord
     let image_record = ImageRecord {
         prev_id: ZERO_UUID.to_string(),
@@ -487,32 +515,33 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
         img_size,
         platform: PLATFORM,
     };
-    
+
     let image_raw = image_record.json_serialize()?;
-    
+
     // 7、创建新的 TextQuicMsgVo 用于发送
     let mut image_msg = text_quic_msg.clone();
     image_msg.raw = image_raw;
-    
+
     // 8、调用 send_text_msg_service 发送消息
     // 获取全局消息发送锁，保证数据库最新消息，超过10秒后获取不到锁就返回错误
     let result = timeout(Duration::from_secs(10), async {
         let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
         let res = send_text_msg_service(image_msg).await;
         res
-    }).await;
-    
+    })
+    .await;
+
     match result {
-        Ok(Ok(_)) => {},
+        Ok(Ok(_)) => {}
         Ok(Err(e)) => {
             error!("获取锁时发生意外错误,{}", e);
             return Err(anyhow!("获取锁时发生意外错误,{}", e));
-        },
+        }
         Err(elapsed) => {
             error!("超时：10秒内未能获取锁 {}", elapsed);
             return Err(anyhow!("超时：10秒内未能获取锁 {}", elapsed));
         }
     }
-    
+
     Ok(())
 }

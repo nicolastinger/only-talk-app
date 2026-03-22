@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from "vue";
 
 interface Post {
   id: number;
@@ -8,48 +8,48 @@ interface Post {
 }
 
 const activeTab = ref(0);
-const tabs = ['瞬间', '相册', '收藏'];
+const tabs = ["瞬间", "相册", "收藏"];
 
 const userInfo = ref({
-  name: '星空漫步',
+  name: "星空漫步",
   age: 24,
-  gender: '♂',
-  bio: '热爱生活，喜欢记录美好瞬间 📸',
-  location: '北京市',
-  joinedTime: '2023年6月加入',
+  gender: "♂",
+  bio: "热爱生活，喜欢记录美好瞬间 📸",
+  location: "北京市",
+  joinedTime: "2023年6月加入",
   posts: 128,
   followers: 2345,
   following: 189,
   likes: 8976,
-  soulAge: '186天',
+  soulAge: "186天",
   level: 5,
-  badges: ['🔥活跃达人', '📷摄影大师', '🌟优质创作者'],
+  badges: ["🔥活跃达人", "📷摄影大师", "🌟优质创作者"],
 });
 
 const myPosts = ref<Post[]>([
-  { id: 1, image: 'https://picsum.photos/300/300?random=30', likes: 234 },
-  { id: 2, image: 'https://picsum.photos/300/300?random=31', likes: 189 },
-  { id: 3, image: 'https://picsum.photos/300/300?random=32', likes: 456 },
-  { id: 4, image: 'https://picsum.photos/300/300?random=33', likes: 123 },
-  { id: 5, image: 'https://picsum.photos/300/300?random=34', likes: 567 },
-  { id: 6, image: 'https://picsum.photos/300/300?random=35', likes: 89 },
+  { id: 1, image: "https://picsum.photos/300/300?random=30", likes: 234 },
+  { id: 2, image: "https://picsum.photos/300/300?random=31", likes: 189 },
+  { id: 3, image: "https://picsum.photos/300/300?random=32", likes: 456 },
+  { id: 4, image: "https://picsum.photos/300/300?random=33", likes: 123 },
+  { id: 5, image: "https://picsum.photos/300/300?random=34", likes: 567 },
+  { id: 6, image: "https://picsum.photos/300/300?random=35", likes: 89 },
 ]);
 
 const menuItems = [
-  { id: 1, icon: '💬', name: '消息', badge: 5 },
-  { id: 2, icon: '👥', name: '好友', badge: 0 },
-  { id: 3, icon: '🔔', name: '通知', badge: 12 },
-  { id: 4, icon: '🎁', name: '钱包', badge: 0 },
-  { id: 5, icon: '📊', name: '数据', badge: 0 },
-  { id: 6, icon: '🎨', name: '个性设置', badge: 0 },
-  { id: 7, icon: '🔒', name: '隐私与安全', badge: 0 },
-  { id: 8, icon: '❓', name: '帮助与反馈', badge: 0 },
+  { id: 1, icon: "💬", name: "消息", badge: 5 },
+  { id: 2, icon: "👥", name: "好友", badge: 0 },
+  { id: 3, icon: "🔔", name: "通知", badge: 12 },
+  { id: 4, icon: "🎁", name: "钱包", badge: 0 },
+  { id: 5, icon: "📊", name: "数据", badge: 0 },
+  { id: 6, icon: "🎨", name: "个性设置", badge: 0 },
+  { id: 7, icon: "🔒", name: "隐私与安全", badge: 0 },
+  { id: 8, icon: "❓", name: "帮助与反馈", badge: 0 },
 ];
 
 const settings = [
-  { id: 1, name: '夜间模式', icon: '🌙', enabled: false },
-  { id: 2, name: '勿扰模式', icon: '🔕', enabled: false },
-  { id: 3, name: '省流模式', icon: '📶', enabled: true },
+  { id: 1, name: "夜间模式", icon: "🌙", enabled: false },
+  { id: 2, name: "勿扰模式", icon: "🔕", enabled: false },
+  { id: 3, name: "省流模式", icon: "📶", enabled: true },
 ];
 </script>
 
@@ -59,19 +59,27 @@ const settings = [
       <div class="header-top">
         <div class="settings-icon">
           <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            <path
+              d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+            />
           </svg>
         </div>
         <div class="qrcode-icon">
           <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v2h2v-2zm0 6h2v-2h-2v2zm-4-6h2v4h-2v-4zm2 4h2v2h-2v-2zm-2 2h-2v2h2v-2zm0-6h2v2h-2v-2z"/>
+            <path
+              d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v2h2v-2zm0 6h2v-2h-2v2zm-4-6h2v4h-2v-4zm2 4h2v2h-2v-2zm-2 2h-2v2h2v-2zm0-6h2v2h-2v-2z"
+            />
           </svg>
         </div>
       </div>
 
       <div class="user-info">
         <div class="avatar-wrapper">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=1" alt="avatar" class="avatar" />
+          <img
+            src="https://api.dicebear.com/7.x/avataaars/svg?seed=1"
+            alt="avatar"
+            class="avatar"
+          />
           <div class="level-badge">Lv.{{ userInfo.level }}</div>
         </div>
 
@@ -84,7 +92,9 @@ const settings = [
           <div class="user-meta">
             <span class="meta-item">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                <path
+                  d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+                />
               </svg>
               {{ userInfo.location }}
             </span>
@@ -125,11 +135,7 @@ const settings = [
     </div>
 
     <div class="quick-settings">
-      <div
-        v-for="setting in settings"
-        :key="setting.id"
-        class="setting-item"
-      >
+      <div v-for="setting in settings" :key="setting.id" class="setting-item">
         <span class="setting-icon">{{ setting.icon }}</span>
         <span class="setting-name">{{ setting.name }}</span>
         <label class="switch">
@@ -140,11 +146,7 @@ const settings = [
     </div>
 
     <div class="menu-section">
-      <div
-        v-for="item in menuItems"
-        :key="item.id"
-        class="menu-item"
-      >
+      <div v-for="item in menuItems" :key="item.id" class="menu-item">
         <div class="menu-left">
           <span class="menu-icon">{{ item.icon }}</span>
           <span class="menu-name">{{ item.name }}</span>
@@ -152,7 +154,7 @@ const settings = [
         <div class="menu-right">
           <span v-if="item.badge > 0" class="menu-badge">{{ item.badge }}</span>
           <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
           </svg>
         </div>
       </div>
@@ -176,7 +178,9 @@ const settings = [
           <img :src="post.image" alt="post" class="content-image" />
           <div class="content-overlay">
             <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              <path
+                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              />
             </svg>
             <span>{{ post.likes }}</span>
           </div>
@@ -199,7 +203,11 @@ const settings = [
 
 .profile-header {
   padding: 16px;
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(99, 102, 241, 0.15) 0%,
+    transparent 100%
+  );
 }
 
 .header-top {
@@ -427,7 +435,7 @@ const settings = [
 
     &::before {
       position: absolute;
-      content: '';
+      content: "";
       height: 20px;
       width: 20px;
       left: 2px;

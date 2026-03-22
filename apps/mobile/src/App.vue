@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import BottomNav from '@/components/BottomNav/index.vue';
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import BottomNav from "@/components/BottomNav/index.vue";
 
 const route = useRoute();
 
 const showNav = computed(() => {
-  return ['/', '/recommend', '/discover', '/profile'].includes(route.path);
+  return ["/", "/recommend", "/discover", "/profile"].includes(route.path);
 });
 </script>
 
@@ -28,8 +28,10 @@ const showNav = computed(() => {
   box-sizing: border-box;
 }
 
-html, body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+html,
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: #0f0f23;

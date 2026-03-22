@@ -1,9 +1,13 @@
-import { PictureOutlined, SmileOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import {
+  PictureOutlined,
+  SmileOutlined,
+  VideoCameraOutlined,
+} from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import React, { useState, useRef, useEffect } from 'react';
 import { selectFile } from '@workspace/services';
-import { TextQuicMsgVo, ChatMessage, MessageFrom } from '@workspace/types';
+import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
 import { nanoid } from 'nanoid';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/FooterToolBar.less';
 
 interface FooterToolBarProps {
@@ -13,23 +17,86 @@ interface FooterToolBarProps {
 }
 
 const EMOJI_LIST = [
-  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
-  '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
-  '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜',
-  '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐',
-  '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬',
-  '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷',
-  '👍', '👎', '👏', '🙌', '🤝', '🙏', '💪', '🤘',
-  '❤️', '💔', '💯', '🔥', '⭐', '✨', '💥', '🎉'
+  '😀',
+  '😃',
+  '😄',
+  '😁',
+  '😆',
+  '😅',
+  '🤣',
+  '😂',
+  '🙂',
+  '🙃',
+  '😉',
+  '😊',
+  '😇',
+  '🥰',
+  '😍',
+  '🤩',
+  '😘',
+  '😗',
+  '😚',
+  '😙',
+  '🥲',
+  '😋',
+  '😛',
+  '😜',
+  '🤪',
+  '😝',
+  '🤑',
+  '🤗',
+  '🤭',
+  '🤫',
+  '🤔',
+  '🤐',
+  '🤨',
+  '😐',
+  '😑',
+  '😶',
+  '😏',
+  '😒',
+  '🙄',
+  '😬',
+  '😮‍💨',
+  '🤥',
+  '😌',
+  '😔',
+  '😪',
+  '🤤',
+  '😴',
+  '😷',
+  '👍',
+  '👎',
+  '👏',
+  '🙌',
+  '🤝',
+  '🙏',
+  '💪',
+  '🤘',
+  '❤️',
+  '💔',
+  '💯',
+  '🔥',
+  '⭐',
+  '✨',
+  '💥',
+  '🎉',
 ];
 
-const FooterToolBar: React.FC<FooterToolBarProps> = ({ friendUuid, onEmojiSelect, onMessageSent }) => {
+const FooterToolBar: React.FC<FooterToolBarProps> = ({
+  friendUuid,
+  onEmojiSelect,
+  onMessageSent,
+}) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
         setShowEmojiPicker(false);
       }
     };
@@ -42,11 +109,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({ friendUuid, onEmojiSelect
       const filePaths = await selectFile(false, false, [
         { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
       ]);
-      
+
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
         console.log('Selected image path:', filePath);
-        
+
         let text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
           text_type: 2,
@@ -55,13 +122,13 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({ friendUuid, onEmojiSelect
           send_user: '',
           timestamp: new Date().getTime(),
         };
-        
+
         const temp: ChatMessage = {
           from: MessageFrom.Mine,
           text_msg_raw,
           ack: false,
         };
-        
+
         await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
         onMessageSent?.(JSON.stringify(temp));
       }
@@ -92,7 +159,10 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({ friendUuid, onEmojiSelect
   return (
     <div className={styles.footerBtnBar}>
       <div className={styles.emojiWrapper} ref={emojiPickerRef}>
-        <div className={styles.footerBtn} onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+        <div
+          className={styles.footerBtn}
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+        >
           <SmileOutlined />
         </div>
         {showEmojiPicker && (

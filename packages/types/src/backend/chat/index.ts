@@ -1,26 +1,26 @@
 interface TextMsgRaw {
-  text: string;   //消息内容
-  prev_id: string;  //上一条消息id
-  platform: number;  //平台, 0: pc, 1: mobile
+  text: string; //消息内容
+  prev_id: string; //上一条消息id
+  platform: number; //平台, 0: pc, 1: mobile
 }
 
 interface ImageRecord {
-    prev_id: string,
-    biz_id: string,
-    is_preview: boolean,
-    img_width: number,
-    img_height: number,
-    img_size: number,
-    platform: number,
+  prev_id: string;
+  biz_id: string;
+  is_preview: boolean;
+  img_width: number;
+  img_height: number;
+  img_size: number;
+  platform: number;
 }
 
 interface TextQuicMsgVo {
-  nano_id: string,   //消息id
-  text_type: number,    //消息类型，0: 文本，1: 图片
-  raw: string,       //数据
-  recv_user: string, //接收用户
-  send_user: string, //发送用户
-  timestamp: number,    //消息时间戳
+  nano_id: string; //消息id
+  text_type: number; //消息类型，0: 文本，1: 图片
+  raw: string; //数据
+  recv_user: string; //接收用户
+  send_user: string; //发送用户
+  timestamp: number; //消息时间戳
 }
 
 export { TextMsgRaw, TextQuicMsgVo, ImageRecord };

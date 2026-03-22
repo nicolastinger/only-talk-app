@@ -1,13 +1,13 @@
+import { useBearStore } from '@/store/store';
+import { CheckOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
 import {
   get_accept_friend_request_list,
   get_friend_request_list,
   process_friend_request,
   readContactsNotification,
 } from '@workspace/services';
-import { useBearStore } from '@/store/store';
 import { FriendRequestInfo, FriendRequestInfoDTO } from '@workspace/types';
-import { CheckOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons';
-import { invoke } from '@tauri-apps/api/core';
 import { Avatar, Button, List, Modal, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
@@ -40,7 +40,9 @@ const FriendRequestsModal = ({
         console.log('获取我发起的好友请求成功', data);
         setSentRequests(data);
         // 已读系统通知
-        const ids = data.map((item) => item.uuid).filter((item) => item !== undefined);
+        const ids = data
+          .map((item) => item.uuid)
+          .filter((item) => item !== undefined);
         if (ids && ids.length > 0) {
           await readContactsNotification(ids, setAddContacts);
         }
@@ -61,7 +63,9 @@ const FriendRequestsModal = ({
         setAcceptRequests(data);
 
         // 已读系统通知
-        const ids = data.map((item) => item.uuid).filter((item) => item !== undefined);
+        const ids = data
+          .map((item) => item.uuid)
+          .filter((item) => item !== undefined);
         if (ids && ids.length > 0) {
           await readContactsNotification(ids, setAddContacts);
         }

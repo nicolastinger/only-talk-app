@@ -1,5 +1,5 @@
-import React from 'react';
 import { formatMessageTime } from '@/utils/format';
+import React from 'react';
 
 interface MessageTimestampProps {
   timestamp: number;

@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { Menu, Layout } from 'antd';
 import {
-  UserOutlined,
-  SettingOutlined,
   BellOutlined,
   InfoCircleOutlined,
+  SettingOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
+import { Layout, Menu } from 'antd';
+import { useState } from 'react';
 import styles from './Settings.less';
+import AboutApp from './components/AboutApp';
 import AccountPrivacy from './components/AccountPrivacy';
 import GeneralSettings from './components/GeneralSettings';
 import NotificationSettings from './components/NotificationSettings';
-import AboutApp from './components/AboutApp';
 
 const { Sider, Content } = Layout;
 

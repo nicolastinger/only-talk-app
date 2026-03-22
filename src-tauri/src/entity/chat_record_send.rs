@@ -7,16 +7,16 @@ use crate::dao::store::SqliteStore;
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatRecordSend {
     pub id: i64,
-    pub send_id: String,      // 发送id
-    pub msg_id: String,       // 消息id
-    pub text_type: u16,       // 消息类型
-    pub platform: u8,     // 平台
-    pub recv_user: String,    // 接收用户
-    pub send_user: String,    // 发送用户
-    pub timestamp: i64,       // 消息时间戳, 超过1分钟未确认，则标记为失败
-    pub raw: String,           // 消息内容
-    pub send_status: u16,     // 0-未发送，1-发送中，2-发送失败，3-发送成功
-    pub retry_count: i32,     // 重试次数, 超过3次则标记为失败
+    pub send_id: String,   // 发送id
+    pub msg_id: String,    // 消息id
+    pub text_type: u16,    // 消息类型
+    pub platform: u8,      // 平台
+    pub recv_user: String, // 接收用户
+    pub send_user: String, // 发送用户
+    pub timestamp: i64,    // 消息时间戳, 超过1分钟未确认，则标记为失败
+    pub raw: String,       // 消息内容
+    pub send_status: u16,  // 0-未发送，1-发送中，2-发送失败，3-发送成功
+    pub retry_count: i32,  // 重试次数, 超过3次则标记为失败
 }
 
 impl SqliteStore for ChatRecordSend {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './styles/Splitter.less';
 
 interface SplitterProps {
@@ -10,7 +10,7 @@ interface SplitterProps {
 const Splitter: React.FC<SplitterProps> = ({
   onHeightChange,
   minHeight = 20,
-  maxHeight = 80
+  maxHeight = 80,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const splitterRef = useRef<HTMLDivElement>(null);
@@ -26,14 +26,19 @@ const Splitter: React.FC<SplitterProps> = ({
 
       const containerHeight = window.innerHeight;
       const mouseY = e.clientY;
-      const containerTop = splitterRef.current?.getBoundingClientRect().top || 0;
-      
+      const containerTop =
+        splitterRef.current?.getBoundingClientRect().top || 0;
+
       // 计算相对于容器的高度百分比
-      const heightPercent = ((containerHeight - mouseY) / containerHeight) * 100;
-      
+      const heightPercent =
+        ((containerHeight - mouseY) / containerHeight) * 100;
+
       // 限制在最小和最大高度之间
-      const clampedHeight = Math.max(minHeight, Math.min(maxHeight, heightPercent));
-      
+      const clampedHeight = Math.max(
+        minHeight,
+        Math.min(maxHeight, heightPercent),
+      );
+
       onHeightChange(clampedHeight);
     };
 
@@ -53,7 +58,7 @@ const Splitter: React.FC<SplitterProps> = ({
   }, [isDragging, onHeightChange, minHeight, maxHeight]);
 
   return (
-    <div 
+    <div
       ref={splitterRef}
       className={`${styles.splitter} ${isDragging ? styles.dragging : ''}`}
       onMouseDown={handleMouseDown}

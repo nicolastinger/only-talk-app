@@ -1,7 +1,7 @@
 import { useBearStore } from '@/store/store';
-import { SystemNotification } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { SystemNotification } from '@workspace/types';
 import { useEffect } from 'react';
 
 // 监听系统通知
@@ -81,7 +81,5 @@ const useSystemNotify = (recvUuid: string) => {
     }
   };
 };
-
-
 
 export { useSystemNotify };

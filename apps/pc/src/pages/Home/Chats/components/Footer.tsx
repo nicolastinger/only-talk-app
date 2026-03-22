@@ -1,9 +1,10 @@
+import { invoke } from '@tauri-apps/api/core';
 import {
   ChatMessage,
-  MessageFrom, TextMsgRaw,
+  MessageFrom,
+  TextMsgRaw,
   TextQuicMsgVo,
 } from '@workspace/types';
-import { invoke } from '@tauri-apps/api/core';
 import { Button, Input } from 'antd';
 import { nanoid } from 'nanoid';
 import React, { useState } from 'react';
@@ -28,8 +29,8 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
 
     let raw: TextMsgRaw = {
       text: message,
-      prev_id: "",
-      platform: 0
+      prev_id: '',
+      platform: 0,
     };
 
     let text_msg_raw: TextQuicMsgVo = {
@@ -55,12 +56,16 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
   };
 
   const handleEmojiSelect = (emoji: string) => {
-    setMessage(prevMessage => prevMessage + emoji);
+    setMessage((prevMessage) => prevMessage + emoji);
   };
 
   return (
     <div className={styles.footer}>
-      <FooterToolBar friendUuid={friendUuid} onEmojiSelect={handleEmojiSelect} onMessageSent={onMessageSent} />
+      <FooterToolBar
+        friendUuid={friendUuid}
+        onEmojiSelect={handleEmojiSelect}
+        onMessageSent={onMessageSent}
+      />
       <div className={styles.footerMessage}>
         <TextArea
           onPressEnter={sendMessage}
@@ -70,10 +75,10 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
           placeholder="请输入"
         />
         <div className={styles.footerSendBtn}>
-        <Button type="primary" variant="outlined" onClick={sendMessage}>
-          发送(S)
-        </Button>
-      </div>
+          <Button type="primary" variant="outlined" onClick={sendMessage}>
+            发送(S)
+          </Button>
+        </div>
       </div>
     </div>
   );

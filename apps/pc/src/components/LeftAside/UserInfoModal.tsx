@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Avatar, Typography, Divider, Space, message, Spin } from 'antd';
-import { UserOutlined, MailOutlined, PhoneOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
-import { useBearStore } from '@/store/store';
-import { selectFile, convertPathToTauriUrl, getFiles } from '@workspace/services';
-import { invoke } from '@tauri-apps/api/core';
 import { TALK_API } from '@/constants';
+import { useBearStore } from '@/store/store';
+import {
+  CameraOutlined,
+  LoadingOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
+import {
+  convertPathToTauriUrl,
+  getFiles,
+  selectFile,
+} from '@workspace/services';
+import { Avatar, Divider, message, Modal, Space, Spin, Typography } from 'antd';
+import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 
 const { Text, Title } = Typography;
@@ -50,36 +60,38 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       setLoading(true);
 
       const compressedResult = await Promise.race([
-        invoke<string>('compress_image_to_webp_command', { inputPath: filePath }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('压缩超时（30秒）')), TIMEOUT_MS)
-        )
+        invoke<string>('compress_image_to_webp_command', {
+          inputPath: filePath,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('压缩超时（30秒）')), TIMEOUT_MS),
+        ),
       ]);
 
       const preview = convertPathToTauriUrl(compressedResult);
       if (preview) {
         setPreviewUrl(preview);
       }
-      
+
       const uploadResult = await Promise.race([
         invoke<{ status: number; body: string }>('upload_file_request', {
           url: `${TALK_API}/file_integrated/upload/user_avatar`,
           filePath: compressedResult,
           fieldName: 'file',
         }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('上传超时（30秒）')), TIMEOUT_MS)
-        )
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('上传超时（30秒）')), TIMEOUT_MS),
+        ),
       ]);
 
       if (uploadResult.status === 200) {
         const responseBody = JSON.parse(uploadResult.body);
         if (responseBody.code === 200 && responseBody.data) {
           const bizId = responseBody.data;
-          
+
           const FileVos = await getFiles(bizId);
           const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
-          
+
           if (tauriFilePath) {
             const updatedUserInfo = { ...userInfo, icon: bizId };
             setUserInfo(updatedUserInfo);
@@ -114,8 +126,14 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
     >
       <div className={styles.modalContent}>
         <div className={styles.avatarSection}>
-          <div className={styles.avatarWrapper} onClick={loading ? undefined : handleAvatarClick}>
-            <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} spinning={loading}>
+          <div
+            className={styles.avatarWrapper}
+            onClick={loading ? undefined : handleAvatarClick}
+          >
+            <Spin
+              indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
+              spinning={loading}
+            >
               <Avatar
                 size={80}
                 src={previewUrl || avatarUrl}
@@ -145,7 +163,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
                 {userInfo?.email || '未设置'}
               </Text>
             </div>
-            
+
             <div className={styles.infoItem}>
               <PhoneOutlined className={styles.infoIcon} />
               <Text strong>电话:</Text>
@@ -153,7 +171,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
                 {userInfo?.phone || '未设置'}
               </Text>
             </div>
-            
+
             <div className={styles.infoItem}>
               <UserOutlined className={styles.infoIcon} />
               <Text strong>账号:</Text>
@@ -161,7 +179,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
                 {userInfo?.account || '未知'}
               </Text>
             </div>
-            
+
             <div className={styles.infoItem}>
               <UserOutlined className={styles.infoIcon} />
               <Text strong>用户ID:</Text>

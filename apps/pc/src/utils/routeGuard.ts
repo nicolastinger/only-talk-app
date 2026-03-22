@@ -44,7 +44,7 @@ export interface RouteInfo {
  */
 export const handleRouteChange = (routeInfo: RouteInfo) => {
   const { location, routes, action } = routeInfo;
-  
+
   // 只在非开发环境或路由真正变化时记录日志
   if (process.env.NODE_ENV !== 'development' || action === 'PUSH') {
     console.log('路由跳转:', {
@@ -55,10 +55,10 @@ export const handleRouteChange = (routeInfo: RouteInfo) => {
       timestamp: new Date().toISOString(),
     });
   }
-  
+
   // 可以在这里添加权限验证逻辑
   // 例如：检查用户是否登录，是否有权限访问当前路由
-  
+
   /* 示例：简单的登录验证
   const publicRoutes = ['/signIn', '/access'];
   const isPublicRoute = publicRoutes.some(route => 
@@ -101,14 +101,14 @@ export interface UserPermissions {
  * @returns 是否有权限访问
  */
 export const checkPermission = (
-  routePath: string, 
-  userPermissions: Permission[] | UserPermissions
+  routePath: string,
+  userPermissions: Permission[] | UserPermissions,
 ): boolean => {
   // 将可能的UserPermissions对象转换为权限数组
-  const permissions = Array.isArray(userPermissions) 
-    ? userPermissions 
+  const permissions = Array.isArray(userPermissions)
+    ? userPermissions
     : userPermissions.permissions;
-  
+
   // 这里可以实现更复杂的权限验证逻辑
   // 例如：根据路由路径和用户权限列表进行匹配
   return true; // 默认允许访问

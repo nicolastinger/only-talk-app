@@ -1,9 +1,9 @@
+import { formatMessageTime } from '@/utils/format';
+import { getFiles } from '@workspace/services';
 import { MessageQueueProps } from '@workspace/types';
 import { Badge } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './styles/MessageBox.less';
-import { getFiles } from '@workspace/services';
-import { useEffect, useState, useMemo } from 'react';
-import { formatMessageTime } from '@/utils/format';
 
 // 图片缓存
 const imageCache = new Map<string, string>();
@@ -18,7 +18,7 @@ const MessageBox = (props: MessageQueueProps) => {
     if (text_type === 2) {
       return '[图片]';
     }
-    
+
     try {
       const parsed = JSON.parse(message);
       if (parsed.text) {
@@ -27,27 +27,29 @@ const MessageBox = (props: MessageQueueProps) => {
     } catch (e) {
       console.error('Failed to parse message:', e);
     }
-    
+
     return message;
   }, [message, text_type]);
 
   // 只在 img 真正变化时重新获取图片
   useEffect(() => {
     if (!img) return;
-    
+
     // 检查缓存
     if (imageCache.has(img)) {
       setFriendIcon(imageCache.get(img)!);
       return;
     }
-    
+
     setLoading(true);
-    getUserIcon(img).then((icon) => {
-      setFriendIcon(icon);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
+    getUserIcon(img)
+      .then((icon) => {
+        setFriendIcon(icon);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, [img]);
 
   // 获取用户头像
@@ -57,13 +59,13 @@ const MessageBox = (props: MessageQueueProps) => {
       if (imageCache.has(icon)) {
         return imageCache.get(icon)!;
       }
-      
+
       const FileVos = await getFiles(icon);
       const tauriFilePath = FileVos?.[0]?.tauri_file_path || '';
-      
+
       // 存入缓存
       imageCache.set(icon, tauriFilePath);
-      
+
       return tauriFilePath;
     } catch (error) {
       console.log(error);
@@ -76,9 +78,9 @@ const MessageBox = (props: MessageQueueProps) => {
     <div className={styles.container}>
       <div className={styles.left}>
         <Badge count={count}>
-          <img 
-            src={friendIcon || ''} 
-            className={styles.imgItem} 
+          <img
+            src={friendIcon || ''}
+            className={styles.imgItem}
             alt="123"
             style={{ opacity: loading ? 0.7 : 1 }}
           />

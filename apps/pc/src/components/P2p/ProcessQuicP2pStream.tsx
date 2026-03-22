@@ -1,5 +1,5 @@
-import { P2pInitMsg } from '@workspace/types';
 import { listen } from '@tauri-apps/api/event';
+import { P2pInitMsg } from '@workspace/types';
 import { useEffect } from 'react';
 
 const ProcessQuicP2pStream = () => {

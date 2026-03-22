@@ -1,5 +1,5 @@
-import { TextQuicMsgVo } from '@workspace/types';
 import { listen } from '@tauri-apps/api/event';
+import { TextQuicMsgVo } from '@workspace/types';
 import { useEffect, useMemo, useState } from 'react';
 
 // 监听目标账号的消息传递,为空则监听全局
@@ -17,8 +17,8 @@ const useMessageApi = (sendUuid: string | null, recvUuid: string) => {
       unlisten = await listen<string>('text_message', (event) => {
         const text = JSON.parse(event.payload) as TextQuicMsgVo;
         if (text.recv_user !== recvUuid) {
-            return;
-          }
+          return;
+        }
         // 监听某个账号
         if (sendUuid !== null) {
           // 过滤接收人
@@ -27,7 +27,6 @@ const useMessageApi = (sendUuid: string | null, recvUuid: string) => {
           }
         } else {
           // 监听全局服务器发送的quic消息处理
-
         }
       });
     };

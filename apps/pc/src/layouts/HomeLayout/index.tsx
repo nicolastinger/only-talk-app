@@ -1,18 +1,27 @@
 import DraggableHeader from '@/components/DraggableHeader';
 import { LeftAside } from '@/components/LeftAside';
 import OnlineStatusSwitch from '@/components/OnlineStatusSwitch';
-import { MuteButton, CamouflageButton, LanguageButton, ThemeButton } from '@/components/ToolButtons';
+import {
+  CamouflageButton,
+  LanguageButton,
+  MuteButton,
+  ThemeButton,
+} from '@/components/ToolButtons';
 import { TALK_API } from '@/constants';
+import { useSystemNotify } from '@/hooks/useSystemNotify';
 import { useBearStore } from '@/store/store';
-import { HttpResponse, ResponseData } from '@workspace/types';
-import { UserInfo } from '@workspace/types';
-import { CloseOutlined, MinusOutlined, ExpandOutlined, CompressOutlined } from '@ant-design/icons';
+import {
+  CloseOutlined,
+  CompressOutlined,
+  ExpandOutlined,
+  MinusOutlined,
+} from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Window } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
+import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
-import { useSystemNotify } from '@/hooks/useSystemNotify';
 
 const HomeLayout = () => {
   const [isHovered, setIsHovered] = useState(false);
@@ -35,7 +44,7 @@ const HomeLayout = () => {
     e.stopPropagation();
     const currentWindow = Window.getCurrent();
     const maximized = await currentWindow.isMaximized();
-    
+
     if (maximized) {
       await currentWindow.unmaximize();
       setIsMaximized(false);
@@ -54,7 +63,7 @@ const HomeLayout = () => {
 
   const initUserInfo = async () => {
     // 先从本地缓存获取
-    try { 
+    try {
       const uuid: string = await invoke('get_user_map', {
         key: 'uuid',
       });
@@ -67,7 +76,7 @@ const HomeLayout = () => {
         return;
       }
     } catch (error) {
-      console.log("本地缓存获取用户信息失败", error);
+      console.log('本地缓存获取用户信息失败', error);
     }
     // 从服务器获取用户信息
     try {
@@ -96,7 +105,8 @@ const HomeLayout = () => {
       </div>
       <div className={styles.rightSideBar}>
         <div className={styles.rightSideBarTool}>
-          <div className={styles.tools}
+          <div
+            className={styles.tools}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -115,13 +125,25 @@ const HomeLayout = () => {
           </div>
           <div className={styles.rightSideBarToolButton}>
             <div className={styles.rightSideBarToolButtonList}>
-              <div onClick={minimizeWindow} onMouseDown={(e) => e.stopPropagation()} className={styles.rightButton}>
+              <div
+                onClick={minimizeWindow}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={styles.rightButton}
+              >
                 <MinusOutlined />
               </div>
-              <div onClick={toggleMaximize} onMouseDown={(e) => e.stopPropagation()} className={styles.rightButton}>
+              <div
+                onClick={toggleMaximize}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={styles.rightButton}
+              >
                 {isMaximized ? <CompressOutlined /> : <ExpandOutlined />}
               </div>
-              <div onClick={closeWindow} onMouseDown={(e) => e.stopPropagation()} className={styles.rightButtonDanger}>
+              <div
+                onClick={closeWindow}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={styles.rightButtonDanger}
+              >
                 <CloseOutlined />
               </div>
             </div>

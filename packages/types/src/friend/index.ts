@@ -16,9 +16,9 @@ interface FriendRequestInfo {
   add_type?: string;
   version?: number;
   accept_status?: number;
-  uuid?: string,
-  created_at: number,
-  updated_at: number,
+  uuid?: string;
+  created_at: number;
+  updated_at: number;
 }
 
 export { FriendRequestInfoDTO, FriendRequestInfo };

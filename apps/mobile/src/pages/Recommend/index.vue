@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from "vue";
 
 interface RecommendUser {
   id: number;
@@ -14,79 +14,79 @@ interface RecommendUser {
   matchRate: number;
 }
 
-const categories = ['全部', '附近', '新入驻', '高匹配', '有趣'];
+const categories = ["全部", "附近", "新入驻", "高匹配", "有趣"];
 const activeCategory = ref(0);
 
 const recommendUsers = ref<RecommendUser[]>([
   {
     id: 1,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=10',
-    name: '小鹿',
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=10",
+    name: "小鹿",
     age: 22,
-    gender: '女',
-    bio: '喜欢音乐和旅行的文艺少女🎨',
-    tags: ['音乐', '旅行', '摄影'],
-    distance: '2.5km',
+    gender: "女",
+    bio: "喜欢音乐和旅行的文艺少女🎨",
+    tags: ["音乐", "旅行", "摄影"],
+    distance: "2.5km",
     online: true,
     matchRate: 95,
   },
   {
     id: 2,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=11',
-    name: '阿伟',
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=11",
+    name: "阿伟",
     age: 24,
-    gender: '男',
-    bio: '健身爱好者，日常打卡健身房💪',
-    tags: ['健身', '篮球', '游戏'],
-    distance: '5.1km',
+    gender: "男",
+    bio: "健身爱好者，日常打卡健身房💪",
+    tags: ["健身", "篮球", "游戏"],
+    distance: "5.1km",
     online: true,
     matchRate: 88,
   },
   {
     id: 3,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=12',
-    name: '糖糖',
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=12",
+    name: "糖糖",
     age: 20,
-    gender: '女',
-    bio: '甜品控，喜欢烘焙和猫咪🐱',
-    tags: ['烘焙', '猫咪', '美食'],
-    distance: '8.3km',
+    gender: "女",
+    bio: "甜品控，喜欢烘焙和猫咪🐱",
+    tags: ["烘焙", "猫咪", "美食"],
+    distance: "8.3km",
     online: false,
     matchRate: 92,
   },
   {
     id: 4,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=13',
-    name: 'Leo',
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=13",
+    name: "Leo",
     age: 26,
-    gender: '男',
-    bio: '程序员，热爱开源和咖啡☕',
-    tags: ['编程', '咖啡', '科技'],
-    distance: '12km',
+    gender: "男",
+    bio: "程序员，热爱开源和咖啡☕",
+    tags: ["编程", "咖啡", "科技"],
+    distance: "12km",
     online: true,
     matchRate: 85,
   },
   {
     id: 5,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=14',
-    name: '小鱼',
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=14",
+    name: "小鱼",
     age: 23,
-    gender: '女',
-    bio: '二次元少女，追番ing📺',
-    tags: ['二次元', '追番', '画画'],
-    distance: '3.7km',
+    gender: "女",
+    bio: "二次元少女，追番ing📺",
+    tags: ["二次元", "追番", "画画"],
+    distance: "3.7km",
     online: true,
     matchRate: 90,
   },
   {
     id: 6,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=15',
-    name: '石头',
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=15",
+    name: "石头",
     age: 25,
-    gender: '男',
-    bio: '户外徒步爱好者，周末常去爬山🏔️',
-    tags: ['徒步', '摄影', '自然'],
-    distance: '6.2km',
+    gender: "男",
+    bio: "户外徒步爱好者，周末常去爬山🏔️",
+    tags: ["徒步", "摄影", "自然"],
+    distance: "6.2km",
     online: false,
     matchRate: 78,
   },
@@ -97,9 +97,9 @@ const selectCategory = (index: number) => {
 };
 
 const getMatchColor = (rate: number) => {
-  if (rate >= 90) return '#22c55e';
-  if (rate >= 80) return '#6366f1';
-  return '#f59e0b';
+  if (rate >= 90) return "#22c55e";
+  if (rate >= 80) return "#6366f1";
+  return "#f59e0b";
 };
 </script>
 
@@ -129,7 +129,10 @@ const getMatchColor = (rate: number) => {
             <img :src="user.avatar" :alt="user.name" class="avatar" />
             <span v-if="user.online" class="online-dot"></span>
           </div>
-          <div class="match-badge" :style="{ background: getMatchColor(user.matchRate) }">
+          <div
+            class="match-badge"
+            :style="{ background: getMatchColor(user.matchRate) }"
+          >
             {{ user.matchRate }}%
           </div>
         </div>
@@ -141,20 +144,26 @@ const getMatchColor = (rate: number) => {
           </h3>
           <p class="user-bio">{{ user.bio }}</p>
           <div class="user-tags">
-            <span v-for="tag in user.tags" :key="tag" class="tag">{{ tag }}</span>
+            <span v-for="tag in user.tags" :key="tag" class="tag">{{
+              tag
+            }}</span>
           </div>
           <div class="user-footer">
             <span class="distance">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="C12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                <path
+                  d="C12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+                />
               </svg>
               {{ user.distance }}
             </span>
             <span class="gender">
               <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                <path
+                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                />
               </svg>
-              {{ user.gender === '男' ? '♂' : '♀' }}
+              {{ user.gender === "男" ? "♂" : "♀" }}
             </span>
           </div>
         </div>
@@ -162,12 +171,16 @@ const getMatchColor = (rate: number) => {
         <div class="card-actions">
           <button class="action-btn pass">
             <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              <path
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
             </svg>
           </button>
           <button class="action-btn like">
             <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              <path
+                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              />
             </svg>
           </button>
         </div>
@@ -177,7 +190,7 @@ const getMatchColor = (rate: number) => {
     <div class="loading-hint">
       <span>上滑查看更多</span>
       <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
       </svg>
     </div>
   </div>
@@ -434,7 +447,12 @@ const getMatchColor = (rate: number) => {
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(5px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
 }
 </style>

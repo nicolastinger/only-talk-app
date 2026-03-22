@@ -1,19 +1,19 @@
 'use client';
 import defaultImg from '@/assets/png/default.png';
 import LayoutBtn from '@/components/Button/LayoutBtn';
+import { useChatsUnread } from '@/hooks/useChatsUnread';
 import { useBearStore } from '@/store/store';
-import { LayoutBtnProps } from '@workspace/types';
 import {
   MessageOutlined,
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { history } from '@umijs/max';
+import { getFiles } from '@workspace/services';
+import { LayoutBtnProps } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
-import { useChatsUnread } from '@/hooks/useChatsUnread';
-import { getFiles } from '@workspace/services';
 
 const LeftAside = () => {
   const [topBtnList, setTopBtnList] = React.useState<LayoutBtnProps[]>([]);
@@ -25,7 +25,7 @@ const LeftAside = () => {
 
   const menuUnread = useBearStore((state) => state.menuUnread);
   const { totalUnreadCount } = useChatsUnread(userInfo.uuid);
-  const [ userIcon, setUserIcon ] = useState<string | null>(null);
+  const [userIcon, setUserIcon] = useState<string | null>(null);
 
   const routeToPage = async (url: string) => {
     setTopBtnList((prev) => {
@@ -97,30 +97,32 @@ const LeftAside = () => {
     // 获取当前路径
     const updateActiveButton = () => {
       const currentPath = history.location.pathname;
-      
+
       // 更新顶部按钮列表的激活状态
-      setTopBtnList((prev) => 
+      setTopBtnList((prev) =>
         prev.map((item) => ({
           ...item,
-          active: currentPath === item.url || currentPath.startsWith(item.url + '/')
-        }))
+          active:
+            currentPath === item.url || currentPath.startsWith(item.url + '/'),
+        })),
       );
-      
+
       // 更新底部按钮列表的激活状态
-      setBottomBtnList((prev) => 
+      setBottomBtnList((prev) =>
         prev.map((item) => ({
           ...item,
-          active: currentPath === item.url || currentPath.startsWith(item.url + '/')
-        }))
+          active:
+            currentPath === item.url || currentPath.startsWith(item.url + '/'),
+        })),
       );
     };
 
     // 初始更新一次
     updateActiveButton();
-    
+
     // 监听路由变化
     const unlisten = history.listen(updateActiveButton);
-    
+
     // 清理函数
     return () => unlisten();
   }, []);
@@ -155,7 +157,7 @@ const LeftAside = () => {
     try {
       const FileVos = await getFiles(userInfo.icon || '');
       setUserIcon(FileVos?.[0]?.tauri_file_path || null);
-      console.log("用户信息", userInfo)
+      console.log('用户信息', userInfo);
     } catch (error) {
       console.log(error);
     }
@@ -186,7 +188,7 @@ const LeftAside = () => {
         {renderBtn(topBtnList)}
       </div>
       <div className={styles.bottom}>{renderBtn(bottomBtnList)}</div>
-      
+
       <UserInfoModal visible={isModalVisible} onClose={handleCancel} />
     </div>
   );

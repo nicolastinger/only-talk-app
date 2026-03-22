@@ -1,6 +1,11 @@
-import { useState } from 'react';
-import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  EyeInvisibleOutlined,
+  MinusCircleOutlined,
+} from '@ant-design/icons';
 import { Dropdown, Tooltip } from 'antd';
+import { useState } from 'react';
 import styles from './index.less';
 
 interface OnlineStatus {
@@ -38,7 +43,9 @@ const ONLINE_STATUSES: OnlineStatus[] = [
 ];
 
 const OnlineStatusSwitch = () => {
-  const [currentStatus, setCurrentStatus] = useState<OnlineStatus>(ONLINE_STATUSES[0]);
+  const [currentStatus, setCurrentStatus] = useState<OnlineStatus>(
+    ONLINE_STATUSES[0],
+  );
 
   const handleStatusChange = (status: OnlineStatus) => {
     setCurrentStatus(status);
@@ -47,7 +54,7 @@ const OnlineStatusSwitch = () => {
   const items = ONLINE_STATUSES.map((status) => ({
     key: status.key,
     label: (
-      <div 
+      <div
         className={styles.statusItem}
         onClick={() => handleStatusChange(status)}
       >
@@ -63,7 +70,10 @@ const OnlineStatusSwitch = () => {
     <Dropdown menu={{ items }} placement="bottomLeft" trigger={['click']}>
       <Tooltip title="在线状态" placement="bottom">
         <div className={styles.statusSwitch}>
-          <span className={styles.statusIcon} style={{ color: currentStatus.color }}>
+          <span
+            className={styles.statusIcon}
+            style={{ color: currentStatus.color }}
+          >
             {currentStatus.icon}
           </span>
           <span className={styles.statusLabel}>{currentStatus.label}</span>

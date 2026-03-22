@@ -1,17 +1,21 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useBearStore } from '@/store/store';
-import { Page, TextQuicMsgVo } from '@workspace/types';
-import { ResponseData } from '@workspace/types';
-import { FriendVo } from '@workspace/types';
-import { ChatMessage, MessageFrom, TextMsgRaw } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { useLocation } from '@umijs/max';
+import {
+  ChatMessage,
+  FriendVo,
+  MessageFrom,
+  Page,
+  ResponseData,
+  TextQuicMsgVo,
+} from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import ChatFooter from '../components/Footer';
 import MessageList from '../components/MessageList';
-import ChatTopBar from '../components/TopBar';
 import Splitter from '../components/Splitter';
+import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
 
 const ChatPage: React.FC = () => {
@@ -31,13 +35,16 @@ const ChatPage: React.FC = () => {
     const containerHeight = window.innerHeight;
     const minHeightPx = 20;
     const maxHeightPx = containerHeight * 0.8;
-    const heightPx = Math.max(minHeightPx, Math.min(maxHeightPx, (heightPercent / 100) * containerHeight));
+    const heightPx = Math.max(
+      minHeightPx,
+      Math.min(maxHeightPx, (heightPercent / 100) * containerHeight),
+    );
     setFooterHeight(heightPx);
   };
 
   useEffect(() => {
-    setRealFooterHeight(footerHeight + 6)
-  }, [footerHeight])
+    setRealFooterHeight(footerHeight + 6);
+  }, [footerHeight]);
 
   // 更新已读记录
   useEffect(() => {
@@ -59,7 +66,7 @@ const ChatPage: React.FC = () => {
     getFriendInfo(friendUuid);
     markReadFriend(friendUuid);
     setCurrentFriendSession(friendUuid);
-    
+
     // 组件卸载时清理当前好友会话
     return () => {
       setCurrentFriendSession('-1');
@@ -71,18 +78,18 @@ const ChatPage: React.FC = () => {
     try {
       const res = await invoke('add_user_map', {
         map: {
-          current_session_friend: friend
-        }
+          current_session_friend: friend,
+        },
       });
       console.log('设置当前好友会话', res);
-    }catch (err){
+    } catch (err) {
       console.log(err);
     }
   };
 
   // 已读好友会话
   const markReadFriend = async (friendUuid: string) => {
-    if (friendUuid == null ||friendUuid === '') {
+    if (friendUuid == null || friendUuid === '') {
       return;
     }
     try {
@@ -224,7 +231,7 @@ const ChatPage: React.FC = () => {
         <ChatTopBar title={currentFriend?.friend_name || ''} />
       </div>
       <div className={styles.mainContainer}>
-        <div 
+        <div
           className={styles.messageContainer}
           style={{ height: `calc(100% - ${realFootHeight}px)` }}
         >
@@ -234,13 +241,16 @@ const ChatPage: React.FC = () => {
           />
           <div id="anchor"></div>
         </div>
-        <Splitter 
+        <Splitter
           onHeightChange={handleHeightChange}
           minHeight={20}
           maxHeight={80}
         />
         <div style={{ height: `${footerHeight}px` }}>
-          <ChatFooter friendUuid={friendUuid} onMessageSent={handleMessageSent} />
+          <ChatFooter
+            friendUuid={friendUuid}
+            onMessageSent={handleMessageSent}
+          />
         </div>
       </div>
     </div>

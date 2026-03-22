@@ -17,7 +17,10 @@ use crate::utils::global_static_str::{RESOURCE_PATH, TALK_API};
 use crate::utils::uuid_utils;
 use crate::vo::file_vo::FileVo;
 
-pub async fn get_file_by_biz_id_service(biz_id: String, url: String) -> Result<Vec<FileVo>, anyhow::Error> {
+pub async fn get_file_by_biz_id_service(
+    biz_id: String,
+    url: String,
+) -> Result<Vec<FileVo>, anyhow::Error> {
     // 0、从biz业务表获取文件列表id，biz只负责文件业务
     // 校验biz_id是否合规，是否为空，格式为uuid
     if biz_id.is_empty() {
@@ -76,7 +79,6 @@ pub async fn get_file_by_biz_id_service(biz_id: String, url: String) -> Result<V
         info!("通过业务id获取公开文件成功: {:?}", file_vo.absolute_file_path);
         result.push(file_vo);
     }
-    
 
     Ok(result)
 }

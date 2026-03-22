@@ -1,6 +1,6 @@
-import { ChatSessionEvent, ChatSessionVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { ChatSessionEvent, ChatSessionVo } from '@workspace/types';
 import { useEffect, useState } from 'react';
 
 // 监听会话信息
@@ -15,10 +15,10 @@ const useChatsUnread = (recvUuid: string) => {
     chatSessions.forEach((session) => {
       totalUnreadCount += session.unread_count;
     });
-    
+
     // 可以在这里使用totalUnreadCount进行其他操作，比如设置到状态中
     console.log('Total unread messages:', chatSessions);
-    
+
     setTotalUnreadCount(totalUnreadCount);
   }, [recvUuid, chatSessions]);
 
@@ -44,12 +44,12 @@ const useChatsUnread = (recvUuid: string) => {
     // 添加一个定时任务，每30s检查一次会话信息
     const intervalId = setInterval(() => {
       getChatSession();
-    }, 30000); 
+    }, 30000);
 
     const setupListener = async () => {
       // 初始获取会话数据
       await getChatSession();
-      
+
       unlisten = await listen<string>('chat_session', (event) => {
         // 监听会话信息
         try {
@@ -64,7 +64,9 @@ const useChatsUnread = (recvUuid: string) => {
           // 更新会话信息
           setChatSessions((prev) => {
             const index = prev.findIndex(
-              (item) => item.send_user === chatSessionEvent.data.send_user && item.recv_user === chatSessionEvent.data.recv_user,
+              (item) =>
+                item.send_user === chatSessionEvent.data.send_user &&
+                item.recv_user === chatSessionEvent.data.recv_user,
             );
             if (index === -1) {
               return [...prev, chatSessionEvent.data];
@@ -76,7 +78,9 @@ const useChatsUnread = (recvUuid: string) => {
               return newChatSessions;
             } else if (chatSessionEvent.type === 1) {
               const newChatSessions = [...prev];
-              chatSessionEvent.data.unread_count = chatSessionEvent.data.unread_count + newChatSessions[index].unread_count;
+              chatSessionEvent.data.unread_count =
+                chatSessionEvent.data.unread_count +
+                newChatSessions[index].unread_count;
               newChatSessions[index] = chatSessionEvent.data;
               return newChatSessions;
             }

@@ -1,8 +1,12 @@
 use log::info;
+
 use crate::entity::p2p_models::{P2pInitMsg, P2pVideoData};
 use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
-use crate::service::p2p_service::{access_p2p_request, find_available_udp_port, reject_p2p_request, send_p2p_video_config_service, send_p2p_video_frame_service};
+use crate::service::p2p_service::{
+    access_p2p_request, find_available_udp_port, reject_p2p_request, send_p2p_video_config_service,
+    send_p2p_video_frame_service,
+};
 use crate::utils::global_static_str::UDP_SOCKET;
 
 /// 发送p2p请求给好友

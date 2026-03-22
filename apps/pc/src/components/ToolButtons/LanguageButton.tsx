@@ -1,11 +1,11 @@
-import { useState } from 'react';
 import { setLocale } from '@umijs/max';
 import { Tooltip } from 'antd';
+import { useState } from 'react';
 import styles from './LanguageButton.less';
 
 const LanguageButton = () => {
   const [isEnglish, setIsEnglish] = useState(
-    localStorage.getItem('language') === 'en-US'
+    localStorage.getItem('language') === 'en-US',
   );
 
   const toggleLanguage = () => {
@@ -22,11 +22,8 @@ const LanguageButton = () => {
   };
 
   return (
-    <Tooltip title={isEnglish ? "切换中文" : "切换英文"} placement="bottom">
-      <div 
-        className={styles.languageButton} 
-        onClick={toggleLanguage}
-      >
+    <Tooltip title={isEnglish ? '切换中文' : '切换英文'} placement="bottom">
+      <div className={styles.languageButton} onClick={toggleLanguage}>
         {isEnglish ? 'EN' : '中文'}
       </div>
     </Tooltip>

@@ -39,11 +39,13 @@ export default {
     nicknamePlaceholder: 'Please enter your nickname',
     nicknameRequired: 'Please input your nickname!',
     nicknameMaxLength: 'Nickname cannot exceed 8 characters!',
-    nicknamePattern: 'Nickname can only contain Chinese characters, English letters, numbers, and special characters #_@!!',
+    nicknamePattern:
+      'Nickname can only contain Chinese characters, English letters, numbers, and special characters #_@!!',
     password: 'Password',
     passwordPlaceholder: 'Please enter your password',
     passwordRequired: 'Please input your password!',
-    passwordPattern: 'Password must contain uppercase letters, lowercase letters, and numbers!',
+    passwordPattern:
+      'Password must contain uppercase letters, lowercase letters, and numbers!',
     passwordMinLength: 'Password must be at least 13 characters long!',
     submit: 'Sign Up',
     success: 'Registration successful, welcome {username}!',

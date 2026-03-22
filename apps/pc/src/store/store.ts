@@ -1,6 +1,9 @@
-import { VideoConfig } from '@workspace/types';
-import { RequestMediaMsg, UserInfo } from '@workspace/types';
-import { UnreadCount } from '@workspace/types';
+import {
+  RequestMediaMsg,
+  UnreadCount,
+  UserInfo,
+  VideoConfig,
+} from '@workspace/types';
 import { create } from 'zustand';
 
 interface BearState {
@@ -68,28 +71,27 @@ export const useBearStore = create<BearState>()((set) => ({
   },
   isLogin: false,
   setIsLogin: (isLogin: boolean) => set({ isLogin: isLogin }),
-  setMenuUnread: (menuUnread: UnreadCount) =>
-    set({ menuUnread: menuUnread }),
+  setMenuUnread: (menuUnread: UnreadCount) => set({ menuUnread: menuUnread }),
   setAddContacts: (addContacts: number) =>
     set((state) => ({
       menuUnread: {
         ...state.menuUnread,
-        contacts: Math.max(0, state.menuUnread.contacts + addContacts ),
+        contacts: Math.max(0, state.menuUnread.contacts + addContacts),
       },
     })),
   chats: 0,
-  setChats: (chats: number, isAdd: boolean) =>{
+  setChats: (chats: number, isAdd: boolean) => {
     // 加减
     if (isAdd) {
-    set((state) => ({
-      chats: Math.max(0, state.chats + chats),
-    }))}
-    else {
+      set((state) => ({
+        chats: Math.max(0, state.chats + chats),
+      }));
+    } else {
       set((_) => ({
-        chats: Math.max(0, chats)
-      }))
+        chats: Math.max(0, chats),
+      }));
     }
-    },
+  },
   setAddGroups: (addGroups: number) =>
     set((state) => ({
       menuUnread: {

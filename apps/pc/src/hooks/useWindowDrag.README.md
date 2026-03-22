@@ -80,7 +80,7 @@ const MyComponent = () => {
 ### Hook 参数
 
 | 参数 | 类型 | 默认值 | 描述 |
-|------|------|--------|------|
+| --- | --- | --- | --- |
 | `enabled` | `boolean` | `true` | 是否启用拖拽功能 |
 | `handleSelector` | `string` | `undefined` | 拖拽手柄选择器，如果指定则只在该元素上触发拖拽 |
 

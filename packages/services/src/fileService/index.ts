@@ -1,6 +1,6 @@
-import { open } from '@tauri-apps/plugin-dialog';
-import { FileVo } from '@workspace/types';
-import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+import { open } from "@tauri-apps/plugin-dialog";
+import { FileVo } from "@workspace/types";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 
 /**
  * 选择文件
@@ -12,21 +12,19 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 export const selectFile = async (
   isMultiple: boolean = false,
   isDirectory: boolean = false,
-  filters?: Array<{ name: string; extensions: string[] }>,
+  filters?: Array<{ name: string; extensions: string[] }>
 ): Promise<string[] | null> => {
   try {
     const filePath = await open({
       multiple: isMultiple,
       directory: isDirectory,
-      filters: filters || [
-        { name: 'All Files', extensions: ['*'] },
-      ],
+      filters: filters || [{ name: "All Files", extensions: ["*"] }],
     });
 
-    console.log('Selected file path:', filePath);
+    console.log("Selected file path:", filePath);
     return filePath ? [filePath] : null;
   } catch (error) {
-    console.error('File selection failed:', error);
+    console.error("File selection failed:", error);
     return null;
   }
 };
@@ -40,7 +38,7 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
   try {
     return convertFileSrc(absolutePath);
   } catch (error) {
-    console.error('Convert path to tauri url failed:', error);
+    console.error("Convert path to tauri url failed:", error);
     return null;
   }
 };
@@ -50,18 +48,18 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
  * @param bizId 业务ID
  * @returns 文件列表
  */
-export const getFiles = async (
-  bizId: string,
-): Promise<FileVo[] | null> => {
+export const getFiles = async (bizId: string): Promise<FileVo[] | null> => {
   try {
     let files = [] as FileVo[];
-    const FileVos: FileVo[] = await invoke('get_file_by_biz_id', {
+    const FileVos: FileVo[] = await invoke("get_file_by_biz_id", {
       bizId,
     });
 
     if (FileVos.length > 0) {
       FileVos.forEach((file) => {
-        const tauriFilePath = convertPathToTauriUrl(file.absolute_file_path || '');
+        const tauriFilePath = convertPathToTauriUrl(
+          file.absolute_file_path || ""
+        );
         if (tauriFilePath) {
           file.tauri_file_path = tauriFilePath;
           files.push(file);
@@ -70,7 +68,7 @@ export const getFiles = async (
     }
     return files;
   } catch (error: any) {
-    console.error('Get files failed:', error);
+    console.error("Get files failed:", error);
     return null;
   }
 };
@@ -81,33 +79,38 @@ export const getFiles = async (
  * @returns 文件列表
  */
 export const getChatFileByBizId = async (
-  bizId: string,
+  bizId: string
 ): Promise<FileVo[] | null> => {
   try {
     let files = [] as FileVo[];
-    const FileVos: FileVo[] = await invoke('get_chat_file_by_biz_id', {
+    const FileVos: FileVo[] = await invoke("get_chat_file_by_biz_id", {
       bizId,
     });
 
-    console.log('get_chat_file_by_biz_id result:', FileVos);
+    console.log("get_chat_file_by_biz_id result:", FileVos);
 
     if (FileVos.length > 0) {
       FileVos.forEach((file) => {
-        const tauriFilePath = convertPathToTauriUrl(file.absolute_file_path || '');
-        console.log('File info:', file);
-        console.log('Tauri file path:', tauriFilePath);
+        const tauriFilePath = convertPathToTauriUrl(
+          file.absolute_file_path || ""
+        );
+        console.log("File info:", file);
+        console.log("Tauri file path:", tauriFilePath);
         if (tauriFilePath) {
           file.tauri_file_path = tauriFilePath;
           files.push(file);
         } else {
-          console.error('Failed to convert path to tauri URL:', file.absolute_file_path);
+          console.error(
+            "Failed to convert path to tauri URL:",
+            file.absolute_file_path
+          );
         }
       });
     }
-    console.log('Final files:', files);
+    console.log("Final files:", files);
     return files;
   } catch (error: any) {
-    console.error('Get chat file failed:', error);
+    console.error("Get chat file failed:", error);
     return null;
   }
 };

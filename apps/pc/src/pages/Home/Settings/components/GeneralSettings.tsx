@@ -1,6 +1,9 @@
-import React from 'react';
-import { Card, Select, Checkbox, Divider, Typography } from 'antd';
-import { GlobalOutlined, FontSizeOutlined, DownloadOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  FontSizeOutlined,
+  GlobalOutlined,
+} from '@ant-design/icons';
+import { Card, Checkbox, Divider, Select, Typography } from 'antd';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
@@ -9,8 +12,10 @@ const { Option } = Select;
 const GeneralSettings = () => {
   return (
     <div className={styles.settingSection}>
-      <Title level={3} className={styles.sectionTitle}>通用设置</Title>
-      
+      <Title level={3} className={styles.sectionTitle}>
+        通用设置
+      </Title>
+
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <GlobalOutlined className={styles.cardIcon} />
@@ -25,7 +30,7 @@ const GeneralSettings = () => {
           选择应用显示语言
         </Text>
       </Card>
-      
+
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <FontSizeOutlined className={styles.cardIcon} />
@@ -41,7 +46,7 @@ const GeneralSettings = () => {
           选择应用界面主题
         </Text>
       </Card>
-      
+
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <FontSizeOutlined className={styles.cardIcon} />
@@ -57,7 +62,7 @@ const GeneralSettings = () => {
           调整聊天文字大小
         </Text>
       </Card>
-      
+
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <DownloadOutlined className={styles.cardIcon} />

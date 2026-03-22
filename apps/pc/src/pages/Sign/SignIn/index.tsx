@@ -4,7 +4,6 @@ import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { TALK_API } from '@/constants';
 import { useWindowDrag } from '@/hooks';
-import { HttpResponse, ResponseData } from '@workspace/types';
 import { FormattedMessage } from '@@/exports';
 import {
   CloseOutlined,
@@ -17,6 +16,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
 import { history, useIntl } from '@umijs/max';
+import { HttpResponse, ResponseData } from '@workspace/types';
 import { Button, Checkbox, Input, message, Modal } from 'antd';
 import React, { useState } from 'react';
 import styles from './index.less';

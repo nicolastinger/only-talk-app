@@ -1,15 +1,12 @@
+import FriendRequestsModal from '@/components/FriendRequestsModal';
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
-import {
-  BellOutlined,
-  UserAddOutlined,
-} from '@ant-design/icons';
+import { useBearStore } from '@/store/store';
+import { BellOutlined, UserAddOutlined } from '@ant-design/icons';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import type { WindowOptions } from '@tauri-apps/api/window';
-import { Button, Input, Badge } from 'antd';
-import styles from './index.less';
-import { useBearStore } from '@/store/store';
+import { Badge, Button, Input } from 'antd';
 import { useState } from 'react';
-import FriendRequestsModal from '@/components/FriendRequestsModal';
+import styles from './index.less';
 
 const SearchBar = () => {
   const menuUnread = useBearStore((state) => state.menuUnread);
@@ -38,7 +35,10 @@ const SearchBar = () => {
   };
 
   // 计算总的通知数量
-  const totalUnread = Object.values(menuUnread).reduce((sum, count) => sum + count, 0);
+  const totalUnread = Object.values(menuUnread).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
 
   return (
     <div className={styles.container}>
@@ -50,12 +50,18 @@ const SearchBar = () => {
           <Button icon={<UserAddOutlined />} onClick={handleAdd} />
         </div>
         <div className={styles.searchButton}>
-          <Badge count={totalUnread > 10 ? '9+' : totalUnread} overflowCount={10}>
+          <Badge
+            count={totalUnread > 10 ? '9+' : totalUnread}
+            overflowCount={10}
+          >
             <Button icon={<BellOutlined />} onClick={handleNotificationClick} />
           </Badge>
         </div>
       </div>
-      <FriendRequestsModal visible={isModalVisible} onClose={handleModalClose} />
+      <FriendRequestsModal
+        visible={isModalVisible}
+        onClose={handleModalClose}
+      />
     </div>
   );
 };

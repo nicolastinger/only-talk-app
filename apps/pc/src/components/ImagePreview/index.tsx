@@ -1,6 +1,6 @@
-import { LeftOutlined, RightOutlined, CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { Button, Image } from 'antd';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 
 interface ImagePreviewProps {
@@ -55,7 +55,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           className={styles.closeButton}
         />
       </div>
-      
+
       <div className={styles.imageContainer}>
         {imagePaths.length > 1 && (
           <Button
@@ -66,14 +66,14 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
             style={{ left: 16 }}
           />
         )}
-        
+
         <Image
           src={imagePaths[current]}
           alt={`Image ${current + 1}`}
           className={styles.image}
           preview={false}
         />
-        
+
         {imagePaths.length > 1 && (
           <Button
             type="text"
@@ -84,13 +84,15 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           />
         )}
       </div>
-      
+
       {imagePaths.length > 1 && (
         <div className={styles.thumbnails}>
           {imagePaths.map((path, index) => (
             <div
               key={index}
-              className={`${styles.thumbnail} ${index === current ? styles.active : ''}`}
+              className={`${styles.thumbnail} ${
+                index === current ? styles.active : ''
+              }`}
               onClick={() => setCurrent(index)}
             >
               <Image

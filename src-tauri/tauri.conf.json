@@ -27,7 +27,13 @@
       "csp": "default-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data: http://asset.localhost; font-src 'self' asset: http://asset.localhost data:",
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**", "$DOWNLOAD/**", "$DESKTOP/**", "$DOCUMENT/**", "$HOME/**"]
+        "scope": [
+          "$APPDATA/**",
+          "$DOWNLOAD/**",
+          "$DESKTOP/**",
+          "$DOCUMENT/**",
+          "$HOME/**"
+        ]
       },
       "capabilities": ["window-default"]
     }
@@ -42,8 +48,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [
-      "resource/default.jpg"
-    ]
+    "resources": ["resource/default.jpg"]
   }
 }

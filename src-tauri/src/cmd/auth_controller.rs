@@ -7,13 +7,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::command;
 
+use crate::cmd::api_controller::{post_request, ApiResponse};
 use crate::entity::user::SignInResult;
 use crate::service::user_service::{add_user_map, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
-use crate::{
-    GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL
-};
-use crate::cmd::api_controller::{post_request, ApiResponse};
+use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
 
 #[command]
 pub async fn sign_in(

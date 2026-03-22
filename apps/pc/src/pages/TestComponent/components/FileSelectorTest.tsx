@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Button, Card, Space, Typography, List, Tag } from 'antd';
 import { selectFile } from '@workspace/services';
+import { Button, Card, List, Space, Tag, Typography } from 'antd';
+import React, { useState } from 'react';
 
 const { Title, Text } = Typography;
 
@@ -46,7 +46,11 @@ const FileSelectorTest: React.FC = () => {
         <div>
           <Title level={4}>操作</Title>
           <Space>
-            <Button type="primary" onClick={handleSingleSelect} loading={loading}>
+            <Button
+              type="primary"
+              onClick={handleSingleSelect}
+              loading={loading}
+            >
               单选文件
             </Button>
             <Button onClick={handleMultiSelect} loading={loading}>
@@ -81,7 +85,9 @@ const FileSelectorTest: React.FC = () => {
         <div>
           <Title level={4}>统计信息</Title>
           <Space>
-            <Text>已选择文件数量: <Tag color="green">{selectedFiles.length}</Tag></Text>
+            <Text>
+              已选择文件数量: <Tag color="green">{selectedFiles.length}</Tag>
+            </Text>
           </Space>
         </div>
       </Space>

@@ -1,7 +1,7 @@
-import { get_friend_info, getFiles } from '@workspace/services';
-import { FriendVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
 import { history } from '@umijs/max';
+import { get_friend_info, getFiles } from '@workspace/services';
+import { FriendVo } from '@workspace/types';
 import { Button, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/FriendInfo.less';
@@ -9,7 +9,7 @@ import styles from './styles/FriendInfo.less';
 const FriendInfo = (props: { uuid: string }) => {
   const { uuid } = props;
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
-  const [ friendIcon, setFriendIcon ] = useState<string>('');
+  const [friendIcon, setFriendIcon] = useState<string>('');
 
   useEffect(() => {
     console.log('uuid', uuid);
@@ -65,11 +65,7 @@ const FriendInfo = (props: { uuid: string }) => {
     <div className={styles.container}>
       <div className={styles.content}>
         <div className={styles.header}>
-          <img
-            className={styles.icon}
-            src={friendIcon || ''}
-            alt="icon"
-          />
+          <img className={styles.icon} src={friendIcon || ''} alt="icon" />
         </div>
         <div className={styles.body}>
           <div className={styles.name}>{currentFriend?.friend_name}</div>

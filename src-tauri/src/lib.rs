@@ -21,14 +21,30 @@ pub mod utils;
 mod vo;
 
 use entity::quic_connection::QuicConnection;
-use crate::cmd::api_controller::{get_request, post_request, upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request, upload_multiple_files_with_extra_fields_request, post_form_data_request, compress_image_to_webp_command};
+
+use crate::cmd::api_controller::{
+    compress_image_to_webp_command, get_request, post_form_data_request, post_request,
+    upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request,
+    upload_multiple_files_with_extra_fields_request,
+};
 use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
-use crate::cmd::chat_record_controller::{get_chat_record_from_store, mark_read, send_image_msg, send_text_msg};
-use crate::cmd::chat_session_controller::{create_chat_session, get_chat_session_from_store, mark_read_chat_session};
-use crate::cmd::file_controller::{debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file};
+use crate::cmd::chat_record_controller::{
+    get_chat_record_from_store, mark_read, send_image_msg, send_text_msg,
+};
+use crate::cmd::chat_session_controller::{
+    create_chat_session, get_chat_session_from_store, mark_read_chat_session,
+};
+use crate::cmd::file_controller::{
+    debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
+};
 use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
-use crate::cmd::notification_controller::{batch_read_system_notification, get_system_notification};
-use crate::cmd::p2p_controller::{process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config, send_p2p_video_frame, send_video_frame};
+use crate::cmd::notification_controller::{
+    batch_read_system_notification, get_system_notification,
+};
+use crate::cmd::p2p_controller::{
+    process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg, send_p2p_video_config,
+    send_p2p_video_frame, send_video_frame,
+};
 use crate::cmd::user_controller::{add_user_map, get_user_map};
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;

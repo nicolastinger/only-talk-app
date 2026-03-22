@@ -1,17 +1,17 @@
 import CameraControl from '@/components/Media/CameraControl';
 import VideoReceiver from '@/components/Media/VideoReceiver';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
 import { useLocation } from '@umijs/max';
+import { VideoConfig } from '@workspace/types';
 import { Button } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
-import { invoke } from '@tauri-apps/api/core';
-import { VideoConfig } from '@workspace/types';
 
 const VideoCallPage: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const friendId = params.get('friendId') || "";
+  const friendId = params.get('friendId') || '';
   // 默认接受,1-客户端,0-服务端
   const callType = params.get('callType') || '1';
   console.log('callType', callType, friendId);
@@ -19,16 +19,16 @@ const VideoCallPage: React.FC = () => {
   const cameraRef = useRef<any>(null);
   const [isReceiver, setIsReceiver] = useState(false);
 
-  useEffect(()=>{
+  useEffect(() => {
     // 获取对方的视频流配置
-    getTargetVideoConfig()
-  }, [])
+    getTargetVideoConfig();
+  }, []);
 
   // 获取对方的视频流配置
-  const getTargetVideoConfig = async () =>{
+  const getTargetVideoConfig = async () => {
     let flag = false;
     for (let i = 0; i < 50; i++) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       // 调用方法获取flag的值
       let data = await getVideoConfig(friendId);
       if (data !== null) {
@@ -41,18 +41,20 @@ const VideoCallPage: React.FC = () => {
     if (!flag) {
       alert('对方未开启视频');
     }
-  }
+  };
 
   const getVideoConfig = async (uuid: string): Promise<string | null> => {
-     try {
-      const data: string = await invoke('get_user_map', { key: "p2p_video_config_"+uuid });
+    try {
+      const data: string = await invoke('get_user_map', {
+        key: 'p2p_video_config_' + uuid,
+      });
       console.log('视频配置', data);
       return data;
     } catch (e) {
-       console.log('获取视频配置失败:', e);
+      console.log('获取视频配置失败:', e);
       return null;
     }
-  }
+  };
 
   const handleStreamReady = (stream: MediaStream) => {
     console.log('摄像头流已就绪:', stream);
@@ -87,27 +89,37 @@ const VideoCallPage: React.FC = () => {
         className={showMe ? styles.mainVideo : styles.miniVideo}
       >
         <div>捕获</div>
-        <CameraControl isReceiver={isReceiver} callType={callType} uuid={friendId} ref={cameraRef} onStreamReady={handleStreamReady} />
+        <CameraControl
+          isReceiver={isReceiver}
+          callType={callType}
+          uuid={friendId}
+          ref={cameraRef}
+          onStreamReady={handleStreamReady}
+        />
       </div>
 
-      {isReceiver && <div className={styles.btnList}>
-        <div className={styles.btnContainer}>
-        <Button
-          onClick={handleStopCamera}
-          variant="solid"
-          color="danger"
-          icon={<CloseOutlined />}
-         >关闭摄像头
-         </Button>
-         <Button
-          onClick={handleStartCamera}
-          variant="solid"
-          color="cyan"
-          icon={<CheckOutlined />}
-        >开启摄像头
-        </Button>
+      {isReceiver && (
+        <div className={styles.btnList}>
+          <div className={styles.btnContainer}>
+            <Button
+              onClick={handleStopCamera}
+              variant="solid"
+              color="danger"
+              icon={<CloseOutlined />}
+            >
+              关闭摄像头
+            </Button>
+            <Button
+              onClick={handleStartCamera}
+              variant="solid"
+              color="cyan"
+              icon={<CheckOutlined />}
+            >
+              开启摄像头
+            </Button>
+          </div>
         </div>
-      </div>}
+      )}
 
       <div
         onClick={() => setShowMe(!showMe)}

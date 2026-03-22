@@ -26,7 +26,7 @@ impl ChatRecordRaw for TextRecord {
         let res = serde_json::to_string(&self);
         match res {
             Ok(s) => Ok(s),
-            Err(e) => Err(anyhow!("文本消息序列化失败: {}", e))
+            Err(e) => Err(anyhow!("文本消息序列化失败: {}", e)),
         }
     }
 
@@ -34,7 +34,7 @@ impl ChatRecordRaw for TextRecord {
         let res = serde_json::from_str(raw);
         match res {
             Ok(r) => Ok(r),
-            Err(e) => Err(anyhow!("文本消息反序列化失败: {}", e))
+            Err(e) => Err(anyhow!("文本消息反序列化失败: {}", e)),
         }
     }
 }
@@ -59,7 +59,7 @@ impl ChatRecordRaw for ImageRecord {
         let res = serde_json::to_string(&self);
         match res {
             Ok(s) => Ok(s),
-            Err(e) => Err(anyhow!("图片消息序列化失败: {}", e))
+            Err(e) => Err(anyhow!("图片消息序列化失败: {}", e)),
         }
     }
 
@@ -67,7 +67,7 @@ impl ChatRecordRaw for ImageRecord {
         let res = serde_json::from_str(raw);
         match res {
             Ok(r) => Ok(r),
-            Err(e) => Err(anyhow!("图片消息反序列化失败: {}", e))
+            Err(e) => Err(anyhow!("图片消息反序列化失败: {}", e)),
         }
     }
 }

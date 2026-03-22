@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { TextQuicMsgVo } from "../backend";
 
 interface LayoutBtnProps {
@@ -105,5 +105,5 @@ export type {
   P2pMsg,
   RequestMediaMsg,
   UserInfo,
-  BasicUser
+  BasicUser,
 };

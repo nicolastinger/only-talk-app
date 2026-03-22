@@ -21,7 +21,7 @@ pub struct TextQuicMsg {
     pub raw: Vec<u8>,      //二进制数据
     pub recv_user: String, //接收用户
     pub send_user: String, //发送用户
-    pub timestamp: i64,   //消息时间戳
+    pub timestamp: i64,    //消息时间戳
 }
 
 impl TextMsg for HeadMsg {

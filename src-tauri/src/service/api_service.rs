@@ -4,12 +4,15 @@ use std::io::Read;
 use std::path::Path;
 
 use anyhow::anyhow;
-use reqwest::{Client, Response};
 use reqwest::header::HeaderMap;
+use reqwest::{Client, Response};
 
 use crate::GLOBAL_QUIC_USER_INFO;
 
-pub async fn post_with_body(url: String, body: HashMap<String, String>) -> Result<Response, anyhow::Error> {
+pub async fn post_with_body(
+    url: String,
+    body: HashMap<String, String>,
+) -> Result<Response, anyhow::Error> {
     let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
 
     let empty_token = String::new();
@@ -56,13 +59,9 @@ pub async fn upload_file_with_fields(
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    let file_name = path.file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("file");
+    let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
 
-    let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()?;
+    let client = Client::builder().timeout(std::time::Duration::from_secs(120)).build()?;
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
@@ -76,8 +75,10 @@ pub async fn upload_file_with_fields(
     }
 
     let field_name_owned = field_name.to_string();
-    let mut form = reqwest::multipart::Form::new()
-        .part(field_name_owned, reqwest::multipart::Part::bytes(buffer).file_name(file_name.to_string()));
+    let mut form = reqwest::multipart::Form::new().part(
+        field_name_owned,
+        reqwest::multipart::Part::bytes(buffer).file_name(file_name.to_string()),
+    );
 
     for (key, value) in extra_fields {
         form = form.text(key, value);
@@ -111,9 +112,7 @@ pub async fn upload_multiple_files_with_fields(
         }
     }
 
-    let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
-        .build()?;
+    let client = Client::builder().timeout(std::time::Duration::from_secs(300)).build()?;
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
@@ -136,9 +135,7 @@ pub async fn upload_multiple_files_with_fields(
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)?;
 
-        let file_name = path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("file");
+        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
 
         // Create a unique field name for each file to avoid overwriting
         let unique_field_name = if part_index == 0 {
@@ -166,9 +163,7 @@ pub async fn post_form_data(
     url: &str,
     fields: HashMap<String, String>,
 ) -> Result<Response, anyhow::Error> {
-    let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()?;
+    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();

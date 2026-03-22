@@ -1,6 +1,6 @@
 import FriendBox from '@/pages/Home/Contacts/components/FriendBox';
-import { FriendVo } from '@workspace/types';
 import { invoke } from '@tauri-apps/api/core';
+import { FriendVo } from '@workspace/types';
 import { useEffect, useState } from 'react';
 import styles from './styles/FriendList.less';
 
