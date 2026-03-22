@@ -1,7 +1,7 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useBearStore } from '@/store/store';
-import { Page } from '@workspace/types';
+import { Page, TextQuicMsgVo } from '@workspace/types';
 import { ResponseData } from '@workspace/types';
 import { FriendVo } from '@workspace/types';
 import { ChatMessage, MessageFrom, TextMsgRaw } from '@workspace/types';
@@ -126,7 +126,7 @@ const ChatPage: React.FC = () => {
 
   const getChatRecordFromStore = async (meUuid: string, friendUuid: string) => {
     try {
-      let textRawText: TextMsgRaw = {
+      let textRawText: TextQuicMsgVo = {
         nano_id: '',
         raw: '',
         recv_user: meUuid,
@@ -139,7 +139,7 @@ const ChatPage: React.FC = () => {
         current: 1,
         total: 0,
       };
-      const data: TextMsgRaw[] = await invoke('get_chat_record_from_store', {
+      const data: TextQuicMsgVo[] = await invoke('get_chat_record_from_store', {
         textQuicMsg: textRawText,
         page,
       });

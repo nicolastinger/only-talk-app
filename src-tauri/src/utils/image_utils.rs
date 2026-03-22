@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Result};
+use exif::Reader;
 use image::{DynamicImage, ImageReader, imageops::FilterType, ImageBuffer, Rgb, Rgba, Luma};
 use log::info;
 use std::fs::File;
-use std::io::{BufReader, Write, Read};
+use std::io::{BufReader, Write, Read, Cursor};
 use std::path::Path;
 use std::time::Instant;
 
@@ -117,6 +118,8 @@ fn decode_jpeg_fast(input_path: &Path) -> Result<DynamicImage> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
     
+    let orientation = get_exif_orientation(&buffer);
+    
     let mut decoder = zune_jpeg::JpegDecoder::new(&buffer);
     let decoded = decoder.decode()?;
     
@@ -125,24 +128,58 @@ fn decode_jpeg_fast(input_path: &Path) -> Result<DynamicImage> {
     let height = info.height;
     let components = info.components;
     
-    match components {
+    let mut img = match components {
         3 => {
             let buffer: ImageBuffer<Rgb<u8>, _> = ImageBuffer::from_raw(width as u32, height as u32, decoded.to_vec())
                 .ok_or_else(|| anyhow!("Failed to create RGB buffer"))?;
-            Ok(DynamicImage::ImageRgb8(buffer))
+            DynamicImage::ImageRgb8(buffer)
         }
         4 => {
             let buffer: ImageBuffer<Rgba<u8>, _> = ImageBuffer::from_raw(width as u32, height as u32, decoded.to_vec())
                 .ok_or_else(|| anyhow!("Failed to create RGBA buffer"))?;
-            Ok(DynamicImage::ImageRgba8(buffer))
+            DynamicImage::ImageRgba8(buffer)
         }
         1 => {
             let buffer: ImageBuffer<Luma<u8>, _> = ImageBuffer::from_raw(width as u32, height as u32, decoded.to_vec())
                 .ok_or_else(|| anyhow!("Failed to create Luma buffer"))?;
-            Ok(DynamicImage::ImageLuma8(buffer))
+            DynamicImage::ImageLuma8(buffer)
         }
         _ => {
-            Err(anyhow!("Unsupported JPEG components: {}", components))
+            return Err(anyhow!("Unsupported JPEG components: {}", components));
         }
+    };
+    
+    img = apply_orientation(img, orientation);
+    Ok(img)
+}
+
+fn get_exif_orientation(data: &[u8]) -> u8 {
+    let reader = Reader::new();
+    let exif_reader = match reader.read_from_container(&mut Cursor::new(data)) {
+        Ok(r) => r,
+        Err(_) => return 1,
+    };
+    
+    match exif_reader.get_field(exif::Tag::Orientation, exif::In::PRIMARY) {
+        Some(field) => {
+            match field.value.get_uint(0) {
+                Some(v) => v as u8,
+                None => 1,
+            }
+        }
+        None => 1,
+    }
+}
+
+fn apply_orientation(img: DynamicImage, orientation: u8) -> DynamicImage {
+    match orientation {
+        2 => img.fliph(),
+        3 => img.rotate180(),
+        4 => img.rotate180().fliph(),
+        5 => img.rotate90().fliph(),
+        6 => img.rotate90(),
+        7 => img.rotate270().fliph(),
+        8 => img.rotate270(),
+        _ => img,
     }
 }

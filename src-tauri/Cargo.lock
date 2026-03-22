@@ -95,6 +95,7 @@ dependencies = [
  "dashmap",
  "fast_log",
  "image",
+ "kamadak-exif",
  "lazy_static",
  "log",
  "nanoid",
