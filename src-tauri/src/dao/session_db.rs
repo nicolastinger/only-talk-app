@@ -101,3 +101,16 @@ pub async fn query_chat_session_by_user_db(
     .await?;
     Ok(record)
 }
+
+/// 隐藏会话（设置is_show为0）
+pub async fn hide_chat_session_db(me: &str, friend_id: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    sqlx::query(
+        r#"UPDATE chat_session SET is_show = 0 WHERE send_user = ?1 AND recv_user = ?2"#,
+    )
+    .bind(friend_id)
+    .bind(me)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}

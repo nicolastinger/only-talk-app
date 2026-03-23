@@ -4,7 +4,8 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::cmd::api_controller::post_request;
-use crate::dao::friend_db::{query_friend_info_db, update_friend_info_db};
+use crate::dao::friend_db::{query_friend_info_db, soft_delete_friend_db, update_friend_info_db};
+use crate::dao::session_db::hide_chat_session_db;
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
@@ -32,6 +33,26 @@ pub async fn process_friend_notify_message(
             info!("处理其他好友通知 {:?}", system_notification);
         }
     }
+    Ok(())
+}
+
+/// 删除好友（软删除）
+pub async fn delete_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+    
+    let url = format!("{}/friend/delete_friend/{}", TALK_API, friend_uuid);
+    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+    
+    info!("删除好友结果 {:?}", result.body);
+    
+    if result.status == 200 {
+        soft_delete_friend_db(&uuid, friend_uuid).await?;
+        hide_chat_session_db(&uuid, friend_uuid).await?;
+        info!("本地好友软删除成功，会话已隐藏: {}", friend_uuid);
+    } else {
+        return Err(anyhow!("删除好友失败: {}", result.body));
+    }
+    
     Ok(())
 }
 

@@ -29,6 +29,21 @@ pub async fn query_friend_info_by_id_db(
     Ok(record)
 }
 
+/// 软删除好友（设置is_del为true，is_show为0）
+pub async fn soft_delete_friend_db(me: &str, friend_id: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let now = chrono::Utc::now().timestamp();
+    sqlx::query(
+        r#"UPDATE friend SET is_del = 1, is_show = 0, updated_at = ?1 WHERE me = ?2 AND friend_id = ?3"#,
+    )
+    .bind(now)
+    .bind(me)
+    .bind(friend_id)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}
+
 /// 更新好友信息表
 pub async fn update_friend_info_db(friend: &Friend) -> Result<(), anyhow::Error> {
     let res = sqlx::query(r#"UPDATE friend SET friend_id = ?1, friend_account = ?2, friend_name = ?3, friend_icon = ?4, friend_status = ?5, me = ?6, is_del = ?7, is_block = ?8, is_mute = ?9, is_top = ?10, is_show = ?11, created_at = ?12, updated_at = ?13, version = ?14, friend_info = ?15 WHERE friend_id = ?1 and me = ?6"#)

@@ -12,7 +12,6 @@ rust-version = "1.77.2"
 opt-level = 3
 lto = true
 codegen-units = 1
-panic = "abort"
 
 
 [lib]

@@ -37,7 +37,7 @@ use crate::cmd::chat_session_controller::{
 use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
 };
-use crate::cmd::friend_controller::{get_friend_info, get_friend_list, update_local_friend_list};
+use crate::cmd::friend_controller::{delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list};
 use crate::cmd::notification_controller::{
     batch_read_system_notification, get_system_notification,
 };
@@ -129,6 +129,7 @@ pub fn run() {
             get_chat_record_from_store,
             get_chat_session_from_store,
             get_friend_info,
+            delete_friend_command,
             mark_read,
             get_friend_list,
             create_chat_session,

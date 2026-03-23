@@ -82,3 +82,9 @@ export const get_accept_friend_request_list = async (
     JSON.stringify(friendRequestInfoDTO)
   );
 };
+
+export const delete_friend = async (friendUuid: string) => {
+  return await invoke("delete_friend_command", {
+    friendUuid,
+  });
+};

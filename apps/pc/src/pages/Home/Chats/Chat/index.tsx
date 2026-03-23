@@ -304,7 +304,7 @@ const ChatPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <ChatTopBar title={currentFriend?.friend_name || ''} />
+        <ChatTopBar title={currentFriend?.friend_name || ''} friendInfo={currentFriend} />
       </div>
       <div className={styles.mainContainer}>
         <div

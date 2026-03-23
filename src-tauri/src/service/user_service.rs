@@ -202,7 +202,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
     let mut timestamp = 0;
-    let count = 0;
+    let mut count = 0;
     while count < 1000000 {
         // 校验定时任务key
         check_schedule_key(&key).await?;
@@ -238,6 +238,8 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
                 }
             }
         }
+        count += 1;
+        tokio::time::sleep(Duration::from_secs(10)).await;
     }
     Ok(())
 }
