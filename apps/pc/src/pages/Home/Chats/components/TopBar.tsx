@@ -4,6 +4,7 @@ import { Dropdown, Modal, message } from 'antd';
 import { history } from '@umijs/max';
 import React, { useState } from 'react';
 import { MoreOutlined, UserOutlined, DeleteOutlined, StopOutlined, BellOutlined } from '@ant-design/icons';
+import { useBearStore } from '@/store/store';
 import styles from './styles/TopBar.less';
 
 interface ChatTopBarProps {
@@ -14,6 +15,7 @@ interface ChatTopBarProps {
 const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   const { title, friendInfo } = props;
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const triggerRefresh = useBearStore((state) => state.triggerRefresh);
 
   const handleViewProfile = () => {
     if (friendInfo?.friend_id) {
@@ -32,6 +34,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
       await delete_friend(friendInfo.friend_id);
       message.success('好友已删除');
       setDeleteModalVisible(false);
+      triggerRefresh();
       history.push('/home/chats');
     } catch (error) {
       message.error('删除好友失败');

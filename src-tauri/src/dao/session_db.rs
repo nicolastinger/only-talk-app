@@ -78,7 +78,7 @@ pub async fn query_chat_session_db(uuid: &str) -> Result<Vec<ChatSessionVo>, any
         r#"select cs.*, fr.friend_icon, fr.friend_name from chat_session cs left join
 (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
 on cs.send_user = fr.friend_id
-where cs.recv_user = ?1"#,
+where cs.recv_user = ?1 and cs.is_show = 1"#,
     )
     .bind(uuid)
     .fetch_all(&pool_sqlite)
@@ -106,7 +106,7 @@ pub async fn query_chat_session_by_user_db(
 pub async fn hide_chat_session_db(me: &str, friend_id: &str) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     sqlx::query(
-        r#"UPDATE chat_session SET is_show = 0 WHERE send_user = ?1 AND recv_user = ?2"#,
+        r#"UPDATE chat_session SET is_show = 0 WHERE (send_user = ?1 AND recv_user = ?2) OR (send_user = ?2 AND recv_user = ?1)"#,
     )
     .bind(friend_id)
     .bind(me)

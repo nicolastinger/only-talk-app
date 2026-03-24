@@ -1,4 +1,5 @@
 import FriendBox from '@/pages/Home/Contacts/components/FriendBox';
+import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
 import { FriendVo } from '@workspace/types';
 import { useEffect, useState } from 'react';
@@ -6,9 +7,17 @@ import styles from './styles/FriendList.less';
 
 const FriendList = () => {
   const [friends, setFriends] = useState<FriendVo[]>([]);
+  const refreshFlag = useBearStore((state) => state.refreshFlag);
+  
   useEffect(() => {
     getFriendList();
   }, []);
+
+  useEffect(() => {
+    if (refreshFlag > 0) {
+      getFriendList();
+    }
+  }, [refreshFlag]);
 
   // 获取朋友列表
   const getFriendList = async () => {

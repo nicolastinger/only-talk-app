@@ -19,6 +19,7 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { Window } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
+import { Modal } from 'antd';
 import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
@@ -26,6 +27,7 @@ import styles from './index.less';
 const HomeLayout = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [closeModalVisible, setCloseModalVisible] = useState(false);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
 
@@ -57,8 +59,22 @@ const HomeLayout = () => {
   // 关闭窗口
   const closeWindow = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    setCloseModalVisible(true);
+  };
+
+  // 最小化到系统托盘
+  const hideToTray = async () => {
+    const currentWindow = Window.getCurrent();
+    await invoke('add_user_map', { map: { window_hide: '1' } });
+    await currentWindow.hide();
+    setCloseModalVisible(false);
+  };
+
+  // 直接关闭应用
+  const quitApp = async () => {
     const currentWindow = Window.getCurrent();
     await currentWindow.close();
+    setCloseModalVisible(false);
   };
 
   const initUserInfo = async () => {
@@ -153,6 +169,44 @@ const HomeLayout = () => {
           <Outlet />
         </div>
       </div>
+      <Modal
+        title="关闭窗口"
+        open={closeModalVisible}
+        onCancel={() => setCloseModalVisible(false)}
+        footer={null}
+        centered
+      >
+        <div style={{ padding: '16px 0' }}>
+          <p style={{ marginBottom: 16 }}>请选择关闭方式：</p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button
+              onClick={hideToTray}
+              style={{
+                padding: '8px 24px',
+                borderRadius: 6,
+                border: '1px solid #d9d9d9',
+                background: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              最小化到托盘
+            </button>
+            <button
+              onClick={quitApp}
+              style={{
+                padding: '8px 24px',
+                borderRadius: 6,
+                border: 'none',
+                background: '#ff4d4f',
+                color: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              退出应用
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

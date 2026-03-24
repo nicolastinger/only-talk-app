@@ -1,0 +1,85 @@
+.container {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 120px;
+  cursor: move;
+  user-select: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.title {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.switchWrapper {
+  cursor: default;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.expandBtn {
+  color: #1890ff;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(24, 144, 255, 0.1);
+  text-align: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(24, 144, 255, 0.2);
+  }
+}
+
+.inputWrapper {
+  cursor: default;
+}
+
+.miniToggle {
+  position: fixed;
+  z-index: 9999;
+  cursor: move;
+  user-select: none;
+}
+
+.miniBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  color: #1890ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(24, 144, 255, 0.3);
+
+  &:hover {
+    background: rgba(24, 144, 255, 0.3);
+    transform: scale(1.1);
+  }
+}

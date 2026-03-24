@@ -6,16 +6,17 @@ const openNewWindow = async (
   label: string,
   window: WebviewOptions | WindowOptions,
   oldWindow: any,
+  title?: string,
 ) => {
   const newWindow = new WebviewWindow(label, {
     ...window,
     decorations: false,
     center: true,
+    title: title,
   });
 
   await newWindow.once('tauri://created', () => {
     console.log('New window created successfully!');
-    // 当新窗口创建完成后，关闭当前窗口
     if (oldWindow) {
       setTimeout(() => {
         oldWindow.close().catch((err: any) => {

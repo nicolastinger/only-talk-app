@@ -15,6 +15,7 @@ const ChatsLayout = () => {
   );
 
   const { userInfo } = useBearStore();
+  const refreshFlag = useBearStore((state) => state.refreshFlag);
   const { chatSessionEvent } = useChatSession(userInfo.uuid);
   const routeToChat = (item: ChatSessionVo) => {
     console.log('userInfo', userInfo, item);
@@ -89,6 +90,12 @@ const ChatsLayout = () => {
   useEffect(() => {
     get_chat_session();
   }, []);
+
+  useEffect(() => {
+    if (refreshFlag > 0) {
+      get_chat_session();
+    }
+  }, [refreshFlag]);
 
   useEffect(() => {
     console.log('chatSessionList', chatSessionList);

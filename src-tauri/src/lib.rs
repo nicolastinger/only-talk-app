@@ -17,6 +17,7 @@ mod emit_app;
 mod entity;
 mod init_app;
 pub mod service;
+mod tray;
 pub mod utils;
 mod vo;
 
@@ -48,6 +49,7 @@ use crate::cmd::p2p_controller::{
 use crate::cmd::user_controller::{add_user_map, get_user_map};
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
+use crate::tray::setup_tray;
 use crate::utils::global_static_str::APP_NAME;
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
@@ -97,6 +99,11 @@ pub fn run() {
                 .unwrap_or_else(|_| {
                     std::env::current_dir().expect("无法获取当前目录").join(APP_NAME)
                 });
+            
+            if let Err(e) = setup_tray(app.handle()) {
+                eprintln!("初始化托盘失败: {}", e);
+            }
+            
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = init_app(root_path, Some(handle)).await {
                     eprintln!("初始化失败: {}", e);

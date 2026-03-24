@@ -71,9 +71,10 @@ const LoginPage: React.FC = () => {
           y: 200,
         };
         await openNewWindow(
-          intl.formatMessage({ id: 'menu.home' }),
+          'home',
           webviewOptions,
           Window.getCurrent(),
+          '恭喜发财',
         );
       } else {
         messageApi.error(

@@ -27,6 +27,8 @@ interface BearState {
   setAddSettings: (addSettings: number) => void;
   chats: number;
   setChats: (chats: number, isAdd: boolean) => void;
+  refreshFlag: number;
+  triggerRefresh: () => void;
 }
 
 export const useBearStore = create<BearState>()((set) => ({
@@ -113,4 +115,6 @@ export const useBearStore = create<BearState>()((set) => ({
         settings: Math.max(0, state.menuUnread.settings + addSettings),
       },
     })),
+  refreshFlag: 0,
+  triggerRefresh: () => set((state) => ({ refreshFlag: state.refreshFlag + 1 })),
 }));

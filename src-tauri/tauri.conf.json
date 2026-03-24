@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "歪比巴卜",
+        "title": "用户登录",
         "width": 380,
         "height": 480,
         "resizable": true,
