@@ -13,7 +13,7 @@ use crate::config::set_config;
 use crate::dao::init_common_db::init_common_sqlite;
 use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
 use crate::utils::global_static_str::{
-    APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, RESOURCE_PATH, SQLITE_PATH, UDP_SOCKET_V6,
+    APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH, RESOURCE_PATH, SQLITE_PATH, UDP_SOCKET_V6
 };
 
 pub async fn init_app(
@@ -60,6 +60,8 @@ pub async fn init_app(
     } else {
         info!("当月资源目录已存在: {}", monthly_folder_name);
     }
+
+    set_config(MONTHLY_RESOURCE_PATH, monthly_resource_path.to_str().expect("转换路径失败"));
 
     // 初始化sqlite文件夹
     let sqlite_path = Path::new(&app_path).join(SQLITE_PATH);

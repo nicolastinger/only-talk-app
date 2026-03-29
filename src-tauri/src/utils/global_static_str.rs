@@ -29,6 +29,8 @@ pub static PACKAGE_NAME: &str = "com.only-talk.app";
 pub static SQLITE_PATH: &str = "dbData";
 // 本地资源文件夹
 pub static RESOURCE_PATH: &str = "resource";
+// 当月资源文件夹
+pub static MONTHLY_RESOURCE_PATH: &str = "monthly_resources";
 // 日志文件夹
 pub static LOG_PATH: &str = "logs";
 // 日志文件名

@@ -13,7 +13,7 @@ use crate::dao::file_record_db::{delete_file_record_by_id, insert_file_record};
 use crate::dto::http_result::HttpResult;
 use crate::entity::file_record::FileRecord;
 use crate::service::api_service::{get_with_token, post_with_body};
-use crate::utils::global_static_str::{RESOURCE_PATH, TALK_API};
+use crate::utils::global_static_str::{MONTHLY_RESOURCE_PATH, TALK_API};
 use crate::utils::uuid_utils;
 use crate::vo::file_vo::FileVo;
 
@@ -158,7 +158,7 @@ pub async fn download_file_by_biz_service(biz_id: &str, url: String) -> Result<(
                     error!("无法获取原始文件的扩展名");
                     return Err(anyhow!("无法保存文件"));
                 };
-                let resource_path = get_config(RESOURCE_PATH).ok_or(anyhow!("无法获取资源路径"))?;
+                let resource_path = get_config(MONTHLY_RESOURCE_PATH).ok_or(anyhow!("无法获取当月资源路径"))?;
 
                 // 构建文件路径
                 let file_path = format!("{}/{}", resource_path, file_name);

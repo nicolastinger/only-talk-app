@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{BufReader, Cursor, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use anyhow::{anyhow, Result};
@@ -9,12 +9,15 @@ use image::imageops::FilterType;
 use image::{DynamicImage, ImageBuffer, ImageReader, Luma, Rgb, Rgba};
 use log::info;
 
+use crate::config::get_config;
+use crate::utils::global_static_str::MONTHLY_RESOURCE_PATH;
+
 const MAX_INPUT_SIZE: u64 = 100 * 1024 * 1024;
 const MAX_OUTPUT_SIZE: u64 = 200 * 1024;
 const TARGET_QUALITY: u8 = 80;
 const MAX_DIMENSION: u32 = 800;
 
-pub fn compress_image_to_webp(input_path: &Path) -> Result<File> {
+pub fn compress_image_to_webp(input_path: &std::path::Path) -> Result<PathBuf> {
     let start = Instant::now();
 
     let metadata = std::fs::metadata(input_path)?;
@@ -53,6 +56,8 @@ pub fn compress_image_to_webp(input_path: &Path) -> Result<File> {
     let encode_time = encode_start.elapsed();
     info!("[压缩] 编码完成，耗时: {:?}, 大小: {} bytes", encode_time, final_data.len());
 
+    let output_path = get_output_path(input_path)?;
+
     if final_data.len() > MAX_OUTPUT_SIZE as usize {
         info!("[压缩] 文件仍然过大，继续缩放...");
         let target_ratio = (MAX_OUTPUT_SIZE as f64 / final_data.len() as f64).sqrt();
@@ -67,24 +72,44 @@ pub fn compress_image_to_webp(input_path: &Path) -> Result<File> {
         let final_data = encode_to_webp(&resized)?;
         info!("[压缩] 缩放后编码完成，大小: {} bytes", final_data.len());
 
-        let output_path = input_path.with_extension("webp");
         let mut output_file = File::create(&output_path)?;
         output_file.write_all(&final_data)?;
 
         let total_time = start.elapsed();
         info!("[压缩] 总耗时: {:?}", total_time);
+        info!("[压缩] 输出路径: {:?}", output_path);
 
-        return Ok(output_file);
+        return Ok(output_path);
     }
 
-    let output_path = input_path.with_extension("webp");
     let mut output_file = File::create(&output_path)?;
     output_file.write_all(&final_data)?;
 
     let total_time = start.elapsed();
     info!("[压缩] 总耗时: {:?}", total_time);
+    info!("[压缩] 输出路径: {:?}", output_path);
 
-    Ok(output_file)
+    Ok(output_path)
+}
+
+fn get_output_path(input_path: &std::path::Path) -> Result<PathBuf> {
+    let monthly_resource_path = get_config(MONTHLY_RESOURCE_PATH)
+        .ok_or_else(|| anyhow!("获取当月资源路径失败"))?;
+
+    let file_stem = input_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image");
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    let output_filename = format!("{}_{}.webp", file_stem, timestamp);
+    let output_path = Path::new(&monthly_resource_path).join(output_filename);
+
+    Ok(output_path)
 }
 
 fn encode_to_webp(img: &DynamicImage) -> Result<Vec<u8>> {
@@ -94,7 +119,7 @@ fn encode_to_webp(img: &DynamicImage) -> Result<Vec<u8>> {
     Ok(webp_data.to_vec())
 }
 
-fn decode_image_optimized(input_path: &Path) -> Result<DynamicImage> {
+fn decode_image_optimized(input_path: &std::path::Path) -> Result<DynamicImage> {
     let extension =
         input_path.extension().and_then(|ext| ext.to_str()).map(|ext| ext.to_lowercase());
 
@@ -113,7 +138,7 @@ fn decode_image_optimized(input_path: &Path) -> Result<DynamicImage> {
     }
 }
 
-fn decode_jpeg_fast(input_path: &Path) -> Result<DynamicImage> {
+fn decode_jpeg_fast(input_path: &std::path::Path) -> Result<DynamicImage> {
     let mut file = File::open(input_path)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;

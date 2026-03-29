@@ -513,9 +513,8 @@ async fn upload_chat_file_server(
 pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
 
-    // 1、压缩图片
-    let _compressed_file = compress_image_to_webp(&Path::new(&file_path))?;
-    let compressed_path = Path::new(&file_path).with_extension("webp");
+    // 1、压缩图片到当月资源目录
+    let compressed_path = compress_image_to_webp(&Path::new(&file_path))?;
     let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
 
     // 2、上传图片到文件服务器
