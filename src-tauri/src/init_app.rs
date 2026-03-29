@@ -2,6 +2,7 @@ use std::fs;
 use std::net::SocketAddrV6;
 use std::path::{Path, PathBuf};
 
+use chrono::Local;
 use fast_log::plugin::file_split::{DateType, KeepType, Rolling, RollingType};
 use fast_log::plugin::packer::LogPacker;
 use fast_log::Config;
@@ -48,6 +49,16 @@ pub async fn init_app(
     if !resource_path.exists() {
         fs::create_dir(&resource_path).expect("创建文件目录失败");
         info!("已创建目录: {}", RESOURCE_PATH);
+    }
+
+    // 检测并创建当月资源文件夹
+    let monthly_folder_name = Local::now().format("%Y-%m").to_string();
+    let monthly_resource_path = resource_path.join(&monthly_folder_name);
+    if !monthly_resource_path.exists() {
+        fs::create_dir(&monthly_resource_path).expect("创建当月资源目录失败");
+        info!("已创建当月资源目录: {}", monthly_folder_name);
+    } else {
+        info!("当月资源目录已存在: {}", monthly_folder_name);
     }
 
     // 初始化sqlite文件夹

@@ -324,6 +324,7 @@ const ChatPage: React.FC = () => {
           <MessageList
             messages={messageList}
             friendIcon={currentFriend?.friend_icon}
+            friendUuid={friendUuid}
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
           />

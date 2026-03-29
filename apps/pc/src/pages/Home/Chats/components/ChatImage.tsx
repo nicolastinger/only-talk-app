@@ -1,4 +1,4 @@
-import { openImagePreviewWindow } from '@workspace/services';
+import { getFriendImageMessages, openImagePreviewWindow } from '@workspace/services';
 import React from 'react';
 
 interface ChatImageProps {
@@ -10,9 +10,9 @@ interface ChatImageProps {
   borderRadius?: string;
   className?: string;
   style?: React.CSSProperties;
-  allImageBizIds?: string[];
-  currentIndex?: number;
-  bizIdToUrlMap?: Map<string, string>;
+  friendUuid: string;
+  currentBizId: string;
+  meUuid: string;
 }
 
 const ChatImage: React.FC<ChatImageProps> = ({
@@ -24,18 +24,30 @@ const ChatImage: React.FC<ChatImageProps> = ({
   borderRadius = '5px',
   className,
   style,
-  allImageBizIds,
-  currentIndex = 0,
-  bizIdToUrlMap,
+  friendUuid,
+  currentBizId,
+  meUuid,
 }) => {
-  const handleClick = () => {
-    if (src && allImageBizIds && allImageBizIds.length > 0 && bizIdToUrlMap) {
-      const imageUrls = allImageBizIds
-        .map((bizId) => bizIdToUrlMap.get(bizId) || '')
-        .filter((url) => url);
+  const [isOpening, setIsOpening] = React.useState(false);
+
+  const handleClick = async () => {
+    if (!src || isOpening) return;
+
+    setIsOpening(true);
+    try {
+      const { imageUrls, currentIndex } = await getFriendImageMessages(
+        meUuid,
+        friendUuid,
+        currentBizId
+      );
+
       if (imageUrls.length > 0) {
         openImagePreviewWindow(imageUrls, currentIndex);
       }
+    } catch (error) {
+      console.error('Failed to open image preview:', error);
+    } finally {
+      setIsOpening(false);
     }
   };
 

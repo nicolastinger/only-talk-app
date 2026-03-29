@@ -1,6 +1,6 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { getChatFileByBizId, getFiles } from '@workspace/services';
+import { convertPathToTauriUrl, getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
 import ChatImage from './ChatImage';
@@ -13,10 +13,12 @@ type MineChatBoxProps = {
   msg: ChatMessage;
   isAck: boolean | undefined;
   icon?: string;
-  allImageBizIds?: string[];
-  currentImageIndex?: number;
+  friendUuid: string;
   currentBizId?: string;
-  bizIdToUrlMap?: Map<string, string>;
+};
+
+const isLocalFilePath = (raw: string): boolean => {
+  return raw.includes(':\\') || raw.startsWith('/') || raw.startsWith('file://');
 };
 
 const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
@@ -26,53 +28,42 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     },
     isAck = true,
     icon,
-    allImageBizIds,
-    currentImageIndex,
+    friendUuid,
     currentBizId,
-    bizIdToUrlMap,
   } = props;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const userInfo = useBearStore((state) => state.userInfo);
-  // 初始化ackFlag
   const [ackFlag, setAckFlag] = React.useState(0);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null); // 使用 ref 保持定时器引用
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // 清理上一次的定时器
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
 
-    // 未收到确认时的处理逻辑
     if (isAck !== undefined && !isAck) {
-      // 设置 10 秒超时标记
       timerRef.current = setTimeout(() => {
         setAckFlag(1);
       }, 10000);
-    }
-    // 确认成功时的处理逻辑
-    else if (isAck !== undefined && isAck) {
+    } else if (isAck !== undefined && isAck) {
       setAckFlag(101);
     }
 
-    // 清理函数：组件卸载或依赖项变化时执行
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     };
-  }, [isAck]); // 明确依赖项
+  }, [isAck]);
 
-  // 获取用户头像
   const getUserIcon = async (icon: string) => {
     try {
-      // 检查缓存
       if (imageCache.has(icon)) {
         setUserIcon(imageCache.get(icon)!);
         return;
@@ -82,7 +73,6 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       const FileVos = await getFiles(icon);
       const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
 
-      // 存入缓存
       if (tauriFilePath) {
         imageCache.set(icon, tauriFilePath);
       }
@@ -103,6 +93,14 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
 
   useEffect(() => {
     if (text_type === 2) {
+      if (isLocalFilePath(raw)) {
+        const tauriUrl = convertPathToTauriUrl(raw);
+        if (tauriUrl) {
+          setImageUrl(tauriUrl);
+        }
+        return;
+      }
+
       try {
         const imageRecord: ImageRecord = JSON.parse(raw);
         const bizId = imageRecord.biz_id;
@@ -111,9 +109,6 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         if (imageCache.has(bizId)) {
           console.log('MineChatBox - Image found in cache');
           setImageUrl(imageCache.get(bizId)!);
-          if (bizIdToUrlMap) {
-            bizIdToUrlMap.set(bizId, imageCache.get(bizId)!);
-          }
           return;
         }
 
@@ -127,9 +122,6 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
               if (tauriFilePath) {
                 imageCache.set(bizId, tauriFilePath);
                 setImageUrl(tauriFilePath);
-                if (bizIdToUrlMap) {
-                  bizIdToUrlMap.set(bizId, tauriFilePath);
-                }
               } else {
                 console.error('MineChatBox - Tauri file path is empty');
               }
@@ -146,7 +138,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         console.error('MineChatBox - Error parsing image record:', error);
       }
     }
-  }, [raw, text_type, bizIdToUrlMap]);
+  }, [raw, text_type]);
 
   const renderMessage = (message: string) => {
     switch (text_type) {
@@ -157,9 +149,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           <ChatImage
             src={imageUrl}
             loading={loading}
-            allImageBizIds={allImageBizIds}
-            currentIndex={currentImageIndex}
-            bizIdToUrlMap={bizIdToUrlMap}
+            friendUuid={friendUuid}
+            currentBizId={currentBizId || ''}
+            meUuid={userInfo?.uuid || ''}
           />
         );
       default:

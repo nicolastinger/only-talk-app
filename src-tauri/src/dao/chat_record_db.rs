@@ -83,3 +83,23 @@ pub async fn query_last_chat_record(
         .await?;
     Ok(record)
 }
+
+/// 按消息类型分页获取聊天记录
+pub async fn query_chat_record_by_type_from_db(
+    send_user: &str,
+    recv_user: &str,
+    text_type: u16,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE ((send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)) AND text_type = ?3 order by timestamp desc limit ?4 offset ?5) order by timestamp asc"#)
+        .bind(send_user)
+        .bind(recv_user)
+        .bind(text_type)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&pool_sqlite)
+        .await?;
+    Ok(record)
+}

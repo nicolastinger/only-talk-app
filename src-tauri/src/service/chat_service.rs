@@ -14,7 +14,7 @@ use tokio::time::timeout;
 use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
 };
-use crate::dao::chat_record_db::{query_chat_record_from_db, query_last_chat_record};
+use crate::dao::chat_record_db::{query_chat_record_from_db, query_chat_record_by_type_from_db, query_last_chat_record};
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
@@ -80,6 +80,24 @@ pub async fn get_chat_record_service(
     let offset = (page.current - 1) * page.size;
     query_chat_record_from_db(&text_quic_msg.send_user, &text_quic_msg.recv_user, limit, offset)
         .await
+}
+
+/// 按消息类型分页获取聊天记录
+pub async fn get_chat_record_by_type_service(
+    text_quic_msg: TextQuicMsgVo,
+    text_type: u16,
+    page: Page,
+) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    let limit = page.size;
+    let offset = (page.current - 1) * page.size;
+    query_chat_record_by_type_from_db(
+        &text_quic_msg.send_user,
+        &text_quic_msg.recv_user,
+        text_type,
+        limit,
+        offset,
+    )
+    .await
 }
 
 /// 本地清空已读消息计数

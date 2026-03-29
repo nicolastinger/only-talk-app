@@ -1,3 +1,4 @@
+import { useBearStore } from '@/store/store';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
@@ -8,10 +9,8 @@ import { TextBox } from './TextBox';
 const imageCache = new Map<string, string>();
 
 interface CustomerChatBoxProps extends ChatMessage {
-  allImageBizIds?: string[];
-  currentImageIndex?: number;
+  friendUuid: string;
   currentBizId?: string;
-  bizIdToUrlMap?: Map<string, string>;
 }
 
 const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
@@ -20,12 +19,11 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   const {
     text_msg_raw: { raw, text_type },
     img,
-    allImageBizIds,
-    currentImageIndex,
+    friendUuid,
     currentBizId,
-    bizIdToUrlMap,
   } = props;
 
+  const userInfo = useBearStore((state) => state.userInfo);
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -59,9 +57,6 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         if (imageCache.has(bizId)) {
           console.log('CustomerChatBox - Image found in cache');
           setImageUrl(imageCache.get(bizId)!);
-          if (bizIdToUrlMap) {
-            bizIdToUrlMap.set(bizId, imageCache.get(bizId)!);
-          }
           return;
         }
 
@@ -75,9 +70,6 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
               if (tauriFilePath) {
                 imageCache.set(bizId, tauriFilePath);
                 setImageUrl(tauriFilePath);
-                if (bizIdToUrlMap) {
-                  bizIdToUrlMap.set(bizId, tauriFilePath);
-                }
               } else {
                 console.error('CustomerChatBox - Tauri file path is empty');
               }
@@ -94,7 +86,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         console.error('CustomerChatBox - Error parsing image record:', error);
       }
     }
-  }, [raw, text_type, bizIdToUrlMap]);
+  }, [raw, text_type]);
 
   const getUserIcon = async (icon: string): Promise<string> => {
     try {
@@ -123,9 +115,9 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
           <ChatImage
             src={imageUrl}
             loading={loading}
-            allImageBizIds={allImageBizIds}
-            currentIndex={currentImageIndex}
-            bizIdToUrlMap={bizIdToUrlMap}
+            friendUuid={friendUuid}
+            currentBizId={currentBizId || ''}
+            meUuid={userInfo?.uuid || ''}
           />
         );
       default:

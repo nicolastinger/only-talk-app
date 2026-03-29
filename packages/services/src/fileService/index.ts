@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { FileVo } from "@workspace/types";
+import { FileVo, Page, TextQuicMsgVo } from "@workspace/types";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 
 /**
@@ -112,5 +112,86 @@ export const getChatFileByBizId = async (
   } catch (error: any) {
     console.error("Get chat file failed:", error);
     return null;
+  }
+};
+
+/**
+ * 按消息类型获取聊天记录（用于图片预览等场景）
+ * @param meUuid 当前用户UUID
+ * @param friendUuid 好友UUID
+ * @param textType 消息类型（2为图片）
+ * @param page 分页参数
+ * @returns 聊天记录列表
+ */
+export const getChatRecordByType = async (
+  meUuid: string,
+  friendUuid: string,
+  textType: number,
+  page: Page
+): Promise<TextQuicMsgVo[]> => {
+  try {
+    const textQuicMsg: TextQuicMsgVo = {
+      nano_id: "",
+      raw: "",
+      recv_user: meUuid,
+      send_user: friendUuid,
+      text_type: 0,
+      timestamp: 0,
+    };
+
+    const data: TextQuicMsgVo[] = await invoke("get_chat_record_by_type", {
+      textQuicMsg,
+      textType,
+      page,
+    });
+
+    return data || [];
+  } catch (error: any) {
+    console.error("Get chat record by type failed:", error);
+    return [];
+  }
+};
+
+/**
+ * 获取好友的所有图片消息并转换为可预览的URL列表
+ * @param meUuid 当前用户UUID
+ * @param friendUuid 好友UUID
+ * @param currentBizId 当前点击的图片bizId
+ * @returns 图片URL列表和当前索引
+ */
+export const getFriendImageMessages = async (
+  meUuid: string,
+  friendUuid: string,
+  currentBizId: string
+): Promise<{ imageUrls: string[]; currentIndex: number }> => {
+  try {
+    const page: Page = { size: 1000, current: 1, total: 0 };
+    const records = await getChatRecordByType(meUuid, friendUuid, 2, page);
+
+    const imageUrls: string[] = [];
+    let currentIndex = 0;
+
+    for (const record of records) {
+      try {
+        const imageRecord = JSON.parse(record.raw);
+        const bizId = imageRecord.biz_id;
+
+        if (bizId === currentBizId) {
+          currentIndex = imageUrls.length;
+        }
+
+        const files = await getChatFileByBizId(bizId);
+        if (files && files.length > 0 && files[0].tauri_file_path) {
+          imageUrls.push(files[0].tauri_file_path);
+        }
+      } catch (e) {
+        console.error("Failed to parse image record:", e);
+      }
+    }
+
+    return { imageUrls, currentIndex };
+  } catch (error: any) {
+    console.error("Get friend image messages failed:", error);
+    return { imageUrls: [], currentIndex: 0 };
   }
 };

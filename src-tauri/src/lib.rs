@@ -30,7 +30,7 @@ use crate::cmd::api_controller::{
 };
 use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
 use crate::cmd::chat_record_controller::{
-    get_chat_record_from_store, mark_read, send_image_msg, send_text_msg,
+    get_chat_record_by_type, get_chat_record_from_store, mark_read, send_image_msg, send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
     create_chat_session, get_chat_session_from_store, mark_read_chat_session,
@@ -134,6 +134,7 @@ pub fn run() {
             send_p2p_video_config,
             send_p2p_video_frame,
             get_chat_record_from_store,
+            get_chat_record_by_type,
             get_chat_session_from_store,
             get_friend_info,
             delete_friend_command,
