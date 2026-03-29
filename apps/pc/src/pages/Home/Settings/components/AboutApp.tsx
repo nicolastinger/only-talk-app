@@ -24,7 +24,7 @@ const AboutApp = () => {
         <Divider className={styles.divider} />
         <div className={styles.appInfo}>
           <Text type="secondary">应用名称</Text>
-          <Text>UMI Chat</Text>
+          <Text>Only Talk</Text>
         </div>
         <div className={styles.appInfo}>
           <Text type="secondary">版本号</Text>
@@ -36,7 +36,7 @@ const AboutApp = () => {
         </div>
         <div className={styles.appInfo}>
           <Text type="secondary">版权信息</Text>
-          <Text>© 2023 UMI Chat. All rights reserved.</Text>
+          <Text>© 2023 Only Talk. All rights reserved.</Text>
         </div>
       </Card>
 

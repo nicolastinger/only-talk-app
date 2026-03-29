@@ -140,14 +140,11 @@ pub async fn post_form_data_request(
 #[command]
 pub async fn compress_image_to_webp_command(input_path: String) -> Result<String, String> {
     let input = PathBuf::from(&input_path);
-    let input_clone = input.clone();
 
     let result = tokio::task::spawn_blocking(move || compress_image_to_webp(&input))
         .await
         .map_err(|e| e.to_string())?;
 
-    result.map_err(|e| e.to_string())?;
-
-    let output_path = input_clone.with_extension("webp");
+    let output_path = result.map_err(|e| e.to_string())?;
     Ok(output_path.to_string_lossy().to_string())
 }

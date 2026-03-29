@@ -189,7 +189,7 @@ const LoginPage: React.FC = () => {
       <div className={styles.titleBar}>
         <div className={styles.logo}>
           <LocalImage width={20} height={20} />
-          <span className={styles.appName}>Umi Chat</span>
+          <span className={styles.appName}>Only Talk</span>
         </div>
         <div className={styles.windowControls}>
           <LanguageSwitcher />
