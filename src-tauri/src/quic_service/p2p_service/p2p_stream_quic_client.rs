@@ -34,7 +34,7 @@ pub async fn run_client(
     let config = ClientConfig::new(Arc::new(crypto));
     endpoint.set_default_client_config(config);
 
-    info!("Connecting to server at {} from local port 19898", server_addr);
+    info!("Connecting to server at {} from local {}", server_addr, local_addr);
     // 连接到服务器
     let connection = endpoint.connect(server_addr, "localhost")?.await?;
     info!("Connected to server at {}", connection.remote_address());
