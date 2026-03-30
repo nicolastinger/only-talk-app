@@ -9,13 +9,13 @@ pub static PONG: &str = "pong";
 
 pub static TALK_API: &str = "https://onlytalk.local:8443";
 
-pub static UDP_SOCKET: &str = "REDACTED_SERVER_IP_1:9562";
-pub static UDP_SOCKET_2: &str = "REDACTED_SERVER_IP_1:9564";
+pub static UDP_SOCKET: &str = "REDACTED_SERVER_IP_2:9562";
+pub static UDP_SOCKET_2: &str = "REDACTED_SERVER_IP_2:9564";
 
 pub static UDP_SOCKET_V6: &str = "[REDACTED_IPV6]:9563";
 pub static UDP_SOCKET_V6_2: &str = "[REDACTED_IPV6]:9565";
 
-pub static QUIC_SERVER_ADDR: &str = "REDACTED_SERVER_IP_1:4433";
+pub static QUIC_SERVER_ADDR: &str = "REDACTED_SERVER_IP_2:4433";
 
 // 用户发起好友申请
 pub static USER_ADD_FRIEND: &str = "USER_ADD_FRIEND_REQUEST";
