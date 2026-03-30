@@ -260,6 +260,14 @@ async fn run_p2p_serer_v4(target_address_info: UserAddressInfo) -> Result<(), an
     // 发送一次udp消息给客户端
     udp_port_forward(addr.parse()?, target_address_info.address.to_string().parse()?, &vec_to)
         .await?;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    // 发送一次udp消息给客户端
+    udp_port_forward(addr.parse()?, target_address_info.address.to_string().parse()?, &vec_to)
+        .await?;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    // 发送一次udp消息给客户端
+    udp_port_forward(addr.parse()?, target_address_info.address.to_string().parse()?, &vec_to)
+        .await?;
     run_server(addr.parse()?).await?;
     Ok(())
 }
