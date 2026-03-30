@@ -15,6 +15,7 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
         let me = guard.get("uuid").ok_or_else(|| anyhow!("uuid not found"))?.clone();
         (p2p_init_msg.request_uuid == me, p2p_init_msg.accept_uuid == me)
     };
+    info!("is_me: {}, req_me: {}", is_me, req_me);
     match (is_me, req_me) {
         (true, true) => {
             error!("自己不能给自己发请求");

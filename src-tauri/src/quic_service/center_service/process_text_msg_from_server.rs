@@ -169,6 +169,10 @@ pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow
 async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     info!("收到ack消息{:?}", text_quic_msg);
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let text_type = msg.text_type;
+    if text_type == 201 || text_type == 202 {
+        return Ok(());
+    }
     let payload = serde_json::to_string(&msg)?;
     //1.查询ack表中该条消息
     let ack_record = query_record_send_from_db(&msg.raw).await;
