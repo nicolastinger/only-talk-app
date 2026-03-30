@@ -157,7 +157,7 @@ async fn process_rec_msg(
     match msg_type {
         ConnectionType::Text => {
             let text_vec = get_text_msg(buffer, length, buffer_msg, head_length).await?;
-            //info!("服务器返回的消息为 {:?}", text_vec);
+            info!("服务器返回的消息为 {:?}", text_vec);
             // 聊天信息处理
             process_msg(text_vec).await?;
         }

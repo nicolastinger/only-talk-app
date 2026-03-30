@@ -5,7 +5,7 @@ import {useP2pMessageApi} from "@/hooks";
 
 const RootLayout: React.FC = () => {
     const {} = useP2pMessageApi();
-    
+
   return (
     <div className={styles.container}>
       <Outlet />

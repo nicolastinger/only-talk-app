@@ -31,6 +31,7 @@ use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
+    info!("处理消息 {:?}", text_vec);
     for msg in text_vec {
         match msg.text_type {
             // 聊天消息
