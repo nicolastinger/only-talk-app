@@ -48,6 +48,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["resource/default.jpg"]
+    "resources": ["resource/default.jpg"],
+    "windows": {
+      "nsis": {
+        "installerHooks": "./installer.nsi"
+      }
+    }
   }
 }
