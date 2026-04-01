@@ -1,0 +1,101 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+  background-color: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  padding: 0 16px;
+
+  .title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .privacyIcon {
+    margin-right: 8px;
+    color: #1890ff;
+  }
+}
+
+.messageContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background-color: #f0f2f5;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border-top: 1px solid #e8e8e8;
+  padding: 8px 16px;
+
+  .inputArea {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+
+    .textArea {
+      flex: 1;
+      border-radius: 8px;
+    }
+  }
+}
+
+.messageItem {
+  display: flex;
+  margin-bottom: 16px;
+
+  &.mine {
+    flex-direction: row-reverse;
+
+    .messageBubble {
+      background-color: #1890ff;
+      color: #fff;
+      border-radius: 12px 4px 12px 12px;
+    }
+  }
+
+  &.friend {
+    flex-direction: row;
+
+    .messageBubble {
+      background-color: #fff;
+      color: #333;
+      border-radius: 4px 12px 12px 12px;
+    }
+  }
+}
+
+.messageBubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.timestamp {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.hint {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  padding: 8px;
+  background-color: #fffbe6;
+  border-bottom: 1px solid #ffe58f;
+}

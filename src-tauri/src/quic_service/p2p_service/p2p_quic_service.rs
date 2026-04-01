@@ -16,7 +16,7 @@ use crate::quic_service::center_service::text_msg_service::{generate_text_msg, g
 use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
-    MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
+    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
@@ -106,6 +106,19 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 let video_config = serde_json::from_slice::<P2pVideoConfig>(&msg.raw)?;
                 let video_str = serde_json::to_string(&video_config)?;
                 insert_user_info(&key, &video_str).await?;
+            }
+            MSG_TYPE_P2P_TEXT => {
+                info!("接收到p2p文本消息 {:?}", msg);
+                if let Some(handle) = APP_HANDLE.get() {
+                    let text = String::from_utf8_lossy(&msg.raw).to_string();
+                    let p2p_text_msg = serde_json::json!({
+                        "type": "p2p_text",
+                        "send_user": msg.send_user,
+                        "text": text,
+                        "timestamp": msg.timestamp,
+                    });
+                    handle.emit("p2p_text_message", p2p_text_msg.to_string())?;
+                }
             }
             MSG_TYPE_PING => {
                 info!("接收到p2p的ping消息 {:?}", msg);

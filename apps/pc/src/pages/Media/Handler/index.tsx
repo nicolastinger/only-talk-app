@@ -57,13 +57,13 @@ const MediaPage: React.FC = () => {
       });
       console.log('response', response);
       const webviewOptions: WebviewOptions = {
-        url: '/media/videoCall?friendId=' + p2pInitMsg.request_uuid,
+        url: '/privacy/chat?friendId=' + p2pInitMsg.request_uuid,
         height: 600,
         width: 800,
         x: 0,
         y: 0,
       };
-      await openNewWindow('视频通话', webviewOptions, currentWindow);
+      await openNewWindow('隐私模式', webviewOptions, currentWindow);
     } catch (e) {
       console.log('处理请求失败', e);
     }
@@ -111,7 +111,7 @@ const MediaPage: React.FC = () => {
           />
         </div>
         <div className={styles.right}>
-          发起了视频通话
+          发起了隐私模式请求
           <div className={styles.btn}>
             <div className={styles.cancelBtn}>
               <Button

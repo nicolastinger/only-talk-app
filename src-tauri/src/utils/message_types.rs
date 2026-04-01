@@ -23,6 +23,9 @@ pub const P2P_REJECT_REQUEST: u16 = 104;
 /// P2P视频呼叫
 pub const MSG_TYPE_P2P_VIDEO_CALL: u16 = 5;
 
+/// P2P文本消息
+pub const MSG_TYPE_P2P_TEXT: u16 = 8;
+
 /// P2P视频数据
 pub const MSG_TYPE_P2P_VIDEO_DATA: u16 = 6;
 

@@ -120,6 +120,10 @@ const routes = [
     component: './ImagePreview',
   },
   {
+    path: '/privacy/chat',
+    component: './Privacy/Chat',
+  },
+  {
     path: '/*',
     component: './Error',
   },

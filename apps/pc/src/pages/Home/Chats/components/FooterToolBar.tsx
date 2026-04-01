@@ -1,7 +1,7 @@
 import {
+  LockOutlined,
   PictureOutlined,
   SmileOutlined,
-  VideoCameraOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { selectFile } from '@workspace/services';
@@ -185,7 +185,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
         <PictureOutlined />
       </div>
       <div className={styles.footerBtn} onClick={sendRequestToP2p}>
-        <VideoCameraOutlined />
+        <LockOutlined />
       </div>
     </div>
   );

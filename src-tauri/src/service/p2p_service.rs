@@ -22,7 +22,7 @@ use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };
 use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
+    MSG_TYPE_P2P, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -317,5 +317,33 @@ pub async fn send_p2p_video_config_service(
         }
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
+    Ok(())
+}
+
+/// 发送p2p文本消息
+pub async fn send_p2p_text_msg_service(
+    text: String,
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    info!("发送p2p文本消息给 {}", target_uuid);
+    let sender = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("no sender"))?.clone()
+    };
+
+    let text_data = generate_text_msg(
+        MSG_TYPE_P2P_TEXT,
+        text.into_bytes(),
+        target_uuid.clone(),
+        sender,
+    )?;
+
+    let send_stream = get_sender(&target_uuid).await?;
+    {
+        let mut guard = send_stream.try_lock()?;
+        guard.write_all(&text_data).await?;
+    }
+    
+    info!("p2p文本消息发送完成");
     Ok(())
 }
