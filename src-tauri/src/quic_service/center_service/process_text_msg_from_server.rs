@@ -24,7 +24,6 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS,
     MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG,
 };
-use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
@@ -171,9 +170,7 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     info!("收到ack消息{:?}", text_quic_msg);
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let text_type = msg.text_type;
-    if text_type == 201 || text_type == 202 {
-        return Ok(());
-    }
+
     let payload = serde_json::to_string(&msg)?;
     //1.查询ack表中该条消息
     let ack_record = query_record_send_from_db(&msg.raw).await;
