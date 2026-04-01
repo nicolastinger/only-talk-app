@@ -136,6 +136,17 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
 pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
     tokio::spawn(async move {
         loop {
+            // 检查p2p连接是否仍然活跃
+            let is_active = {
+                let guard = GLOBAL_QUIC_USER_INFO.read().await;
+                guard.get("p2p_active").map(|v| v == "true").unwrap_or(false)
+            };
+            
+            if !is_active {
+                info!("p2p连接已关闭，停止发送心跳");
+                break;
+            }
+            
             info!("发送p2p心跳");
             let me = {
                 let guard = GLOBAL_QUIC_USER_INFO.read().await;
@@ -148,12 +159,12 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
                     .expect("generate_text_msg error");
             {
                 let mut send_stream = send_stream_ping.lock().await;
-                send_stream
-                    .write_all(&ping_msg)
-                    .await
-                    .unwrap_or_else(|e| error!("发送ping消息失败: {:?}", e));
+                if let Err(e) = send_stream.write_all(&ping_msg).await {
+                    error!("发送ping消息失败: {:?}", e);
+                    break;
+                }
             }
-            //一分钟发送心跳
+            //两秒发送心跳
             tokio::time::sleep(Duration::from_secs(2)).await;
         }
     });

@@ -74,6 +74,11 @@ pub async fn run_client(
     }
 
     info!("建立p2p客户端成功!");
+    // 设置p2p连接活跃状态
+    {
+        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+        guard.insert("p2p_active".to_string(), "true".to_string());
+    }
     send_ping_msg(send_stream.clone(), ping_uuid);
     let head_length = 9;
     let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));

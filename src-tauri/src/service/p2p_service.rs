@@ -352,6 +352,12 @@ pub async fn send_p2p_text_msg_service(
 pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), anyhow::Error> {
     info!("关闭p2p连接: {}", target_uuid);
     
+    // 设置p2p连接状态为非活跃，停止ping消息
+    {
+        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+        guard.insert("p2p_active".to_string(), "false".to_string());
+    }
+    
     // 从P2P_STREAM_SENDER中移除连接
     {
         let mut guard = crate::P2P_STREAM_SENDER.write().await;

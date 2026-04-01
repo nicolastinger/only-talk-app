@@ -117,6 +117,11 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
             let target_uuid = guard.get("target_uuid").ok_or(anyhow!("no target uuid"))?;
             target_uuid.clone()
         };
+        // 设置p2p连接活跃状态
+        {
+            let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+            guard.insert("p2p_active".to_string(), "true".to_string());
+        }
         send_ping_msg(send_stream.clone(), target_uuid.clone());
         {
             let mut guard = P2P_STREAM_SENDER.write().await;
