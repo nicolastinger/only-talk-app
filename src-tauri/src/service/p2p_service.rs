@@ -347,3 +347,31 @@ pub async fn send_p2p_text_msg_service(
     info!("p2p文本消息发送完成");
     Ok(())
 }
+
+/// 关闭p2p连接，清理资源
+pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), anyhow::Error> {
+    info!("关闭p2p连接: {}", target_uuid);
+    
+    // 从P2P_STREAM_SENDER中移除连接
+    {
+        let mut guard = crate::P2P_STREAM_SENDER.write().await;
+        if let Some(stream) = guard.remove(&target_uuid) {
+            // 尝试关闭发送流
+            let _ = stream.send_stream.lock().await.finish().await;
+            info!("已移除p2p发送流: {}", target_uuid);
+        }
+    }
+    
+    // 清理GLOBAL_QUIC_USER_INFO中的相关数据
+    {
+        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+        guard.remove("p2p_server_model");
+        guard.remove("p2p_request_token");
+        guard.remove("target_uuid");
+        guard.remove("p2p_port_v4");
+        guard.remove("p2p_port_v6");
+    }
+    
+    info!("p2p连接资源清理完成");
+    Ok(())
+}

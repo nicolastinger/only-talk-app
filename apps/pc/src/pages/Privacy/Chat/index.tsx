@@ -1,6 +1,7 @@
-import { LockOutlined } from '@ant-design/icons';
+import { LockOutlined, LogoutOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { window } from '@tauri-apps/api';
 import { useLocation } from '@umijs/max';
 import { Button, Input, message } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
@@ -119,11 +120,37 @@ const PrivacyChat: React.FC = () => {
     }
   };
 
+  const handleExit = async () => {
+    try {
+      if (friendId) {
+        await invoke('close_p2p_connection', {
+          targetUuid: friendId,
+        });
+      }
+      const currentWindow = window.getCurrentWindow();
+      await currentWindow.close();
+    } catch (e) {
+      console.error('退出失败:', e);
+      message.error('退出失败');
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <LockOutlined className={styles.privacyIcon} />
-        <span className={styles.title}>隐私聊天</span>
+        <div className={styles.titleWrapper}>
+          <LockOutlined className={styles.privacyIcon} />
+          <span className={styles.title}>隐私聊天</span>
+        </div>
+        <Button
+          className={styles.exitBtn}
+          type="text"
+          danger
+          icon={<LogoutOutlined />}
+          onClick={handleExit}
+        >
+          退出
+        </Button>
       </div>
       <div className={styles.hint}>
         隐私聊天消息不会保存到本地，关闭窗口后消息将消失

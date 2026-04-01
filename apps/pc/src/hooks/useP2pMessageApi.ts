@@ -36,26 +36,19 @@ const openMessageHandler = async (p2pInitMsg: P2pInitMsg) => {
   await openNewWindowWithoutClose('音视频处理窗口', webviewOptions, config);
 };
 
-// 打开视频通话窗口
-const openP2pVideoHandler = async (uuid: string, callType: number) => {
-  // 通过URL参数传递数据
-  const urlParams = new URLSearchParams({
-    friendId: uuid,
-    callType: callType.toString(),
-  });
-
-  console.log('打开新窗口:', urlParams);
+// 打开隐私聊天窗口
+const openPrivacyChatHandler = async (uuid: string) => {
   const webviewOptions: WebviewOptions = {
     x: 0,
     y: 0,
-    url: `/media/videoCall?${urlParams.toString()}`,
-    height: 720,
-    width: 1280,
+    url: `/privacy/chat?friendId=${uuid}`,
+    height: 600,
+    width: 800,
   };
   const config: WindowOptions = {
     center: true,
   };
-  await openNewWindowWithoutClose('音视频处理窗口', webviewOptions, config);
+  await openNewWindowWithoutClose('隐私聊天', webviewOptions, config);
 };
 
 const useP2pMessageApi = () => {
@@ -80,7 +73,7 @@ const useP2pMessageApi = () => {
     } else if (p2pMsg.type === 103) {
       // 接收到p2p同意信息
       const uuid = p2pMsg.raw;
-      await openP2pVideoHandler(uuid, 0);
+      await openPrivacyChatHandler(uuid);
     } else if (p2pMsg.type === 104) {
       // 接收到p2p拒绝信息
     } else {

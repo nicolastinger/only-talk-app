@@ -4,8 +4,8 @@ use crate::entity::p2p_models::{P2pInitMsg, P2pVideoData};
 use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
-    access_p2p_request, find_available_udp_port, reject_p2p_request, send_p2p_text_msg_service,
-    send_p2p_video_config_service, send_p2p_video_frame_service,
+    access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
+    send_p2p_text_msg_service, send_p2p_video_config_service, send_p2p_video_frame_service,
 };
 use crate::utils::global_static_str::UDP_SOCKET;
 
@@ -83,4 +83,10 @@ pub async fn send_video_frame(frame_data: Vec<u8>, uuid: String) -> Result<(), S
 #[tauri::command]
 pub async fn send_p2p_text_msg(text: String, target_uuid: String) -> Result<(), String> {
     send_p2p_text_msg_service(text, target_uuid).await.map_err(|e| e.to_string())
+}
+
+/// 关闭p2p连接
+#[tauri::command]
+pub async fn close_p2p_connection(target_uuid: String) -> Result<(), String> {
+    close_p2p_connection_service(target_uuid).await.map_err(|e| e.to_string())
 }
