@@ -611,136 +611,18 @@ class WebRTCService {
   /**
    * 优化SDP以提高NAT穿透成功率
    * 
-   * 优化策略：
-   * 1. 移除不必要的编解码器，减少SDP大小
-   * 2. 调整ICE候选策略
-   * 3. 启用更积极的NAT穿越选项
-   * 4. 优化带宽和码率设置
+   * 保守策略：不做任何SDP修改，让浏览器自动处理
+   * 现代浏览器已经自动优化了ICE和NAT穿透
    * 
    * @param sdp 原始SDP字符串
    * @returns 优化后的SDP字符串
    */
   private optimizeSDPForNAT(sdp: string): string {
-    let optimizedSdp = sdp;
-    
-    // 1. 移除不常用的视频编解码器（保留VP8, VP9, H264）
-    // 只保留最常用的编解码器以减少协商时间
-    optimizedSdp = this.removeRedundantCodecs(optimizedSdp);
-    
-    // 2. 确保使用bundle策略（将所有媒体复用到单个传输）
-    if (!optimizedSdp.includes('a=group:BUNDLE')) {
-      // 如果没有BUNDLE行，尝试添加
-      const mediaLines = optimizedSdp.match(/m=(audio|video)/g) || [];
-      if (mediaLines.length > 1) {
-        const bundleIds = mediaLines.map(line => line.split('=')[1]).join(' ');
-        optimizedSdp = optimizedSdp.replace(
-          /a=group:BUNDLE[^\n]*/g,
-          `a=group:BUNDLE ${bundleIds}`
-        );
-      }
-    }
-    
-    // 3. 添加或修改ICE选项以提高NAT穿透
-    // 移除ice-lite（仅用于服务器场景）
-    optimizedSdp = optimizedSdp.replace(/a=ice-lite\n/g, '');
-    
-    // 4. 确保使用rtcp-mux（减少NAT映射数量）
-    if (!optimizedSdp.includes('a=rtcp-mux')) {
-      optimizedSdp = optimizedSdp.replace(
-        /(m=video[^\n]*\n)/,
-        '$1a=rtcp-mux\n'
-      );
-    }
-    
-    // 5. 优化带宽设置 - 降低初始带宽需求，提高连接成功率
-    // 设置合理的最大比特率
-    optimizedSdp = this.optimizeBandwidthSettings(optimizedSdp);
-    
-    // 6. 确保DTLS指纹存在（用于加密传输）
-    if (!optimizedSdp.includes('a=fingerprint:')) {
-      console.warn(`[WebRTCService.optimizeSDPForNAT] ⚠️ SDP缺少DTLS指纹`);
-    }
-    
-    // 7. 添加NAT穿越相关的扩展属性
-    optimizedSdp = this.addNATTraversalExtensions(optimizedSdp);
-    
-    console.log(`[WebRTCService.optimizeSDPForNAT] ✅ SDP优化完成`);
-    return optimizedSdp;
-  }
-
-  /**
-   * 移除冗余的编解码器
-   * 仅保留VP8/VP9/H264(视频) 和 OPUS/PCMU/PCMA(音频)
-   */
-  private removeRedundantCodecs(sdp: string): string {
-    let result = sdp;
-    
-    // 视频编解码器：保留VP8(96), VP9(98), H264(127)
-    // 音频编解码器：保留OPUS(111), PCMU(0), PCMA(8)
-    const videoCodecPattern = /^a=rtpmap:(\d+) (?!VP8|VP9|H264)[^\n]+$/gm;
-    const audioCodecPattern = /^a=rtpmap:(\d+) (?!opus|PCMU|PCMA)[^\n]+$/gm;
-    
-    // 移除不常用的视频编解码器
-    result = result.replace(videoCodecPattern, '');
-    
-    // 移除不常用的音频编解码器
-    result = result.replace(audioCodecPattern, '');
-    
-    return result;
-  }
-
-  /**
-   * 优化带宽设置
-   * 为NAT3环境设置更保守的带宽参数
-   */
-  private optimizeBandwidthSettings(sdp: string): string {
-    let result = sdp;
-    
-    // 设置应用层带宽限制
-    // AS (Application Specific) 最大带宽：1Mbps
-    if (!result.includes('b=AS:')) {
-      result = result.replace(
-        /(m=video[^\n]*\n)/,
-        '$1b=AS:1024\n'
-      );
-    } else {
-      result = result.replace(/b=AS:\d+/g, 'b=AS:1024');
-    }
-    
-    // 设置传输层带宽限制 (TIAS)
-    if (!result.includes('b=TIAS:')) {
-      result = result.replace(
-        /(m=video[^\n]*\n)/,
-        '$1b=TIAS:1000000\n'
-      );
-    } else {
-      result = result.replace(/b=TIAS:\d+/g, 'b=TIAS:1000000');
-    }
-    
-    return result;
-  }
-
-  /**
-   * 添加NAT穿越相关的扩展属性
-   */
-  private addNATTraversalExtensions(sdp: string): string {
-    let result = sdp;
-    
-    // 添加ICE控制属性
-    if (!result.includes('a=ice-options:')) {
-      result = result.replace(
-        /(m=[^\n]+\n)/,
-        '$1a=ice-options:trickle renomination\n'
-      );
-    }
-    
-    // 添加连接性检查的扩展属性
-    // 使用aggressive nomination模式提高连接速度
-    if (!result.includes('a=nomination:')) {
-      result += '\na=nomination:aggressive';
-    }
-    
-    return result;
+    // 保守策略：直接返回原始SDP，不做任何修改
+    // 浏览器已经自动处理了大部分NAT穿透优化
+    // 修改SDP可能会导致格式错误
+    console.log(`[WebRTCService.optimizeSDPForNAT] 使用原始SDP（保守模式）`);
+    return sdp;
   }
 
   /**
