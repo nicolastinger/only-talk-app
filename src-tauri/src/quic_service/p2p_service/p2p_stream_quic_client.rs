@@ -83,8 +83,8 @@ pub async fn run_client(
     let head_length = 9;
     let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
     loop {
-        // 接收响应
-        let mut buf = vec![0u8; 1024];
+        // 接收响应 - 使用1MB缓冲区以容纳视频帧数据(约230KB/帧)
+        let mut buf = vec![0u8; 1024 * 1024 * 10];
         match recv.read(&mut buf).await {
             Ok(Some(n)) => {
                 info!("Received {} bytes: {:?}", n, &buf[..n]);

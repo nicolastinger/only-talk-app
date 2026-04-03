@@ -137,7 +137,7 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
         let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
         // 处理双向流
         loop {
-            let mut buf = vec![0u8; 1024 * 1024];
+            let mut buf = vec![0u8; 1024 * 1024 * 10];
             match recv.read(&mut buf).await {
                 Ok(Some(n)) => {
                     info!("收到 {} bytes", n);
