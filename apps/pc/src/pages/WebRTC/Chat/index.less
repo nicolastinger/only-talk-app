@@ -31,26 +31,100 @@
   font-weight: 500;
 }
 
-.status {
-  font-size: 12px;
-  color: var(--ant-color-text-secondary);
-  margin-left: 8px;
+.headerButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
 }
 
-.statusConnected {
-  color: #52c41a;
-}
-
-.statusConnecting {
-  color: #faad14;
-}
-
-.statusDisconnected {
-  color: #ff4d4f;
+.headerBtn {
+  -webkit-app-region: no-drag;
 }
 
 .exitBtn {
   -webkit-app-region: no-drag;
+}
+
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.videoPanel {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  min-width: 300px;
+  max-width: 600px;
+  background-color: var(--ant-color-bg-layout);
+  border-right: 1px solid var(--ant-color-border);
+}
+
+.videoWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.videoContainer {
+  flex: 1;
+  position: relative;
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.remoteVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.localVideoContainer {
+  position: relative;
+  height: 180px;
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.localVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.videoLabel {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 4px 8px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.mediaControls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px;
+  background-color: var(--ant-color-bg-elevated);
+  border-top: 1px solid var(--ant-color-border);
+}
+
+.chatPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
 }
 
 .hint {

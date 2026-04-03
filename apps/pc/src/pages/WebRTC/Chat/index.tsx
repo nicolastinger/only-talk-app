@@ -15,11 +15,11 @@
  * - signalData: 初始信令数据(仅响应方需要，包含对端的offer)
  */
 
-import { ApiOutlined, LogoutOutlined } from '@ant-design/icons';
+import { ApiOutlined, LogoutOutlined, VideoCameraOutlined, AudioOutlined, AudioMutedOutlined, VideoCameraAddOutlined } from '@ant-design/icons';
 import { listen } from '@tauri-apps/api/event';
 import { window } from '@tauri-apps/api';
 import { useLocation } from '@umijs/max';
-import { Button, Input, message, Spin, Tag } from 'antd';
+import { Button, Input, message, Spin, Tag, Tooltip } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import { initWebRTCService, getWebRTCService } from '@/services/webrtcService';
 import { WebRTCSignalMessage } from '@workspace/types';
@@ -89,6 +89,16 @@ const WebRTCChat: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'failed'>('connecting');
   /** 消息容器DOM引用，用于自动滚动 */
   const messageContainerRef = useRef<HTMLDivElement>(null);
+  /** 本地视频元素引用 */
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  /** 远程视频元素引用 */
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  /** 视频是否开启 */
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  /** 音频是否开启 */
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  /** 是否显示视频区域 */
+  const [showVideoPanel, setShowVideoPanel] = useState(true);
 
   // ============ 从URL参数获取信息 ============
   const location = useLocation();
@@ -132,6 +142,34 @@ const WebRTCChat: React.FC = () => {
       // 初始化或获取WebRTC服务实例
       const service = initWebRTCService(localUserId);
       console.log(`[WebRTCChat] WebRTCService已初始化，会话ID: ${service.sessionId}`);
+
+      /**
+       * 初始化本地媒体流
+       */
+      try {
+        console.log(`[WebRTCChat] 初始化本地媒体流...`);
+        const stream = await service.initLocalStream(true, true);
+        
+        // 将本地流绑定到视频元素
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          console.log(`[WebRTCChat] ✅ 本地视频流已绑定`);
+        }
+      } catch (error) {
+        console.error(`[WebRTCChat] ❌ 初始化本地媒体流失败:`, error);
+        message.warning('无法访问摄像头或麦克风，视频聊天功能可能受限');
+      }
+
+      /**
+       * 设置远程媒体流接收回调
+       */
+      service.setOnRemoteStreamCallback((fromFriendId: string, stream: MediaStream) => {
+        console.log(`[WebRTCChat.onRemoteStreamCallback] 收到来自${fromFriendId}的远程媒体流`);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+          console.log(`[WebRTCChat.onRemoteStreamCallback] ✅ 远程视频流已绑定`);
+        }
+      });
 
       /**
        * 设置消息接收回调
@@ -417,6 +455,37 @@ const WebRTCChat: React.FC = () => {
   };
 
   /**
+   * 切换视频状态
+   */
+  const handleToggleVideo = () => {
+    const service = getWebRTCService();
+    if (service) {
+      const enabled = service.toggleVideo();
+      setIsVideoEnabled(enabled);
+      console.log(`[WebRTCChat] 视频状态切换为: ${enabled ? '开启' : '关闭'}`);
+    }
+  };
+
+  /**
+   * 切换音频状态
+   */
+  const handleToggleAudio = () => {
+    const service = getWebRTCService();
+    if (service) {
+      const enabled = service.toggleAudio();
+      setIsAudioEnabled(enabled);
+      console.log(`[WebRTCChat] 音频状态切换为: ${enabled ? '开启' : '关闭'}`);
+    }
+  };
+
+  /**
+   * 切换视频面板显示
+   */
+  const handleToggleVideoPanel = () => {
+    setShowVideoPanel(!showVideoPanel);
+  };
+
+  /**
    * 退出聊天
    *
    * 流程：
@@ -471,58 +540,122 @@ const WebRTCChat: React.FC = () => {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <ApiOutlined className={styles.webrtcIcon} />
-          <span className={styles.title}>WebRTC 聊天</span>
+          <span className={styles.title}>WebRTC 视频聊天</span>
           {getStatusTag()}
         </div>
-        <Button
-          className={styles.exitBtn}
-          type="text"
-          danger
-          icon={<LogoutOutlined />}
-          onClick={handleExit}
-        >
-          退出
-        </Button>
-      </div>
-      <div className={styles.hint}>
-        WebRTC P2P 直连聊天，消息不经过服务器，关闭窗口后消息将消失
-      </div>
-      <div ref={messageContainerRef} className={styles.messageContainer}>
-        {connectionStatus === 'connecting' && (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <Spin tip="正在建立连接..." />
-          </div>
-        )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`${styles.messageItem} ${msg.isMine ? styles.mine : styles.friend}`}
+        <div className={styles.headerButtons}>
+          <Tooltip title={showVideoPanel ? '隐藏视频' : '显示视频'}>
+            <Button
+              className={styles.headerBtn}
+              type="text"
+              icon={<VideoCameraOutlined />}
+              onClick={handleToggleVideoPanel}
+            />
+          </Tooltip>
+          <Button
+            className={styles.exitBtn}
+            type="text"
+            danger
+            icon={<LogoutOutlined />}
+            onClick={handleExit}
           >
-            <div>
-              <div className={styles.messageBubble}>{msg.text}</div>
-              <div className={styles.messageTime}>{formatTime(msg.timestamp)}</div>
+            退出
+          </Button>
+        </div>
+      </div>
+      
+      <div className={styles.mainContent}>
+        {showVideoPanel && (
+          <div className={styles.videoPanel}>
+            <div className={styles.videoWrapper}>
+              <div className={styles.videoContainer}>
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className={styles.remoteVideo}
+                />
+                <div className={styles.videoLabel}>远程</div>
+              </div>
+              <div className={styles.localVideoContainer}>
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={styles.localVideo}
+                />
+                <div className={styles.videoLabel}>本地</div>
+              </div>
+            </div>
+            
+            <div className={styles.mediaControls}>
+              <Tooltip title={isVideoEnabled ? '关闭摄像头' : '开启摄像头'}>
+                <Button
+                  type={isVideoEnabled ? 'primary' : 'default'}
+                  danger={!isVideoEnabled}
+                  icon={isVideoEnabled ? <VideoCameraOutlined /> : <VideoCameraAddOutlined />}
+                  onClick={handleToggleVideo}
+                  size="large"
+                  shape="circle"
+                />
+              </Tooltip>
+              <Tooltip title={isAudioEnabled ? '关闭麦克风' : '开启麦克风'}>
+                <Button
+                  type={isAudioEnabled ? 'primary' : 'default'}
+                  danger={!isAudioEnabled}
+                  icon={isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />}
+                  onClick={handleToggleAudio}
+                  size="large"
+                  shape="circle"
+                />
+              </Tooltip>
             </div>
           </div>
-        ))}
-      </div>
-      <div className={styles.footer}>
-        <div className={styles.inputArea}>
-          <TextArea
-            className={styles.textArea}
-            value={inputText}
-            onChange={(e: any) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="输入消息..."
-            autoSize={{ minRows: 1, maxRows: 4 }}
-            disabled={connectionStatus !== 'connected'}
-          />
-          <Button
-            type="primary"
-            onClick={sendMessage}
-            disabled={connectionStatus !== 'connected'}
-          >
-            发送
-          </Button>
+        )}
+        
+        <div className={styles.chatPanel}>
+          <div className={styles.hint}>
+            WebRTC P2P 直连聊天，消息不经过服务器，关闭窗口后消息将消失
+          </div>
+          <div ref={messageContainerRef} className={styles.messageContainer}>
+            {connectionStatus === 'connecting' && (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <Spin tip="正在建立连接..." />
+              </div>
+            )}
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`${styles.messageItem} ${msg.isMine ? styles.mine : styles.friend}`}
+              >
+                <div>
+                  <div className={styles.messageBubble}>{msg.text}</div>
+                  <div className={styles.messageTime}>{formatTime(msg.timestamp)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={styles.footer}>
+            <div className={styles.inputArea}>
+              <TextArea
+                className={styles.textArea}
+                value={inputText}
+                onChange={(e: any) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="输入消息..."
+                autoSize={{ minRows: 1, maxRows: 4 }}
+                disabled={connectionStatus !== 'connected'}
+              />
+              <Button
+                type="primary"
+                onClick={sendMessage}
+                disabled={connectionStatus !== 'connected'}
+              >
+                发送
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

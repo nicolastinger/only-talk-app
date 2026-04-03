@@ -66,6 +66,16 @@ class WebRTCService {
   private onMessageCallback: ((friendId: string, message: string) => void) | null = null;
   /** 连接状态变化时的回调函数: (来源friendId, 连接状态) => void */
   private onConnectionStateChange: ((friendId: string, state: RTCPeerConnectionState) => void) | null = null;
+  /** 本地媒体流 */
+  private localStream: MediaStream | null = null;
+  /** 远程媒体流映射, key为friendId */
+  private remoteStreams: Map<string, MediaStream> = new Map();
+  /** 接收到远程媒体流时的回调函数: (来源friendId, 媒体流) => void */
+  private onRemoteStreamCallback: ((friendId: string, stream: MediaStream) => void) | null = null;
+  /** 视频轨道状态 */
+  private isVideoEnabled: boolean = true;
+  /** 音频轨道状态 */
+  private isAudioEnabled: boolean = true;
 
   /**
    * 构造函数
@@ -93,6 +103,133 @@ class WebRTCService {
   setOnConnectionStateChange(callback: (friendId: string, state: RTCPeerConnectionState) => void) {
     this.onConnectionStateChange = callback;
     console.log(`[WebRTCService] 连接状态变化回调已设置`);
+  }
+
+  /**
+   * 设置远程媒体流接收回调
+   * @param callback 收到远程媒体流时触发的回调函数
+   */
+  setOnRemoteStreamCallback(callback: (friendId: string, stream: MediaStream) => void) {
+    this.onRemoteStreamCallback = callback;
+    console.log(`[WebRTCService] 远程媒体流回调已设置`);
+  }
+
+  /**
+   * 获取本地媒体流
+   * @returns 本地媒体流
+   */
+  getLocalStream(): MediaStream | null {
+    return this.localStream;
+  }
+
+  /**
+   * 获取远程媒体流
+   * @param friendId 对端用户ID
+   * @returns 远程媒体流
+   */
+  getRemoteStream(friendId: string): MediaStream | null {
+    return this.remoteStreams.get(friendId) || null;
+  }
+
+  /**
+   * 初始化本地媒体流
+   * @param video 是否启用视频
+   * @param audio 是否启用音频
+   * @returns 本地媒体流
+   */
+  async initLocalStream(video: boolean = true, audio: boolean = true): Promise<MediaStream> {
+    console.log(`[WebRTCService.initLocalStream] 初始化本地媒体流 - 视频: ${video}, 音频: ${audio}`);
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: video ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user',
+          frameRate: { ideal: 30 }
+        } : false,
+        audio: audio ? {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } : false
+      });
+
+      this.localStream = stream;
+      this.isVideoEnabled = video;
+      this.isAudioEnabled = audio;
+      console.log(`[WebRTCService.initLocalStream] ✅ 本地媒体流初始化成功`);
+      return stream;
+    } catch (error) {
+      console.error(`[WebRTCService.initLocalStream] ❌ 初始化本地媒体流失败:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 关闭本地媒体流
+   */
+  closeLocalStream(): void {
+    console.log(`[WebRTCService.closeLocalStream] 关闭本地媒体流...`);
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        track.stop();
+        console.log(`[WebRTCService.closeLocalStream] 停止轨道: ${track.kind}`);
+      });
+      this.localStream = null;
+    }
+  }
+
+  /**
+   * 切换视频轨道状态
+   * @returns 切换后的视频状态
+   */
+  toggleVideo(): boolean {
+    console.log(`[WebRTCService.toggleVideo] 切换视频状态...`);
+    if (this.localStream) {
+      const videoTrack = this.localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        this.isVideoEnabled = !this.isVideoEnabled;
+        videoTrack.enabled = this.isVideoEnabled;
+        console.log(`[WebRTCService.toggleVideo] ✅ 视频状态已切换为: ${this.isVideoEnabled ? '开启' : '关闭'}`);
+        return this.isVideoEnabled;
+      }
+    }
+    console.log(`[WebRTCService.toggleVideo] ⚠️ 没有视频轨道`);
+    return false;
+  }
+
+  /**
+   * 切换音频轨道状态
+   * @returns 切换后的音频状态
+   */
+  toggleAudio(): boolean {
+    console.log(`[WebRTCService.toggleAudio] 切换音频状态...`);
+    if (this.localStream) {
+      const audioTrack = this.localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        this.isAudioEnabled = !this.isAudioEnabled;
+        audioTrack.enabled = this.isAudioEnabled;
+        console.log(`[WebRTCService.toggleAudio] ✅ 音频状态已切换为: ${this.isAudioEnabled ? '开启' : '关闭'}`);
+        return this.isAudioEnabled;
+      }
+    }
+    console.log(`[WebRTCService.toggleAudio] ⚠️ 没有音频轨道`);
+    return false;
+  }
+
+  /**
+   * 获取视频状态
+   */
+  getVideoEnabled(): boolean {
+    return this.isVideoEnabled;
+  }
+
+  /**
+   * 获取音频状态
+   */
+  getAudioEnabled(): boolean {
+    return this.isAudioEnabled;
   }
 
   /**
@@ -171,6 +308,35 @@ class WebRTCService {
       this.setupDataChannel(friendId, event.channel);
     };
 
+    /**
+     * 远程媒体轨道接收事件处理器
+     * 当对端添加媒体轨道时触发
+     */
+    connection.ontrack = (event) => {
+      console.log(`[WebRTCService.ontrack] 收到远程媒体轨道 - 类型: ${event.track.kind}, streams: ${event.streams.length}`);
+      if (event.streams && event.streams.length > 0) {
+        const remoteStream = event.streams[0];
+        this.remoteStreams.set(friendId, remoteStream);
+        console.log(`[WebRTCService.ontrack] ✅ 远程媒体流已保存，触发回调`);
+        this.onRemoteStreamCallback?.(friendId, remoteStream);
+      }
+    };
+
+    /**
+     * 添加本地媒体轨道到连接
+     */
+    if (this.localStream) {
+      console.log(`[WebRTCService.createConnection] 添加本地媒体轨道到连接...`);
+      this.localStream.getTracks().forEach(track => {
+        if (this.localStream) {
+          connection.addTrack(track, this.localStream);
+          console.log(`[WebRTCService.createConnection] 已添加轨道: ${track.kind}`);
+        }
+      });
+    } else {
+      console.log(`[WebRTCService.createConnection] ⚠️ 本地媒体流未初始化，不添加媒体轨道`);
+    }
+
     console.log(`[WebRTCService.createConnection] 连接创建完成 - friendId: ${friendId}, 连接总数: ${this.connections.size}`);
     return connection;
   }
@@ -212,12 +378,12 @@ class WebRTCService {
 
     /**
      * 创建offer
-     * offerToReceiveAudio/Video: false 因为此应用仅用于文本聊天
+     * offerToReceiveAudio/Video: true 接收对方的音频和视频
      */
     console.log(`[WebRTCService.createOffer] 调用 createOffer()...`);
     const offer = await connection.createOffer({
-      offerToReceiveAudio: false,
-      offerToReceiveVideo: false,
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true,
     });
     console.log(`[WebRTCService.createOffer] offer 已创建，SDP长度: ${offer.sdp?.length || 0}`);
 
@@ -482,6 +648,14 @@ class WebRTCService {
       console.log(`[WebRTCService.closeConnection] 该friendId不存在连接`);
     }
 
+    // 移除远程媒体流
+    const remoteStream = this.remoteStreams.get(friendId);
+    if (remoteStream) {
+      remoteStream.getTracks().forEach(track => track.stop());
+      this.remoteStreams.delete(friendId);
+      console.log(`[WebRTCService.closeConnection] 远程媒体流已移除`);
+    }
+
     console.log(`[WebRTCService.closeConnection] ✅ 连接已关闭，剩余连接数: ${this.connections.size}`);
   }
 
@@ -507,6 +681,17 @@ class WebRTCService {
     });
     this.connections.clear();
     console.log(`[WebRTCService.closeAllConnections] 所有RTCPeerConnection已关闭`);
+
+    // 关闭所有远程媒体流
+    this.remoteStreams.forEach((stream, friendId) => {
+      console.log(`[WebRTCService.closeAllConnections] 关闭 ${friendId} 的远程媒体流...`);
+      stream.getTracks().forEach(track => track.stop());
+    });
+    this.remoteStreams.clear();
+    console.log(`[WebRTCService.closeAllConnections] 所有远程媒体流已关闭`);
+
+    // 关闭本地媒体流
+    this.closeLocalStream();
 
     console.log(`[WebRTCService.closeAllConnections] ✅ 所有连接已清理完成`);
   }
