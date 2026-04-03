@@ -72,14 +72,17 @@ impl ChatRecordRaw for ImageRecord {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WebRTCSignalRecord {
+    #[serde(default)]
     pub prev_id: String,
+    #[serde(rename = "type")]
     pub signal_type: String,
     pub sender: String,
     pub receiver: String,
+    #[serde(rename = "sessionId")]
     pub session_id: String,
-    pub data: String,
+    pub data: serde_json::Value,
     pub timestamp: i64,
 }
 
