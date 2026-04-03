@@ -269,6 +269,11 @@ class WebRTCService {
           console.log(`[WebRTCService.onicecandidate] 跳过中继候选(relay candidate)`);
           return;
         }
+        // 跳过本地host候选
+        if (candidateType === 'host') {
+          console.log(`[WebRTCService.onicecandidate] 跳过本地host候选(host candidate)`);
+          return;
+        }
 
         // 构建ICE候选信令消息并发送给对端
         const signalMessage: WebRTCSignalMessage = {
