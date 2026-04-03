@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { nanoid } from 'nanoid';
-import { WebRTCSignalMessage, WebRTCConfig } from '@workspace/types';
+import { WebRTCSignalMessage } from '@workspace/types';
 
 /**
  * WebRTC 默认配置
