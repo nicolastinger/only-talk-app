@@ -124,6 +124,10 @@ const routes = [
     component: './Privacy/Chat',
   },
   {
+    path: '/webrtc/chat',
+    component: './WebRTC/Chat',
+  },
+  {
     path: '/*',
     component: './Error',
   },

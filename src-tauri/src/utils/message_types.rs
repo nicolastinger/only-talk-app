@@ -35,6 +35,9 @@ pub const MSG_TYPE_P2P_VIDEO_CONFIG: u16 = 7;
 /// 心跳消息(Ping)
 pub const MSG_TYPE_PING: u16 = 99;
 
+/// WebRTC信令消息
+pub const MSG_TYPE_WEBRTC_SIGNAL: u16 = 100;
+
 /// 消息接收成功回执
 pub const MSG_TYPE_RECALL_SUCCESS: u16 = 201;
 

@@ -22,7 +22,7 @@ use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P,
     MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS,
-    MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, NOTIFY_TYPE_MSG,
+    MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
 };
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -51,6 +51,10 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             }
             MSG_TYPE_PING => {
                 info!("接收到服务器发送的ping");
+            }
+            MSG_TYPE_WEBRTC_SIGNAL => {
+                info!("接收到 WebRTC 信令消息 {:?}", msg);
+                process_webrtc_signal(msg).await?;
             }
             // 本机作为p2p服务端, 建立连接
             MSG_TYPE_P2P_USER_SERVER => {
@@ -267,21 +271,28 @@ async fn process_notify_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
 async fn process_local_notify_message(
     system_notification: SystemNotification,
 ) -> Result<(), anyhow::Error> {
-    // 处理本系统通知
     match system_notification.level2.ok_or(anyhow!("level2为空"))? {
         1 => {
-            // 处理好友通知
-            info!("处理好友通知 {:?}", system_notification);
             friend_service::process_friend_notify_message(system_notification).await?;
         }
         2 => {
-            // 处理用户本身通知
             info!("处理用户本身通知 {:?}", system_notification);
         }
         _ => {
-            // 处理其他通知
             info!("处理其他通知 {:?}", system_notification);
         }
     }
+    Ok(())
+}
+
+async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let payload = serde_json::to_string(&msg)?;
+    
+    APP_HANDLE
+        .get()
+        .ok_or(anyhow!("获取app失败"))?
+        .emit("webrtc_signal", payload)?;
+    
     Ok(())
 }

@@ -2,12 +2,17 @@ import {
   LockOutlined,
   PictureOutlined,
   SmileOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { selectFile } from '@workspace/services';
 import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
 import { nanoid } from 'nanoid';
 import React, { useEffect, useRef, useState } from 'react';
+import { openWebRTCChatHandler } from '@/hooks/useWebRTCSignalApi';
+import { useBearStore } from '@/store/store';
+import { initWebRTCService, getWebRTCService } from '@/services/webrtcService';
+import { message } from 'antd';
 import styles from './styles/FooterToolBar.less';
 
 interface FooterToolBarProps {
@@ -90,6 +95,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const userInfo = useBearStore((state) => state.userInfo);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -150,6 +156,26 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
     }
   };
 
+  const startWebRTCChat = async () => {
+    try {
+      const localUserId = userInfo.uuid;
+      if (!localUserId) {
+        message.error('无法获取用户信息');
+        return;
+      }
+
+      let service = getWebRTCService();
+      if (!service) {
+        service = initWebRTCService(localUserId);
+      }
+
+      await openWebRTCChatHandler(friendUuid, localUserId, true);
+    } catch (e) {
+      console.error('发起 WebRTC 聊天失败:', e);
+      message.error('发起 WebRTC 聊天失败');
+    }
+  };
+
   const handleEmojiClick = (emoji: string) => {
     console.log('Selected emoji:', emoji);
     onEmojiSelect?.(emoji);
@@ -186,6 +212,9 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
       </div>
       <div className={styles.footerBtn} onClick={sendRequestToP2p}>
         <LockOutlined />
+      </div>
+      <div className={styles.footerBtn} onClick={startWebRTCChat} title="发起 WebRTC 聊天">
+        <ApiOutlined />
       </div>
     </div>
   );
