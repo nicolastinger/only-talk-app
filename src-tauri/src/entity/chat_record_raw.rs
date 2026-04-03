@@ -71,3 +71,36 @@ impl ChatRecordRaw for ImageRecord {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct WebRTCSignalRecord {
+    pub prev_id: String,
+    pub signal_type: String,
+    pub sender: String,
+    pub receiver: String,
+    pub session_id: String,
+    pub data: String,
+    pub timestamp: i64,
+}
+
+impl ChatRecordRaw for WebRTCSignalRecord {
+    fn set_prev_id(&mut self, prev_id: String) {
+        self.prev_id = prev_id;
+    }
+
+    fn json_serialize(&self) -> Result<String, anyhow::Error> {
+        let res = serde_json::to_string(&self);
+        match res {
+            Ok(s) => Ok(s),
+            Err(e) => Err(anyhow!("WebRTC信令消息序列化失败: {}", e)),
+        }
+    }
+
+    fn deserialize(raw: &str) -> Result<Self, anyhow::Error> {
+        let res = serde_json::from_str(raw);
+        match res {
+            Ok(r) => Ok(r),
+            Err(e) => Err(anyhow!("WebRTC信令消息反序列化失败: {}", e)),
+        }
+    }
+}

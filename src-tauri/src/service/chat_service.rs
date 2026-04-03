@@ -25,7 +25,7 @@ use crate::dao::session_db::{
 };
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord};
+use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord, WebRTCSignalRecord};
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
@@ -383,6 +383,11 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
         }
         2 => {
             let mut chat_record_raw = <ImageRecord as ChatRecordRaw>::deserialize(raw)?;
+            chat_record_raw.set_prev_id(prev_id);
+            chat_record_raw.json_serialize()
+        }
+        100 => {
+            let mut chat_record_raw = <WebRTCSignalRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         }
