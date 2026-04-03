@@ -4,12 +4,25 @@ import { WebRTCSignalMessage, WebRTCConfig } from '@workspace/types';
 
 /**
  * WebRTC 默认配置
- * - iceServers: 空数组，表示不使用STUN/TURN服务器，仅使用本地候选
+ * - iceServers: 包含国内外STUN服务器，用于获取公网IP(srflx候选)
  * - iceTransportPolicy: 'all' 接收所有类型的候选(host, srflx, relay等)
  * - bundlePolicy: 'max-bundle' 将所有媒体束复用到单个传输
+ * 
+ * 注意：不使用TURN服务器(relay候选被代码主动过滤)，仅用于P2P直连
  */
 const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
-  iceServers: [],
+  iceServers: [
+    // 国内STUN服务器
+    { urls: 'stun:stun.miwifi.com:3478' },
+    { urls: 'stun:stun.chat.bilibili.com:3478' },
+    { urls: 'stun:stun.hitv.com:3478' },
+    // 国际STUN服务器
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+  ],
   iceTransportPolicy: 'all',
   bundlePolicy: 'max-bundle',
 };
