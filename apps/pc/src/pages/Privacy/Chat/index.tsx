@@ -38,7 +38,6 @@ const PrivacyChat: React.FC = () => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
-  const [isP2PConnected, setIsP2PConnected] = useState(false);
   const [remoteVideoData, setRemoteVideoData] = useState<Uint8Array | null>(null);
   const [remoteAudioData, setRemoteAudioData] = useState<Uint8Array | null>(null);
   const [remoteControl, setRemoteControl] = useState<P2pVideoControl | null>(null);
@@ -85,36 +84,6 @@ const PrivacyChat: React.FC = () => {
     };
   }, []);
 
-  const scrollToBottom = () => {
-    const container = messageContainerRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  };
-
-  const startVideoCall = useCallback(async () => {
-    try {
-      const videoService = getPrivacyVideoService();
-      if (!videoService) {
-        message.error('视频服务未初始化');
-        return;
-      }
-
-      await videoService.initLocalStream(true, true);
-
-      if (localVideoRef.current) {
-        await videoService.startVideoCapture(friendId, localVideoRef.current);
-        setIsVideoCallActive(true);
-        setIsVideoEnabled(true);
-        setIsAudioEnabled(true);
-        message.success('视频通话已开始');
-      }
-    } catch (error) {
-      console.error('启动视频通话失败:', error);
-      message.error('启动视频通话失败');
-    }
-  }, [friendId]);
-
   useEffect(() => {
     const videoService = initPrivacyVideoService();
 
@@ -132,33 +101,6 @@ const PrivacyChat: React.FC = () => {
       videoService.stopAll();
     };
   }, []);
-
-  useEffect(() => {
-    const startVideoCallAuto = async () => {
-      console.log('[PrivacyChat] 等待P2P连接建立...');
-      
-      for (let i = 0; i < 30; i++) {
-        try {
-          const result = await invoke<string>('check_p2p_connection', { targetUuid: friendId });
-          if (result === 'connected') {
-            console.log('[PrivacyChat] P2P连接已建立，自动开始视频通话');
-            setIsP2PConnected(true);
-            await startVideoCall();
-            return;
-          }
-        } catch (e) {
-          console.log('[PrivacyChat] 检查P2P连接状态失败:', e);
-        }
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      console.log('[PrivacyChat] P2P连接超时');
-      message.warning('P2P连接建立超时，请手动开始视频通话');
-    };
-
-    if (friendId) {
-      startVideoCallAuto();
-    }
-  }, [friendId, startVideoCall]);
 
   useEffect(() => {
     if (!remoteVideoData || !remoteCanvasRef.current) return;
@@ -251,6 +193,36 @@ const PrivacyChat: React.FC = () => {
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
     source.start();
+  };
+
+  const scrollToBottom = () => {
+    const container = messageContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  };
+
+  const startVideoCall = async () => {
+    try {
+      const videoService = getPrivacyVideoService();
+      if (!videoService) {
+        message.error('视频服务未初始化');
+        return;
+      }
+
+      await videoService.initLocalStream(true, true);
+
+      if (localVideoRef.current) {
+        await videoService.startVideoCapture(friendId, localVideoRef.current);
+        setIsVideoCallActive(true);
+        setIsVideoEnabled(true);
+        setIsAudioEnabled(true);
+        message.success('视频通话已开始');
+      }
+    } catch (error) {
+      console.error('启动视频通话失败:', error);
+      message.error('启动视频通话失败');
+    }
   };
 
   const handleToggleVideo = async () => {
