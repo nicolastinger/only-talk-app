@@ -144,9 +144,9 @@ class WebRTCService {
   /** 最大ICE重启次数 */
   private static MAX_ICE_RESTART_COUNT = 3;
   /** ICE连接超时时间 (毫秒) - NAT3环境需要更长时间 */
-  private static ICE_CONNECTION_TIMEOUT = 30000; // 30秒
+  private static ICE_CONNECTION_TIMEOUT = 45000; // 45秒（NAT3环境）
   /** ICE重启间隔时间 (毫秒) */
-  private static ICE_RESTART_INTERVAL = 15000; // 15秒
+  private static ICE_RESTART_INTERVAL = 10000; // 10秒（更频繁的重启）
   /** 检测到的NAT类型 */
   private detectedNATType: string | null = null;
   /** 是否已完成NAT检测 */
@@ -522,6 +522,9 @@ class WebRTCService {
   /**
    * 尝试重启ICE连接
    * 通过重新创建offer/answer来刷新ICE候选
+   * 
+   * 重要：ICE重启不会创建新窗口，只是在同一个连接上重新协商
+   * 
    * @param friendId 对端用户ID
    * @param connection RTCPeerConnection对象
    */
@@ -534,7 +537,7 @@ class WebRTCService {
     const restartCount = (this.iceRestartCount.get(friendId) || 0) + 1;
     
     if (restartCount > WebRTCService.MAX_ICE_RESTART_COUNT) {
-      console.log(`[WebRTCService.attemptIceRestart] 已达到最大重启次数(${WebRTCService.MAX_ICE_RESTART_COUNT})，停止尝试`);
+      console.log(`[WebRTCService.attemptIceRestart] ❌ 已达到最大重启次数(${WebRTCService.MAX_ICE_RESTART_COUNT})，停止尝试`);
       this.clearIceTimers(friendId);
       
       // 触发最终失败状态
@@ -543,13 +546,14 @@ class WebRTCService {
     }
 
     this.iceRestartCount.set(friendId, restartCount);
-    console.log(`[WebRTCService.attemptIceRestart] 🔄 第${restartCount}次尝试重启ICE...`);
+    console.log(`[WebRTCService.attemptIceRestart] 🔄 第${restartCount}/${WebRTCService.MAX_ICE_RESTART_COUNT}次尝试重启ICE...`);
 
     try {
       // 清除旧的计时器
       this.clearIceTimers(friendId);
       
       // 创建新的offer并设置iceRestart选项
+      // 这会在同一个连接上重新协商，不会创建新窗口
       const offer = await connection.createOffer({
         iceRestart: true,
         offerToReceiveAudio: true,
@@ -557,7 +561,7 @@ class WebRTCService {
       });
 
       await connection.setLocalDescription(offer);
-      console.log(`[WebRTCService.attemptIceRestart] ✅ ICE重启offer已创建并发送`);
+      console.log(`[WebRTCService.attemptIceRestart] ✅ ICE重启offer已创建`);
 
       // 发送新的offer给对端
       const signalMessage: WebRTCSignalMessage = {
@@ -570,7 +574,7 @@ class WebRTCService {
       };
 
       await this.sendSignal(signalMessage);
-      console.log(`[WebRTCService.attemptIceRestart] ✅ ICE重启信令已发送`);
+      console.log(`[WebRTCService.attemptIceRestart] ✅ ICE重启信令已发送，等待对端响应...`);
 
       // 重新启动超时计时器
       this.startIceConnectionTimeout(friendId);
@@ -579,10 +583,12 @@ class WebRTCService {
       
       // 如果还有重试机会，延迟后再次尝试
       if (restartCount < WebRTCService.MAX_ICE_RESTART_COUNT) {
+        console.log(`[WebRTCService.attemptIceRestart] ⏳ ${WebRTCService.ICE_RESTART_INTERVAL / 1000}秒后进行第${restartCount + 1}次尝试...`);
         setTimeout(() => {
           this.attemptIceRestartWithDelay(friendId);
         }, WebRTCService.ICE_RESTART_INTERVAL);
       } else {
+        console.log(`[WebRTCService.attemptIceRestart] ❌ 已达到最大重启次数，放弃连接`);
         this.onConnectionStateChange?.(friendId, 'failed');
       }
     }
@@ -716,23 +722,26 @@ class WebRTCService {
   private adjustConfigForNATType(natType: string): void {
     switch (natType) {
       case 'nat3':
-        console.log(`[WebRTCService.adjustConfigForNATType] 🔄 调整配置适配NAT3环境...`);
-        // NAT3环境下增加超时时间
-        WebRTCService.ICE_CONNECTION_TIMEOUT = 45000; // 增加到45秒
-        WebRTCService.ICE_RESTART_INTERVAL = 20000;   // 增加到20秒
+        console.log(`[WebRTCService.adjustConfigForNATType] 🔄 检测到NAT3（对称型NAT），调整配置...`);
+        console.warn(`[WebRTCService.adjustConfigForNATType] ⚠️  对称型NAT穿透难度极高，可能需要多次尝试`);
+        // NAT3环境下增加超时时间和重启次数
+        WebRTCService.ICE_CONNECTION_TIMEOUT = 60000; // 增加到60秒
+        WebRTCService.ICE_RESTART_INTERVAL = 8000;    // 缩短到8秒，更频繁尝试
+        WebRTCService.MAX_ICE_RESTART_COUNT = 5;      // 增加到5次
         break;
         
       case 'nat1':
       case 'public':
-        console.log(`[WebRTCService.adjustConfigForNATType] ✅ 网络条件良好，使用标准配置`);
+        console.log(`[WebRTCService.adjustConfigForNATType] ✅ 网络条件良好(${natType})，使用标准配置`);
         // 保持默认配置
         break;
         
       case 'blocked':
         console.warn(`[WebRTCService.adjustConfigForNATType] ⚠️ 网络受限严重，尝试更激进的策略`);
         // 尝试更长的超时和更多重启次数
-        WebRTCService.ICE_CONNECTION_TIMEOUT = 60000; // 60秒
-        WebRTCService.MAX_ICE_RESTART_COUNT = 5;       // 允许更多重启
+        WebRTCService.ICE_CONNECTION_TIMEOUT = 90000; // 90秒
+        WebRTCService.ICE_RESTART_INTERVAL = 5000;    // 5秒
+        WebRTCService.MAX_ICE_RESTART_COUNT = 7;       // 允许更多重启
         break;
         
       default:
@@ -740,7 +749,10 @@ class WebRTCService {
         break;
     }
     
-    console.log(`[WebRTCService.adjustConfigForNATType] 配置已调整 - 超时: ${WebRTCService.ICE_CONNECTION_TIMEOUT / 1000}秒, 重启间隔: ${WebRTCService.ICE_RESTART_INTERVAL / 1000}秒, 最大重启: ${WebRTCService.MAX_ICE_RESTART_COUNT}次`);
+    console.log(`[WebRTCService.adjustConfigForNATType] 配置已调整:`);
+    console.log(`  - 超时时间: ${WebRTCService.ICE_CONNECTION_TIMEOUT / 1000}秒`);
+    console.log(`  - 重启间隔: ${WebRTCService.ICE_RESTART_INTERVAL / 1000}秒`);
+    console.log(`  - 最大重启次数: ${WebRTCService.MAX_ICE_RESTART_COUNT}次`);
   }
 
   /**
