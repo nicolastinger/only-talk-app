@@ -40,8 +40,7 @@ const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
     { urls: 'stun:stun.schlund.de:3478' },
     
     // ========== Twilio STUN 服务器 ==========
-    { urls: 'stun:global.stun.twilio.com:3478?transport=udp' },
-    { urls: 'stun:global.stun.twilio.com:3478?transport=tcp' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
     
     // ========== Cloudflare STUN 服务器 ==========
     { urls: 'stun:stun.cloudflare.com:3478' },
