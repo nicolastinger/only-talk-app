@@ -43,7 +43,7 @@ use crate::cmd::notification_controller::{
     batch_read_system_notification, get_system_notification,
 };
 use crate::cmd::p2p_controller::{
-    close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
+    check_p2p_connection, close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
     send_p2p_init_msg, send_p2p_text_msg, send_p2p_video_config, send_p2p_video_control,
     send_p2p_video_frame, send_video_frame,
 };
@@ -136,6 +136,7 @@ pub fn run() {
             send_p2p_video_frame,
             send_p2p_audio_frame,
             send_p2p_video_control,
+            check_p2p_connection,
             send_p2p_text_msg,
             close_p2p_connection,
             get_chat_record_from_store,

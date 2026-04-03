@@ -103,3 +103,27 @@ pub async fn send_p2p_audio_frame(audio_data: Vec<u8>, target_uuid: String) -> R
 pub async fn send_p2p_video_control(control_type: String, target_uuid: String) -> Result<(), String> {
     send_p2p_video_control_service(control_type, target_uuid).await.map_err(|e| e.to_string())
 }
+
+/// 检查P2P连接状态
+#[tauri::command]
+pub async fn check_p2p_connection(target_uuid: String) -> Result<String, String> {
+    let is_active = {
+        let guard = crate::GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("p2p_active").map(|v| v == "true").unwrap_or(false)
+    };
+    
+    if !is_active {
+        return Ok("disconnected".to_string());
+    }
+    
+    let has_sender = {
+        let guard = crate::P2P_STREAM_SENDER.read().await;
+        guard.contains_key(&target_uuid)
+    };
+    
+    if has_sender {
+        Ok("connected".to_string())
+    } else {
+        Ok("connecting".to_string())
+    }
+}
