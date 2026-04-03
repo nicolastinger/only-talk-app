@@ -9,14 +9,15 @@ use tauri::Emitter;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, Mutex};
 
-use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData};
+use crate::entity::p2p_models::{P2pVideoConfig, P2pVideoData, P2pVideoControl};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
-    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
+    MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, 
+    MSG_TYPE_P2P_VIDEO_CONTROL, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
@@ -100,12 +101,25 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                     handle.emit("video_frame", msg.raw)?;
                 }
             }
+            MSG_TYPE_P2P_AUDIO_DATA => {
+                if let Some(handle) = APP_HANDLE.get() {
+                    handle.emit("audio_frame", msg.raw)?;
+                }
+            }
             MSG_TYPE_P2P_VIDEO_CONFIG => {
                 info!("接收到p2p视频配置信息 {:?}", msg);
                 let key = format!("p2p_video_config_{}", msg.send_user);
                 let video_config = serde_json::from_slice::<P2pVideoConfig>(&msg.raw)?;
                 let video_str = serde_json::to_string(&video_config)?;
                 insert_user_info(&key, &video_str).await?;
+            }
+            MSG_TYPE_P2P_VIDEO_CONTROL => {
+                info!("接收到p2p视频控制信息 {:?}", msg);
+                if let Some(handle) = APP_HANDLE.get() {
+                    let control = serde_json::from_slice::<P2pVideoControl>(&msg.raw)?;
+                    let control_json = serde_json::to_string(&control)?;
+                    handle.emit("p2p_video_control", control_json)?;
+                }
             }
             MSG_TYPE_P2P_TEXT => {
                 info!("接收到p2p文本消息 {:?}", msg);

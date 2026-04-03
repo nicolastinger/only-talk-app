@@ -32,6 +32,12 @@ pub const MSG_TYPE_P2P_VIDEO_DATA: u16 = 6;
 /// P2P视频配置
 pub const MSG_TYPE_P2P_VIDEO_CONFIG: u16 = 7;
 
+/// P2P音频数据
+pub const MSG_TYPE_P2P_AUDIO_DATA: u16 = 9;
+
+/// P2P视频通话控制（开始/结束/切换）
+pub const MSG_TYPE_P2P_VIDEO_CONTROL: u16 = 10;
+
 /// 心跳消息(Ping)
 pub const MSG_TYPE_PING: u16 = 99;
 
