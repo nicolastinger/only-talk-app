@@ -148,7 +148,7 @@ const Search: React.FC<SearchProps> = ({ onSelect }) => {
         {value && (
           <CloseOutlined
             className={styles.clearBtn}
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               setValue('');
             }}
