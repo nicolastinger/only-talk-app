@@ -167,20 +167,6 @@ pub enum P2pMediaControlType {
     EndCall,
 }
 
-/// 视频通话邀请
-/// 用于发起视频通话时通知对端
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct P2pVideoCallInvite {
-    /// 发起者UUID
-    pub from_uuid: String,
-    /// 目标UUID
-    pub to_uuid: String,
-    /// 时间戳
-    pub timestamp: u64,
-    /// 媒体配置 (可选)
-    pub media_config: Option<P2pMediaConfig>,
-}
-
 /// P2P消息 - 前端通信
 /// 用于向前端发送P2P事件通知
 #[derive(Debug, Serialize, Deserialize, Clone)]
