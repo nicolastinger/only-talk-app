@@ -14,9 +14,10 @@ import styles from './index.module.less';
 interface PrivacyVideoCallProps {
   friendId: string;
   onClose?: () => void;
+  isInitiator?: boolean;
 }
 
-const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({ friendId, onClose }) => {
+const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({ friendId, onClose, isInitiator = false }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localAudioRef = useRef<HTMLAudioElement>(null);

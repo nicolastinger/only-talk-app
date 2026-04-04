@@ -8,7 +8,7 @@ use log::{info, warn};
 use nanoid::nanoid;
 use tauri::Emitter;
 
-use crate::entity::p2p_models::{P2pInitMsg, P2pMediaConfig, P2pMsg, P2pVideoConfig, UserAddressInfo};
+use crate::entity::p2p_models::{P2pInitMsg, P2pMediaConfig, P2pMsg, P2pVideoCallInvite, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
@@ -23,7 +23,7 @@ use crate::utils::global_static_str::{
 };
 use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
+    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -515,5 +515,54 @@ pub async fn send_p2p_media_control_service(
     }
     
     info!("媒体控制命令发送完成");
+    Ok(())
+}
+
+/// 发送p2p视频通话邀请
+/// 用于发起视频通话时通知对端
+/// 
+/// # 参数
+/// - `target_uuid`: 目标用户UUID
+/// - `media_config`: 媒体配置 (可选)
+/// 
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+pub async fn send_p2p_video_call_invite_service(
+    target_uuid: String,
+    media_config: Option<P2pMediaConfig>,
+) -> Result<(), anyhow::Error> {
+    info!("发送视频通话邀请给 {}", target_uuid);
+    
+    let from_uuid = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("no uuid"))?.clone()
+    };
+    
+    let invite = P2pVideoCallInvite {
+        from_uuid: from_uuid.clone(),
+        to_uuid: target_uuid.clone(),
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64,
+        media_config,
+    };
+    
+    let invite_vec = serde_json::to_vec(&invite)?;
+    let invite_msg = generate_text_msg(
+        MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+        invite_vec,
+        target_uuid.clone(),
+        from_uuid,
+    )?;
+    
+    let send_stream = get_sender(&target_uuid).await?;
+    {
+        let mut guard = send_stream.try_lock()?;
+        guard.write_all(&invite_msg).await?;
+    }
+    
+    info!("视频通话邀请发送完成");
     Ok(())
 }

@@ -51,6 +51,10 @@ pub const MSG_TYPE_P2P_MEDIA_CONFIG: u16 = 10;
 /// 用于控制视频/音频的开关、暂停等操作
 pub const MSG_TYPE_P2P_MEDIA_CONTROL: u16 = 11;
 
+/// P2P视频通话邀请
+/// 用于发起视频通话时通知对端
+pub const MSG_TYPE_P2P_VIDEO_CALL_INVITE: u16 = 12;
+
 // ==================== P2P请求响应类型 ====================
 
 /// 接受P2P请求

@@ -9,7 +9,7 @@ use tauri::Emitter;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, Mutex};
 
-use crate::entity::p2p_models::{P2pMediaConfig, P2pMediaControl, P2pVideoConfig, P2pVideoData};
+use crate::entity::p2p_models::{P2pMediaConfig, P2pMediaControl, P2pVideoCallInvite, P2pVideoConfig, P2pVideoData};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
@@ -17,7 +17,7 @@ use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
     MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
+    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
     MSG_TYPE_PING,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
@@ -127,6 +127,14 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 let control = serde_json::from_slice::<P2pMediaControl>(&msg.raw)?;
                 if let Some(handle) = APP_HANDLE.get() {
                     handle.emit("media_control", &msg.raw)?;
+                }
+            }
+            MSG_TYPE_P2P_VIDEO_CALL_INVITE => {
+                info!("接收到p2p视频通话邀请 {:?}", msg);
+                let invite = serde_json::from_slice::<P2pVideoCallInvite>(&msg.raw)?;
+                if let Some(handle) = APP_HANDLE.get() {
+                    let invite_json = serde_json::to_string(&invite)?;
+                    handle.emit("video_call_invite", invite_json)?;
                 }
             }
             MSG_TYPE_P2P_TEXT => {
