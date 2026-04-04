@@ -86,17 +86,8 @@ interface P2pInitMsg {
   request_addr: string;
   request_uuid: string;
   request_token: string;
-  accept_uuid: string;
   accept: boolean;
   ip_type: number;
-  step: number;
-  is_server: boolean;
-}
-
-interface P2pVideoControl {
-  control_type: 'start' | 'stop' | 'video_on' | 'video_off' | 'audio_on' | 'audio_off';
-  sender_uuid: string;
-  timestamp: number;
 }
 
 interface RequestMediaMsg {
@@ -112,7 +103,6 @@ export type {
   MessageQueueProps,
   P2pInitMsg,
   P2pMsg,
-  P2pVideoControl,
   RequestMediaMsg,
   UserInfo,
   BasicUser,

@@ -42,12 +42,6 @@ pub struct P2pVideoData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct P2pAudioData {
-    pub uuid: String,
-    pub audio_data: Vec<u8>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct P2pVideoConfig {
     // 宽度
     pub width: u16,
@@ -63,16 +57,6 @@ pub struct P2pVideoConfig {
     pub video: bool,
     // 是否开启音频
     pub audio: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct P2pVideoControl {
-    // 控制类型: start, stop, video_on, video_off, audio_on, audio_off
-    pub control_type: String,
-    // 发送者uuid
-    pub sender_uuid: String,
-    // 时间戳
-    pub timestamp: i64,
 }
 
 // 前端通信

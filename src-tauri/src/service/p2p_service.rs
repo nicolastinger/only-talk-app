@@ -8,7 +8,7 @@ use log::{info, warn};
 use nanoid::nanoid;
 use tauri::Emitter;
 
-use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pVideoConfig, P2pVideoControl, UserAddressInfo};
+use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
@@ -22,8 +22,7 @@ use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };
 use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, 
-    MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_CONTROL, P2P_ACCEPT_REQUEST,
+    MSG_TYPE_P2P, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -381,61 +380,4 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
     
     info!("p2p连接资源清理完成");
     Ok(())
-}
-
-/// 发送p2p音频帧数据
-pub async fn send_p2p_audio_frame_service(
-    audio_data: Vec<u8>,
-    target_uuid: String,
-) -> Result<(), anyhow::Error> {
-    info!("音频帧大小 {}", audio_data.len());
-    let sender = {
-        let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let sender = guard.get("uuid").ok_or(anyhow!("no sender"))?.clone();
-        sender
-    };
-
-    let audio_msg =
-        generate_text_msg(MSG_TYPE_P2P_AUDIO_DATA, audio_data, target_uuid.clone(), sender)?;
-
-    {
-        let send_stream = get_sender(&target_uuid).await?;
-        {
-            let mut guard = send_stream.try_lock()?;
-            guard.write_all(&audio_msg).await?;
-        }
-        Ok(())
-    }
-}
-
-/// 发送p2p视频控制消息
-pub async fn send_p2p_video_control_service(
-    control_type: String,
-    target_uuid: String,
-) -> Result<(), anyhow::Error> {
-    info!("发送视频控制消息: {} -> {}", control_type, target_uuid);
-    let sender = {
-        let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let sender = guard.get("uuid").ok_or(anyhow!("no sender"))?.clone();
-        sender
-    };
-
-    let video_control = P2pVideoControl {
-        control_type,
-        sender_uuid: sender.clone(),
-        timestamp: chrono::Utc::now().timestamp_millis(),
-    };
-
-    let control_data = serde_json::to_vec(&video_control)?;
-    let control_msg =
-        generate_text_msg(MSG_TYPE_P2P_VIDEO_CONTROL, control_data, target_uuid.clone(), sender)?;
-
-    {
-        let send_stream = get_sender(&target_uuid).await?;
-        {
-            let mut guard = send_stream.try_lock()?;
-            guard.write_all(&control_msg).await?;
-        }
-        Ok(())
-    }
 }

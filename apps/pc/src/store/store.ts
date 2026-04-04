@@ -48,11 +48,8 @@ export const useBearStore = create<BearState>()((set) => ({
       request_addr: '',
       request_uuid: '',
       request_token: '',
-      accept_uuid: '',
       accept: false,
       ip_type: 0,
-      step: 0,
-      is_server: false,
     },
   },
   videoConfig: {

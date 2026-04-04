@@ -5,8 +5,7 @@ use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
     access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
-    send_p2p_audio_frame_service, send_p2p_text_msg_service, send_p2p_video_config_service, 
-    send_p2p_video_control_service, send_p2p_video_frame_service,
+    send_p2p_text_msg_service, send_p2p_video_config_service, send_p2p_video_frame_service,
 };
 use crate::utils::global_static_str::UDP_SOCKET;
 
@@ -90,16 +89,4 @@ pub async fn send_p2p_text_msg(text: String, target_uuid: String) -> Result<(), 
 #[tauri::command]
 pub async fn close_p2p_connection(target_uuid: String) -> Result<(), String> {
     close_p2p_connection_service(target_uuid).await.map_err(|e| e.to_string())
-}
-
-/// 发送p2p音频帧数据
-#[tauri::command]
-pub async fn send_p2p_audio_frame(audio_data: Vec<u8>, target_uuid: String) -> Result<(), String> {
-    send_p2p_audio_frame_service(audio_data, target_uuid).await.map_err(|e| e.to_string())
-}
-
-/// 发送p2p视频控制消息
-#[tauri::command]
-pub async fn send_p2p_video_control(control_type: String, target_uuid: String) -> Result<(), String> {
-    send_p2p_video_control_service(control_type, target_uuid).await.map_err(|e| e.to_string())
 }
