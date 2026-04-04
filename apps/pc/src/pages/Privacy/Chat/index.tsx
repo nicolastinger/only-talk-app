@@ -1,10 +1,11 @@
-import { LockOutlined, LogoutOutlined } from '@ant-design/icons';
+import { LockOutlined, LogoutOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { window } from '@tauri-apps/api';
 import { useLocation } from '@umijs/max';
 import { Button, Input, message } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
+import PrivacyVideoCall from '@/components/Media/PrivacyVideoCall';
 import styles from './index.less';
 
 const { TextArea } = Input;
@@ -26,6 +27,7 @@ interface ChatMessageItem {
 const PrivacyChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -135,6 +137,22 @@ const PrivacyChat: React.FC = () => {
     }
   };
 
+  const toggleVideoCall = () => {
+    setIsVideoCallActive(!isVideoCallActive);
+  };
+
+  const handleVideoCallClose = () => {
+    setIsVideoCallActive(false);
+  };
+
+  if (isVideoCallActive) {
+    return (
+      <div className={styles.videoCallPage}>
+        <PrivacyVideoCall friendId={friendId} onClose={handleVideoCallClose} />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -142,15 +160,25 @@ const PrivacyChat: React.FC = () => {
           <LockOutlined className={styles.privacyIcon} />
           <span className={styles.title}>隐私聊天</span>
         </div>
-        <Button
-          className={styles.exitBtn}
-          type="text"
-          danger
-          icon={<LogoutOutlined />}
-          onClick={handleExit}
-        >
-          退出
-        </Button>
+        <div className={styles.headerActions}>
+          <Button
+            type="text"
+            icon={<VideoCameraOutlined />}
+            onClick={toggleVideoCall}
+            className={styles.videoCallBtn}
+          >
+            视频通话
+          </Button>
+          <Button
+            className={styles.exitBtn}
+            type="text"
+            danger
+            icon={<LogoutOutlined />}
+            onClick={handleExit}
+          >
+            退出
+          </Button>
+        </div>
       </div>
       <div className={styles.hint}>
         隐私聊天消息不会保存到本地，关闭窗口后消息将消失

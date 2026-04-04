@@ -8,7 +8,7 @@ use log::{info, warn};
 use nanoid::nanoid;
 use tauri::Emitter;
 
-use crate::entity::p2p_models::{P2pInitMsg, P2pMsg, P2pVideoConfig, UserAddressInfo};
+use crate::entity::p2p_models::{P2pInitMsg, P2pMediaConfig, P2pMsg, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
@@ -22,7 +22,8 @@ use crate::utils::global_static_str::{
     TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };
 use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
+    MSG_TYPE_P2P, MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
+    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -379,5 +380,140 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
     }
     
     info!("p2p连接资源清理完成");
+    Ok(())
+}
+
+/// 发送p2p音频数据
+/// 用于隐私模式视频聊天中的音频传输
+/// 
+/// # 参数
+/// - `audio_data`: 音频帧数据 (Opus编码)
+/// - `target_uuid`: 目标用户UUID
+/// 
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+pub async fn send_p2p_audio_frame_service(
+    audio_data: Vec<u8>,
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    info!("音频帧大小 {}", audio_data.len());
+    let sender = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("no sender"))?.clone()
+    };
+
+    let audio_msg =
+        generate_text_msg(MSG_TYPE_P2P_AUDIO_DATA, audio_data, target_uuid.clone(), sender)?;
+
+    {
+        let send_stream = get_sender(&target_uuid).await?;
+        {
+            let mut guard = send_stream.try_lock()?;
+            guard.write_all(&audio_msg).await?;
+        }
+        Ok(())
+    }
+}
+
+/// 发送p2p媒体配置信息
+/// 用于视频聊天初始化时的参数协商
+/// 
+/// # 参数
+/// - `media_config`: 媒体配置JSON字符串
+/// - `uuid`: 目标用户UUID
+/// 
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+pub async fn send_p2p_media_config_service(
+    media_config: String,
+    uuid: String,
+) -> Result<(), anyhow::Error> {
+    info!("开始发送媒体配置信息 {}", uuid);
+    let media_config = serde_json::from_str::<P2pMediaConfig>(&media_config)?;
+    let media_config_vec = serde_json::to_vec(&media_config)?;
+    let me = get_user_info("uuid").await?;
+    let p2p_data =
+        generate_text_msg(MSG_TYPE_P2P_MEDIA_CONFIG, media_config_vec, String::new(), me)?;
+    
+    for _ in 0..10 {
+        info!("等待p2p连接 {}", uuid);
+        {
+            match get_sender(&uuid).await {
+                Ok(sender) => {
+                    info!("发送p2p媒体配置信息 {}", uuid);
+                    let mut guard = sender.try_lock()?;
+                    guard.write_all(&p2p_data).await?;
+                    return Ok(());
+                }
+                Err(e) => {
+                    warn!("找不到发送流，等待下一次获取 {}", e);
+                }
+            };
+        }
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+    Ok(())
+}
+
+/// 发送p2p媒体控制命令
+/// 用于控制视频/音频的开关等操作
+/// 
+/// # 参数
+/// - `control_type`: 控制类型 (VideoToggle/AudioToggle/Pause/Resume/EndCall)
+/// - `enabled`: 是否启用
+/// - `target_uuid`: 目标用户UUID
+/// 
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+pub async fn send_p2p_media_control_service(
+    control_type: String,
+    enabled: bool,
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    info!("发送媒体控制命令: {} = {}", control_type, enabled);
+    
+    use crate::entity::p2p_models::P2pMediaControlType;
+    
+    let control_type_enum = match control_type.as_str() {
+        "VideoToggle" => P2pMediaControlType::VideoToggle,
+        "AudioToggle" => P2pMediaControlType::AudioToggle,
+        "Pause" => P2pMediaControlType::Pause,
+        "Resume" => P2pMediaControlType::Resume,
+        "EndCall" => P2pMediaControlType::EndCall,
+        _ => return Err(anyhow!("未知的控制类型: {}", control_type)),
+    };
+    
+    let control = crate::entity::p2p_models::P2pMediaControl {
+        control_type: control_type_enum,
+        enabled,
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64,
+    };
+    
+    let control_vec = serde_json::to_vec(&control)?;
+    let sender = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("no sender"))?.clone()
+    };
+    
+    let control_msg = generate_text_msg(
+        MSG_TYPE_P2P_MEDIA_CONTROL,
+        control_vec,
+        target_uuid.clone(),
+        sender,
+    )?;
+    
+    let send_stream = get_sender(&target_uuid).await?;
+    {
+        let mut guard = send_stream.try_lock()?;
+        guard.write_all(&control_msg).await?;
+    }
+    
+    info!("媒体控制命令发送完成");
     Ok(())
 }
