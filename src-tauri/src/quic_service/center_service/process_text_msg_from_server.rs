@@ -43,11 +43,13 @@ struct WebRTCSignalMessage {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct IceCandidateData {
-    candidate: String,
+    candidate: Option<String>,
     #[serde(rename = "sdpMid")]
     sdp_mid: Option<String>,
     #[serde(rename = "sdpMLineIndex")]
     sdp_mline_index: Option<u16>,
+    #[serde(rename = "usernameFragment")]
+    username_fragment: Option<String>,
 }
 
 struct ParsedCandidate {
@@ -323,25 +325,43 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
     );
     
     if signal.msg_type == "candidate" {
-        if let Ok(candidate_data) = serde_json::from_value::<IceCandidateData>(signal.data.clone()) {
-            if let Some(parsed) = parse_ice_candidate(&candidate_data.candidate) {
-                info!(
-                    "解析 ICE candidate - type: {}, ip: {}, port: {}",
-                    parsed.candidate_type, parsed.ip, parsed.port
-                );
-                
-                if parsed.candidate_type == "srflx" {
-                    let local_uuid = {
-                        let guard = GLOBAL_QUIC_USER_INFO.read().await;
-                        guard.get("uuid").cloned().unwrap_or_default()
-                    };
-                    
-                    tokio::spawn(async move {
-                        if let Err(e) = send_udp_ping_for_webrtc(&parsed.ip, parsed.port, &local_uuid).await {
-                            warn!("发送 UDP ping 失败: {}", e);
+        info!("开始解析 ICE candidate, data: {:?}", signal.data);
+        
+        match serde_json::from_value::<IceCandidateData>(signal.data.clone()) {
+            Ok(candidate_data) => {
+                match &candidate_data.candidate {
+                    Some(candidate_str) => {
+                        info!("ICE candidate 数据解析成功, candidate 字符串: {}", candidate_str);
+                        
+                        if let Some(parsed) = parse_ice_candidate(candidate_str) {
+                            info!(
+                                "解析 ICE candidate - type: {}, ip: {}, port: {}",
+                                parsed.candidate_type, parsed.ip, parsed.port
+                            );
+                            
+                            if parsed.candidate_type == "srflx" {
+                                let local_uuid = {
+                                    let guard = GLOBAL_QUIC_USER_INFO.read().await;
+                                    guard.get("uuid").cloned().unwrap_or_default()
+                                };
+                                
+                                tokio::spawn(async move {
+                                    if let Err(e) = send_udp_ping_for_webrtc(&parsed.ip, parsed.port, &local_uuid).await {
+                                        warn!("发送 UDP ping 失败: {}", e);
+                                    }
+                                });
+                            }
+                        } else {
+                            warn!("parse_ice_candidate 返回 None, 无法解析 candidate 字符串: {}", candidate_str);
                         }
-                    });
+                    }
+                    None => {
+                        warn!("ICE candidate 字段为空，可能是候选收集完成信号");
+                    }
                 }
+            }
+            Err(e) => {
+                warn!("解析 IceCandidateData 失败: {}", e);
             }
         }
     }
