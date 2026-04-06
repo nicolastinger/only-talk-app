@@ -928,7 +928,7 @@ class WebRTCService {
 
     const iceCandidate = new RTCIceCandidate(candidate);
     // 跳过relay类型的候选
-    if (iceCandidate.type === 'relay') {
+    if (iceCandidate.type === 'relay' || iceCandidate.type === 'host') {
       console.log(`[WebRTCService.handleCandidate] 跳过中继候选(relay candidate)`);
       return;
     }

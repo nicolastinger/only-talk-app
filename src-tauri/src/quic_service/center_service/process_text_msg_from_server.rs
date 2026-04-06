@@ -1,7 +1,10 @@
 use std::time::Duration;
 
+use std::net::{SocketAddr, UdpSocket};
+
 use anyhow::anyhow;
 use log::{error, info, warn};
+use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::time::timeout;
 
@@ -26,7 +29,32 @@ use crate::utils::message_types::{
 };
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
+use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct WebRTCSignalMessage {
+    #[serde(rename = "type")]
+    msg_type: String,
+    sender: String,
+    receiver: String,
+    data: serde_json::Value,
+    timestamp: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct IceCandidateData {
+    candidate: String,
+    #[serde(rename = "sdpMid")]
+    sdp_mid: Option<String>,
+    #[serde(rename = "sdpMLineIndex")]
+    sdp_mline_index: Option<u16>,
+}
+
+struct ParsedCandidate {
+    ip: String,
+    port: u16,
+    candidate_type: String,
+}
 
 /// 处理消息
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
@@ -287,12 +315,159 @@ async fn process_local_notify_message(
 
 async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
-    let payload = serde_json::to_string(&msg)?;
+    let signal: WebRTCSignalMessage = serde_json::from_str(&msg.raw)?;
     
+    info!(
+        "收到 WebRTC 信令消息 - type: {}, sender: {}, receiver: {}",
+        signal.msg_type, signal.sender, signal.receiver
+    );
+    
+    if signal.msg_type == "candidate" {
+        if let Ok(candidate_data) = serde_json::from_value::<IceCandidateData>(signal.data.clone()) {
+            if let Some(parsed) = parse_ice_candidate(&candidate_data.candidate) {
+                info!(
+                    "解析 ICE candidate - type: {}, ip: {}, port: {}",
+                    parsed.candidate_type, parsed.ip, parsed.port
+                );
+                
+                if parsed.candidate_type == "srflx" {
+                    let local_uuid = {
+                        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+                        guard.get("uuid").cloned().unwrap_or_default()
+                    };
+                    
+                    tokio::spawn(async move {
+                        if let Err(e) = send_udp_ping_for_webrtc(&parsed.ip, parsed.port, &local_uuid).await {
+                            warn!("发送 UDP ping 失败: {}", e);
+                        }
+                    });
+                }
+            }
+        }
+    }
+    
+    let payload = serde_json::to_string(&msg)?;
     APP_HANDLE
         .get()
         .ok_or(anyhow!("获取app失败"))?
         .emit("webrtc_signal", payload)?;
     
     Ok(())
+}
+
+fn parse_ice_candidate(candidate_str: &str) -> Option<ParsedCandidate> {
+    let parts: Vec<&str> = candidate_str.split_whitespace().collect();
+    
+    if parts.is_empty() || parts[0] != "candidate:" {
+        return None;
+    }
+    
+    let mut ip: Option<String> = None;
+    let mut port: Option<u16> = None;
+    let mut candidate_type: Option<String> = None;
+    
+    let mut i = 0;
+    while i < parts.len() {
+        match parts[i] {
+            "typ" => {
+                if i + 1 < parts.len() {
+                    candidate_type = Some(parts[i + 1].to_string());
+                    i += 2;
+                    continue;
+                }
+            }
+            _ => {
+                if i >= 4 && parts.len() > i {
+                    if ip.is_none() && parts[i].parse::<std::net::IpAddr>().is_ok() {
+                        ip = Some(parts[i].to_string());
+                    } else if ip.is_some() && port.is_none() {
+                        if let Ok(p) = parts[i].parse::<u16>() {
+                            port = Some(p);
+                        }
+                    }
+                }
+            }
+        }
+        i += 1;
+    }
+    
+    if parts.len() > 4 {
+        if let Ok(addr) = parts[4].parse::<std::net::IpAddr>() {
+            ip = Some(addr.to_string());
+        }
+        if parts.len() > 5 {
+            if let Ok(p) = parts[5].parse::<u16>() {
+                port = Some(p);
+            }
+        }
+    }
+    
+    match (ip, port, candidate_type) {
+        (Some(ip), Some(port), Some(candidate_type)) => Some(ParsedCandidate {
+            ip,
+            port,
+            candidate_type,
+        }),
+        _ => None,
+    }
+}
+
+async fn send_udp_ping_for_webrtc(
+    remote_ip: &str,
+    remote_port: u16,
+    local_uuid: &str,
+) -> Result<(), anyhow::Error> {
+    let local_port = find_available_udp_port(20000);
+    let local_port = match local_port {
+        Some(p) => p,
+        None => {
+            warn!("无法找到可用的 UDP 端口");
+            return Err(anyhow!("无法找到可用的 UDP 端口"));
+        }
+    };
+    
+    let local_addr: SocketAddr = format!("0.0.0.0:{}", local_port).parse()?;
+    let remote_addr: SocketAddr = format!("{}:{}", remote_ip, remote_port).parse()?;
+    
+    info!("WebRTC NAT 穿透: 本地 {} -> 远程 {}", local_addr, remote_addr);
+    
+    let socket = UdpSocket::bind(local_addr)?;
+    socket.set_read_timeout(Some(std::time::Duration::from_millis(100)))?;
+    
+    let ping_data = format!("WEBRTC_PING:{}", local_uuid);
+    
+    for i in 0..3 {
+        match socket.send_to(ping_data.as_bytes(), remote_addr) {
+            Ok(_) => {
+                info!("UDP ping 发送成功 (第{}次) -> {}", i + 1, remote_addr);
+            }
+            Err(e) => {
+                warn!("UDP ping 发送失败 (第{}次): {}", i + 1, e);
+            }
+        }
+        
+        if i < 2 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    }
+    
+    {
+        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
+        guard.insert(
+            "webrtc_remote_addr".to_string(),
+            remote_addr.to_string(),
+        );
+    }
+    
+    info!("WebRTC UDP ping 完成，已记录远程地址: {}", remote_addr);
+    Ok(())
+}
+
+fn find_available_udp_port(start_port: u16) -> Option<u16> {
+    use std::net::{SocketAddrV4, Ipv4Addr};
+    
+    (start_port..=65535).find(|&port| {
+        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port);
+        UdpSocket::bind(addr).is_ok()
+    })
 }
