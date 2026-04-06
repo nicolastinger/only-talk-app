@@ -17,9 +17,11 @@
  */
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { window } from '@tauri-apps/api';
 import {
   AudioMutedOutlined,
   AudioOutlined,
+  LogoutOutlined,
   PhoneOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
@@ -82,8 +84,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** SourceBuffer - 用于缓冲远程视频数据 */
   const sourceBufferRef = useRef<SourceBuffer | null>(null);
   
-  /** AudioContext - 用于播放远程音频 */
-  const audioContextRef = useRef<AudioContext | null>(null);
+  /** AudioMediaSource - 用于接收远程音频流 */
+  const audioMediaSourceRef = useRef<MediaSource | null>(null);
+  
+  /** AudioSourceBuffer - 用于缓冲远程音频数据 */
+  const audioSourceBufferRef = useRef<SourceBuffer | null>(null);
 
   // ==================== 缓冲队列引用 ====================
   
@@ -91,10 +96,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   const videoBufferQueueRef = useRef<Uint8Array[]>([]);
   
   /** 音频缓冲队列 - 存储待处理的音频帧 */
-  const audioBufferQueueRef = useRef<ArrayBuffer[]>([]);
+  const audioBufferQueueRef = useRef<Uint8Array[]>([]);
   
-  /** SourceBuffer更新状态标记 - 防止并发写入 */
-  const isSourceBufferUpdatingRef = useRef<boolean>(false);
+  /** 视频SourceBuffer更新状态标记 - 防止并发写入 */
+  const isVideoSourceBufferUpdatingRef = useRef<boolean>(false);
+  
+  /** 音频SourceBuffer更新状态标记 - 防止并发写入 */
+  const isAudioSourceBufferUpdatingRef = useRef<boolean>(false);
 
   // ==================== 事件监听器清理引用 ====================
   
@@ -303,7 +311,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 流程:
    * 1. 创建 MediaSource 对象用于接收视频流
    * 2. 创建 SourceBuffer 用于缓冲视频数据
-   * 3. 创建 AudioContext 用于播放音频
+   * 3. 创建 MediaSource 对象用于接收音频流
+   * 4. 创建 SourceBuffer 用于缓冲音频数据
    */
   const initRemoteMediaReceiver = useCallback(async () => {
     // 创建 MediaSource 用于视频流
@@ -318,7 +327,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     // 监听 sourceopen 事件
     mediaSource.addEventListener('sourceopen', () => {
       try {
-        // 创建 SourceBuffer
+        // 创建视频 SourceBuffer
         const buffer = mediaSource.addSourceBuffer(
           defaultMediaConfig.video_config.encode,
         );
@@ -326,22 +335,53 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
         // 监听 updateend 事件，处理缓冲队列
         buffer.addEventListener('updateend', () => {
-          isSourceBufferUpdatingRef.current = false;
+          isVideoSourceBufferUpdatingRef.current = false;
           processVideoBufferQueue();
         });
 
         // 监听 error 事件
         buffer.addEventListener('error', (e) => {
-          console.error('SourceBuffer 错误:', e);
-          isSourceBufferUpdatingRef.current = false;
+          console.error('视频 SourceBuffer 错误:', e);
+          isVideoSourceBufferUpdatingRef.current = false;
         });
       } catch (error) {
-        console.error('创建SourceBuffer失败:', error);
+        console.error('创建视频 SourceBuffer 失败:', error);
       }
     });
 
-    // 创建 AudioContext 用于音频播放
-    audioContextRef.current = new AudioContext();
+    // 创建 MediaSource 用于音频流
+    const audioMediaSource = new MediaSource();
+    audioMediaSourceRef.current = audioMediaSource;
+
+    // 将 MediaSource 绑定到远程音频元素
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.src = URL.createObjectURL(audioMediaSource);
+    }
+
+    // 监听 sourceopen 事件
+    audioMediaSource.addEventListener('sourceopen', () => {
+      try {
+        // 创建音频 SourceBuffer
+        const audioBuffer = audioMediaSource.addSourceBuffer(
+          defaultMediaConfig.audio_config.encode,
+        );
+        audioSourceBufferRef.current = audioBuffer;
+
+        // 监听 updateend 事件，处理缓冲队列
+        audioBuffer.addEventListener('updateend', () => {
+          isAudioSourceBufferUpdatingRef.current = false;
+          processAudioBufferQueue();
+        });
+
+        // 监听 error 事件
+        audioBuffer.addEventListener('error', (e) => {
+          console.error('音频 SourceBuffer 错误:', e);
+          isAudioSourceBufferUpdatingRef.current = false;
+        });
+      } catch (error) {
+        console.error('创建音频 SourceBuffer 失败:', error);
+      }
+    });
   }, []);
 
   // ==================== 处理视频缓冲队列 ====================
@@ -358,7 +398,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     // 如果 SourceBuffer 不存在或正在更新，直接返回
     if (
       !sourceBufferRef.current ||
-      isSourceBufferUpdatingRef.current ||
+      isVideoSourceBufferUpdatingRef.current ||
       videoBufferQueueRef.current.length === 0
     ) {
       return;
@@ -369,7 +409,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     if (data) {
       try {
         // 标记为正在更新
-        isSourceBufferUpdatingRef.current = true;
+        isVideoSourceBufferUpdatingRef.current = true;
         // 追加缓冲区
         // 注意: Uint8Array.buffer 可能是 SharedArrayBuffer，需要转换为 ArrayBuffer
         // 创建一个新的 ArrayBuffer 副本，避免 SharedArrayBuffer 类型问题
@@ -378,7 +418,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         sourceBufferRef.current.appendBuffer(newBuffer);
       } catch (error) {
         console.error('追加视频缓冲失败:', error);
-        isSourceBufferUpdatingRef.current = false;
+        isVideoSourceBufferUpdatingRef.current = false;
         // 如果追加失败，继续处理队列中的下一个
         processVideoBufferQueue();
       }
@@ -391,28 +431,35 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 处理音频缓冲队列
    * 
    * 说明:
-   * 使用 AudioContext 解码音频数据并播放。
+   * SourceBuffer 一次只能处理一个缓冲区，
+   * 所以需要使用队列来管理待处理的数据。
+   * 当 SourceBuffer 完成当前操作后，从队列中取出下一个数据处理。
    */
   const processAudioBufferQueue = useCallback(() => {
-    while (audioBufferQueueRef.current.length > 0) {
-      const data = audioBufferQueueRef.current.shift();
-      if (data && audioContextRef.current) {
-        // 解码音频数据
-        audioContextRef.current.decodeAudioData(
-          data,
-          (buffer) => {
-            // 创建音频源节点
-            const source = audioContextRef.current!.createBufferSource();
-            source.buffer = buffer;
-            // 连接到音频输出
-            source.connect(audioContextRef.current!.destination);
-            // 开始播放
-            source.start();
-          },
-          (error) => {
-            console.error('音频解码失败:', error);
-          }
-        );
+    // 如果 SourceBuffer 不存在或正在更新，直接返回
+    if (
+      !audioSourceBufferRef.current ||
+      isAudioSourceBufferUpdatingRef.current ||
+      audioBufferQueueRef.current.length === 0
+    ) {
+      return;
+    }
+
+    // 从队列中取出数据
+    const data = audioBufferQueueRef.current.shift();
+    if (data) {
+      try {
+        // 标记为正在更新
+        isAudioSourceBufferUpdatingRef.current = true;
+        // 追加缓冲区
+        const newBuffer = new ArrayBuffer(data.byteLength);
+        new Uint8Array(newBuffer).set(data);
+        audioSourceBufferRef.current.appendBuffer(newBuffer);
+      } catch (error) {
+        console.error('追加音频缓冲失败:', error);
+        isAudioSourceBufferUpdatingRef.current = false;
+        // 如果追加失败，继续处理队列中的下一个
+        processAudioBufferQueue();
       }
     }
   }, []);
@@ -445,8 +492,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
       // 监听音频帧数据
       const unlistenAudio = await listen<number[]>('audio_frame', (event) => {
-        if (event.payload.length > 0 && audioContextRef.current) {
-          const data = new Uint8Array(event.payload).buffer;
+        if (event.payload.length > 0) {
+          const data = new Uint8Array(event.payload);
           audioBufferQueueRef.current.push(data);
           processAudioBufferQueue();
         }
@@ -607,7 +654,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 流程:
    * 1. 停止录制器
    * 2. 停止媒体轨道
-   * 3. 关闭音频上下文
+   * 3. 关闭媒体源
    * 4. 发送结束通知给对方
    * 5. 调用关闭回调
    */
@@ -627,9 +674,14 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       localStreamRef.current.getTracks().forEach((track) => track.stop());
     }
     
-    // 关闭音频上下文
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
+    // 关闭视频 MediaSource
+    if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
+      mediaSourceRef.current.endOfStream();
+    }
+    
+    // 关闭音频 MediaSource
+    if (audioMediaSourceRef.current && audioMediaSourceRef.current.readyState === 'open') {
+      audioMediaSourceRef.current.endOfStream();
     }
 
     // 发送结束通知给对方
@@ -647,6 +699,38 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     // 调用关闭回调
     onClose?.();
   }, [friendId, onClose]);
+
+  // ==================== 退出隐私聊天 ====================
+  
+  /**
+   * 退出隐私聊天
+   * 
+   * 流程:
+   * 1. 结束视频通话
+   * 2. 关闭P2P连接
+   * 3. 关闭当前窗口
+   */
+  const handleExit = useCallback(async () => {
+    // 先结束视频通话
+    await handleEndCall();
+    
+    try {
+      // 关闭P2P连接
+      await invoke('close_p2p_connection', {
+        targetUuid: friendId,
+      });
+    } catch (error) {
+      console.error('关闭P2P连接失败:', error);
+    }
+    
+    // 关闭当前窗口
+    try {
+      const currentWindow = window.getCurrentWindow();
+      await currentWindow.close();
+    } catch (error) {
+      console.error('关闭窗口失败:', error);
+    }
+  }, [friendId, handleEndCall]);
 
   // ==================== 发送视频通话邀请 ====================
   
@@ -821,6 +905,19 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
             icon={<PhoneOutlined />}
             onClick={handleEndCall}
             className={styles.endCallButton}
+          />
+        </Tooltip>
+
+        {/* 退出按钮 */}
+        <Tooltip title="退出隐私聊天">
+          <Button
+            type="default"
+            danger
+            shape="circle"
+            size="large"
+            icon={<LogoutOutlined />}
+            onClick={handleExit}
+            className={styles.exitButton}
           />
         </Tooltip>
       </div>
