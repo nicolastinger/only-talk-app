@@ -23,7 +23,9 @@ use crate::utils::global_static_str::{
 };
 use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
+    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
+    MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
+    MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -515,5 +517,187 @@ pub async fn send_p2p_media_control_service(
     }
     
     info!("媒体控制命令发送完成");
+    Ok(())
+}
+
+// ==================== 视频通话邀请相关服务 ====================
+
+/// 发送视频通话邀请
+/// 当用户发起视频通话时，先发送邀请消息通知对方
+/// 对方收到邀请后会弹出视频通话界面
+/// 
+/// # 参数
+/// - `target_uuid`: 目标用户UUID
+/// - `from_name`: 邀请者昵称 (可选)
+/// 
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+/// 
+/// # 流程
+/// 1. 构造邀请消息结构体
+/// 2. 序列化为JSON
+/// 3. 通过P2P连接发送给对方
+/// 4. 对方收到后会触发 `video_call_invite` 事件
+pub async fn send_p2p_video_call_invite_service(
+    target_uuid: String,
+    from_name: Option<String>,
+) -> Result<(), anyhow::Error> {
+    info!("发送视频通话邀请给: {}", target_uuid);
+    
+    // 获取当前用户UUID
+    let from_uuid = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
+    };
+    
+    // 构造邀请消息
+    let invite = crate::entity::p2p_models::P2pVideoCallInvite {
+        from_uuid: from_uuid.clone(),
+        to_uuid: target_uuid.clone(),
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64,
+        media_config: Some(crate::entity::p2p_models::P2pMediaConfig::default()),
+        from_name,
+    };
+    
+    // 序列化邀请消息
+    let invite_vec = serde_json::to_vec(&invite)?;
+    
+    // 生成P2P消息
+    let invite_msg = generate_text_msg(
+        MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+        invite_vec,
+        target_uuid.clone(),
+        from_uuid,
+    )?;
+    
+    // 发送邀请消息
+    let send_stream = get_sender(&target_uuid).await?;
+    {
+        let mut guard = send_stream.try_lock()?;
+        guard.write_all(&invite_msg).await?;
+    }
+    
+    info!("视频通话邀请发送完成");
+    Ok(())
+}
+
+/// 发送视频通话响应
+/// 当用户接受或拒绝视频通话邀请时发送
+/// 
+/// # 参数
+/// - `target_uuid`: 目标用户UUID (邀请者)
+/// - `accept`: 是否接受邀请
+/// - `media_config`: 媒体配置 (接受时需要)
+/// - `reject_reason`: 拒绝原因 (拒绝时可选)
+/// 
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+pub async fn send_p2p_video_call_response_service(
+    target_uuid: String,
+    accept: bool,
+    media_config: Option<String>,
+    reject_reason: Option<String>,
+) -> Result<(), anyhow::Error> {
+    info!("发送视频通话响应给: {}, 接受: {}", target_uuid, accept);
+    
+    // 获取当前用户UUID
+    let from_uuid = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
+    };
+    
+    // 解析媒体配置
+    let media_config = if let Some(config_str) = media_config {
+        Some(serde_json::from_str::<crate::entity::p2p_models::P2pMediaConfig>(&config_str)?)
+    } else if accept {
+        // 如果接受但没有提供配置，使用默认配置
+        Some(crate::entity::p2p_models::P2pMediaConfig::default())
+    } else {
+        None
+    };
+    
+    // 构造响应消息
+    let response = crate::entity::p2p_models::P2pVideoCallResponse {
+        from_uuid: from_uuid.clone(),
+        to_uuid: target_uuid.clone(),
+        accept,
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64,
+        media_config,
+        reject_reason,
+    };
+    
+    // 序列化响应消息
+    let response_vec = serde_json::to_vec(&response)?;
+    
+    // 选择消息类型
+    let msg_type = if accept {
+        MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
+    } else {
+        MSG_TYPE_P2P_VIDEO_CALL_REJECT
+    };
+    
+    // 生成P2P消息
+    let response_msg = generate_text_msg(
+        msg_type,
+        response_vec,
+        target_uuid.clone(),
+        from_uuid,
+    )?;
+    
+    // 发送响应消息
+    let send_stream = get_sender(&target_uuid).await?;
+    {
+        let mut guard = send_stream.try_lock()?;
+        guard.write_all(&response_msg).await?;
+    }
+    
+    info!("视频通话响应发送完成");
+    Ok(())
+}
+
+/// 发送视频通话结束通知
+/// 当用户主动结束视频通话时发送
+/// 
+/// # 参数
+/// - `target_uuid`: 目标用户UUID
+/// 
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+pub async fn send_p2p_video_call_end_service(
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    info!("发送视频通话结束通知给: {}", target_uuid);
+    
+    // 获取当前用户UUID
+    let from_uuid = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
+    };
+    
+    // 生成结束消息
+    let end_msg = generate_text_msg(
+        MSG_TYPE_P2P_VIDEO_CALL_END,
+        vec![], // 空payload
+        target_uuid.clone(),
+        from_uuid,
+    )?;
+    
+    // 发送结束消息
+    let send_stream = get_sender(&target_uuid).await?;
+    {
+        let mut guard = send_stream.try_lock()?;
+        guard.write_all(&end_msg).await?;
+    }
+    
+    info!("视频通话结束通知发送完成");
     Ok(())
 }

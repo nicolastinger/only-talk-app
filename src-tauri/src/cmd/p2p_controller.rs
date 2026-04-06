@@ -6,7 +6,8 @@ use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
     access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
     send_p2p_audio_frame_service, send_p2p_media_config_service, send_p2p_media_control_service,
-    send_p2p_text_msg_service, send_p2p_video_config_service, send_p2p_video_frame_service,
+    send_p2p_text_msg_service, send_p2p_video_call_end_service, send_p2p_video_call_invite_service,
+    send_p2p_video_call_response_service, send_p2p_video_config_service, send_p2p_video_frame_service,
 };
 use crate::utils::global_static_str::UDP_SOCKET;
 
@@ -125,4 +126,44 @@ pub async fn send_p2p_text_msg(text: String, target_uuid: String) -> Result<(), 
 #[tauri::command]
 pub async fn close_p2p_connection(target_uuid: String) -> Result<(), String> {
     close_p2p_connection_service(target_uuid).await.map_err(|e| e.to_string())
+}
+
+// ==================== 视频通话邀请相关命令 ====================
+
+/// 发送视频通话邀请
+/// 当用户发起视频通话时，先发送邀请消息通知对方
+/// 对方收到邀请后会弹出视频通话界面
+#[tauri::command]
+pub async fn send_p2p_video_call_invite(
+    target_uuid: String,
+    from_name: Option<String>,
+) -> Result<(), String> {
+    send_p2p_video_call_invite_service(target_uuid, from_name)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 发送视频通话响应
+/// 当用户接受或拒绝视频通话邀请时发送
+/// - accept: true 接受邀请
+/// - accept: false 拒绝邀请
+#[tauri::command]
+pub async fn send_p2p_video_call_response(
+    target_uuid: String,
+    accept: bool,
+    media_config: Option<String>,
+    reject_reason: Option<String>,
+) -> Result<(), String> {
+    send_p2p_video_call_response_service(target_uuid, accept, media_config, reject_reason)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 发送视频通话结束通知
+/// 当用户主动结束视频通话时发送
+#[tauri::command]
+pub async fn send_p2p_video_call_end(target_uuid: String) -> Result<(), String> {
+    send_p2p_video_call_end_service(target_uuid)
+        .await
+        .map_err(|e| e.to_string())
 }

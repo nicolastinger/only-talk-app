@@ -167,6 +167,57 @@ pub enum P2pMediaControlType {
     EndCall,
 }
 
+/// 视频通话邀请
+/// 当一方发起视频通话时发送此消息
+/// 包含邀请者的基本信息和媒体配置
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pVideoCallInvite {
+    /// 邀请者UUID (发送方)
+    pub from_uuid: String,
+    /// 被邀请者UUID (接收方)
+    pub to_uuid: String,
+    /// 邀请时间戳
+    pub timestamp: u64,
+    /// 邀请者的媒体配置 (可选，用于提前协商)
+    pub media_config: Option<P2pMediaConfig>,
+    /// 邀请者的昵称/用户名 (用于显示)
+    pub from_name: Option<String>,
+}
+
+/// 视频通话响应
+/// 当接收方接受或拒绝视频通话时发送
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pVideoCallResponse {
+    /// 响应者UUID
+    pub from_uuid: String,
+    /// 邀请者UUID
+    pub to_uuid: String,
+    /// 是否接受邀请
+    pub accept: bool,
+    /// 响应时间戳
+    pub timestamp: u64,
+    /// 响应者的媒体配置 (接受时携带)
+    pub media_config: Option<P2pMediaConfig>,
+    /// 拒绝原因 (拒绝时可选)
+    pub reject_reason: Option<String>,
+}
+
+/// 视频通话状态
+/// 用于跟踪视频通话的生命周期状态
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum P2pVideoCallState {
+    /// 空闲状态 - 无通话
+    Idle,
+    /// 正在邀请 - 等待对方响应
+    Inviting,
+    /// 被邀请 - 收到邀请，等待用户操作
+    Invited,
+    /// 通话中 - 双方已建立连接
+    InCall,
+    /// 已结束 - 通话结束
+    Ended,
+}
+
 /// P2P消息 - 前端通信
 /// 用于向前端发送P2P事件通知
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -51,6 +51,24 @@ pub const MSG_TYPE_P2P_MEDIA_CONFIG: u16 = 10;
 /// 用于控制视频/音频的开关、暂停等操作
 pub const MSG_TYPE_P2P_MEDIA_CONTROL: u16 = 11;
 
+/// P2P视频通话邀请 - 发起视频通话请求
+/// 当一方发起视频通话时，先发送此消息通知对方
+/// 对方收到后应弹出视频通话界面或提示用户接听
+pub const MSG_TYPE_P2P_VIDEO_CALL_INVITE: u16 = 12;
+
+/// P2P视频通话接受 - 接受视频通话邀请
+/// 当对方同意视频通话时发送此消息
+/// 发送方收到后开始发送视频流
+pub const MSG_TYPE_P2P_VIDEO_CALL_ACCEPT: u16 = 13;
+
+/// P2P视频通话拒绝 - 拒绝视频通话邀请
+/// 当对方拒绝视频通话时发送此消息
+pub const MSG_TYPE_P2P_VIDEO_CALL_REJECT: u16 = 14;
+
+/// P2P视频通话结束 - 结束视频通话
+/// 当一方结束视频通话时发送此消息通知对方
+pub const MSG_TYPE_P2P_VIDEO_CALL_END: u16 = 15;
+
 // ==================== P2P请求响应类型 ====================
 
 /// 接受P2P请求
