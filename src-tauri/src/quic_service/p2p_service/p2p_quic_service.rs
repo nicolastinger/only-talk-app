@@ -164,7 +164,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到p2p视频呼叫信息 {:?}", msg);
                 let accept_user = {
                     let guard = GLOBAL_QUIC_USER_INFO.read().await;
-                    let accept_user = guard.get("accept");
+                    let accept_user = guard.get("target_uuid");
                     let accept_user = accept_user.ok_or(anyhow!("获取用户失败"))?.clone();
                     accept_user
                 };
