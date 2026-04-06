@@ -837,6 +837,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
             playsInline
             className={styles.video}
           />
+          {/* 远程音频 - 对方音频 */}
+          <audio
+            ref={remoteAudioRef}
+            autoPlay
+          />
           {/* 等待连接提示 */}
           {!isConnected && (
             <div className={styles.waitingOverlay}>
