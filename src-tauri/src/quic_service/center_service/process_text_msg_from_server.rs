@@ -378,58 +378,23 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
 fn parse_ice_candidate(candidate_str: &str) -> Option<ParsedCandidate> {
     let parts: Vec<&str> = candidate_str.split_whitespace().collect();
     
-    if parts.is_empty() || parts[0] != "candidate:" {
+    if parts.is_empty() || !parts[0].starts_with("candidate:") {
         return None;
     }
     
-    let mut ip: Option<String> = None;
-    let mut port: Option<u16> = None;
-    let mut candidate_type: Option<String> = None;
-    
-    let mut i = 0;
-    while i < parts.len() {
-        match parts[i] {
-            "typ" => {
-                if i + 1 < parts.len() {
-                    candidate_type = Some(parts[i + 1].to_string());
-                    i += 2;
-                    continue;
-                }
-            }
-            _ => {
-                if i >= 4 && parts.len() > i {
-                    if ip.is_none() && parts[i].parse::<std::net::IpAddr>().is_ok() {
-                        ip = Some(parts[i].to_string());
-                    } else if ip.is_some() && port.is_none() {
-                        if let Ok(p) = parts[i].parse::<u16>() {
-                            port = Some(p);
-                        }
-                    }
-                }
-            }
-        }
-        i += 1;
+    if parts.len() < 8 {
+        return None;
     }
     
-    if parts.len() > 4 {
-        if let Ok(addr) = parts[4].parse::<std::net::IpAddr>() {
-            ip = Some(addr.to_string());
-        }
-        if parts.len() > 5 {
-            if let Ok(p) = parts[5].parse::<u16>() {
-                port = Some(p);
-            }
-        }
-    }
+    let ip = parts[4].to_string();
+    let port: u16 = parts[5].parse().ok()?;
+    let candidate_type = parts[7].to_string();
     
-    match (ip, port, candidate_type) {
-        (Some(ip), Some(port), Some(candidate_type)) => Some(ParsedCandidate {
-            ip,
-            port,
-            candidate_type,
-        }),
-        _ => None,
-    }
+    Some(ParsedCandidate {
+        ip,
+        port,
+        candidate_type,
+    })
 }
 
 async fn send_udp_ping_for_webrtc(
