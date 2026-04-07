@@ -55,6 +55,21 @@
 
 .item {
   width: 100%;
+  height: calc(100% - 48px);
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.item > div {
   height: 68px;
   transition: all 0.3s ease;
   border-radius: 8px;
