@@ -1,34 +1,43 @@
 .splitter {
   position: relative;
   height: 6px;
-  background-color: transparent;
+  background: linear-gradient(90deg, transparent 0%, rgba(64, 150, 255, 0.1) 50%, transparent 100%);
   cursor: row-resize;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    background-color: var(--color-gray-3);
+    background: linear-gradient(90deg, transparent 0%, rgba(64, 150, 255, 0.2) 50%, transparent 100%);
+    height: 8px;
+    margin-top: -1px;
   }
 
   &.dragging {
-    background-color: var(--color-gray-4);
+    background: linear-gradient(90deg, transparent 0%, rgba(64, 150, 255, 0.3) 50%, transparent 100%);
+    height: 8px;
+    margin-top: -1px;
   }
 }
 
 .handle {
   width: 40px;
   height: 3px;
-  background-color: var(--color-gray-5);
+  background: linear-gradient(90deg, transparent 0%, var(--color-primary) 50%, transparent 100%);
   border-radius: 2px;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: var(--glass-shadow-sm);
 
   .splitter:hover & {
-    background-color: var(--color-gray-7);
+    height: 4px;
+    box-shadow: var(--glass-shadow);
   }
 
   .splitter.dragging & {
-    background-color: var(--color-primary);
+    height: 4px;
+    background: var(--color-primary);
+    box-shadow: 0 0 12px rgba(64, 150, 255, 0.4);
   }
 }
+
