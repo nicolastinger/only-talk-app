@@ -20,63 +20,63 @@ const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
   iceServers: [
     // ========== Google STUN 服务器 (最稳定) ==========
     { urls: 'stun:stun.l.google.com:19302' },
-    // { urls: 'stun:stun1.l.google.com:19302' },
-    // { urls: 'stun:stun2.l.google.com:19302' },
-    // { urls: 'stun:stun3.l.google.com:19302' },
-    // { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
 
-    // // Google 备用端口
-    // { urls: 'stun:stun.l.google.com:19305' },
-    // { urls: 'stun:stun1.l.google.com:19305' },
-    // { urls: 'stun:stun2.l.google.com:19305' },
+    // Google 备用端口
+    { urls: 'stun:stun.l.google.com:19305' },
+    { urls: 'stun:stun1.l.google.com:19305' },
+    { urls: 'stun:stun2.l.google.com:19305' },
 
-    // // Google TCP STUN (某些NAT环境TCP更易通过)
-    // { urls: 'stuns:stun.l.google.com:19302' },
-    // { urls: 'stuns:stun1.l.google.com:19302' },
+    // Google TCP STUN (某些NAT环境TCP更易通过)
+    { urls: 'stuns:stun.l.google.com:19302' },
+    { urls: 'stuns:stun1.l.google.com:19302' },
 
-    // // ========== Microsoft STUN 服务器 ==========
-    // { urls: 'stun:stun.skype.com:3478' },
-    // { urls: 'stun:stun.sipvoip.net:3478' },
-    // { urls: 'stun:stun.schlund.de:3478' },
+    // ========== Microsoft STUN 服务器 ==========
+    { urls: 'stun:stun.skype.com:3478' },
+    { urls: 'stun:stun.sipvoip.net:3478' },
+    { urls: 'stun:stun.schlund.de:3478' },
 
-    // // ========== Twilio STUN 服务器 ==========
-    // { urls: 'stun:global.stun.twilio.com:3478' },
+    // ========== Twilio STUN 服务器 ==========
+    { urls: 'stun:global.stun.twilio.com:3478' },
 
-    // // ========== Cloudflare STUN 服务器 ==========
-    // { urls: 'stun:stun.cloudflare.com:3478' },
-    // { urls: 'stun:stun.cloudflare.com:5349' },
+    // ========== Cloudflare STUN 服务器 ==========
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:stun.cloudflare.com:5349' },
 
-    // // ========== 国内STUN服务器 ==========
-    // { urls: 'stun:stun.miwifi.com:3478' },
-    // { urls: 'stun:stun.chat.bilibili.com:3478' },
-    // { urls: 'stun:stun.hitv.com:3478' },
-    // { urls: 'stun:stun.douyucdn.cn:3500' },
-    // { urls: 'stun:stun.huya.com:3478' },
+    // ========== 国内STUN服务器 ==========
+    { urls: 'stun:stun.miwifi.com:3478' },
+    { urls: 'stun:stun.chat.bilibili.com:3478' },
+    { urls: 'stun:stun.hitv.com:3478' },
+    { urls: 'stun:stun.douyucdn.cn:3500' },
+    { urls: 'stun:stun.huya.com:3478' },
 
-    // // ========== 其他公共STUN服务器 ==========
-    // { urls: 'stun:stun.voip.eutelia.it:3478' },
-    // { urls: 'stun:stun.voiparound.com:3478' },
-    // { urls: 'stun:stun.voipbuster.com:3478' },
-    // { urls: 'stun:stun.voxgratia.org:3478' },
-    // { urls: 'stun:stun.xten.com:3478' },
-    // { urls: 'stun:stun.sipgate.net:10000' },
-    // { urls: 'stun:stun.ekiga.net:3478' },
-    // { urls: 'stun:stun.ideasip.com:3478' },
-    // { urls: 'stun:stun.rixtelecom.se:3478' },
-    // { urls: 'stun:stun.sonetel.com:3478' },
-    // { urls: 'stun:stun.internetcalls.com:3478' },
-    // { urls: 'stun:numb.viagenie.ca:3478' },
-    // { urls: 'stun:stun.phone.com:3478' },
-    // { urls: 'stun:stun.ipshka.com:3478' },
-    // { urls: 'stun:stun.antisip.com:3478' },
-    // { urls: 'stun:stun.bluesip.net:3478' },
-    // { urls: 'stun:stun.dynalias.com:3478' },
-    // { urls: 'stun:stun.ppy.sh:3478' },
-    // { urls: 'stun:stun.rangate.ru:3478' },
-    // { urls: 'stun:stun.sipuk.net:3478' },
-    // { urls: 'stun:stun.zoiper.com:3478' },
-    // { urls: 'stun:stun.noc.ams-ix.net:3478' },
-    // { urls: 'stun:stun.noc.euro-ix.net:3478' },
+    // ========== 其他公共STUN服务器 ==========
+    { urls: 'stun:stun.voip.eutelia.it:3478' },
+    { urls: 'stun:stun.voiparound.com:3478' },
+    { urls: 'stun:stun.voipbuster.com:3478' },
+    { urls: 'stun:stun.voxgratia.org:3478' },
+    { urls: 'stun:stun.xten.com:3478' },
+    { urls: 'stun:stun.sipgate.net:10000' },
+    { urls: 'stun:stun.ekiga.net:3478' },
+    { urls: 'stun:stun.ideasip.com:3478' },
+    { urls: 'stun:stun.rixtelecom.se:3478' },
+    { urls: 'stun:stun.sonetel.com:3478' },
+    { urls: 'stun:stun.internetcalls.com:3478' },
+    { urls: 'stun:numb.viagenie.ca:3478' },
+    { urls: 'stun:stun.phone.com:3478' },
+    { urls: 'stun:stun.ipshka.com:3478' },
+    { urls: 'stun:stun.antisip.com:3478' },
+    { urls: 'stun:stun.bluesip.net:3478' },
+    { urls: 'stun:stun.dynalias.com:3478' },
+    { urls: 'stun:stun.ppy.sh:3478' },
+    { urls: 'stun:stun.rangate.ru:3478' },
+    { urls: 'stun:stun.sipuk.net:3478' },
+    { urls: 'stun:stun.zoiper.com:3478' },
+    { urls: 'stun:stun.noc.ams-ix.net:3478' },
+    { urls: 'stun:stun.noc.euro-ix.net:3478' },
   ],
   iceTransportPolicy: 'all',
   bundlePolicy: 'max-bundle',
