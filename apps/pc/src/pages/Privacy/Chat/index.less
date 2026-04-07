@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--color-gray-light);
 }
 
 .header {
@@ -10,8 +10,8 @@
   align-items: center;
   justify-content: space-between;
   height: 50px;
-  background-color: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-gray-border);
   padding: 0 16px;
 
   .titleWrapper {
@@ -22,12 +22,12 @@
   .title {
     font-size: 16px;
     font-weight: 500;
-    color: #333;
+    color: var(--color-gray-text-darker);
   }
 
   .privacyIcon {
     margin-right: 8px;
-    color: #1890ff;
+    color: var(--color-info);
   }
 
   .headerActions {
@@ -37,11 +37,11 @@
   }
 
   .videoCallBtn {
-    color: #52c41a;
+    color: var(--color-success);
 
     &:hover {
-      color: #73d13d;
-      background-color: rgba(82, 196, 26, 0.1);
+      color: var(--color-success-hover);
+      background-color: var(--color-success-bg);
     }
   }
 
@@ -55,14 +55,14 @@
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background-color: #f0f2f5;
+  background-color: var(--color-gray-lighter);
 }
 
 .footer {
   display: flex;
   flex-direction: column;
-  background-color: #fff;
-  border-top: 1px solid #e8e8e8;
+  background-color: var(--color-white);
+  border-top: 1px solid var(--color-gray-border);
   padding: 8px 16px;
 
   .inputArea {
@@ -85,8 +85,8 @@
     flex-direction: row-reverse;
 
     .messageBubble {
-      background-color: #1890ff;
-      color: #fff;
+      background-color: var(--color-info);
+      color: var(--color-white);
       border-radius: 12px 4px 12px 12px;
     }
   }
@@ -95,8 +95,8 @@
     flex-direction: row;
 
     .messageBubble {
-      background-color: #fff;
-      color: #333;
+      background-color: var(--color-white);
+      color: var(--color-gray-text-darker);
       border-radius: 4px 12px 12px 12px;
     }
   }
@@ -106,23 +106,23 @@
   max-width: 70%;
   padding: 10px 14px;
   word-wrap: break-word;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .timestamp {
   font-size: 12px;
-  color: #999;
+  color: var(--color-gray-text);
   text-align: center;
   margin: 8px 0;
 }
 
 .hint {
   font-size: 12px;
-  color: #999;
+  color: var(--color-gray-text);
   text-align: center;
   padding: 8px;
-  background-color: #fffbe6;
-  border-bottom: 1px solid #ffe58f;
+  background-color: var(--color-warning-bg);
+  border-bottom: 1px solid var(--color-warning);
 }
 
 .videoCallPage {
@@ -132,5 +132,5 @@
   right: 0;
   bottom: 0;
   z-index: 1000;
-  background-color: #1a1a1a;
+  background-color: var(--color-video-bg);
 }

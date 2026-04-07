@@ -1,7 +1,7 @@
 .leftSideBar {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #0a192f 0%, #007bff 100%);
+  background: var(--bg-gradient-sidebar);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -38,33 +38,32 @@
   }
 
   .icon:hover .imgItem {
-    border-color: #1890ff;
+    border-color: var(--color-info);
     box-shadow: 0 0 10px rgba(24, 144, 255, 0.3);
   }
 
   .iconBtn {
     width: 40px;
     height: 40px;
-    color: #ffffff;
-    // 添加半透明背景和边框，提高在渐变背景上的可见性
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--color-white);
+    background: var(--bg-white-20);
+    border: 1px solid var(--border-white-lighter);
     border-radius: 8px;
     backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px var(--bg-black-20);
   }
 
   .iconBtn:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: var(--color-white);
+    background: var(--bg-white-30);
+    border: 1px solid var(--border-white-lightest);
     cursor: pointer;
     transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 8px var(--bg-black-30);
   }
 
   .top,
@@ -99,13 +98,13 @@
 
 .largeAvatar {
   margin-bottom: 16px;
-  border: 3px solid #e8e8e8;
+  border: 3px solid var(--color-gray-border);
   transition: all 0.3s ease;
 }
 
 .largeAvatar:hover {
   transform: scale(1.05);
-  border-color: #1890ff;
+  border-color: var(--color-info);
   box-shadow: 0 0 15px rgba(24, 144, 255, 0.4);
 }
 
@@ -123,7 +122,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--bg-black-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -137,7 +136,7 @@
 
 .cameraIcon {
   font-size: 24px;
-  color: #fff;
+  color: var(--color-white);
 }
 
 .username {
@@ -158,7 +157,7 @@
 
 .infoIcon {
   font-size: 16px;
-  color: #1890ff;
+  color: var(--color-info);
 }
 
 .infoText {

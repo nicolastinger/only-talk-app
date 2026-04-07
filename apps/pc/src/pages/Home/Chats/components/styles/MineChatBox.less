@@ -26,9 +26,9 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid var(--bg-white-80);
 
   &:hover {
     box-shadow: 0 4px 12px rgba(64, 150, 255, 0.3);
@@ -53,15 +53,15 @@
   align-items: center;
   justify-content: center;
   word-break: break-all;
-  color: #fff;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: var(--color-white);
+  background: var(--btn-gradient-success);
   border-radius: 16px 16px 4px 16px;
   font-size: 14px;
   line-height: 1.5;
   overflow: hidden;
   padding: 12px 14px;
   box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3),
-    0 4px 16px rgba(0, 242, 254, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 4px 16px rgba(0, 242, 254, 0.2), inset 0 1px 0 var(--bg-white-20);
   transition: all 0.3s ease;
   position: relative;
 
@@ -72,7 +72,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent);
+    background: linear-gradient(135deg, var(--bg-white-15), transparent);
     border-radius: inherit;
     pointer-events: none;
   }

@@ -1,6 +1,8 @@
 :root {
   --bg-color: #fff;
   --text-color: #121212;
+
+  // 品牌主色系列
   --acai-primary: #007bff;
   --acai-secondary: #007bff;
   --acai-success: #00bfff;
@@ -13,9 +15,13 @@
   --acai-darker: #343a40;
   --acai-icon-btn: rgb(230, 230, 230);
   --acai-icon-btn-hover: rgb(51, 173, 255);
+
+  // 图标尺寸
   --one-icon-size: 16px;
   --two-icon-size: 24px;
   --three-icon-size: 36px;
+
+  // 灰度色阶 (从深到浅)
   --color-gray-10: rgb(13, 17, 25);
   --color-gray-9: rgb(31, 37, 51);
   --color-gray-8: rgb(71, 83, 102);
@@ -26,6 +32,8 @@
   --color-gray-3: rgb(242, 246, 250);
   --color-gray-2: rgb(247, 250, 253);
   --color-gray-1: rgb(255, 255, 255);
+
+  // 主色色阶 (从浅到深)
   --color-primary-01: rgb(230, 244, 255);
   --color-primary-02: rgb(181, 219, 255);
   --color-primary-03: rgb(140, 196, 255);
@@ -36,6 +44,8 @@
   --color-primary-08: rgb(0, 57, 179);
   --color-primary-09: rgb(0, 40, 140);
   --color-primary-10: rgb(0, 26, 102);
+
+  // 白色/黑色色阶
   --color-white: #fff;
   --color-white-86: rgba(255, 255, 255, 86%);
   --color-white-11: rgb(242, 242, 242);
@@ -49,11 +59,14 @@
   --color-white-03: rgb(20, 20, 20);
   --color-white-02: rgb(10, 10, 10);
   --color-white-01: rgb(0, 0, 0);
-  --color-mine-chat-box: #94ec69;
+
+  // 主色
   --color-primary: rgb(64, 150, 255);
   --color-primary-bg: rgb(236, 242, 254);
   --color-normal-bg: rgb(245, 248, 253);
   --color-white-bg: rgb(255, 255, 255);
+
+  // 布局尺寸
   --header-height: 68px;
   --logo-width: 88px;
   --logo-height: 34px;
@@ -63,6 +76,7 @@
   --banner-text-font-size: 24px;
   --large-title-font-size: 32px;
 
+  // 侧边栏背景
   --sidebar-bg: rgb(220, 225, 230);
   --content-list-bg: rgb(230, 235, 240);
   --content-bg: rgb(235, 240, 245);
@@ -77,6 +91,138 @@
   --glass-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.08);
   --glass-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.15);
   --glass-icon-hover-bg: rgba(64, 150, 255, 0.1);
+
+  // ========== 新增颜色变量 ==========
+
+  // 渐变色系列 (登录/注册页面)
+  --gradient-blue-dark: #0a2a6c;
+  --gradient-blue-mid: #1a5cff;
+  --gradient-blue-light: #7eb8ff;
+  --gradient-blue-accent: #4a90ff;
+  --gradient-blue-pale: #a8d4ff;
+  --gradient-blue-hover: #0a4de8;
+  --gradient-blue-hover-light: #3a80ff;
+
+  // 功能色
+  --color-success: #52c41a;
+  --color-success-hover: #73d13d;
+  --color-success-bg: rgba(82, 196, 26, 0.1);
+  --color-error: #ff4d4f;
+  --color-error-bg: rgba(255, 77, 79, 0.1);
+  --color-error-border: rgba(255, 77, 79, 0.5);
+  --color-info: #1890ff;
+  --color-info-bg: #e6f7ff;
+  --color-warning: #faad14;
+  --color-warning-bg: rgba(250, 173, 20, 0.1);
+
+  // 聊天气泡颜色
+  --color-chat-mine-start: #4facfe;
+  --color-chat-mine-end: #00f2fe;
+  --color-chat-mine-bg: #94ec69;
+  --color-chat-customer-bg: rgba(255, 255, 255, 0.95);
+
+  // 常用灰度色
+  --color-gray-light: #f5f5f5;
+  --color-gray-lighter: #f0f2f5;
+  --color-gray-border: #e8e8e8;
+  --color-gray-border-light: #e0e0e0;
+  --color-gray-text: #999;
+  --color-gray-text-dark: #666;
+  --color-gray-text-darker: #333;
+  --color-gray-text-darkest: #1a1a1a;
+
+  // 滚动条颜色
+  --scrollbar-bg: #f1f1f1;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+  --scrollbar-thumb-light: #d6d6d6;
+  --scrollbar-thumb-lighter: #ddd;
+  --scrollbar-thumb-lighter-hover: #bbb;
+
+  // 视频通话背景色
+  --color-video-bg: #1a1a1a;
+  --color-video-bg-dark: #2a2a2a;
+  --color-video-overlay: rgba(0, 0, 0, 0.5);
+  --color-video-overlay-dark: rgba(0, 0, 0, 0.7);
+
+  // Markdown 样式色
+  --markdown-text: #222;
+  --markdown-bg: #fff;
+  --markdown-code-bg: #f6f8fa;
+  --markdown-code-text: #c7254e;
+  --markdown-pre-bg: #282c34;
+  --markdown-link: #0969da;
+  --markdown-border: #d0d7de;
+  --markdown-blockquote-text: #6a737d;
+  --markdown-hr: #eaecef;
+
+  // Markdown 暗色模式
+  --markdown-dark-text: #e6e6e6;
+  --markdown-dark-bg: #181a1b;
+  --markdown-dark-code-bg: #23272e;
+  --markdown-dark-code-text: #ffb86c;
+  --markdown-dark-border: #444c56;
+  --markdown-dark-blockquote-text: #b1b1b1;
+  --markdown-dark-scrollbar: #666c7a;
+
+  // 输入框颜色
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --input-border: transparent;
+  --input-border-focus: rgba(26, 92, 255, 0.3);
+  --input-placeholder: #bbb;
+  --input-text: #333;
+  --input-icon: #999;
+
+  // 按钮渐变
+  --btn-gradient-primary: linear-gradient(135deg, var(--gradient-blue-mid) 0%, var(--gradient-blue-accent) 100%);
+  --btn-gradient-primary-hover: linear-gradient(135deg, var(--gradient-blue-hover) 0%, var(--gradient-blue-hover-light) 100%);
+  --btn-gradient-success: linear-gradient(135deg, var(--color-chat-mine-start) 0%, var(--color-chat-mine-end) 100%);
+
+  // 背景渐变
+  --bg-gradient-auth: linear-gradient(135deg, var(--gradient-blue-dark) 0%, var(--gradient-blue-mid) 50%, var(--gradient-blue-light) 100%);
+  --bg-gradient-sidebar: linear-gradient(135deg, #0a192f 0%, #007bff 100%);
+
+  // 阴影
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.15);
+  --shadow-primary: 0 4px 15px rgba(26, 92, 255, 0.3);
+  --shadow-primary-lg: 0 6px 20px rgba(26, 92, 255, 0.4);
+  --shadow-glow: 0 0 20px rgba(100, 180, 255, 0.5);
+
+  // 边框
+  --border-light: rgba(0, 0, 0, 0.04);
+  --border-lighter: rgba(0, 0, 0, 0.05);
+  --border-lightest: rgba(0, 0, 0, 0.06);
+  --border-white: rgba(255, 255, 255, 0.1);
+  --border-white-light: rgba(255, 255, 255, 0.2);
+  --border-white-lighter: rgba(255, 255, 255, 0.3);
+  --border-white-lightest: rgba(255, 255, 255, 0.5);
+
+  // 透明度背景
+  --bg-black-02: rgba(0, 0, 0, 0.02);
+  --bg-black-05: rgba(0, 0, 0, 0.05);
+  --bg-black-08: rgba(0, 0, 0, 0.08);
+  --bg-black-10: rgba(0, 0, 0, 0.1);
+  --bg-black-15: rgba(0, 0, 0, 0.15);
+  --bg-black-30: rgba(0, 0, 0, 0.3);
+  --bg-black-50: rgba(0, 0, 0, 0.5);
+  --bg-black-70: rgba(0, 0, 0, 0.7);
+  --bg-black-85: rgba(0, 0, 0, 0.85);
+  --bg-white-10: rgba(255, 255, 255, 0.1);
+  --bg-white-15: rgba(255, 255, 255, 0.15);
+  --bg-white-20: rgba(255, 255, 255, 0.2);
+  --bg-white-30: rgba(255, 255, 255, 0.3);
+  --bg-white-50: rgba(255, 255, 255, 0.5);
+  --bg-white-80: rgba(255, 255, 255, 0.8);
+  --bg-white-90: rgba(255, 255, 255, 0.9);
+  --bg-white-95: rgba(255, 255, 255, 0.95);
+
+  // 悬停背景
+  --hover-bg-primary: rgba(64, 150, 255, 0.1);
+  --hover-bg-primary-light: rgba(64, 150, 255, 0.08);
+  --hover-bg-primary-lighter: rgba(64, 150, 255, 0.05);
 }
 
 // 全局样式

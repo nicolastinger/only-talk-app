@@ -10,5 +10,41 @@
   {
     "name": "--sidebar-bg-gradient",
     "value": "linear-gradient(180deg, #1E3A8A 0%, #000000 100%)"
+  },
+  {
+    "name": "--glass-bg",
+    "value": "rgba(30, 30, 30, 0.8)"
+  },
+  {
+    "name": "--glass-bg-light",
+    "value": "rgba(30, 30, 30, 0.6)"
+  },
+  {
+    "name": "--glass-bg-dark",
+    "value": "rgba(40, 40, 40, 0.95)"
+  },
+  {
+    "name": "--markdown-text",
+    "value": "#e6e6e6"
+  },
+  {
+    "name": "--markdown-bg",
+    "value": "#181a1b"
+  },
+  {
+    "name": "--markdown-code-bg",
+    "value": "#23272e"
+  },
+  {
+    "name": "--markdown-pre-bg",
+    "value": "#23272e"
+  },
+  {
+    "name": "--color-video-bg",
+    "value": "#0a0a0a"
+  },
+  {
+    "name": "--color-video-bg-dark",
+    "value": "#1a1a1a"
   }
 ]

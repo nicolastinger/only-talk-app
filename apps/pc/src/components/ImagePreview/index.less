@@ -30,7 +30,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-black-30);
   z-index: 2;
 }
 
@@ -41,14 +41,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+  background: linear-gradient(180deg, var(--bg-black-50) 0%, transparent 100%);
 }
 
 .counter {
   font-size: 14px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  color: var(--bg-white-90);
+  text-shadow: 0 1px 2px var(--bg-black-30);
 }
 
 .headerActions {
@@ -58,7 +58,7 @@
 }
 
 .iconButton {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--bg-white-90);
   font-size: 18px;
   width: 40px;
   height: 40px;
@@ -69,14 +69,14 @@
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background: var(--bg-white-15);
+    color: var(--color-white);
   }
 }
 
 .scaleText {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--bg-white-80);
   min-width: 50px;
   text-align: center;
   user-select: none;
@@ -105,7 +105,7 @@
   max-height: calc(100vh - 200px);
   object-fit: contain;
   border-radius: 4px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px var(--bg-black-40);
   transition: transform 0.3s ease;
 }
 
@@ -125,14 +125,14 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--bg-black-30);
     backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--bg-white-60);
     transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-white);
     opacity: 0;
     transform: scale(0.8);
   }
@@ -140,31 +140,31 @@
   &:hover .navButton {
     opacity: 1;
     transform: scale(1);
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background: var(--bg-white-15);
+    color: var(--color-white);
   }
 
   &:active .navButton {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.25);
+    background: var(--bg-white-25);
   }
 }
 
 .navAreaLeft {
   left: 0;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+  background: linear-gradient(90deg, var(--bg-black-30) 0%, transparent 100%);
 }
 
 .navAreaRight {
   right: 0;
-  background: linear-gradient(-90deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+  background: linear-gradient(-90deg, var(--bg-black-30) 0%, transparent 100%);
 }
 
 .thumbnails {
   position: relative;
   z-index: 10;
   padding: 16px 24px;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+  background: linear-gradient(0deg, var(--bg-black-50) 0%, transparent 100%);
 }
 
 .thumbnailScroll {
@@ -179,16 +179,16 @@
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-white-10);
     border-radius: 2px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--bg-white-30);
     border-radius: 2px;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.5);
+      background: var(--bg-white-50);
     }
   }
 }
@@ -202,16 +202,16 @@
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.2s ease;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-black-30);
 
   &:hover {
-    border-color: rgba(255, 255, 255, 0.5);
+    border-color: var(--border-white-lightest);
     transform: translateY(-2px);
   }
 
   &.active {
-    border-color: #fff;
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    border-color: var(--color-white);
+    box-shadow: 0 0 12px var(--bg-white-30);
   }
 }
 

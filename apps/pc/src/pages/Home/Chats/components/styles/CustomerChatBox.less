@@ -27,9 +27,9 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid var(--bg-white-80);
 
   &:hover {
     box-shadow: 0 4px 12px rgba(64, 150, 255, 0.3);
@@ -62,12 +62,12 @@
   padding: 12px 14px;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.95),
+    var(--color-chat-customer-bg),
     rgba(255, 255, 255, 0.85)
   );
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-white-lighter);
+  box-shadow: var(--shadow-sm), 0 4px 16px var(--bg-black-04),
+    inset 0 1px 0 var(--bg-white-80);
   transition: all 0.3s ease;
   position: relative;
 
@@ -78,13 +78,13 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(64, 150, 255, 0.03), transparent);
+    background: linear-gradient(135deg, var(--hover-bg-primary-lighter), transparent);
     border-radius: inherit;
     pointer-events: none;
   }
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 12px var(--bg-black-08), 0 8px 24px var(--bg-black-06);
     transform: translateY(-1px);
   }
 }

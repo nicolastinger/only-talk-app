@@ -1,15 +1,15 @@
 .container {
   position: fixed;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--bg-black-85);
   border-radius: 8px;
   padding: 8px 12px;
   min-width: 120px;
   cursor: move;
   user-select: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-white);
 }
 
 .header {
@@ -20,7 +20,7 @@
 }
 
 .title {
-  color: #fff;
+  color: var(--color-white);
   font-size: 12px;
   font-weight: 500;
 }
@@ -36,7 +36,7 @@
 }
 
 .expandBtn {
-  color: #1890ff;
+  color: var(--color-info);
   font-size: 12px;
   cursor: pointer;
   padding: 4px 8px;
@@ -65,15 +65,15 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.75);
-  color: #1890ff;
+  background: var(--bg-black-75);
+  color: var(--color-info);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   font-size: 14px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s;
   backdrop-filter: blur(8px);
   border: 1px solid rgba(24, 144, 255, 0.3);

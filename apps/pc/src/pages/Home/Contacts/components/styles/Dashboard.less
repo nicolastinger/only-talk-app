@@ -34,8 +34,8 @@
   padding: 32px;
   background: var(--glass-bg);
   border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-lg),
+    inset 0 1px 0 var(--bg-white-80);
   transition: all 0.3s ease;
   position: relative;
 
@@ -44,14 +44,14 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+    background: linear-gradient(135deg, var(--bg-white-10), transparent);
     pointer-events: none;
   }
 
   &:hover {
     transform: scale(1.02);
     box-shadow: 0 12px 40px rgba(102, 126, 234, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      inset 0 1px 0 var(--bg-white-90);
 
     .svgItem {
       transform: scale(1.05);

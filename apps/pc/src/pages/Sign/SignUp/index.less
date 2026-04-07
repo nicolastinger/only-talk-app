@@ -7,7 +7,7 @@
   margin: 0;
   padding: 0;
   position: relative;
-  background: linear-gradient(135deg, #0a2a6c 0%, #1a5cff 50%, #7eb8ff 100%);
+  background: var(--bg-gradient-auth);
 }
 
 .container::before,
@@ -24,13 +24,13 @@
 .container::before {
   background: conic-gradient(
     from 0deg at 50% 50%,
-    #0a2a6c 0deg,
-    #1a5cff 60deg,
-    #4a90ff 120deg,
-    #7eb8ff 180deg,
-    #a8d4ff 240deg,
-    #4a90ff 300deg,
-    #0a2a6c 360deg
+    var(--gradient-blue-dark) 0deg,
+    var(--gradient-blue-mid) 60deg,
+    var(--gradient-blue-accent) 120deg,
+    var(--gradient-blue-light) 180deg,
+    var(--gradient-blue-pale) 240deg,
+    var(--gradient-blue-accent) 300deg,
+    var(--gradient-blue-dark) 360deg
   );
   animation: rotateGradient 15s linear infinite;
   filter: blur(80px);
@@ -40,7 +40,7 @@
 .container::after {
   background: radial-gradient(
       ellipse at 30% 20%,
-      rgba(255, 255, 255, 0.5) 0%,
+      var(--bg-white-50) 0%,
       transparent 40%
     ),
     radial-gradient(
@@ -50,7 +50,7 @@
     ),
     radial-gradient(
       ellipse at 50% 50%,
-      rgba(255, 255, 255, 0.3) 0%,
+      var(--bg-white-30) 0%,
       transparent 50%
     );
   animation: pulseGlow 4s ease-in-out infinite;
@@ -83,7 +83,7 @@
   align-items: center;
   padding: 8px 16px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-white-10);
   backdrop-filter: blur(10px);
   -webkit-app-region: drag;
   position: relative;
@@ -99,7 +99,7 @@
 .appName {
   font-size: 14px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--bg-white-90);
   letter-spacing: 0.5px;
 }
 
@@ -117,15 +117,15 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--bg-white-80);
   font-size: 14px;
   transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .closeBtn:hover {
-  background: rgba(255, 77, 79, 0.9);
-  color: #fff;
+  background: var(--color-error-bg);
+  color: var(--color-white);
 }
 
 .content {
@@ -153,9 +153,9 @@
   height: 72px;
   border-radius: 50%;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--bg-white-20);
   padding: 3px;
-  box-shadow: 0 0 20px rgba(100, 180, 255, 0.5),
+  box-shadow: var(--shadow-glow),
     0 0 40px rgba(100, 180, 255, 0.3), 0 0 60px rgba(100, 180, 255, 0.2);
   animation: avatarGlow 3s ease-in-out infinite alternate;
   margin-bottom: 16px;
@@ -163,7 +163,7 @@
 
 @keyframes avatarGlow {
   0% {
-    box-shadow: 0 0 20px rgba(100, 180, 255, 0.5),
+    box-shadow: var(--shadow-glow),
       0 0 40px rgba(100, 180, 255, 0.3);
   }
   100% {
@@ -180,8 +180,8 @@
 .welcomeText {
   font-size: 18px;
   font-weight: 500;
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  color: var(--color-white);
+  text-shadow: 0 2px 10px var(--bg-black-30);
 }
 
 .formSection {
@@ -207,36 +207,36 @@
   position: relative;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--input-bg);
   border-radius: 10px;
   padding: 0 16px;
   height: 46px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
-  border: 1px solid transparent;
+  border: 1px solid var(--input-border);
 }
 
 .inputError {
-  border-color: rgba(255, 77, 79, 0.5);
-  box-shadow: 0 0 10px rgba(255, 77, 79, 0.2);
+  border-color: var(--color-error-border);
+  box-shadow: 0 0 10px var(--color-error-bg);
 }
 
 .errorText {
   font-size: 12px;
-  color: #ff4d4f;
+  color: var(--color-error);
   padding-left: 4px;
   min-height: 18px;
 }
 
 .inputGroup:focus-within {
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 4px 16px rgba(26, 92, 255, 0.2),
     0 0 20px rgba(100, 180, 255, 0.3);
-  border: 1px solid rgba(26, 92, 255, 0.3);
+  border: 1px solid var(--input-border-focus);
 }
 
 .inputIcon {
-  color: #999;
+  color: var(--input-icon);
   font-size: 16px;
   margin-right: 10px;
 }
@@ -246,18 +246,18 @@
   border: none;
   outline: none;
   font-size: 14px;
-  color: #333;
+  color: var(--input-text);
   background: transparent;
   height: 100%;
 }
 
 .input::placeholder {
-  color: #bbb;
+  color: var(--input-placeholder);
 }
 
 .label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--bg-white-90);
   margin-bottom: 2px;
   padding-left: 2px;
 }
@@ -267,13 +267,13 @@
   height: 48px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1a5cff 0%, #4a90ff 100%);
-  color: #fff;
+  background: var(--btn-gradient-primary);
+  color: var(--color-white);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(26, 92, 255, 0.3),
+  box-shadow: var(--shadow-primary),
     0 0 20px rgba(100, 180, 255, 0.2);
   letter-spacing: 1px;
   position: relative;
@@ -291,7 +291,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.3),
+    var(--bg-white-30),
     transparent
   );
   animation: btnShine 3s ease-in-out infinite;
@@ -309,9 +309,9 @@
 
 .submitBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(26, 92, 255, 0.4),
+  box-shadow: var(--shadow-primary-lg),
     0 0 30px rgba(100, 180, 255, 0.4);
-  background: linear-gradient(135deg, #0a4de8 0%, #3a80ff 100%);
+  background: var(--btn-gradient-primary-hover);
 }
 
 .submitBtn:active {
@@ -351,7 +351,7 @@
 }
 
 .link {
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--bg-white-90);
   font-size: 13px;
   cursor: pointer;
   text-decoration: none;
@@ -359,24 +359,24 @@
 }
 
 .link:hover {
-  color: #fff;
+  color: var(--color-white);
   text-decoration: underline;
 }
 
 .divider {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--bg-white-40);
   font-size: 12px;
 }
 
 .passwordToggle {
-  color: #999;
+  color: var(--input-icon);
   font-size: 16px;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
 .passwordToggle:hover {
-  color: #666;
+  color: var(--color-gray-text-dark);
 }
 
 @media (prefers-reduced-motion: reduce) {
