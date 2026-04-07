@@ -1,17 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
-import { nanoid } from 'nanoid';
 import { WebRTCSignalMessage } from '@workspace/types';
+import { nanoid } from 'nanoid';
 
 /**
  * WebRTC 默认配置 - NAT3穿透优化版
- * 
+ *
  * 优化策略：
  * 1. 大量STUN服务器：覆盖国内外、不同端口、不同提供商，提高获取公网IP的成功率
  * 2. 多端口探测：同一服务器使用多个端口（3478, 19302, 5349等）
  * 3. ICE候选池：预收集候选，加快连接建立
  * 4. ICE重启机制：连接失败时自动重启ICE
  * 5. 超时配置：合理的超时时间避免长时间等待
- * 
+ *
  * 注意：
  * - 不使用TURN/relay服务器
  * - 过滤host和relay候选，仅保留srflx候选用于P2P直连
@@ -24,35 +24,35 @@ const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
     // { urls: 'stun:stun2.l.google.com:19302' },
     // { urls: 'stun:stun3.l.google.com:19302' },
     // { urls: 'stun:stun4.l.google.com:19302' },
-    
+
     // // Google 备用端口
     // { urls: 'stun:stun.l.google.com:19305' },
     // { urls: 'stun:stun1.l.google.com:19305' },
     // { urls: 'stun:stun2.l.google.com:19305' },
-    
+
     // // Google TCP STUN (某些NAT环境TCP更易通过)
     // { urls: 'stuns:stun.l.google.com:19302' },
     // { urls: 'stuns:stun1.l.google.com:19302' },
-    
+
     // // ========== Microsoft STUN 服务器 ==========
     // { urls: 'stun:stun.skype.com:3478' },
     // { urls: 'stun:stun.sipvoip.net:3478' },
     // { urls: 'stun:stun.schlund.de:3478' },
-    
+
     // // ========== Twilio STUN 服务器 ==========
     // { urls: 'stun:global.stun.twilio.com:3478' },
-    
+
     // // ========== Cloudflare STUN 服务器 ==========
     // { urls: 'stun:stun.cloudflare.com:3478' },
     // { urls: 'stun:stun.cloudflare.com:5349' },
-    
+
     // // ========== 国内STUN服务器 ==========
     // { urls: 'stun:stun.miwifi.com:3478' },
     // { urls: 'stun:stun.chat.bilibili.com:3478' },
     // { urls: 'stun:stun.hitv.com:3478' },
     // { urls: 'stun:stun.douyucdn.cn:3500' },
     // { urls: 'stun:stun.huya.com:3478' },
-    
+
     // // ========== 其他公共STUN服务器 ==========
     // { urls: 'stun:stun.voip.eutelia.it:3478' },
     // { urls: 'stun:stun.voiparound.com:3478' },
@@ -122,15 +122,21 @@ class WebRTCService {
   /** 当前用户的ID */
   private localUserId: string;
   /** 接收到对端消息时的回调函数: (来源friendId, 消息内容) => void */
-  private onMessageCallback: ((friendId: string, message: string) => void) | null = null;
+  private onMessageCallback:
+    | ((friendId: string, message: string) => void)
+    | null = null;
   /** 连接状态变化时的回调函数: (来源friendId, 连接状态) => void */
-  private onConnectionStateChange: ((friendId: string, state: RTCPeerConnectionState) => void) | null = null;
+  private onConnectionStateChange:
+    | ((friendId: string, state: RTCPeerConnectionState) => void)
+    | null = null;
   /** 本地媒体流 */
   private localStream: MediaStream | null = null;
   /** 远程媒体流映射, key为friendId */
   private remoteStreams: Map<string, MediaStream> = new Map();
   /** 接收到远程媒体流时的回调函数: (来源friendId, 媒体流) => void */
-  private onRemoteStreamCallback: ((friendId: string, stream: MediaStream) => void) | null = null;
+  private onRemoteStreamCallback:
+    | ((friendId: string, stream: MediaStream) => void)
+    | null = null;
   /** 视频轨道状态 */
   private isVideoEnabled: boolean = true;
   /** 音频轨道状态 */
@@ -159,8 +165,10 @@ class WebRTCService {
   constructor(localUserId: string) {
     this.localUserId = localUserId;
     this.sessionId = nanoid(); // 生成唯一的会话ID
-    console.log(`[WebRTCService] 初始化成功 - 用户ID: ${localUserId}, 会话ID: ${this.sessionId}`);
-    
+    console.log(
+      `[WebRTCService] 初始化成功 - 用户ID: ${localUserId}, 会话ID: ${this.sessionId}`,
+    );
+
     // 异步检测NAT类型（不阻塞初始化）
     this.detectNATType();
   }
@@ -178,7 +186,9 @@ class WebRTCService {
    * 设置连接状态变化回调
    * @param callback RTCPeerConnection状态变化时触发的回调函数
    */
-  setOnConnectionStateChange(callback: (friendId: string, state: RTCPeerConnectionState) => void) {
+  setOnConnectionStateChange(
+    callback: (friendId: string, state: RTCPeerConnectionState) => void,
+  ) {
     this.onConnectionStateChange = callback;
     console.log(`[WebRTCService] 连接状态变化回调已设置`);
   }
@@ -187,7 +197,9 @@ class WebRTCService {
    * 设置远程媒体流接收回调
    * @param callback 收到远程媒体流时触发的回调函数
    */
-  setOnRemoteStreamCallback(callback: (friendId: string, stream: MediaStream) => void) {
+  setOnRemoteStreamCallback(
+    callback: (friendId: string, stream: MediaStream) => void,
+  ) {
     this.onRemoteStreamCallback = callback;
     console.log(`[WebRTCService] 远程媒体流回调已设置`);
   }
@@ -215,22 +227,31 @@ class WebRTCService {
    * @param audio 是否启用音频
    * @returns 本地媒体流
    */
-  async initLocalStream(video: boolean = true, audio: boolean = true): Promise<MediaStream> {
-    console.log(`[WebRTCService.initLocalStream] 初始化本地媒体流 - 视频: ${video}, 音频: ${audio}`);
-    
+  async initLocalStream(
+    video: boolean = true,
+    audio: boolean = true,
+  ): Promise<MediaStream> {
+    console.log(
+      `[WebRTCService.initLocalStream] 初始化本地媒体流 - 视频: ${video}, 音频: ${audio}`,
+    );
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: video ? {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-          frameRate: { ideal: 30 }
-        } : false,
-        audio: audio ? {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } : false
+        video: video
+          ? {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: 'user',
+              frameRate: { ideal: 30 },
+            }
+          : false,
+        audio: audio
+          ? {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            }
+          : false,
       });
 
       this.localStream = stream;
@@ -239,7 +260,10 @@ class WebRTCService {
       console.log(`[WebRTCService.initLocalStream] ✅ 本地媒体流初始化成功`);
       return stream;
     } catch (error) {
-      console.error(`[WebRTCService.initLocalStream] ❌ 初始化本地媒体流失败:`, error);
+      console.error(
+        `[WebRTCService.initLocalStream] ❌ 初始化本地媒体流失败:`,
+        error,
+      );
       throw error;
     }
   }
@@ -250,7 +274,7 @@ class WebRTCService {
   closeLocalStream(): void {
     console.log(`[WebRTCService.closeLocalStream] 关闭本地媒体流...`);
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => {
+      this.localStream.getTracks().forEach((track) => {
         track.stop();
         console.log(`[WebRTCService.closeLocalStream] 停止轨道: ${track.kind}`);
       });
@@ -269,7 +293,11 @@ class WebRTCService {
       if (videoTrack) {
         this.isVideoEnabled = !this.isVideoEnabled;
         videoTrack.enabled = this.isVideoEnabled;
-        console.log(`[WebRTCService.toggleVideo] ✅ 视频状态已切换为: ${this.isVideoEnabled ? '开启' : '关闭'}`);
+        console.log(
+          `[WebRTCService.toggleVideo] ✅ 视频状态已切换为: ${
+            this.isVideoEnabled ? '开启' : '关闭'
+          }`,
+        );
         return this.isVideoEnabled;
       }
     }
@@ -288,7 +316,11 @@ class WebRTCService {
       if (audioTrack) {
         this.isAudioEnabled = !this.isAudioEnabled;
         audioTrack.enabled = this.isAudioEnabled;
-        console.log(`[WebRTCService.toggleAudio] ✅ 音频状态已切换为: ${this.isAudioEnabled ? '开启' : '关闭'}`);
+        console.log(
+          `[WebRTCService.toggleAudio] ✅ 音频状态已切换为: ${
+            this.isAudioEnabled ? '开启' : '关闭'
+          }`,
+        );
         return this.isAudioEnabled;
       }
     }
@@ -323,11 +355,15 @@ class WebRTCService {
    * @returns 创建的RTCPeerConnection连接对象
    */
   async createConnection(friendId: string): Promise<RTCPeerConnection> {
-    console.log(`[WebRTCService.createConnection] 开始为 ${friendId} 创建连接...`);
+    console.log(
+      `[WebRTCService.createConnection] 开始为 ${friendId} 创建连接...`,
+    );
 
     const config = createWebRTCConfig();
     const connection = new RTCPeerConnection(config);
-    console.log(`[WebRTCService.createConnection] RTCPeerConnection 对象已创建`);
+    console.log(
+      `[WebRTCService.createConnection] RTCPeerConnection 对象已创建`,
+    );
 
     // 存储连接对象供后续使用
     this.connections.set(friendId, connection);
@@ -340,16 +376,22 @@ class WebRTCService {
     connection.onicecandidate = async (event) => {
       if (event.candidate) {
         const candidateType = event.candidate.type;
-        console.log(`[WebRTCService.onicecandidate] 收集到ICE候选 - 类型: ${candidateType}, 地址: ${event.candidate.address}:${event.candidate.port}`);
+        console.log(
+          `[WebRTCService.onicecandidate] 收集到ICE候选 - 类型: ${candidateType}, 地址: ${event.candidate.address}:${event.candidate.port}`,
+        );
 
         // 跳过relay类型的候选(中继候选)，仅使用host和srflx候选
         if (candidateType === 'relay') {
-          console.log(`[WebRTCService.onicecandidate] 跳过中继候选(relay candidate)`);
+          console.log(
+            `[WebRTCService.onicecandidate] 跳过中继候选(relay candidate)`,
+          );
           return;
         }
         // 跳过本地host候选
         if (candidateType === 'host') {
-          console.log(`[WebRTCService.onicecandidate] 跳过本地host候选(host candidate)`);
+          console.log(
+            `[WebRTCService.onicecandidate] 跳过本地host候选(host candidate)`,
+          );
           return;
         }
 
@@ -376,25 +418,31 @@ class WebRTCService {
      * connecting -> connected -> disconnected/closed/failed
      */
     connection.onconnectionstatechange = () => {
-      console.log(`[WebRTCService.onconnectionstatechange] 连接状态: ${connection.connectionState} (ICE状态: ${connection.iceConnectionState}, 收集状态: ${connection.iceGatheringState})`);
-      
+      console.log(
+        `[WebRTCService.onconnectionstatechange] 连接状态: ${connection.connectionState} (ICE状态: ${connection.iceConnectionState}, 收集状态: ${connection.iceGatheringState})`,
+      );
+
       // 触发状态变化回调，供UI层更新显示
       this.onConnectionStateChange?.(friendId, connection.connectionState);
-      
+
       // 根据状态处理ICE重启和超时
       this.handleConnectionStateChange(friendId, connection.connectionState);
     };
-    
+
     /**
      * ICE连接状态变化事件处理器
      * 用于更细粒度的ICE状态监控
      */
     connection.oniceconnectionstatechange = () => {
-      console.log(`[WebRTCService.oniceconnectionstatechange] ICE连接状态: ${connection.iceConnectionState}`);
-      
+      console.log(
+        `[WebRTCService.oniceconnectionstatechange] ICE连接状态: ${connection.iceConnectionState}`,
+      );
+
       // 处理ICE失败，尝试重启
       if (connection.iceConnectionState === 'failed') {
-        console.log(`[WebRTCService.oniceconnectionstatechange] ICE连接失败，尝试重启ICE...`);
+        console.log(
+          `[WebRTCService.oniceconnectionstatechange] ICE连接失败，尝试重启ICE...`,
+        );
         this.attemptIceRestart(friendId, connection);
       }
     };
@@ -405,7 +453,9 @@ class WebRTCService {
      * 发起方通过createOffer时主动创建DataChannel
      */
     connection.ondatachannel = (event) => {
-      console.log(`[WebRTCService.ondatachannel] 接收到远程DataChannel: ${event.channel.label}`);
+      console.log(
+        `[WebRTCService.ondatachannel] 接收到远程DataChannel: ${event.channel.label}`,
+      );
       this.setupDataChannel(friendId, event.channel);
     };
 
@@ -414,7 +464,9 @@ class WebRTCService {
      * 当对端添加媒体轨道时触发
      */
     connection.ontrack = (event) => {
-      console.log(`[WebRTCService.ontrack] 收到远程媒体轨道 - 类型: ${event.track.kind}, streams: ${event.streams.length}`);
+      console.log(
+        `[WebRTCService.ontrack] 收到远程媒体轨道 - 类型: ${event.track.kind}, streams: ${event.streams.length}`,
+      );
       if (event.streams && event.streams.length > 0) {
         const remoteStream = event.streams[0];
         this.remoteStreams.set(friendId, remoteStream);
@@ -428,20 +480,26 @@ class WebRTCService {
      */
     if (this.localStream) {
       console.log(`[WebRTCService.createConnection] 添加本地媒体轨道到连接...`);
-      this.localStream.getTracks().forEach(track => {
+      this.localStream.getTracks().forEach((track) => {
         if (this.localStream) {
           connection.addTrack(track, this.localStream);
-          console.log(`[WebRTCService.createConnection] 已添加轨道: ${track.kind}`);
+          console.log(
+            `[WebRTCService.createConnection] 已添加轨道: ${track.kind}`,
+          );
         }
       });
     } else {
-      console.log(`[WebRTCService.createConnection] ⚠️ 本地媒体流未初始化，不添加媒体轨道`);
+      console.log(
+        `[WebRTCService.createConnection] ⚠️ 本地媒体流未初始化，不添加媒体轨道`,
+      );
     }
 
     // 启动ICE连接超时计时器
     this.startIceConnectionTimeout(friendId);
 
-    console.log(`[WebRTCService.createConnection] 连接创建完成 - friendId: ${friendId}, 连接总数: ${this.connections.size}`);
+    console.log(
+      `[WebRTCService.createConnection] 连接创建完成 - friendId: ${friendId}, 连接总数: ${this.connections.size}`,
+    );
     return connection;
   }
 
@@ -451,22 +509,33 @@ class WebRTCService {
    * @param friendId 对端用户ID
    * @param state 当前连接状态
    */
-  private handleConnectionStateChange(friendId: string, state: RTCPeerConnectionState): void {
+  private handleConnectionStateChange(
+    friendId: string,
+    state: RTCPeerConnectionState,
+  ): void {
     switch (state) {
       case 'connected':
-        console.log(`[WebRTCService.handleConnectionStateChange] ✅ 连接已建立，清除超时和重启计时器`);
+        console.log(
+          `[WebRTCService.handleConnectionStateChange] ✅ 连接已建立，清除超时和重启计时器`,
+        );
         this.clearIceTimers(friendId);
         break;
       case 'disconnected':
-        console.log(`[WebRTCService.handleConnectionStateChange] ⚠️  连接断开，尝试重启ICE...`);
+        console.log(
+          `[WebRTCService.handleConnectionStateChange] ⚠️  连接断开，尝试重启ICE...`,
+        );
         this.attemptIceRestartWithDelay(friendId);
         break;
       case 'failed':
-        console.log(`[WebRTCService.handleConnectionStateChange] ❌ 连接失败，尝试重启ICE...`);
+        console.log(
+          `[WebRTCService.handleConnectionStateChange] ❌ 连接失败，尝试重启ICE...`,
+        );
         this.attemptIceRestartWithDelay(friendId);
         break;
       case 'closed':
-        console.log(`[WebRTCService.handleConnectionStateChange] 🔒 连接已关闭，清除所有计时器`);
+        console.log(
+          `[WebRTCService.handleConnectionStateChange] 🔒 连接已关闭，清除所有计时器`,
+        );
         this.clearIceTimers(friendId);
         break;
     }
@@ -481,14 +550,22 @@ class WebRTCService {
     if (this.iceTimeoutTimers.has(friendId)) {
       clearTimeout(this.iceTimeoutTimers.get(friendId)!);
     }
-    
+
     const timeout = setTimeout(() => {
-      console.log(`[WebRTCService.startIceConnectionTimeout] ⏰ ICE连接超时 (${WebRTCService.ICE_CONNECTION_TIMEOUT / 1000}秒)，尝试重启...`);
+      console.log(
+        `[WebRTCService.startIceConnectionTimeout] ⏰ ICE连接超时 (${
+          WebRTCService.ICE_CONNECTION_TIMEOUT / 1000
+        }秒)，尝试重启...`,
+      );
       this.attemptIceRestart(friendId, this.connections.get(friendId));
     }, WebRTCService.ICE_CONNECTION_TIMEOUT);
-    
+
     this.iceTimeoutTimers.set(friendId, timeout);
-    console.log(`[WebRTCService.startIceConnectionTimeout] 已启动ICE超时计时器，${WebRTCService.ICE_CONNECTION_TIMEOUT / 1000}秒后触发`);
+    console.log(
+      `[WebRTCService.startIceConnectionTimeout] 已启动ICE超时计时器，${
+        WebRTCService.ICE_CONNECTION_TIMEOUT / 1000
+      }秒后触发`,
+    );
   }
 
   /**
@@ -500,9 +577,11 @@ class WebRTCService {
     if (!connection) return;
 
     const restartCount = this.iceRestartCount.get(friendId) || 0;
-    
+
     if (restartCount >= WebRTCService.MAX_ICE_RESTART_COUNT) {
-      console.log(`[WebRTCService.attemptIceRestartWithDelay] 已达到最大重启次数(${WebRTCService.MAX_ICE_RESTART_COUNT})，停止尝试`);
+      console.log(
+        `[WebRTCService.attemptIceRestartWithDelay] 已达到最大重启次数(${WebRTCService.MAX_ICE_RESTART_COUNT})，停止尝试`,
+      );
       return;
     }
 
@@ -512,46 +591,57 @@ class WebRTCService {
     }
 
     const delay = setTimeout(() => {
-      console.log(`[WebRTCService.attemptIceRestartWithDelay] 开始第${restartCount + 1}次ICE重启...`);
+      console.log(
+        `[WebRTCService.attemptIceRestartWithDelay] 开始第${
+          restartCount + 1
+        }次ICE重启...`,
+      );
       this.attemptIceRestart(friendId, connection);
     }, WebRTCService.ICE_RESTART_INTERVAL);
-    
+
     this.iceRestartTimers.set(friendId, delay);
   }
 
   /**
    * 尝试重启ICE连接
    * 通过重新创建offer/answer来刷新ICE候选
-   * 
+   *
    * 重要：ICE重启不会创建新窗口，只是在同一个连接上重新协商
-   * 
+   *
    * @param friendId 对端用户ID
    * @param connection RTCPeerConnection对象
    */
-  private async attemptIceRestart(friendId: string, connection: RTCPeerConnection | undefined): Promise<void> {
+  private async attemptIceRestart(
+    friendId: string,
+    connection: RTCPeerConnection | undefined,
+  ): Promise<void> {
     if (!connection) {
       console.error(`[WebRTCService.attemptIceRestart] ❌ 连接不存在`);
       return;
     }
 
     const restartCount = (this.iceRestartCount.get(friendId) || 0) + 1;
-    
+
     if (restartCount > WebRTCService.MAX_ICE_RESTART_COUNT) {
-      console.log(`[WebRTCService.attemptIceRestart] ❌ 已达到最大重启次数(${WebRTCService.MAX_ICE_RESTART_COUNT})，停止尝试`);
+      console.log(
+        `[WebRTCService.attemptIceRestart] ❌ 已达到最大重启次数(${WebRTCService.MAX_ICE_RESTART_COUNT})，停止尝试`,
+      );
       this.clearIceTimers(friendId);
-      
+
       // 触发最终失败状态
       this.onConnectionStateChange?.(friendId, 'failed');
       return;
     }
 
     this.iceRestartCount.set(friendId, restartCount);
-    console.log(`[WebRTCService.attemptIceRestart] 🔄 第${restartCount}/${WebRTCService.MAX_ICE_RESTART_COUNT}次尝试重启ICE...`);
+    console.log(
+      `[WebRTCService.attemptIceRestart] 🔄 第${restartCount}/${WebRTCService.MAX_ICE_RESTART_COUNT}次尝试重启ICE...`,
+    );
 
     try {
       // 清除旧的计时器
       this.clearIceTimers(friendId);
-      
+
       // 创建新的offer并设置iceRestart选项
       // 这会在同一个连接上重新协商，不会创建新窗口
       const offer = await connection.createOffer({
@@ -574,21 +664,29 @@ class WebRTCService {
       };
 
       await this.sendSignal(signalMessage);
-      console.log(`[WebRTCService.attemptIceRestart] ✅ ICE重启信令已发送，等待对端响应...`);
+      console.log(
+        `[WebRTCService.attemptIceRestart] ✅ ICE重启信令已发送，等待对端响应...`,
+      );
 
       // 重新启动超时计时器
       this.startIceConnectionTimeout(friendId);
     } catch (error) {
       console.error(`[WebRTCService.attemptIceRestart] ❌ ICE重启失败:`, error);
-      
+
       // 如果还有重试机会，延迟后再次尝试
       if (restartCount < WebRTCService.MAX_ICE_RESTART_COUNT) {
-        console.log(`[WebRTCService.attemptIceRestart] ⏳ ${WebRTCService.ICE_RESTART_INTERVAL / 1000}秒后进行第${restartCount + 1}次尝试...`);
+        console.log(
+          `[WebRTCService.attemptIceRestart] ⏳ ${
+            WebRTCService.ICE_RESTART_INTERVAL / 1000
+          }秒后进行第${restartCount + 1}次尝试...`,
+        );
         setTimeout(() => {
           this.attemptIceRestartWithDelay(friendId);
         }, WebRTCService.ICE_RESTART_INTERVAL);
       } else {
-        console.log(`[WebRTCService.attemptIceRestart] ❌ 已达到最大重启次数，放弃连接`);
+        console.log(
+          `[WebRTCService.attemptIceRestart] ❌ 已达到最大重启次数，放弃连接`,
+        );
         this.onConnectionStateChange?.(friendId, 'failed');
       }
     }
@@ -604,22 +702,22 @@ class WebRTCService {
       clearTimeout(this.iceTimeoutTimers.get(friendId)!);
       this.iceTimeoutTimers.delete(friendId);
     }
-    
+
     // 清除重启计时器
     if (this.iceRestartTimers.has(friendId)) {
       clearTimeout(this.iceRestartTimers.get(friendId)!);
       this.iceRestartTimers.delete(friendId);
     }
-    
+
     console.log(`[WebRTCService.clearIceTimers] 所有ICE计时器已清除`);
   }
 
   /**
    * 优化SDP以提高NAT穿透成功率
-   * 
+   *
    * 保守策略：不做任何SDP修改，让浏览器自动处理
    * 现代浏览器已经自动优化了ICE和NAT穿透
-   * 
+   *
    * @param sdp 原始SDP字符串
    * @returns 优化后的SDP字符串
    */
@@ -637,22 +735,24 @@ class WebRTCService {
    */
   private async detectNATType(): Promise<void> {
     console.log(`[WebRTCService.detectNATType] 开始检测NAT类型...`);
-    
+
     try {
       const config = createWebRTCConfig();
       const tempConnection = new RTCPeerConnection(config);
-      
+
       let hasHostCandidate = false;
       let hasSrflxCandidate = false;
       let candidateCount = 0;
-      
+
       // 收集ICE候选以分析NAT类型
       tempConnection.onicecandidate = (event) => {
         if (event.candidate) {
           candidateCount++;
           const type = event.candidate.type;
-          console.log(`[WebRTCService.detectNATType] 收到候选 - 类型: ${type}, 地址: ${event.candidate.address}`);
-          
+          console.log(
+            `[WebRTCService.detectNATType] 收到候选 - 类型: ${type}, 地址: ${event.candidate.address}`,
+          );
+
           if (type === 'host') {
             hasHostCandidate = true;
           } else if (type === 'srflx') {
@@ -660,24 +760,23 @@ class WebRTCService {
           }
         }
       };
-      
+
       // 创建offer触发ICE候选收集
       const offer = await tempConnection.createOffer({
         offerToReceiveAudio: false,
         offerToReceiveVideo: false,
       });
-      
+
       await tempConnection.setLocalDescription(offer);
-      
+
       // 等待一段时间收集候选
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
       // 分析NAT类型
       this.analyzeNATType(hasHostCandidate, hasSrflxCandidate, candidateCount);
-      
+
       // 清理临时连接
       tempConnection.close();
-      
     } catch (error) {
       console.error(`[WebRTCService.detectNATType] ❌ NAT检测失败:`, error);
       this.detectedNATType = 'unknown';
@@ -688,29 +787,41 @@ class WebRTCService {
   /**
    * 分析收集到的ICE候选，确定NAT类型
    */
-  private analyzeNATType(hasHost: boolean, hasSrflx: boolean, count: number): void {
+  private analyzeNATType(
+    hasHost: boolean,
+    hasSrflx: boolean,
+    count: number,
+  ): void {
     let natType: string;
-    
+
     if (!hasSrflx && !hasHost) {
       natType = 'blocked'; // 完全阻塞或对称型NAT
-      console.warn(`[WebRTCService.analyzeNATType] ⚠️ 检测到网络可能被严重限制`);
+      console.warn(
+        `[WebRTCService.analyzeNATType] ⚠️ 检测到网络可能被严重限制`,
+      );
     } else if (hasHost && hasSrflx) {
       natType = 'nat1'; // 全锥型NAT（最易穿透）
-      console.log(`[WebRTCService.analyzeNATType] ✅ 检测到全锥型NAT(NAT1)，穿透性最好`);
+      console.log(
+        `[WebRTCService.analyzeNATType] ✅ 检测到全锥型NAT(NAT1)，穿透性最好`,
+      );
     } else if (hasSrflx && !hasHost) {
       natType = 'nat3'; // 对称型NAT（最难穿透）
-      console.warn(`[WebRTCService.analyzeNATType] ⚠️ 检测到对称型NAT(NAT3)，穿透难度较高`);
+      console.warn(
+        `[WebRTCService.analyzeNATType] ⚠️ 检测到对称型NAT(NAT3)，穿透难度较高`,
+      );
     } else if (hasHost && !hasSrflx) {
       natType = 'public'; // 公网IP
-      console.log(`[WebRTCService.analyzeNATType] ✅ 检测到公网IP，无需NAT穿越`);
+      console.log(
+        `[WebRTCService.analyzeNATType] ✅ 检测到公网IP，无需NAT穿越`,
+      );
     } else {
       natType = 'unknown';
       console.log(`[WebRTCService.analyzeNATType] 无法确定NAT类型`);
     }
-    
+
     this.detectedNATType = natType;
     this.isNATDetected = true;
-    
+
     // 根据NAT类型调整配置
     this.adjustConfigForNATType(natType);
   }
@@ -722,35 +833,45 @@ class WebRTCService {
   private adjustConfigForNATType(natType: string): void {
     switch (natType) {
       case 'nat3':
-        console.log(`[WebRTCService.adjustConfigForNATType] 🔄 检测到NAT3（对称型NAT），调整配置...`);
-        console.warn(`[WebRTCService.adjustConfigForNATType] ⚠️  对称型NAT穿透难度极高，可能需要多次尝试`);
+        console.log(
+          `[WebRTCService.adjustConfigForNATType] 🔄 检测到NAT3（对称型NAT），调整配置...`,
+        );
+        console.warn(
+          `[WebRTCService.adjustConfigForNATType] ⚠️  对称型NAT穿透难度极高，可能需要多次尝试`,
+        );
         // NAT3环境下增加超时时间和重启次数
         WebRTCService.ICE_CONNECTION_TIMEOUT = 60000; // 增加到60秒
-        WebRTCService.ICE_RESTART_INTERVAL = 8000;    // 缩短到8秒，更频繁尝试
-        WebRTCService.MAX_ICE_RESTART_COUNT = 5;      // 增加到5次
+        WebRTCService.ICE_RESTART_INTERVAL = 8000; // 缩短到8秒，更频繁尝试
+        WebRTCService.MAX_ICE_RESTART_COUNT = 5; // 增加到5次
         break;
-        
+
       case 'nat1':
       case 'public':
-        console.log(`[WebRTCService.adjustConfigForNATType] ✅ 网络条件良好(${natType})，使用标准配置`);
+        console.log(
+          `[WebRTCService.adjustConfigForNATType] ✅ 网络条件良好(${natType})，使用标准配置`,
+        );
         // 保持默认配置
         break;
-        
+
       case 'blocked':
-        console.warn(`[WebRTCService.adjustConfigForNATType] ⚠️ 网络受限严重，尝试更激进的策略`);
+        console.warn(
+          `[WebRTCService.adjustConfigForNATType] ⚠️ 网络受限严重，尝试更激进的策略`,
+        );
         // 尝试更长的超时和更多重启次数
         WebRTCService.ICE_CONNECTION_TIMEOUT = 90000; // 90秒
-        WebRTCService.ICE_RESTART_INTERVAL = 5000;    // 5秒
-        WebRTCService.MAX_ICE_RESTART_COUNT = 7;       // 允许更多重启
+        WebRTCService.ICE_RESTART_INTERVAL = 5000; // 5秒
+        WebRTCService.MAX_ICE_RESTART_COUNT = 7; // 允许更多重启
         break;
-        
+
       default:
         console.log(`[WebRTCService.adjustConfigForNATType] 使用默认配置`);
         break;
     }
-    
+
     console.log(`[WebRTCService.adjustConfigForNATType] 配置已调整:`);
-    console.log(`  - 超时时间: ${WebRTCService.ICE_CONNECTION_TIMEOUT / 1000}秒`);
+    console.log(
+      `  - 超时时间: ${WebRTCService.ICE_CONNECTION_TIMEOUT / 1000}秒`,
+    );
     console.log(`  - 重启间隔: ${WebRTCService.ICE_RESTART_INTERVAL / 1000}秒`);
     console.log(`  - 最大重启次数: ${WebRTCService.MAX_ICE_RESTART_COUNT}次`);
   }
@@ -813,18 +934,26 @@ class WebRTCService {
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
     });
-    console.log(`[WebRTCService.createOffer] offer 已创建，SDP长度: ${offer.sdp?.length || 0}`);
+    console.log(
+      `[WebRTCService.createOffer] offer 已创建，SDP长度: ${
+        offer.sdp?.length || 0
+      }`,
+    );
 
     // 优化SDP以提高NAT穿透成功率
     if (offer.sdp) {
       offer.sdp = this.optimizeSDPForNAT(offer.sdp);
-      console.log(`[WebRTCService.createOffer] SDP已优化，新长度: ${offer.sdp.length}`);
+      console.log(
+        `[WebRTCService.createOffer] SDP已优化，新长度: ${offer.sdp.length}`,
+      );
     }
 
     // 设置本地描述，告知WebRTC此端的能力
     console.log(`[WebRTCService.createOffer] 设置本地描述...`);
     await connection.setLocalDescription(offer);
-    console.log(`[WebRTCService.createOffer] 本地描述已设置，连接状态: ${connection.connectionState}`);
+    console.log(
+      `[WebRTCService.createOffer] 本地描述已设置，连接状态: ${connection.connectionState}`,
+    );
 
     return offer;
   }
@@ -842,8 +971,13 @@ class WebRTCService {
    * @param offer 发起方发来的offer
    * @returns RTCSessionDescriptionInit (answer)
    */
-  async handleOffer(friendId: string, offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
-    console.log(`[WebRTCService.handleOffer] 开始处理来自 ${friendId} 的offer...`);
+  async handleOffer(
+    friendId: string,
+    offer: RTCSessionDescriptionInit,
+  ): Promise<RTCSessionDescriptionInit> {
+    console.log(
+      `[WebRTCService.handleOffer] 开始处理来自 ${friendId} 的offer...`,
+    );
 
     let connection = this.connections.get(friendId);
     if (!connection) {
@@ -854,25 +988,37 @@ class WebRTCService {
     }
 
     // 设置远程描述，表示接受对端的offer
-    console.log(`[WebRTCService.handleOffer] 设置远程描述，SDP长度: ${offer.sdp?.length || 0}`);
+    console.log(
+      `[WebRTCService.handleOffer] 设置远程描述，SDP长度: ${
+        offer.sdp?.length || 0
+      }`,
+    );
     await connection.setRemoteDescription(new RTCSessionDescription(offer));
     console.log(`[WebRTCService.handleOffer] 远程描述已设置`);
 
     // 创建answer作为本端的回应
     console.log(`[WebRTCService.handleOffer] 调用 createAnswer()...`);
     const answer = await connection.createAnswer();
-    console.log(`[WebRTCService.handleOffer] answer 已创建，SDP长度: ${answer.sdp?.length || 0}`);
+    console.log(
+      `[WebRTCService.handleOffer] answer 已创建，SDP长度: ${
+        answer.sdp?.length || 0
+      }`,
+    );
 
     // 优化answer SDP
     if (answer.sdp) {
       answer.sdp = this.optimizeSDPForNAT(answer.sdp);
-      console.log(`[WebRTCService.handleOffer] Answer SDP已优化，新长度: ${answer.sdp.length}`);
+      console.log(
+        `[WebRTCService.handleOffer] Answer SDP已优化，新长度: ${answer.sdp.length}`,
+      );
     }
 
     // 设置本地描述
     console.log(`[WebRTCService.handleOffer] 设置本地描述...`);
     await connection.setLocalDescription(answer);
-    console.log(`[WebRTCService.handleOffer] 本地描述已设置，连接状态: ${connection.connectionState}`);
+    console.log(
+      `[WebRTCService.handleOffer] 本地描述已设置，连接状态: ${connection.connectionState}`,
+    );
 
     return answer;
   }
@@ -888,8 +1034,13 @@ class WebRTCService {
    * @param friendId 对端用户ID
    * @param answer 对端的answer
    */
-  async handleAnswer(friendId: string, answer: RTCSessionDescriptionInit): Promise<void> {
-    console.log(`[WebRTCService.handleAnswer] 开始处理来自 ${friendId} 的answer...`);
+  async handleAnswer(
+    friendId: string,
+    answer: RTCSessionDescriptionInit,
+  ): Promise<void> {
+    console.log(
+      `[WebRTCService.handleAnswer] 开始处理来自 ${friendId} 的answer...`,
+    );
 
     const connection = this.connections.get(friendId);
     if (!connection) {
@@ -898,9 +1049,15 @@ class WebRTCService {
     }
 
     // 设置远程描述
-    console.log(`[WebRTCService.handleAnswer] 设置远程描述，SDP长度: ${answer.sdp?.length || 0}`);
+    console.log(
+      `[WebRTCService.handleAnswer] 设置远程描述，SDP长度: ${
+        answer.sdp?.length || 0
+      }`,
+    );
     await connection.setRemoteDescription(new RTCSessionDescription(answer));
-    console.log(`[WebRTCService.handleAnswer] 远程描述已设置，连接状态: ${connection.connectionState}`);
+    console.log(
+      `[WebRTCService.handleAnswer] 远程描述已设置，连接状态: ${connection.connectionState}`,
+    );
   }
 
   /**
@@ -917,19 +1074,30 @@ class WebRTCService {
    * @param friendId 对端用户ID
    * @param candidate 对端发来的ICE候选
    */
-  async handleCandidate(friendId: string, candidate: RTCIceCandidateInit): Promise<void> {
-    console.log(`[WebRTCService.handleCandidate] 处理来自 ${friendId} 的candidate - 类型: ${candidate.candidate?.split(' ')[7]}`);
+  async handleCandidate(
+    friendId: string,
+    candidate: RTCIceCandidateInit,
+  ): Promise<void> {
+    console.log(
+      `[WebRTCService.handleCandidate] 处理来自 ${friendId} 的candidate - 类型: ${
+        candidate.candidate?.split(' ')[7]
+      }`,
+    );
 
     const connection = this.connections.get(friendId);
     if (!connection) {
-      console.error(`[WebRTCService.handleCandidate] 未找到 ${friendId} 的连接`);
+      console.error(
+        `[WebRTCService.handleCandidate] 未找到 ${friendId} 的连接`,
+      );
       throw new Error('未找到该联系人的连接');
     }
 
     const iceCandidate = new RTCIceCandidate(candidate);
     // 跳过relay类型的候选
     if (iceCandidate.type === 'relay' || iceCandidate.type === 'host') {
-      console.log(`[WebRTCService.handleCandidate] 跳过中继候选(relay candidate)`);
+      console.log(
+        `[WebRTCService.handleCandidate] 跳过中继候选(relay candidate)`,
+      );
       return;
     }
 
@@ -952,40 +1120,58 @@ class WebRTCService {
    * @param channel RTCDataChannel对象
    */
   private setupDataChannel(friendId: string, channel: RTCDataChannel) {
-    console.log(`[WebRTCService.setupDataChannel] 为 ${friendId} 设置DataChannel - Label: ${channel.label}, BufferedAmount: ${channel.bufferedAmount}`);
+    console.log(
+      `[WebRTCService.setupDataChannel] 为 ${friendId} 设置DataChannel - Label: ${channel.label}, BufferedAmount: ${channel.bufferedAmount}`,
+    );
 
     this.dataChannels.set(friendId, channel);
 
     /** DataChannel打开事件 */
     channel.onopen = () => {
-      console.log(`[WebRTCService.ondatachannelopen] ✅ DataChannel已打开 (friendId: ${friendId}) - 现在可以发送消息`);
-      console.log(`[WebRTCService.ondatachannelopen] 通道详情 - readyState: ${channel.readyState}, bufferedAmount: ${channel.bufferedAmount}`);
+      console.log(
+        `[WebRTCService.ondatachannelopen] ✅ DataChannel已打开 (friendId: ${friendId}) - 现在可以发送消息`,
+      );
+      console.log(
+        `[WebRTCService.ondatachannelopen] 通道详情 - readyState: ${channel.readyState}, bufferedAmount: ${channel.bufferedAmount}`,
+      );
     };
 
     /** DataChannel关闭事件 */
     channel.onclose = () => {
-      console.log(`[WebRTCService.ondatachannelclose] DataChannel已关闭 (friendId: ${friendId})`);
+      console.log(
+        `[WebRTCService.ondatachannelclose] DataChannel已关闭 (friendId: ${friendId})`,
+      );
       this.dataChannels.delete(friendId);
     };
 
     /** DataChannel接收消息事件 */
     channel.onmessage = (event) => {
-      console.log(`[WebRTCService.ondatachannelmessage] ✉️  从${friendId}收到消息 - 内容: ${event.data}, 时间: ${new Date().toLocaleTimeString()}`);
+      console.log(
+        `[WebRTCService.ondatachannelmessage] ✉️  从${friendId}收到消息 - 内容: ${
+          event.data
+        }, 时间: ${new Date().toLocaleTimeString()}`,
+      );
       // 触发消息回调，供应用层处理
       this.onMessageCallback?.(friendId, event.data);
     };
 
     /** DataChannel错误事件 */
     channel.onerror = (error) => {
-      console.error(`[WebRTCService.ondatachannelerror] ❌ DataChannel错误 (friendId: ${friendId}) - ${error}`);
+      console.error(
+        `[WebRTCService.ondatachannelerror] ❌ DataChannel错误 (friendId: ${friendId}) - ${error}`,
+      );
     };
 
     /** DataChannel缓冲量变化事件 */
     channel.onbufferedamountlow = () => {
-      console.log(`[WebRTCService.onbufferedamountlow] 缓冲区低水位事件 (friendId: ${friendId})`);
+      console.log(
+        `[WebRTCService.onbufferedamountlow] 缓冲区低水位事件 (friendId: ${friendId})`,
+      );
     };
 
-    console.log(`[WebRTCService.setupDataChannel] DataChannel设置完成，当前总数: ${this.dataChannels.size}`);
+    console.log(
+      `[WebRTCService.setupDataChannel] DataChannel设置完成，当前总数: ${this.dataChannels.size}`,
+    );
   }
 
   /**
@@ -1002,21 +1188,29 @@ class WebRTCService {
 
     // 检查通道是否存在且已打开
     if (!channel) {
-      console.error(`[WebRTCService.sendMessage] ❌ 发送失败 - DataChannel不存在 (friendId: ${friendId})`);
+      console.error(
+        `[WebRTCService.sendMessage] ❌ 发送失败 - DataChannel不存在 (friendId: ${friendId})`,
+      );
       return false;
     }
 
     if (channel.readyState !== 'open') {
-      console.error(`[WebRTCService.sendMessage] ❌ 发送失败 - DataChannel未打开 (readyState: ${channel.readyState})`);
+      console.error(
+        `[WebRTCService.sendMessage] ❌ 发送失败 - DataChannel未打开 (readyState: ${channel.readyState})`,
+      );
       return false;
     }
 
-    console.log(`[WebRTCService.sendMessage] ✅ DataChannel已就绪，发送消息: "${message}" (长度: ${message.length} 字符)`);
+    console.log(
+      `[WebRTCService.sendMessage] ✅ DataChannel已就绪，发送消息: "${message}" (长度: ${message.length} 字符)`,
+    );
 
     try {
       // 发送消息
       channel.send(message);
-      console.log(`[WebRTCService.sendMessage] ✅ 消息发送成功，缓冲区大小: ${channel.bufferedAmount}`);
+      console.log(
+        `[WebRTCService.sendMessage] ✅ 消息发送成功，缓冲区大小: ${channel.bufferedAmount}`,
+      );
       return true;
     } catch (error) {
       console.error(`[WebRTCService.sendMessage] ❌ 发送异常 - ${error}`);
@@ -1036,8 +1230,12 @@ class WebRTCService {
   async sendSignal(signalMessage: WebRTCSignalMessage): Promise<void> {
     try {
       const raw = JSON.stringify(signalMessage);
-      console.log(`[WebRTCService.sendSignal] 准备发送${signalMessage.type}信令给 ${signalMessage.receiver}...`);
-      console.log(`[WebRTCService.sendSignal] 信令详情 - sessionId: ${signalMessage.sessionId}, 内容长度: ${raw.length}`);
+      console.log(
+        `[WebRTCService.sendSignal] 准备发送${signalMessage.type}信令给 ${signalMessage.receiver}...`,
+      );
+      console.log(
+        `[WebRTCService.sendSignal] 信令详情 - sessionId: ${signalMessage.sessionId}, 内容长度: ${raw.length}`,
+      );
 
       // 通过Tauri invoke调用后端的send_text_msg命令
       await invoke('send_text_msg', {
@@ -1051,7 +1249,9 @@ class WebRTCService {
         },
       });
 
-      console.log(`[WebRTCService.sendSignal] ✅ ${signalMessage.type}信令已通过QUIC发送，等待对端响应...`);
+      console.log(
+        `[WebRTCService.sendSignal] ✅ ${signalMessage.type}信令已通过QUIC发送，等待对端响应...`,
+      );
     } catch (error) {
       console.error(`[WebRTCService.sendSignal] ❌ 发送信令失败 - ${error}`);
       throw error;
@@ -1064,11 +1264,13 @@ class WebRTCService {
    * @param friendId 对端用户ID
    */
   async closeConnection(friendId: string): Promise<void> {
-    console.log(`[WebRTCService.closeConnection] 开始关闭与 ${friendId} 的连接...`);
+    console.log(
+      `[WebRTCService.closeConnection] 开始关闭与 ${friendId} 的连接...`,
+    );
 
     // 清除ICE相关计时器
     this.clearIceTimers(friendId);
-    
+
     // 重置ICE重启计数
     this.iceRestartCount.delete(friendId);
 
@@ -1080,13 +1282,17 @@ class WebRTCService {
       this.dataChannels.delete(friendId);
       console.log(`[WebRTCService.closeConnection] DataChannel已关闭`);
     } else {
-      console.log(`[WebRTCService.closeConnection] 该friendId不存在DataChannel`);
+      console.log(
+        `[WebRTCService.closeConnection] 该friendId不存在DataChannel`,
+      );
     }
 
     // 关闭RTCPeerConnection
     const connection = this.connections.get(friendId);
     if (connection) {
-      console.log(`[WebRTCService.closeConnection] 关闭RTCPeerConnection (当前状态: ${connection.connectionState})...`);
+      console.log(
+        `[WebRTCService.closeConnection] 关闭RTCPeerConnection (当前状态: ${connection.connectionState})...`,
+      );
       connection.close();
       this.connections.delete(friendId);
       console.log(`[WebRTCService.closeConnection] RTCPeerConnection已关闭`);
@@ -1097,12 +1303,14 @@ class WebRTCService {
     // 移除远程媒体流
     const remoteStream = this.remoteStreams.get(friendId);
     if (remoteStream) {
-      remoteStream.getTracks().forEach(track => track.stop());
+      remoteStream.getTracks().forEach((track) => track.stop());
       this.remoteStreams.delete(friendId);
       console.log(`[WebRTCService.closeConnection] 远程媒体流已移除`);
     }
 
-    console.log(`[WebRTCService.closeConnection] ✅ 连接已关闭，剩余连接数: ${this.connections.size}`);
+    console.log(
+      `[WebRTCService.closeConnection] ✅ 连接已关闭，剩余连接数: ${this.connections.size}`,
+    );
   }
 
   /**
@@ -1110,11 +1318,15 @@ class WebRTCService {
    * 用于窗口卸载或应用退出时清理资源
    */
   closeAllConnections(): void {
-    console.log(`[WebRTCService.closeAllConnections] 开始关闭所有连接 (当前连接数: ${this.connections.size}, 通道数: ${this.dataChannels.size})...`);
+    console.log(
+      `[WebRTCService.closeAllConnections] 开始关闭所有连接 (当前连接数: ${this.connections.size}, 通道数: ${this.dataChannels.size})...`,
+    );
 
     // 关闭所有数据通道
     this.dataChannels.forEach((channel, friendId) => {
-      console.log(`[WebRTCService.closeAllConnections] 关闭 ${friendId} 的DataChannel...`);
+      console.log(
+        `[WebRTCService.closeAllConnections] 关闭 ${friendId} 的DataChannel...`,
+      );
       channel.close();
     });
     this.dataChannels.clear();
@@ -1122,16 +1334,22 @@ class WebRTCService {
 
     // 关闭所有连接
     this.connections.forEach((connection, friendId) => {
-      console.log(`[WebRTCService.closeAllConnections] 关闭 ${friendId} 的RTCPeerConnection...`);
+      console.log(
+        `[WebRTCService.closeAllConnections] 关闭 ${friendId} 的RTCPeerConnection...`,
+      );
       connection.close();
     });
     this.connections.clear();
-    console.log(`[WebRTCService.closeAllConnections] 所有RTCPeerConnection已关闭`);
+    console.log(
+      `[WebRTCService.closeAllConnections] 所有RTCPeerConnection已关闭`,
+    );
 
     // 关闭所有远程媒体流
     this.remoteStreams.forEach((stream, friendId) => {
-      console.log(`[WebRTCService.closeAllConnections] 关闭 ${friendId} 的远程媒体流...`);
-      stream.getTracks().forEach(track => track.stop());
+      console.log(
+        `[WebRTCService.closeAllConnections] 关闭 ${friendId} 的远程媒体流...`,
+      );
+      stream.getTracks().forEach((track) => track.stop());
     });
     this.remoteStreams.clear();
     console.log(`[WebRTCService.closeAllConnections] 所有远程媒体流已关闭`);
@@ -1150,7 +1368,9 @@ class WebRTCService {
   getConnectionState(friendId: string): RTCPeerConnectionState | null {
     const connection = this.connections.get(friendId);
     const state = connection?.connectionState || null;
-    console.log(`[WebRTCService.getConnectionState] 查询 ${friendId} 的连接状态: ${state}`);
+    console.log(
+      `[WebRTCService.getConnectionState] 查询 ${friendId} 的连接状态: ${state}`,
+    );
     return state;
   }
 
@@ -1162,7 +1382,11 @@ class WebRTCService {
   isDataChannelOpen(friendId: string): boolean {
     const channel = this.dataChannels.get(friendId);
     const isOpen = channel?.readyState === 'open';
-    console.log(`[WebRTCService.isDataChannelOpen] 检查 ${friendId} 的DataChannel状态: ${isOpen ? '✅ 打开' : '❌ 关闭'} (readyState: ${channel?.readyState || '不存在'})`);
+    console.log(
+      `[WebRTCService.isDataChannelOpen] 检查 ${friendId} 的DataChannel状态: ${
+        isOpen ? '✅ 打开' : '❌ 关闭'
+      } (readyState: ${channel?.readyState || '不存在'})`,
+    );
     return isOpen;
   }
 }

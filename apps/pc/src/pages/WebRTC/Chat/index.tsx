@@ -15,14 +15,21 @@
  * - signalData: 初始信令数据(仅响应方需要，包含对端的offer)
  */
 
-import { ApiOutlined, LogoutOutlined, VideoCameraOutlined, AudioOutlined, AudioMutedOutlined, VideoCameraAddOutlined } from '@ant-design/icons';
-import { listen } from '@tauri-apps/api/event';
+import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
+import {
+  ApiOutlined,
+  AudioMutedOutlined,
+  AudioOutlined,
+  LogoutOutlined,
+  VideoCameraAddOutlined,
+  VideoCameraOutlined,
+} from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
+import { listen } from '@tauri-apps/api/event';
 import { useLocation } from '@umijs/max';
+import { WebRTCSignalMessage } from '@workspace/types';
 import { Button, Input, message, Spin, Tag, Tooltip } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
-import { initWebRTCService, getWebRTCService } from '@/services/webrtcService';
-import { WebRTCSignalMessage } from '@workspace/types';
 import styles from './index.less';
 
 const { TextArea } = Input;
@@ -86,7 +93,9 @@ const WebRTCChat: React.FC = () => {
   /** 用户输入的文本 */
   const [inputText, setInputText] = useState('');
   /** 连接状态: connecting | connected | disconnected | failed */
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'failed'>('connecting');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connecting' | 'connected' | 'disconnected' | 'failed'
+  >('connecting');
   /** 消息容器DOM引用，用于自动滚动 */
   const messageContainerRef = useRef<HTMLDivElement>(null);
   /** 本地视频元素引用 */
@@ -137,11 +146,15 @@ const WebRTCChat: React.FC = () => {
   useEffect(() => {
     const initWebRTC = async () => {
       console.log(`[WebRTCChat] 开始初始化WebRTC连接...`);
-      console.log(`[WebRTCChat] 参数 - friendId: ${friendId}, isInitiator: ${isInitiator}, localUserId: ${localUserId}`);
+      console.log(
+        `[WebRTCChat] 参数 - friendId: ${friendId}, isInitiator: ${isInitiator}, localUserId: ${localUserId}`,
+      );
 
       // 初始化或获取WebRTC服务实例
       const service = initWebRTCService(localUserId);
-      console.log(`[WebRTCChat] WebRTCService已初始化，会话ID: ${service.sessionId}`);
+      console.log(
+        `[WebRTCChat] WebRTCService已初始化，会话ID: ${service.sessionId}`,
+      );
 
       /**
        * 初始化本地媒体流
@@ -149,7 +162,7 @@ const WebRTCChat: React.FC = () => {
       try {
         console.log(`[WebRTCChat] 初始化本地媒体流...`);
         const stream = await service.initLocalStream(true, true);
-        
+
         // 将本地流绑定到视频元素
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
@@ -163,20 +176,28 @@ const WebRTCChat: React.FC = () => {
       /**
        * 设置远程媒体流接收回调
        */
-      service.setOnRemoteStreamCallback((fromFriendId: string, stream: MediaStream) => {
-        console.log(`[WebRTCChat.onRemoteStreamCallback] 收到来自${fromFriendId}的远程媒体流`);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = stream;
-          console.log(`[WebRTCChat.onRemoteStreamCallback] ✅ 远程视频流已绑定`);
-        }
-      });
+      service.setOnRemoteStreamCallback(
+        (fromFriendId: string, stream: MediaStream) => {
+          console.log(
+            `[WebRTCChat.onRemoteStreamCallback] 收到来自${fromFriendId}的远程媒体流`,
+          );
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = stream;
+            console.log(
+              `[WebRTCChat.onRemoteStreamCallback] ✅ 远程视频流已绑定`,
+            );
+          }
+        },
+      );
 
       /**
        * 设置消息接收回调
        * 当对端通过DataChannel发送消息时触发
        */
       service.setOnMessageCallback((fromFriendId: string, msg: string) => {
-        console.log(`[WebRTCChat.onMessageCallback] 收到来自${fromFriendId}的消息: ${msg}`);
+        console.log(
+          `[WebRTCChat.onMessageCallback] 收到来自${fromFriendId}的消息: ${msg}`,
+        );
         const newMessage: ChatMessageItem = {
           id: `${Date.now()}_${Math.random()}`,
           text: msg,
@@ -191,19 +212,23 @@ const WebRTCChat: React.FC = () => {
        * 设置连接状态变化回调
        * 当RTCPeerConnection的状态发生变化时触发
        */
-      service.setOnConnectionStateChange((fromFriendId: string, state: RTCPeerConnectionState) => {
-        console.log(`[WebRTCChat.onConnectionStateChange] 连接状态变化: ${state}`);
-        if (state === 'connected') {
-          setConnectionStatus('connected');
-          console.log(`[WebRTCChat] ✅ P2P连接已建立，可以开始聊天`);
-        } else if (state === 'disconnected' || state === 'closed') {
-          setConnectionStatus('disconnected');
-          console.log(`[WebRTCChat] ⚠️  连接已断开`);
-        } else if (state === 'failed') {
-          setConnectionStatus('failed');
-          console.log(`[WebRTCChat] ❌ 连接失败`);
-        }
-      });
+      service.setOnConnectionStateChange(
+        (fromFriendId: string, state: RTCPeerConnectionState) => {
+          console.log(
+            `[WebRTCChat.onConnectionStateChange] 连接状态变化: ${state}`,
+          );
+          if (state === 'connected') {
+            setConnectionStatus('connected');
+            console.log(`[WebRTCChat] ✅ P2P连接已建立，可以开始聊天`);
+          } else if (state === 'disconnected' || state === 'closed') {
+            setConnectionStatus('disconnected');
+            console.log(`[WebRTCChat] ⚠️  连接已断开`);
+          } else if (state === 'failed') {
+            setConnectionStatus('failed');
+            console.log(`[WebRTCChat] ❌ 连接失败`);
+          }
+        },
+      );
       console.log(`[WebRTCChat] 连接状态回调已设置`);
 
       /**
@@ -231,22 +256,27 @@ const WebRTCChat: React.FC = () => {
           // 通过QUIC信令通道发送offer给对端
           console.log(`[WebRTCChat] 调用 service.sendSignal()...`);
           await service.sendSignal(signalMessage);
-          console.log(`[WebRTCChat] ✅ offer已发送，等待对端的answer和ICE候选...`);
+          console.log(
+            `[WebRTCChat] ✅ offer已发送，等待对端的answer和ICE候选...`,
+          );
         } catch (e) {
           console.error(`[WebRTCChat] ❌ 创建offer失败:`, e);
           message.error('创建连接失败');
         }
-      }
+      } else if (initialSignalData) {
       /**
        * 响应方流程：处理offer并发送answer
        */
-      else if (initialSignalData) {
         console.log(`[WebRTCChat] 本端为响应方，处理对端的offer...`);
         try {
           // 从URL参数解析对端的offer
           console.log(`[WebRTCChat] 解析URL参数中的signalData...`);
-          const signalMsg: WebRTCSignalMsgRaw = JSON.parse(decodeURIComponent(initialSignalData));
-          console.log(`[WebRTCChat] signalData解析成功，类型: ${signalMsg.type}`);
+          const signalMsg: WebRTCSignalMsgRaw = JSON.parse(
+            decodeURIComponent(initialSignalData),
+          );
+          console.log(
+            `[WebRTCChat] signalData解析成功，类型: ${signalMsg.type}`,
+          );
 
           if (signalMsg.type === 'offer') {
             // 处理offer: 设置远程描述并创建answer
@@ -268,15 +298,18 @@ const WebRTCChat: React.FC = () => {
             // 发送answer给对端
             console.log(`[WebRTCChat] 调用 service.sendSignal()...`);
             await service.sendSignal(responseSignal);
-            console.log(`[WebRTCChat] ✅ answer已发送，等待ICE候选和连接建立...`);
+            console.log(
+              `[WebRTCChat] ✅ answer已发送，等待ICE候选和连接建立...`,
+            );
           }
         } catch (e) {
           console.error(`[WebRTCChat] ❌ 处理初始信令失败:`, e);
           message.error('处理初始信令失败');
         }
-      }
-      else {
-        console.log(`[WebRTCChat] ⚠️  既不是发起方也没有initialSignalData，可能是异常状态`);
+      } else {
+        console.log(
+          `[WebRTCChat] ⚠️  既不是发起方也没有initialSignalData，可能是异常状态`,
+        );
       }
     };
 
@@ -298,7 +331,9 @@ const WebRTCChat: React.FC = () => {
 
     const setupListener = async () => {
       try {
-        console.log(`[WebRTCChat] useEffect(setupListener) - 开始设置信令事件监听...`);
+        console.log(
+          `[WebRTCChat] useEffect(setupListener) - 开始设置信令事件监听...`,
+        );
 
         // 监听 'webrtc_signal' 事件，接收对端的answer和candidate消息
         unlisten = await listen<string>('webrtc_signal', async (event) => {
@@ -306,20 +341,28 @@ const WebRTCChat: React.FC = () => {
           try {
             // 解析事件数据: QUIC消息格式 -> 信令消息格式
             const msgVo: TextQuicMsgVo = JSON.parse(event.payload);
-            console.log(`[WebRTCChat.onWebRTCSignal] QUIC消息已解析 - nano_id: ${msgVo.nano_id}, text_type: ${msgVo.text_type}`);
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] QUIC消息已解析 - nano_id: ${msgVo.nano_id}, text_type: ${msgVo.text_type}`,
+            );
 
             const signalMsg: WebRTCSignalMsgRaw = JSON.parse(msgVo.raw);
-            console.log(`[WebRTCChat.onWebRTCSignal] 信令消息已解析 - 类型: ${signalMsg.type}, 发送方: ${signalMsg.sender}, sessionId: ${signalMsg.sessionId}`);
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] 信令消息已解析 - 类型: ${signalMsg.type}, 发送方: ${signalMsg.sender}, sessionId: ${signalMsg.sessionId}`,
+            );
 
             // 仅处理来自对端的消息
             if (signalMsg.sender !== friendId) {
-              console.log(`[WebRTCChat.onWebRTCSignal] ⚠️  忽略来自非目标用户(${signalMsg.sender})的消息`);
+              console.log(
+                `[WebRTCChat.onWebRTCSignal] ⚠️  忽略来自非目标用户(${signalMsg.sender})的消息`,
+              );
               return;
             }
 
             const service = getWebRTCService();
             if (!service) {
-              console.error(`[WebRTCChat.onWebRTCSignal] ❌ WebRTCService不存在`);
+              console.error(
+                `[WebRTCChat.onWebRTCSignal] ❌ WebRTCService不存在`,
+              );
               return;
             }
 
@@ -328,21 +371,25 @@ const WebRTCChat: React.FC = () => {
              * 仅发起方需要处理answer
              */
             if (signalMsg.type === 'answer') {
-              console.log(`[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的answer，正在处理...`);
+              console.log(
+                `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的answer，正在处理...`,
+              );
               await service.handleAnswer(friendId, signalMsg.data);
               console.log(`[WebRTCChat.onWebRTCSignal] ✅ answer已处理`);
-            }
+            } else if (signalMsg.type === 'candidate') {
             /**
              * 处理candidate信令
              * 双方都需要处理candidate来建立完整的连接
              */
-            else if (signalMsg.type === 'candidate') {
-              console.log(`[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的ICE candidate`);
+              console.log(
+                `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的ICE candidate`,
+              );
               await service.handleCandidate(friendId, signalMsg.data);
               console.log(`[WebRTCChat.onWebRTCSignal] ✅ candidate已处理`);
-            }
-            else {
-              console.log(`[WebRTCChat.onWebRTCSignal] ⚠️  未知的信令类型: ${signalMsg.type}`);
+            } else {
+              console.log(
+                `[WebRTCChat.onWebRTCSignal] ⚠️  未知的信令类型: ${signalMsg.type}`,
+              );
             }
           } catch (e) {
             console.error(`[WebRTCChat.onWebRTCSignal] ❌ 处理信令失败:`, e);
@@ -387,7 +434,9 @@ const WebRTCChat: React.FC = () => {
    * 4. 清空输入框
    */
   const sendMessage = async () => {
-    console.log(`[WebRTCChat.sendMessage] 准备发送消息，输入内容: "${inputText}"`);
+    console.log(
+      `[WebRTCChat.sendMessage] 准备发送消息，输入内容: "${inputText}"`,
+    );
 
     // 检查是否有输入内容
     if (!inputText.trim()) {
@@ -410,12 +459,16 @@ const WebRTCChat: React.FC = () => {
       return;
     }
 
-    console.log(`[WebRTCChat.sendMessage] ✅ 连接就绪，调用 service.sendMessage()...`);
+    console.log(
+      `[WebRTCChat.sendMessage] ✅ 连接就绪，调用 service.sendMessage()...`,
+    );
 
     // 通过DataChannel发送消息
     const success = service.sendMessage(friendId, inputText.trim());
     if (success) {
-      console.log(`[WebRTCChat.sendMessage] ✅ 消息发送成功，添加到本地消息列表`);
+      console.log(
+        `[WebRTCChat.sendMessage] ✅ 消息发送成功，添加到本地消息列表`,
+      );
 
       // 添加到本地消息列表
       const newMessage: ChatMessageItem = {
@@ -425,7 +478,11 @@ const WebRTCChat: React.FC = () => {
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, newMessage]);
-      console.log(`[WebRTCChat.sendMessage] 消息已添加到UI，当前消息总数: ${messages.length + 1}`);
+      console.log(
+        `[WebRTCChat.sendMessage] 消息已添加到UI，当前消息总数: ${
+          messages.length + 1
+        }`,
+      );
       setInputText(''); // 清空输入框
     } else {
       console.error(`[WebRTCChat.sendMessage] ❌ 消息发送失败`);
@@ -498,7 +555,9 @@ const WebRTCChat: React.FC = () => {
     try {
       const service = getWebRTCService();
       if (service) {
-        console.log(`[WebRTCChat.handleExit] 调用 service.closeConnection(${friendId})...`);
+        console.log(
+          `[WebRTCChat.handleExit] 调用 service.closeConnection(${friendId})...`,
+        );
         // 清理WebRTC连接资源
         await service.closeConnection(friendId);
         console.log(`[WebRTCChat.handleExit] ✅ WebRTC连接已关闭`);
@@ -563,7 +622,7 @@ const WebRTCChat: React.FC = () => {
           </Button>
         </div>
       </div>
-      
+
       <div className={styles.mainContent}>
         {showVideoPanel && (
           <div className={styles.videoPanel}>
@@ -588,13 +647,19 @@ const WebRTCChat: React.FC = () => {
                 <div className={styles.videoLabel}>本地</div>
               </div>
             </div>
-            
+
             <div className={styles.mediaControls}>
               <Tooltip title={isVideoEnabled ? '关闭摄像头' : '开启摄像头'}>
                 <Button
                   type={isVideoEnabled ? 'primary' : 'default'}
                   danger={!isVideoEnabled}
-                  icon={isVideoEnabled ? <VideoCameraOutlined /> : <VideoCameraAddOutlined />}
+                  icon={
+                    isVideoEnabled ? (
+                      <VideoCameraOutlined />
+                    ) : (
+                      <VideoCameraAddOutlined />
+                    )
+                  }
                   onClick={handleToggleVideo}
                   size="large"
                   shape="circle"
@@ -604,7 +669,9 @@ const WebRTCChat: React.FC = () => {
                 <Button
                   type={isAudioEnabled ? 'primary' : 'default'}
                   danger={!isAudioEnabled}
-                  icon={isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />}
+                  icon={
+                    isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />
+                  }
                   onClick={handleToggleAudio}
                   size="large"
                   shape="circle"
@@ -613,7 +680,7 @@ const WebRTCChat: React.FC = () => {
             </div>
           </div>
         )}
-        
+
         <div className={styles.chatPanel}>
           <div className={styles.hint}>
             WebRTC P2P 直连聊天，消息不经过服务器，关闭窗口后消息将消失
@@ -627,11 +694,15 @@ const WebRTCChat: React.FC = () => {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`${styles.messageItem} ${msg.isMine ? styles.mine : styles.friend}`}
+                className={`${styles.messageItem} ${
+                  msg.isMine ? styles.mine : styles.friend
+                }`}
               >
                 <div>
                   <div className={styles.messageBubble}>{msg.text}</div>
-                  <div className={styles.messageTime}>{formatTime(msg.timestamp)}</div>
+                  <div className={styles.messageTime}>
+                    {formatTime(msg.timestamp)}
+                  </div>
                 </div>
               </div>
             ))}

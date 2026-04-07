@@ -1,6 +1,10 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { convertPathToTauriUrl, getChatFileByBizId, getFiles } from '@workspace/services';
+import {
+  convertPathToTauriUrl,
+  getChatFileByBizId,
+  getFiles,
+} from '@workspace/services';
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
 import ChatImage from './ChatImage';
@@ -18,7 +22,9 @@ type MineChatBoxProps = {
 };
 
 const isLocalFilePath = (raw: string): boolean => {
-  return raw.includes(':\\') || raw.startsWith('/') || raw.startsWith('file://');
+  return (
+    raw.includes(':\\') || raw.startsWith('/') || raw.startsWith('file://')
+  );
 };
 
 const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {

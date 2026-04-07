@@ -23,7 +23,12 @@ interface TextQuicMsgVo {
   timestamp: number;
 }
 
-const openWebRTCChatHandler = async (friendId: string, localUserId: string, isInitiator: boolean, signalData?: string) => {
+const openWebRTCChatHandler = async (
+  friendId: string,
+  localUserId: string,
+  isInitiator: boolean,
+  signalData?: string,
+) => {
   let url = `/webrtc/chat?friendId=${friendId}&localUserId=${localUserId}&initiator=${isInitiator}`;
   if (signalData) {
     url += `&signalData=${encodeURIComponent(signalData)}`;
@@ -38,7 +43,11 @@ const openWebRTCChatHandler = async (friendId: string, localUserId: string, isIn
   const config: WindowOptions = {
     center: true,
   };
-  await openNewWindowWithoutClose(`webrtc-chat-${friendId}-${Date.now()}`, webviewOptions, config);
+  await openNewWindowWithoutClose(
+    `webrtc-chat-${friendId}-${Date.now()}`,
+    webviewOptions,
+    config,
+  );
 };
 
 const useWebRTCSignalApi = () => {
@@ -59,7 +68,12 @@ const useWebRTCSignalApi = () => {
 
             if (signalMsg.type === 'offer') {
               console.log('收到 offer，打开 WebRTC 聊天窗口');
-              await openWebRTCChatHandler(signalMsg.sender, localUserId, false, msgVo.raw);
+              await openWebRTCChatHandler(
+                signalMsg.sender,
+                localUserId,
+                false,
+                msgVo.raw,
+              );
             }
           } catch (e) {
             console.error('处理 WebRTC 信令失败:', e);
@@ -82,4 +96,4 @@ const useWebRTCSignalApi = () => {
   return useMemo(() => ({ state }), [state]);
 };
 
-export { useWebRTCSignalApi, openWebRTCChatHandler };
+export { openWebRTCChatHandler, useWebRTCSignalApi };

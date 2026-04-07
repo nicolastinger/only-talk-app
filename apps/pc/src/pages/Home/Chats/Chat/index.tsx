@@ -200,7 +200,9 @@ const ChatPage: React.FC = () => {
         const container = messageContainerRef.current;
         const prevScrollHeight = container?.scrollHeight || 0;
 
-        const newIds = new Set(chatMessages.map((msg) => msg.text_msg_raw.nano_id));
+        const newIds = new Set(
+          chatMessages.map((msg) => msg.text_msg_raw.nano_id),
+        );
         setLoadedMessageIds(newIds);
 
         setMessageList((prev) => [...chatMessages, ...prev]);
@@ -304,7 +306,10 @@ const ChatPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <ChatTopBar title={currentFriend?.friend_name || ''} friendInfo={currentFriend} />
+        <ChatTopBar
+          title={currentFriend?.friend_name || ''}
+          friendInfo={currentFriend}
+        />
       </div>
       <div className={styles.mainContainer}>
         <div

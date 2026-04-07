@@ -1,23 +1,20 @@
 /**
  * 隐私视频通话组件
- * 
+ *
  * 功能说明：
  * 1. 发起视频通话邀请
  * 2. 接收和显示远程视频/音频
  * 3. 发送本地视频/音频数据
  * 4. 控制视频/音频的开关
  * 5. 处理通话结束
- * 
+ *
  * 使用方式：
- * <PrivacyVideoCall 
- *   friendId="对方UUID" 
+ * <PrivacyVideoCall
+ *   friendId="对方UUID"
  *   isInitiator={true} // 是否为发起方
  *   onClose={() => {}} // 通话结束回调
  * />
  */
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { window } from '@tauri-apps/api';
 import {
   AudioMutedOutlined,
   AudioOutlined,
@@ -25,7 +22,15 @@ import {
   PhoneOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
-import { MediaConfig, MediaControl, MediaControlState, VideoCallInvite } from '@workspace/types';
+import { window } from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import {
+  MediaConfig,
+  MediaControl,
+  MediaControlState,
+  VideoCallInvite,
+} from '@workspace/types';
 import { Button, message, Spin, Tooltip } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './index.module.less';
@@ -52,74 +57,74 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   inviteInfo,
 }) => {
   // ==================== 视频元素引用 ====================
-  
+
   /** 本地视频元素引用 - 用于显示本地摄像头画面 */
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  
+
   /** 远程视频元素引用 - 用于显示对方视频画面 */
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  
+
   /** 本地音频元素引用 - 用于播放本地音频(通常静音) */
   const localAudioRef = useRef<HTMLAudioElement>(null);
-  
+
   /** 远程音频元素引用 - 用于播放对方音频 */
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
   // ==================== 媒体录制器引用 ====================
-  
+
   /** 视频录制器 - 录制本地摄像头视频 */
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  
+
   /** 音频录制器 - 录制本地麦克风音频 */
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  
+
   /** 本地媒体流 - 包含视频和音频轨道 */
   const localStreamRef = useRef<MediaStream | null>(null);
 
   // ==================== 远程媒体接收引用 ====================
-  
+
   /** MediaSource - 用于接收远程视频流 */
   const mediaSourceRef = useRef<MediaSource | null>(null);
-  
+
   /** SourceBuffer - 用于缓冲远程视频数据 */
   const sourceBufferRef = useRef<SourceBuffer | null>(null);
-  
+
   /** AudioMediaSource - 用于接收远程音频流 */
   const audioMediaSourceRef = useRef<MediaSource | null>(null);
-  
+
   /** AudioSourceBuffer - 用于缓冲远程音频数据 */
   const audioSourceBufferRef = useRef<SourceBuffer | null>(null);
 
   // ==================== 缓冲队列引用 ====================
-  
+
   /** 视频缓冲队列 - 存储待处理的视频帧 */
   const videoBufferQueueRef = useRef<Uint8Array[]>([]);
-  
+
   /** 音频缓冲队列 - 存储待处理的音频帧 */
   const audioBufferQueueRef = useRef<Uint8Array[]>([]);
-  
+
   /** 视频SourceBuffer更新状态标记 - 防止并发写入 */
   const isVideoSourceBufferUpdatingRef = useRef<boolean>(false);
-  
+
   /** 音频SourceBuffer更新状态标记 - 防止并发写入 */
   const isAudioSourceBufferUpdatingRef = useRef<boolean>(false);
 
   // ==================== 事件监听器清理引用 ====================
-  
+
   /** 存储所有事件监听器的取消函数，用于组件卸载时清理 */
   const unlistenRef = useRef<(() => void)[]>([]);
 
   // ==================== 组件状态 ====================
-  
+
   /** 加载状态 - 显示加载动画 */
   const [isLoading, setIsLoading] = useState(true);
-  
+
   /** 连接状态 - 是否已建立连接 */
   const [isConnected, setIsConnected] = useState(false);
-  
+
   /** 等待响应状态 - 发起方等待对方接受 */
   const [isWaitingResponse, setIsWaitingResponse] = useState(isInitiator);
-  
+
   /** 媒体控制状态 - 视频/音频开关状态 */
   const [mediaState, setMediaState] = useState<MediaControlState>({
     videoEnabled: true,
@@ -129,7 +134,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   });
 
   // ==================== 默认媒体配置 ====================
-  
+
   /**
    * 默认媒体配置
    * - 视频分辨率: 640x480 (低画质)
@@ -167,10 +172,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   };
 
   // ==================== 初始化本地媒体 ====================
-  
+
   /**
    * 初始化本地媒体设备
-   * 
+   *
    * 流程:
    * 1. 请求摄像头和麦克风权限
    * 2. 配置视频参数 (分辨率、帧率等)
@@ -228,16 +233,16 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   }, [friendId]);
 
   // ==================== 开始媒体录制 ====================
-  
+
   /**
    * 开始录制本地媒体数据
-   * 
+   *
    * 流程:
    * 1. 分别获取视频轨道和音频轨道
    * 2. 创建视频录制器和音频录制器
    * 3. 设置数据可用回调，将数据发送给对方
    * 4. 开始录制
-   * 
+   *
    * @param stream - 本地媒体流
    */
   const startMediaRecording = (stream: MediaStream) => {
@@ -304,10 +309,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   };
 
   // ==================== 初始化远程媒体接收器 ====================
-  
+
   /**
    * 初始化远程媒体接收器
-   * 
+   *
    * 流程:
    * 1. 创建 MediaSource 对象用于接收视频流
    * 2. 创建 SourceBuffer 用于缓冲视频数据
@@ -385,10 +390,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   }, []);
 
   // ==================== 处理视频缓冲队列 ====================
-  
+
   /**
    * 处理视频缓冲队列
-   * 
+   *
    * 说明:
    * SourceBuffer 一次只能处理一个缓冲区，
    * 所以需要使用队列来管理待处理的数据。
@@ -426,10 +431,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   }, []);
 
   // ==================== 处理音频缓冲队列 ====================
-  
+
   /**
    * 处理音频缓冲队列
-   * 
+   *
    * 说明:
    * SourceBuffer 一次只能处理一个缓冲区，
    * 所以需要使用队列来管理待处理的数据。
@@ -465,10 +470,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   }, []);
 
   // ==================== 设置事件监听器 ====================
-  
+
   /**
    * 设置所有事件监听器
-   * 
+   *
    * 监听的事件:
    * - video_frame: 接收视频帧数据
    * - audio_frame: 接收音频帧数据
@@ -510,22 +515,28 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       });
 
       // 监听对方接受通话
-      const unlistenAccept = await listen<string>('video_call_accept', (event) => {
-        console.log('对方接受了视频通话:', event.payload);
-        setIsWaitingResponse(false);
-        message.success('对方已接受视频通话');
-        // 开始初始化本地媒体
-        initLocalMedia();
-      });
+      const unlistenAccept = await listen<string>(
+        'video_call_accept',
+        (event) => {
+          console.log('对方接受了视频通话:', event.payload);
+          setIsWaitingResponse(false);
+          message.success('对方已接受视频通话');
+          // 开始初始化本地媒体
+          initLocalMedia();
+        },
+      );
 
       // 监听对方拒绝通话
-      const unlistenReject = await listen<string>('video_call_reject', (event) => {
-        console.log('对方拒绝了视频通话:', event.payload);
-        setIsWaitingResponse(false);
-        message.info('对方拒绝了视频通话');
-        // 关闭视频通话
-        handleEndCall();
-      });
+      const unlistenReject = await listen<string>(
+        'video_call_reject',
+        (event) => {
+          console.log('对方拒绝了视频通话:', event.payload);
+          setIsWaitingResponse(false);
+          message.info('对方拒绝了视频通话');
+          // 关闭视频通话
+          handleEndCall();
+        },
+      );
 
       // 监听对方结束通话
       const unlistenEnd = await listen<string>('video_call_end', (event) => {
@@ -555,10 +566,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   }, [processVideoBufferQueue, processAudioBufferQueue, initLocalMedia]);
 
   // ==================== 处理媒体控制命令 ====================
-  
+
   /**
    * 处理媒体控制命令
-   * 
+   *
    * @param control - 媒体控制命令对象
    */
   const handleMediaControl = (control: MediaControl) => {
@@ -587,10 +598,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   };
 
   // ==================== 切换视频 ====================
-  
+
   /**
    * 切换本地视频开关
-   * 
+   *
    * 流程:
    * 1. 切换本地状态
    * 2. 启用/禁用视频轨道
@@ -617,10 +628,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   };
 
   // ==================== 切换音频 ====================
-  
+
   /**
    * 切换本地音频开关
-   * 
+   *
    * 流程:
    * 1. 切换本地状态
    * 2. 启用/禁用音频轨道
@@ -647,10 +658,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   };
 
   // ==================== 结束通话 ====================
-  
+
   /**
    * 结束视频通话
-   * 
+   *
    * 流程:
    * 1. 停止录制器
    * 2. 停止媒体轨道
@@ -660,27 +671,39 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    */
   const handleEndCall = useCallback(async () => {
     // 停止视频录制器
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== 'inactive'
+    ) {
       mediaRecorderRef.current.stop();
     }
-    
+
     // 停止音频录制器
-    if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+    if (
+      audioRecorderRef.current &&
+      audioRecorderRef.current.state !== 'inactive'
+    ) {
       audioRecorderRef.current.stop();
     }
-    
+
     // 停止所有媒体轨道
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
     }
-    
+
     // 关闭视频 MediaSource
-    if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
+    if (
+      mediaSourceRef.current &&
+      mediaSourceRef.current.readyState === 'open'
+    ) {
       mediaSourceRef.current.endOfStream();
     }
-    
+
     // 关闭音频 MediaSource
-    if (audioMediaSourceRef.current && audioMediaSourceRef.current.readyState === 'open') {
+    if (
+      audioMediaSourceRef.current &&
+      audioMediaSourceRef.current.readyState === 'open'
+    ) {
       audioMediaSourceRef.current.endOfStream();
     }
 
@@ -695,16 +718,16 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
     // 更新状态
     setMediaState((prev) => ({ ...prev, isInCall: false }));
-    
+
     // 调用关闭回调
     onClose?.();
   }, [friendId, onClose]);
 
   // ==================== 退出隐私聊天 ====================
-  
+
   /**
    * 退出隐私聊天
-   * 
+   *
    * 流程:
    * 1. 结束视频通话
    * 2. 关闭P2P连接
@@ -713,7 +736,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   const handleExit = useCallback(async () => {
     // 先结束视频通话
     await handleEndCall();
-    
+
     try {
       // 关闭P2P连接
       await invoke('close_p2p_connection', {
@@ -722,7 +745,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     } catch (error) {
       console.error('关闭P2P连接失败:', error);
     }
-    
+
     // 关闭当前窗口
     try {
       const currentWindow = window.getCurrentWindow();
@@ -733,7 +756,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   }, [friendId, handleEndCall]);
 
   // ==================== 发送视频通话邀请 ====================
-  
+
   /**
    * 发送视频通话邀请
    * 仅发起方调用
@@ -753,41 +776,44 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   }, [friendId, handleEndCall]);
 
   // ==================== 发送视频通话响应 ====================
-  
+
   /**
    * 发送视频通话响应
    * 仅被邀请方调用
-   * 
+   *
    * @param accept - 是否接受邀请
    */
-  const sendVideoCallResponse = useCallback(async (accept: boolean) => {
-    try {
-      await invoke('send_p2p_video_call_response', {
-        targetUuid: friendId,
-        accept,
-        mediaConfig: accept ? JSON.stringify(defaultMediaConfig) : null,
-        rejectReason: accept ? null : '用户拒绝',
-      });
+  const sendVideoCallResponse = useCallback(
+    async (accept: boolean) => {
+      try {
+        await invoke('send_p2p_video_call_response', {
+          targetUuid: friendId,
+          accept,
+          mediaConfig: accept ? JSON.stringify(defaultMediaConfig) : null,
+          rejectReason: accept ? null : '用户拒绝',
+        });
 
-      if (accept) {
-        // 接受邀请，开始初始化本地媒体
-        await initLocalMedia();
-      } else {
-        // 拒绝邀请，关闭视频通话
+        if (accept) {
+          // 接受邀请，开始初始化本地媒体
+          await initLocalMedia();
+        } else {
+          // 拒绝邀请，关闭视频通话
+          handleEndCall();
+        }
+      } catch (error) {
+        console.error('发送视频通话响应失败:', error);
+        message.error('发送视频通话响应失败');
         handleEndCall();
       }
-    } catch (error) {
-      console.error('发送视频通话响应失败:', error);
-      message.error('发送视频通话响应失败');
-      handleEndCall();
-    }
-  }, [friendId, initLocalMedia, handleEndCall]);
+    },
+    [friendId, initLocalMedia, handleEndCall],
+  );
 
   // ==================== 组件初始化 ====================
-  
+
   /**
    * 组件初始化
-   * 
+   *
    * 流程:
    * 1. 初始化远程媒体接收器
    * 2. 如果是发起方，发送邀请
@@ -814,7 +840,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     return () => {
       handleEndCall();
     };
-  }, [initRemoteMediaReceiver, isInitiator, sendVideoCallInvite, sendVideoCallResponse, handleEndCall]);
+  }, [
+    initRemoteMediaReceiver,
+    isInitiator,
+    sendVideoCallInvite,
+    sendVideoCallResponse,
+    handleEndCall,
+  ]);
 
   // ==================== 渲染 ====================
 
@@ -823,7 +855,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       {/* 加载状态遮罩 */}
       {isLoading && (
         <div className={styles.loadingOverlay}>
-          <Spin size="large" tip={isWaitingResponse ? '等待对方接受...' : '正在建立视频连接...'} />
+          <Spin
+            size="large"
+            tip={isWaitingResponse ? '等待对方接受...' : '正在建立视频连接...'}
+          />
         </div>
       )}
 
@@ -838,14 +873,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
             className={styles.video}
           />
           {/* 远程音频 - 对方音频 */}
-          <audio
-            ref={remoteAudioRef}
-            autoPlay
-          />
+          <audio ref={remoteAudioRef} autoPlay />
           {/* 等待连接提示 */}
           {!isConnected && (
             <div className={styles.waitingOverlay}>
-              <span>{isWaitingResponse ? '等待对方接受...' : '等待对方连接...'}</span>
+              <span>
+                {isWaitingResponse ? '等待对方接受...' : '等待对方连接...'}
+              </span>
             </div>
           )}
         </div>

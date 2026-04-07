@@ -7,16 +7,16 @@
   border-radius: 12px;
   justify-content: flex-start;
   gap: 12px;
-  animation: slideInLeft 0.3s ease;
+  animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   @keyframes slideInLeft {
     from {
       opacity: 0;
-      transform: translateX(-10px);
+      transform: translateX(-15px) scale(0.95);
     }
     to {
       opacity: 1;
-      transform: translateX(0);
+      transform: translateX(0) scale(1);
     }
   }
 }
@@ -27,12 +27,14 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: var(--glass-shadow-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.8);
 
   &:hover {
-    box-shadow: var(--glass-shadow);
-    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(64, 150, 255, 0.3);
+    transform: scale(1.08);
+    border-color: var(--color-primary);
   }
 }
 
@@ -49,24 +51,40 @@
   min-width: 40px;
   min-height: 40px;
   color: var(--color-gray-9);
-  border-radius: 12px;
+  border-radius: 16px 16px 16px 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   word-break: break-all;
   font-size: 14px;
+  line-height: 1.5;
   overflow: hidden;
-  padding: 10px 12px;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-sm);
+  padding: 12px 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.85)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   transition: all 0.3s ease;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(64, 150, 255, 0.03), transparent);
+    border-radius: inherit;
+    pointer-events: none;
+  }
 
   &:hover {
-    background: var(--glass-bg-dark);
-    box-shadow: var(--glass-shadow);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
   }
 }
-

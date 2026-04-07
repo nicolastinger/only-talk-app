@@ -1,19 +1,76 @@
 .container {
-  background-color: var(--content-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
+  background: var(--glass-bg-light);
+  backdrop-filter: var(--glass-blur);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        ellipse at 30% 30%,
+        rgba(79, 172, 254, 0.05) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse at 70% 70%,
+        rgba(0, 242, 254, 0.05) 0%,
+        transparent 50%
+      );
+    pointer-events: none;
+  }
 }
 
 .content {
-  width: 120px;
-  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px;
+  background: var(--glass-bg);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 12px 40px rgba(79, 172, 254, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+    .svgItem {
+      transform: scale(1.05);
+    }
+  }
 }
 
 .svgItem {
-  width: 100%;
-  height: 100%;
+  width: 120px;
+  height: 120px;
   object-fit: contain;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 4px 12px rgba(79, 172, 254, 0.2));
+}
+
+.text {
+  font-size: 14px;
+  color: var(--color-gray-6);
+  text-align: center;
+  font-weight: 400;
+  letter-spacing: 0.5px;
 }

@@ -4,11 +4,7 @@ import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { TALK_API } from '@/constants';
 import { FormattedMessage } from '@@/exports';
-import {
-  CloseOutlined,
-  LockOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { CloseOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
@@ -41,11 +37,21 @@ const LoginPage: React.FC = () => {
 
   const validateUserCode = (value: string): boolean => {
     if (!value) {
-      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameRequired', defaultMessage: '请输入用户名' }));
+      setUserCodeError(
+        intl.formatMessage({
+          id: 'signIn.errors.usernameRequired',
+          defaultMessage: '请输入用户名',
+        }),
+      );
       return false;
     }
     if (value.length < 5) {
-      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameTooShort', defaultMessage: '用户名至少需要5个字符' }));
+      setUserCodeError(
+        intl.formatMessage({
+          id: 'signIn.errors.usernameTooShort',
+          defaultMessage: '用户名至少需要5个字符',
+        }),
+      );
       return false;
     }
     setUserCodeError('');
@@ -54,11 +60,21 @@ const LoginPage: React.FC = () => {
 
   const validatePassword = (value: string): boolean => {
     if (!value) {
-      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordRequired', defaultMessage: '请输入密码' }));
+      setPasswordError(
+        intl.formatMessage({
+          id: 'signIn.errors.passwordRequired',
+          defaultMessage: '请输入密码',
+        }),
+      );
       return false;
     }
     if (value.length < 8) {
-      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordTooShort', defaultMessage: '密码至少需要8个字符' }));
+      setPasswordError(
+        intl.formatMessage({
+          id: 'signIn.errors.passwordTooShort',
+          defaultMessage: '密码至少需要8个字符',
+        }),
+      );
       return false;
     }
     setPasswordError('');
@@ -152,7 +168,10 @@ const LoginPage: React.FC = () => {
 
     if (!agreed) {
       messageApi.warning(
-        intl.formatMessage({ id: 'signIn.errors.pleaseAgree', defaultMessage: '请阅读并同意隐私政策' }),
+        intl.formatMessage({
+          id: 'signIn.errors.pleaseAgree',
+          defaultMessage: '请阅读并同意隐私政策',
+        }),
       );
       return;
     }
@@ -211,7 +230,11 @@ const LoginPage: React.FC = () => {
 
         <div className={styles.formSection}>
           <div className={styles.inputWrapper}>
-            <div className={`${styles.inputGroup} ${userCodeError ? styles.inputError : ''}`}>
+            <div
+              className={`${styles.inputGroup} ${
+                userCodeError ? styles.inputError : ''
+              }`}
+            >
               <UserOutlined className={styles.inputIcon} />
               <input
                 type="text"
@@ -222,11 +245,17 @@ const LoginPage: React.FC = () => {
                 onBlur={() => validateUserCode(userCode)}
               />
             </div>
-            {userCodeError && <span className={styles.errorText}>{userCodeError}</span>}
+            {userCodeError && (
+              <span className={styles.errorText}>{userCodeError}</span>
+            )}
           </div>
 
           <div className={styles.inputWrapper}>
-            <div className={`${styles.inputGroup} ${passwordError ? styles.inputError : ''}`}>
+            <div
+              className={`${styles.inputGroup} ${
+                passwordError ? styles.inputError : ''
+              }`}
+            >
               <LockOutlined className={styles.inputIcon} />
               <input
                 type="password"
@@ -237,7 +266,9 @@ const LoginPage: React.FC = () => {
                 onBlur={() => validatePassword(password)}
               />
             </div>
-            {passwordError && <span className={styles.errorText}>{passwordError}</span>}
+            {passwordError && (
+              <span className={styles.errorText}>{passwordError}</span>
+            )}
           </div>
 
           <div className={styles.options}>

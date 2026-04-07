@@ -8,7 +8,7 @@ import styles from './styles/FriendList.less';
 const FriendList = () => {
   const [friends, setFriends] = useState<FriendVo[]>([]);
   const refreshFlag = useBearStore((state) => state.refreshFlag);
-  
+
   useEffect(() => {
     getFriendList();
   }, []);

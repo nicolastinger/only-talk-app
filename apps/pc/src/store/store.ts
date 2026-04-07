@@ -116,5 +116,6 @@ export const useBearStore = create<BearState>()((set) => ({
       },
     })),
   refreshFlag: 0,
-  triggerRefresh: () => set((state) => ({ refreshFlag: state.refreshFlag + 1 })),
+  triggerRefresh: () =>
+    set((state) => ({ refreshFlag: state.refreshFlag + 1 })),
 }));

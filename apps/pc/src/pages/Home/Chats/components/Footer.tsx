@@ -6,11 +6,11 @@ import {
   TextQuicMsgVo,
 } from '@workspace/types';
 import { Button, Input } from 'antd';
+import { TextAreaRef } from 'antd/es/input/TextArea';
 import { nanoid } from 'nanoid';
 import React, { ChangeEvent, useRef, useState } from 'react';
 import FooterToolBar from './FooterToolBar';
 import styles from './styles/Footer.less';
-import { TextAreaRef } from 'antd/es/input/TextArea';
 
 const { TextArea } = Input;
 
@@ -27,7 +27,8 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
   const textareaRef = useRef<TextAreaRef>(null); // 需要获取ref
 
   const sendMessage = async () => {
-    const currentMessage = textareaRef.current?.resizableTextArea?.textArea.value || message;
+    const currentMessage =
+      textareaRef.current?.resizableTextArea?.textArea.value || message;
     if (!currentMessage.trim()) return;
 
     let raw: TextMsgRaw = {
@@ -73,7 +74,9 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
         <TextArea
           onPressEnter={sendMessage}
           value={message}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+            setMessage(e.target.value)
+          }
           className={styles.footerTextArea}
           placeholder="请输入"
         />

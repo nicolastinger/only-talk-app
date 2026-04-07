@@ -134,7 +134,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 20px 40px;
+  padding: 32px 48px;
   position: relative;
   z-index: 5;
   overflow-y: auto;
@@ -144,13 +144,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
-  margin-top: 10px;
+  margin-bottom: 28px;
+  margin-top: 16px;
 }
 
 .avatarWrapper {
-  width: 70px;
-  height: 70px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.2);
@@ -158,7 +158,7 @@
   box-shadow: 0 0 20px rgba(100, 180, 255, 0.5),
     0 0 40px rgba(100, 180, 255, 0.3), 0 0 60px rgba(100, 180, 255, 0.2);
   animation: avatarGlow 3s ease-in-out infinite alternate;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 @keyframes avatarGlow {
@@ -186,16 +186,21 @@
 
 .formSection {
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+}
+
+.formInner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .inputWrapper {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .inputGroup {
@@ -203,9 +208,9 @@
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
-  padding: 0 14px;
-  height: 42px;
+  border-radius: 10px;
+  padding: 0 16px;
+  height: 46px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.2s ease;
   border: 1px solid transparent;
@@ -217,10 +222,10 @@
 }
 
 .errorText {
-  font-size: 11px;
+  font-size: 12px;
   color: #ff4d4f;
   padding-left: 4px;
-  min-height: 16px;
+  min-height: 18px;
 }
 
 .inputGroup:focus-within {
@@ -259,12 +264,12 @@
 
 .submitBtn {
   width: 100%;
-  height: 44px;
+  height: 48px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #1a5cff 0%, #4a90ff 100%);
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -273,7 +278,7 @@
   letter-spacing: 1px;
   position: relative;
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .submitBtn::before {
@@ -341,13 +346,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 16px;
+  margin-top: 20px;
 }
 
 .link {
   color: rgba(255, 255, 255, 0.95);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   text-decoration: none;
   transition: all 0.2s ease;

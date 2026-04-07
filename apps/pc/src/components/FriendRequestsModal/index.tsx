@@ -1,5 +1,10 @@
 import { useBearStore } from '@/store/store';
-import { CheckOutlined, CloseOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  ClockCircleOutlined,
+  CloseOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import {
   get_accept_friend_request_list,
@@ -8,7 +13,7 @@ import {
   readContactsNotification,
 } from '@workspace/services';
 import { FriendRequestInfo, FriendRequestInfoDTO } from '@workspace/types';
-import { Avatar, Button, Empty, Modal, Tabs } from 'antd';
+import { Avatar, Button, Modal, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 
@@ -80,11 +85,23 @@ const FriendRequestsModal = ({
   const getStatusConfig = (status?: number) => {
     switch (status) {
       case 0:
-        return { text: '等待验证', className: styles.pendingStatus, icon: <ClockCircleOutlined /> };
+        return {
+          text: '等待验证',
+          className: styles.pendingStatus,
+          icon: <ClockCircleOutlined />,
+        };
       case 1:
-        return { text: '已接受', className: styles.acceptedStatus, icon: <CheckOutlined /> };
+        return {
+          text: '已接受',
+          className: styles.acceptedStatus,
+          icon: <CheckOutlined />,
+        };
       case 2:
-        return { text: '已拒绝', className: styles.rejectedStatus, icon: <CloseOutlined /> };
+        return {
+          text: '已拒绝',
+          className: styles.rejectedStatus,
+          icon: <CloseOutlined />,
+        };
       default:
         return { text: '未知', className: styles.unknownStatus, icon: null };
     }
@@ -135,7 +152,7 @@ const FriendRequestsModal = ({
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) {
       const hours = Math.floor(diff / (1000 * 60 * 60));
       if (hours === 0) {
@@ -151,37 +168,36 @@ const FriendRequestsModal = ({
     return date.toLocaleDateString();
   };
 
-  const renderRequestItem = (request: FriendRequestInfo, isReceived: boolean) => {
+  const renderRequestItem = (
+    request: FriendRequestInfo,
+    isReceived: boolean,
+  ) => {
     const statusConfig = getStatusConfig(request.accept_status);
-    
+
     return (
       <div className={styles.requestItem} key={request.uuid}>
         <div className={styles.avatarSection}>
-          <Avatar
-            size={48}
-            icon={<UserOutlined />}
-            className={styles.avatar}
-          />
+          <Avatar size={48} icon={<UserOutlined />} className={styles.avatar} />
         </div>
-        
+
         <div className={styles.contentSection}>
           <div className={styles.header}>
-            <span className={styles.username}>{request.request_user || '未知用户'}</span>
+            <span className={styles.username}>
+              {request.request_user || '未知用户'}
+            </span>
             <span className={`${styles.status} ${statusConfig.className}`}>
               {statusConfig.icon}
               <span>{statusConfig.text}</span>
             </span>
           </div>
-          
+
           <div className={styles.message}>
             {request.request_message || '请求添加你为好友'}
           </div>
-          
-          <div className={styles.time}>
-            {formatTime(request.created_at)}
-          </div>
+
+          <div className={styles.time}>{formatTime(request.created_at)}</div>
         </div>
-        
+
         <div className={styles.actionSection}>
           {isReceived && request.accept_status === 0 ? (
             <div className={styles.actionButtons}>
@@ -209,9 +225,7 @@ const FriendRequestsModal = ({
 
   const renderEmptyState = (type: 'sent' | 'received') => (
     <div className={styles.emptyState}>
-      <div className={styles.emptyIcon}>
-        {type === 'sent' ? '📤' : '📥'}
-      </div>
+      <div className={styles.emptyIcon}>{type === 'sent' ? '📤' : '📥'}</div>
       <div className={styles.emptyText}>
         {type === 'sent' ? '暂无发起的好友请求' : '暂无收到的好友请求'}
       </div>
@@ -231,10 +245,9 @@ const FriendRequestsModal = ({
       ),
       children: (
         <div className={styles.requestList}>
-          {sentRequests.length === 0 
+          {sentRequests.length === 0
             ? renderEmptyState('sent')
-            : sentRequests.map((request) => renderRequestItem(request, false))
-          }
+            : sentRequests.map((request) => renderRequestItem(request, false))}
         </div>
       ),
     },
@@ -243,8 +256,10 @@ const FriendRequestsModal = ({
       label: (
         <span className={styles.tabLabel}>
           <span>收到的</span>
-          {acceptRequests.filter(r => r.accept_status === 0).length > 0 && (
-            <span className={styles.badge}>{acceptRequests.filter(r => r.accept_status === 0).length}</span>
+          {acceptRequests.filter((r) => r.accept_status === 0).length > 0 && (
+            <span className={styles.badge}>
+              {acceptRequests.filter((r) => r.accept_status === 0).length}
+            </span>
           )}
         </span>
       ),
@@ -252,8 +267,7 @@ const FriendRequestsModal = ({
         <div className={styles.requestList}>
           {acceptRequests.length === 0
             ? renderEmptyState('received')
-            : acceptRequests.map((request) => renderRequestItem(request, true))
-          }
+            : acceptRequests.map((request) => renderRequestItem(request, true))}
         </div>
       ),
     },

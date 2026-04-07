@@ -1,12 +1,12 @@
-import talkSvg from '@/assets/svg/talk.svg';
+import chatSvg from '@/assets/svg/chat.svg';
 import styles from './index.less';
 
 const DashboardPage: React.FC = () => {
-  console.log('dashboard');
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        <img src={talkSvg} alt="talk" className={styles.svgItem} />
+        <img src={chatSvg} alt="chat" className={styles.svgItem} />
+        <div className={styles.text}>选择一个对话开始聊天</div>
       </div>
     </div>
   );

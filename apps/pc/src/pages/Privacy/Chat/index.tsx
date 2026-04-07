@@ -1,23 +1,27 @@
 /**
  * 隐私聊天页面
- * 
+ *
  * 功能说明：
  * 1. 隐私文本聊天 - 消息不保存到本地
  * 2. 视频通话 - 支持发起和接收视频通话邀请
  * 3. P2P通信 - 所有消息通过P2P连接传输
- * 
+ *
  * 使用方式：
  * 访问路径: /privacy/chat?friendId=对方UUID
  */
-import { LockOutlined, LogoutOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import PrivacyVideoCall from '@/components/Media/PrivacyVideoCall';
+import {
+  LockOutlined,
+  LogoutOutlined,
+  VideoCameraOutlined,
+} from '@ant-design/icons';
+import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { window } from '@tauri-apps/api';
 import { useLocation } from '@umijs/max';
+import { VideoCallInvite } from '@workspace/types';
 import { Button, Input, message, Modal } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
-import PrivacyVideoCall from '@/components/Media/PrivacyVideoCall';
-import { VideoCallInvite } from '@workspace/types';
 import styles from './index.less';
 
 const { TextArea } = Input;
@@ -44,52 +48,53 @@ interface ChatMessageItem {
 
 const PrivacyChat: React.FC = () => {
   // ==================== 状态定义 ====================
-  
+
   /** 聊天消息列表 */
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
-  
+
   /** 输入框文本 */
   const [inputText, setInputText] = useState('');
-  
+
   /** 是否处于视频通话状态 */
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
-  
+
   /** 是否为视频通话发起方 */
   const [isVideoCallInitiator, setIsVideoCallInitiator] = useState(false);
-  
+
   /** 收到的视频通话邀请 */
-  const [incomingCallInvite, setIncomingCallInvite] = useState<VideoCallInvite | null>(null);
-  
+  const [incomingCallInvite, setIncomingCallInvite] =
+    useState<VideoCallInvite | null>(null);
+
   /** 是否显示来电弹窗 */
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
 
   // ==================== 引用定义 ====================
-  
+
   /** 消息容器引用 - 用于自动滚动到底部 */
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  
+
   /** 事件监听器清理函数列表 */
   const unlistenRef = useRef<(() => void)[]>([]);
 
   // ==================== 路由参数获取 ====================
-  
+
   /** 获取路由参数 */
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendId = params.get('friendId') || '';
 
   // ==================== 自动滚动到底部 ====================
-  
+
   /** 当消息列表更新时，自动滚动到底部 */
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   // ==================== 设置事件监听器 ====================
-  
+
   /**
    * 设置所有事件监听器
-   * 
+   *
    * 监听的事件:
    * - p2p_text_message: 接收P2P文本消息
    * - video_call_invite: 接收视频通话邀请
@@ -115,16 +120,19 @@ const PrivacyChat: React.FC = () => {
       });
 
       // 监听视频通话邀请
-      const unlistenInvite = await listen<string>('video_call_invite', (event) => {
-        console.log('收到视频通话邀请:', event.payload);
-        try {
-          const invite: VideoCallInvite = JSON.parse(event.payload);
-          setIncomingCallInvite(invite);
-          setShowIncomingCallModal(true);
-        } catch (e) {
-          console.error('解析视频通话邀请失败:', e);
-        }
-      });
+      const unlistenInvite = await listen<string>(
+        'video_call_invite',
+        (event) => {
+          console.log('收到视频通话邀请:', event.payload);
+          try {
+            const invite: VideoCallInvite = JSON.parse(event.payload);
+            setIncomingCallInvite(invite);
+            setShowIncomingCallModal(true);
+          } catch (e) {
+            console.error('解析视频通话邀请失败:', e);
+          }
+        },
+      );
 
       // 监听视频通话结束
       const unlistenEnd = await listen<string>('video_call_end', (event) => {
@@ -147,7 +155,7 @@ const PrivacyChat: React.FC = () => {
   }, []);
 
   // ==================== 工具函数 ====================
-  
+
   /** 滚动消息容器到底部 */
   const scrollToBottom = () => {
     const container = messageContainerRef.current;
@@ -165,10 +173,10 @@ const PrivacyChat: React.FC = () => {
   };
 
   // ==================== 消息发送 ====================
-  
+
   /**
    * 发送文本消息
-   * 
+   *
    * 流程:
    * 1. 检查消息是否为空
    * 2. 检查好友ID是否存在
@@ -216,10 +224,10 @@ const PrivacyChat: React.FC = () => {
   };
 
   // ==================== 退出处理 ====================
-  
+
   /**
    * 退出隐私聊天
-   * 
+   *
    * 流程:
    * 1. 关闭P2P连接
    * 2. 关闭当前窗口
@@ -240,10 +248,10 @@ const PrivacyChat: React.FC = () => {
   };
 
   // ==================== 视频通话处理 ====================
-  
+
   /**
    * 发起视频通话
-   * 
+   *
    * 流程:
    * 1. 设置为发起方
    * 2. 激活视频通话界面
@@ -290,16 +298,16 @@ const PrivacyChat: React.FC = () => {
   };
 
   // ==================== 渲染视频通话界面 ====================
-  
+
   /** 如果处于视频通话状态，渲染视频通话组件 */
   if (isVideoCallActive) {
     return (
       <div className={styles.videoCallPage}>
-        <PrivacyVideoCall 
-          friendId={friendId} 
+        <PrivacyVideoCall
+          friendId={friendId}
           isInitiator={isVideoCallInitiator}
           inviteInfo={incomingCallInvite}
-          onClose={handleVideoCallClose} 
+          onClose={handleVideoCallClose}
         />
       </div>
     );
@@ -348,7 +356,9 @@ const PrivacyChat: React.FC = () => {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`${styles.messageItem} ${msg.isMine ? styles.mine : styles.friend}`}
+            className={`${styles.messageItem} ${
+              msg.isMine ? styles.mine : styles.friend
+            }`}
           >
             <div className={styles.messageBubble}>{msg.text}</div>
           </div>
@@ -381,9 +391,7 @@ const PrivacyChat: React.FC = () => {
         okText="接受"
         cancelText="拒绝"
       >
-        <p>
-          {incomingCallInvite?.from_name || '对方'} 邀请您进行视频通话
-        </p>
+        <p>{incomingCallInvite?.from_name || '对方'} 邀请您进行视频通话</p>
       </Modal>
     </div>
   );

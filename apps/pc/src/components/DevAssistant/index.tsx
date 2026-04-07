@@ -1,6 +1,6 @@
 import { history } from '@umijs/max';
 import { Input, Switch, Tooltip } from 'antd';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './index.less';
 
 const DevAssistant: React.FC = () => {
@@ -15,30 +15,35 @@ const DevAssistant: React.FC = () => {
   const clickTimer = useRef<NodeJS.Timeout | null>(null);
   const lastClickTime = useRef<number>(0);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(`.${styles.switchWrapper}`) || 
-        (e.target as HTMLElement).closest(`.${styles.inputWrapper}`)) {
-      return;
-    }
-    setIsDragging(true);
-    setHasDragged(false);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
-  }, [position]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (
+        (e.target as HTMLElement).closest(`.${styles.switchWrapper}`) ||
+        (e.target as HTMLElement).closest(`.${styles.inputWrapper}`)
+      ) {
+        return;
+      }
+      setIsDragging(true);
+      setHasDragged(false);
+      setDragStart({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      });
+    },
+    [position],
+  );
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      
+
       const newX = e.clientX - dragStart.x;
       const newY = e.clientY - dragStart.y;
-      
+
       if (Math.abs(newX - position.x) > 3 || Math.abs(newY - position.y) > 3) {
         setHasDragged(true);
       }
-      
+
       setPosition({
         x: newX,
         y: newY,
@@ -86,7 +91,7 @@ const DevAssistant: React.FC = () => {
     if (hasDragged) {
       return;
     }
-    
+
     const now = Date.now();
     if (now - lastClickTime.current < 300) {
       if (clickTimer.current) {
@@ -105,7 +110,7 @@ const DevAssistant: React.FC = () => {
 
   if (!visible) {
     return (
-      <div 
+      <div
         className={styles.miniToggle}
         style={{
           left: position.x,
@@ -114,7 +119,7 @@ const DevAssistant: React.FC = () => {
         onMouseDown={handleMouseDown}
       >
         <Tooltip title="双击打开开发助手" placement="left">
-          <div 
+          <div
             className={styles.miniBtn}
             onClick={handleMiniClick}
             onDoubleClick={handleMiniDoubleClick}
@@ -139,19 +144,15 @@ const DevAssistant: React.FC = () => {
       <div className={styles.header}>
         <span className={styles.title}>Dev Assistant</span>
         <div className={styles.switchWrapper}>
-          <Switch
-            size="small"
-            checked={visible}
-            onChange={handleToggle}
-          />
+          <Switch size="small" checked={visible} onChange={handleToggle} />
         </div>
       </div>
-      
+
       <div className={styles.body}>
         <div className={styles.expandBtn} onClick={handleExpand}>
           {expanded ? '收起' : '跳转URL'}
         </div>
-        
+
         {expanded && (
           <div className={styles.inputWrapper}>
             <Input

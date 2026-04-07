@@ -192,11 +192,8 @@ const FastSignUp: React.FC = () => {
   };
 
   return (
-    <div onKeyDown={handleKeyDown}>
+    <div className={styles.formInner} onKeyDown={handleKeyDown}>
       <div className={styles.inputWrapper}>
-        <label className={styles.label}>
-          {intl.formatMessage({ id: 'signUp.account', defaultMessage: '账号' })}
-        </label>
         <div
           className={`${styles.inputGroup} ${
             accountError ? styles.inputError : ''
@@ -221,12 +218,6 @@ const FastSignUp: React.FC = () => {
       </div>
 
       <div className={styles.inputWrapper}>
-        <label className={styles.label}>
-          {intl.formatMessage({
-            id: 'signUp.nickname',
-            defaultMessage: '昵称',
-          })}
-        </label>
         <div
           className={`${styles.inputGroup} ${
             nicknameError ? styles.inputError : ''
@@ -251,12 +242,6 @@ const FastSignUp: React.FC = () => {
       </div>
 
       <div className={styles.inputWrapper}>
-        <label className={styles.label}>
-          {intl.formatMessage({
-            id: 'signUp.password',
-            defaultMessage: '密码',
-          })}
-        </label>
         <div
           className={`${styles.inputGroup} ${
             passwordError ? styles.inputError : ''

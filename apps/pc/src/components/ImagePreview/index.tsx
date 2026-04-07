@@ -93,7 +93,12 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         {imagePaths.length > 1 && (
           <div className={styles.navAreaLeft} onClick={handlePrev}>
             <div className={styles.navButton}>
-              <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="28"
+                height="28"
+              >
                 <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
               </svg>
             </div>
@@ -113,7 +118,12 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         {imagePaths.length > 1 && (
           <div className={styles.navAreaRight} onClick={handleNext}>
             <div className={styles.navButton}>
-              <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="28"
+                height="28"
+              >
                 <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
               </svg>
             </div>

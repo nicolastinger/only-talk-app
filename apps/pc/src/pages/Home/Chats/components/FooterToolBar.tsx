@@ -1,18 +1,18 @@
+import { openWebRTCChatHandler } from '@/hooks/useWebRTCSignalApi';
+import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
+import { useBearStore } from '@/store/store';
 import {
+  ApiOutlined,
   LockOutlined,
   PictureOutlined,
   SmileOutlined,
-  ApiOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { selectFile } from '@workspace/services';
 import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
+import { message } from 'antd';
 import { nanoid } from 'nanoid';
 import React, { useEffect, useRef, useState } from 'react';
-import { openWebRTCChatHandler } from '@/hooks/useWebRTCSignalApi';
-import { useBearStore } from '@/store/store';
-import { initWebRTCService, getWebRTCService } from '@/services/webrtcService';
-import { message } from 'antd';
 import styles from './styles/FooterToolBar.less';
 
 interface FooterToolBarProps {
@@ -213,7 +213,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
       <div className={styles.footerBtn} onClick={sendRequestToP2p}>
         <LockOutlined />
       </div>
-      <div className={styles.footerBtn} onClick={startWebRTCChat} title="发起 WebRTC 聊天">
+      <div
+        className={styles.footerBtn}
+        onClick={startWebRTCChat}
+        title="发起 WebRTC 聊天"
+      >
         <ApiOutlined />
       </div>
     </div>

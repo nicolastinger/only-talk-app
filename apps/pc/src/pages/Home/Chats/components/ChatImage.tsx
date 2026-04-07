@@ -1,4 +1,7 @@
-import { getFriendImageMessages, openImagePreviewWindow } from '@workspace/services';
+import {
+  getFriendImageMessages,
+  openImagePreviewWindow,
+} from '@workspace/services';
 import React from 'react';
 
 interface ChatImageProps {
@@ -38,7 +41,7 @@ const ChatImage: React.FC<ChatImageProps> = ({
       const { imageUrls, currentIndex } = await getFriendImageMessages(
         meUuid,
         friendUuid,
-        currentBizId
+        currentBizId,
       );
 
       if (imageUrls.length > 0) {

@@ -1,10 +1,16 @@
+import { useBearStore } from '@/store/store';
+import {
+  BellOutlined,
+  DeleteOutlined,
+  MoreOutlined,
+  StopOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { history } from '@umijs/max';
 import { delete_friend } from '@workspace/services';
 import { FriendVo } from '@workspace/types';
 import { Dropdown, Modal, message } from 'antd';
-import { history } from '@umijs/max';
 import React, { useState } from 'react';
-import { MoreOutlined, UserOutlined, DeleteOutlined, StopOutlined, BellOutlined } from '@ant-design/icons';
-import { useBearStore } from '@/store/store';
 import styles from './styles/TopBar.less';
 
 interface ChatTopBarProps {
@@ -29,7 +35,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
 
   const confirmDeleteFriend = async () => {
     if (!friendInfo?.friend_id) return;
-    
+
     try {
       await delete_friend(friendInfo.friend_id);
       message.success('好友已删除');
@@ -103,7 +109,9 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
         okButtonProps={{ danger: true }}
       >
         <p>确定要删除好友「{friendInfo?.friend_name || title}」吗？</p>
-        <p style={{ color: '#999', fontSize: '12px' }}>删除后聊天记录将保留，但对方将从好友列表中移除。</p>
+        <p style={{ color: '#999', fontSize: '12px' }}>
+          删除后聊天记录将保留，但对方将从好友列表中移除。
+        </p>
       </Modal>
     </div>
   );

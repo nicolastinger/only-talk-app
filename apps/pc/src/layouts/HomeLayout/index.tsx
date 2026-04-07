@@ -19,8 +19,8 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { Window } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
-import { Modal } from 'antd';
 import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
+import { Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 

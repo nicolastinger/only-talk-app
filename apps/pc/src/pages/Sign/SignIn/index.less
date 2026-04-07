@@ -38,10 +38,21 @@
 }
 
 .container::after {
-  background: 
-    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.5) 0%, transparent 40%),
-    radial-gradient(ellipse at 70% 80%, rgba(100, 180, 255, 0.6) 0%, transparent 40%),
-    radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 50%);
+  background: radial-gradient(
+      ellipse at 30% 20%,
+      rgba(255, 255, 255, 0.5) 0%,
+      transparent 40%
+    ),
+    radial-gradient(
+      ellipse at 70% 80%,
+      rgba(100, 180, 255, 0.6) 0%,
+      transparent 40%
+    ),
+    radial-gradient(
+      ellipse at 50% 50%,
+      rgba(255, 255, 255, 0.3) 0%,
+      transparent 50%
+    );
   animation: pulseGlow 4s ease-in-out infinite;
 }
 
@@ -55,7 +66,8 @@
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(1);
   }
@@ -141,25 +153,20 @@
   overflow: hidden;
   background: rgba(255, 255, 255, 0.2);
   padding: 3px;
-  box-shadow: 
-    0 0 20px rgba(100, 180, 255, 0.5),
-    0 0 40px rgba(100, 180, 255, 0.3),
-    0 0 60px rgba(100, 180, 255, 0.2);
+  box-shadow: 0 0 20px rgba(100, 180, 255, 0.5),
+    0 0 40px rgba(100, 180, 255, 0.3), 0 0 60px rgba(100, 180, 255, 0.2);
   animation: avatarGlow 3s ease-in-out infinite alternate;
   margin-bottom: 16px;
 }
 
 @keyframes avatarGlow {
   0% {
-    box-shadow: 
-      0 0 20px rgba(100, 180, 255, 0.5),
+    box-shadow: 0 0 20px rgba(100, 180, 255, 0.5),
       0 0 40px rgba(100, 180, 255, 0.3);
   }
   100% {
-    box-shadow: 
-      0 0 30px rgba(100, 180, 255, 0.8),
-      0 0 60px rgba(100, 180, 255, 0.5),
-      0 0 80px rgba(100, 180, 255, 0.3);
+    box-shadow: 0 0 30px rgba(100, 180, 255, 0.8),
+      0 0 60px rgba(100, 180, 255, 0.5), 0 0 80px rgba(100, 180, 255, 0.3);
   }
 }
 
@@ -216,8 +223,7 @@
 
 .inputGroup:focus-within {
   background: #fff;
-  box-shadow: 
-    0 4px 16px rgba(26, 92, 255, 0.2),
+  box-shadow: 0 4px 16px rgba(26, 92, 255, 0.2),
     0 0 20px rgba(100, 180, 255, 0.3);
   border: 1px solid rgba(26, 92, 255, 0.3);
 }
@@ -291,8 +297,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 
-    0 4px 15px rgba(26, 92, 255, 0.3),
+  box-shadow: 0 4px 15px rgba(26, 92, 255, 0.3),
     0 0 20px rgba(100, 180, 255, 0.2);
   letter-spacing: 1px;
   position: relative;
@@ -319,15 +324,15 @@
   0% {
     left: -100%;
   }
-  50%, 100% {
+  50%,
+  100% {
     left: 100%;
   }
 }
 
 .loginBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 
-    0 6px 20px rgba(26, 92, 255, 0.4),
+  box-shadow: 0 6px 20px rgba(26, 92, 255, 0.4),
     0 0 30px rgba(100, 180, 255, 0.4);
   background: linear-gradient(135deg, #0a4de8 0%, #3a80ff 100%);
 }
@@ -347,13 +352,15 @@
 }
 
 @keyframes loading {
-  0%, 20% {
+  0%,
+  20% {
     content: '.';
   }
   40% {
     content: '..';
   }
-  60%, 100% {
+  60%,
+  100% {
     content: '...';
   }
 }
@@ -385,7 +392,7 @@
   .loginBtn:hover {
     transform: none;
   }
-  
+
   .container::before,
   .container::after,
   .loginBtn::before {
