@@ -4,8 +4,10 @@ import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import ChatImage from './ChatImage';
+import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/CustomerChatBox.less';
 import { TextBox } from './TextBox';
+import WebRTCMessage from './WebRTCMessage';
 
 const imageCache = new Map<string, string>();
 
@@ -121,6 +123,15 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
             meUuid={userInfo?.uuid || ''}
           />
         );
+      case 4:
+        return <PrivacyModeMessage isMine={false} />;
+      case 5:
+      case 12:
+      case 13:
+      case 14:
+      case 15:
+      case 100:
+        return <WebRTCMessage textType={text_type} isMine={false} />;
       default:
         return TextBox(message);
     }

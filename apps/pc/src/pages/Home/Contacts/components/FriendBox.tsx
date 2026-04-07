@@ -29,13 +29,13 @@ const FriendBox = (props: { friend: FriendVo }) => {
   }, [friend_icon]);
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onClick={routeToFriendInfo}>
       <div className={styles.left}>
         <Badge>
           <img src={userIcon || ''} className={styles.imgItem} alt="123" />
         </Badge>
       </div>
-      <div className={styles.center} onClick={routeToFriendInfo}>
+      <div className={styles.center}>
         <div className={styles.centerTitle}>{friend_name}</div>
       </div>
     </div>

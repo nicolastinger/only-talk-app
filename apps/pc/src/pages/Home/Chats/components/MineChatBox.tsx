@@ -9,8 +9,10 @@ import {
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
 import ChatImage from './ChatImage';
+import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
+import WebRTCMessage from './WebRTCMessage';
 
 const imageCache = new Map<string, string>();
 
@@ -161,6 +163,15 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             meUuid={userInfo?.uuid || ''}
           />
         );
+      case 4:
+        return <PrivacyModeMessage isMine={true} />;
+      case 5:
+      case 12:
+      case 13:
+      case 14:
+      case 15:
+      case 100:
+        return <WebRTCMessage textType={text_type} isMine={true} />;
       default:
         return TextBox(message);
     }
