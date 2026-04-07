@@ -4,7 +4,7 @@
  */
 interface WebRTCSignalMessage {
   /** 信令类型: offer(发起方的媒体描述) | answer(响应方的媒体描述) | candidate(ICE候选地址) */
-  type: 'offer' | 'answer' | 'candidate';
+  type: "offer" | "answer" | "candidate";
   /** 发送方用户ID */
   sender: string;
   /** 接收方用户ID */
@@ -33,7 +33,7 @@ interface WebRTCSession {
   /** 是否为发起方: true=本端发起offer, false=本端响应offer */
   isInitiator: boolean;
   /** 连接状态: connecting(连接中) | connected(已连接) | disconnected(已断开) | failed(连接失败) */
-  status: 'connecting' | 'connected' | 'disconnected' | 'failed';
+  status: "connecting" | "connected" | "disconnected" | "failed";
 }
 
 /**
@@ -55,7 +55,7 @@ interface WebRTCConfig {
  */
 interface WebRTCMessage {
   /** 消息类型: text(文本消息) | file(文件消息) | control(控制消息) */
-  type: 'text' | 'file' | 'control';
+  type: "text" | "file" | "control";
   /** 消息内容(文本、文件数据或控制命令) */
   content: string;
   /** 消息生成时间戳 */
@@ -64,9 +64,4 @@ interface WebRTCMessage {
   sender: string;
 }
 
-export type {
-  WebRTCSignalMessage,
-  WebRTCSession,
-  WebRTCConfig,
-  WebRTCMessage,
-};
+export type { WebRTCSignalMessage, WebRTCSession, WebRTCConfig, WebRTCMessage };

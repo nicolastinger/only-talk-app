@@ -71,12 +71,12 @@ interface MediaConfig {
 /**
  * 媒体控制类型枚举
  */
-type MediaControlType = 
-  | 'VideoToggle'   // 视频开关
-  | 'AudioToggle'   // 音频开关
-  | 'Pause'         // 暂停
-  | 'Resume'        // 恢复
-  | 'EndCall';      // 结束通话
+type MediaControlType =
+  | "VideoToggle" // 视频开关
+  | "AudioToggle" // 音频开关
+  | "Pause" // 暂停
+  | "Resume" // 恢复
+  | "EndCall"; // 结束通话
 
 /**
  * 媒体控制命令接口
@@ -145,22 +145,22 @@ interface VideoCallResponse {
  * 视频通话状态枚举
  * 用于跟踪视频通话的生命周期状态
  */
-type VideoCallState = 
-  | 'Idle'      // 空闲状态 - 无通话
-  | 'Inviting'  // 正在邀请 - 等待对方响应
-  | 'Invited'   // 被邀请 - 收到邀请，等待用户操作
-  | 'InCall'    // 通话中 - 双方已建立连接
-  | 'Ended';    // 已结束 - 通话结束
+type VideoCallState =
+  | "Idle" // 空闲状态 - 无通话
+  | "Inviting" // 正在邀请 - 等待对方响应
+  | "Invited" // 被邀请 - 收到邀请，等待用户操作
+  | "InCall" // 通话中 - 双方已建立连接
+  | "Ended"; // 已结束 - 通话结束
 
-export { 
-  VideoConfig, 
-  AudioConfig, 
-  BufferConfig, 
-  MediaConfig, 
-  MediaControlType, 
+export {
+  VideoConfig,
+  AudioConfig,
+  BufferConfig,
+  MediaConfig,
+  MediaControlType,
   MediaControl,
   MediaControlState,
   VideoCallInvite,
   VideoCallResponse,
-  VideoCallState
+  VideoCallState,
 };

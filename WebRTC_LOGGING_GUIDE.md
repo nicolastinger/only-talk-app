@@ -2,27 +2,27 @@
 
 ## 📋 日志系统概述
 
-为了帮助开发者快速定位问题和理解执行流程，在WebRTC聊天系统的关键位置添加了详细的日志打印。所有日志都可以在浏览器开发者工具（DevTools）的 Console 标签中查看。
+为了帮助开发者快速定位问题和理解执行流程，在 WebRTC 聊天系统的关键位置添加了详细的日志打印。所有日志都可以在浏览器开发者工具（DevTools）的 Console 标签中查看。
 
 ### 日志前缀说明
 
 使用统一的前缀格式，便于快速识别日志来源：
 
-| 前缀 | 含义 | 示例 |
-|------|------|------|
-| `[WebRTCService]` | 核心服务类 | `[WebRTCService.createOffer]` |
-| `[WebRTCChat]` | UI组件 | `[WebRTCChat.sendMessage]` |
+| 前缀                  | 含义       | 示例                             |
+| --------------------- | ---------- | -------------------------------- |
+| `[WebRTCService]`     | 核心服务类 | `[WebRTCService.createOffer]`    |
+| `[WebRTCChat]`        | UI 组件    | `[WebRTCChat.sendMessage]`       |
 | `[WebRTCService.on*]` | 事件处理器 | `[WebRTCService.onicecandidate]` |
 
 ### 符号含义
 
-| 符号 | 含义 |
-|------|------|
-| ✅ | 成功 |
-| ❌ | 失败 / 错误 |
-| ⚠️  | 警告 / 跳过 |
-| 📡 | 信令相关 |
-| ✉️  | 消息相关 |
+| 符号 | 含义        |
+| ---- | ----------- |
+| ✅   | 成功        |
+| ❌   | 失败 / 错误 |
+| ⚠️   | 警告 / 跳过 |
+| 📡   | 信令相关    |
+| ✉️   | 消息相关    |
 
 ---
 
@@ -44,9 +44,9 @@
 [WebRTCChat] 连接状态回调已设置
 ```
 
-**关键信息：** 用户ID和会话ID
+**关键信息：** 用户 ID 和会话 ID
 
-### 2. Offer创建阶段日志（发起方）
+### 2. Offer 创建阶段日志（发起方）
 
 ```
 [WebRTCChat] 本端为发起方，创建offer...
@@ -70,9 +70,9 @@
 [WebRTCChat] offer信令消息已构建，准备发送...
 ```
 
-**关键信息：** offer SDP长度，连接状态从 'new' 变为 'connecting'
+**关键信息：** offer SDP 长度，连接状态从 'new' 变为 'connecting'
 
-### 3. Offer发送阶段日志
+### 3. Offer 发送阶段日志
 
 ```
 [WebRTCChat] 调用 service.sendSignal()...
@@ -87,7 +87,7 @@
 
 **关键信息：** 信令内容长度，发送成功
 
-### 4. ICE候选收集阶段日志
+### 4. ICE 候选收集阶段日志
 
 ```
 [WebRTCService.onicecandidate] 收集到ICE候选 - 类型: host, 地址: 192.168.1.100:12345
@@ -103,9 +103,9 @@
 [WebRTCService.onicecandidate] ICE候选收集完成
 ```
 
-**关键信息：** 候选地址类型，IP和端口，relay被过滤
+**关键信息：** 候选地址类型，IP 和端口，relay 被过滤
 
-### 5. Answer处理阶段日志（响应方）
+### 5. Answer 处理阶段日志（响应方）
 
 ```
 [WebRTCChat.onWebRTCSignal] 📡 收到WebRTC信令事件
@@ -122,9 +122,9 @@
 [WebRTCChat.onWebRTCSignal] ✅ answer已处理
 ```
 
-**关键信息：** 信令消息类型和发送方，answer SDP长度
+**关键信息：** 信令消息类型和发送方，answer SDP 长度
 
-### 6. ICE候选处理阶段日志
+### 6. ICE 候选处理阶段日志
 
 ```
 [WebRTCChat.onWebRTCSignal] 📡 收到WebRTC信令事件
@@ -211,9 +211,10 @@
 
 ## 🎯 常见日志场景及解析
 
-### 场景1: 连接一直停留在 'connecting'
+### 场景 1: 连接一直停留在 'connecting'
 
 **日志特征：**
+
 ```
 [WebRTCService.onconnectionstatechange] 连接状态: connecting (ICE状态: gathering, 收集状态: gathering)
 [WebRTCService.onconnectionstatechange] 连接状态: connecting (ICE状态: checking, 收集状态: complete)
@@ -221,75 +222,86 @@
 ```
 
 **可能原因：**
-1. ICE候选交换失败 - 检查是否有 `onicecandidate` 日志
-2. Answer没有收到 - 检查信令监听日志
-3. 防火墙阻止 - 检查是否有candidate的IP和端口信息
+
+1. ICE 候选交换失败 - 检查是否有 `onicecandidate` 日志
+2. Answer 没有收到 - 检查信令监听日志
+3. 防火墙阻止 - 检查是否有 candidate 的 IP 和端口信息
 
 **排查方法：**
+
 ```javascript
 // 在浏览器console查询
 // 搜索所有candidate日志
-console.log("查找: [WebRTCService.onicecandidate]")
+console.log("查找: [WebRTCService.onicecandidate]");
 
 // 搜索answer处理日志
-console.log("查找: [WebRTCService.handleAnswer]")
+console.log("查找: [WebRTCService.handleAnswer]");
 
 // 检查ICE状态
-console.log("查找: ICE状态")
+console.log("查找: ICE状态");
 ```
 
-### 场景2: DataChannel未打开
+### 场景 2: DataChannel 未打开
 
 **日志特征：**
+
 ```
 [WebRTCService.ondatachannelopen] ❌ (没有这行日志)
 [WebRTCService.ondatachannelclose] DataChannel已关闭
 ```
 
 **可能原因：**
+
 1. 连接未达到 'connected' 状态
-2. DataChannel配置错误
-3. 响应方未收到offer
+2. DataChannel 配置错误
+3. 响应方未收到 offer
 
 **排查方法：**
+
 1. 检查连接状态日志，确保达到 'connected'
 2. 搜索 "setupDataChannel" 确保初始化
 3. 发起方搜索 "createDataChannel"，响应方搜索 "ondatachannel"
 
-### 场景3: 消息发送失败
+### 场景 3: 消息发送失败
 
 **日志特征：**
+
 ```
 [WebRTCService.sendMessage] ❌ 发送失败 - DataChannel未打开 (readyState: connecting)
 ```
 
 **可能原因：**
-1. DataChannel还在建立过程中
+
+1. DataChannel 还在建立过程中
 2. 连接已断开
 3. 对端关闭了连接
 
 **排查方法：**
+
 1. 检查 DataChannel readyState (应为 'open')
 2. 检查连接状态 (应为 'connected')
 3. 查看是否有 "ondatachannelclose" 日志
 
-### 场景4: 信令未被接收
+### 场景 4: 信令未被接收
 
 **日志特征：**
+
 ```
 [WebRTCService.sendSignal] ✅ offer信令已通过QUIC发送...
 // 但对端没有 [WebRTCChat.onWebRTCSignal] 日志
 ```
 
 **可能原因：**
-1. Rust后端未正确转发消息
+
+1. Rust 后端未正确转发消息
 2. 事件监听失败
-3. 消息类型不是100 (MSG_TYPE_WEBRTC_SIGNAL)
+3. 消息类型不是 100 (MSG_TYPE_WEBRTC_SIGNAL)
 
 **排查方法：**
+
 1. 检查发送端的 "text_type: 100"
 2. 检查接收端的监听器是否注册成功
-3. 查看浏览器Network标签，检查Tauri IPC消息
+3. 查看浏览器 Network 标签，检查 Tauri IPC 消息
 
 ---
 
@@ -301,17 +313,19 @@ console.log("查找: ICE状态")
 // 在DevTools Console输入
 copy(
   Array.from(console.log.calls || [])
-    .map(call => call.join(' '))
-    .join('\n')
-)
+    .map((call) => call.join(" "))
+    .join("\n")
+);
 ```
 
 ### 2. 按模块筛选日志
 
 ```javascript
 // 只看WebRTCService日志
-console.log(performance.getEntriesByType('measure')
-  .filter(e => e.name.includes('WebRTCService'))
+console.log(
+  performance
+    .getEntriesByType("measure")
+    .filter((e) => e.name.includes("WebRTCService"))
 );
 ```
 
@@ -332,9 +346,9 @@ console.log(`连接建立耗时: ${connectedTime - startTime}ms`);
 // 在DevTools Console运行
 copy(
   document.body.innerText
-    .split('\n')
-    .filter(line => line.includes('[WebRTC'))
-    .join('\n')
+    .split("\n")
+    .filter((line) => line.includes("[WebRTC"))
+    .join("\n")
 );
 // 粘贴到文件即可
 ```
@@ -345,11 +359,11 @@ copy(
 
 当前实现的日志级别：
 
-| 级别 | 颜色 | 用途 |
-|------|------|------|
-| `console.log()` | 默认 | 普通日志 |
-| `console.error()` | 红色 | 错误日志 |
-| `console.warn()` | 黄色 | 警告日志(未使用) |
+| 级别              | 颜色 | 用途             |
+| ----------------- | ---- | ---------------- |
+| `console.log()`   | 默认 | 普通日志         |
+| `console.error()` | 红色 | 错误日志         |
+| `console.warn()`  | 黄色 | 警告日志(未使用) |
 
 **改进建议：**
 
@@ -359,14 +373,14 @@ const LOG_LEVEL = {
   ERROR: 0,
   WARN: 1,
   INFO: 2,
-  DEBUG: 3
+  DEBUG: 3,
 };
 
 const currentLevel = LOG_LEVEL.DEBUG;
 
 function log(level: number, message: string, data?: any) {
   if (level <= currentLevel) {
-    console.log(message, data || '');
+    console.log(message, data || "");
   }
 }
 ```
@@ -378,8 +392,9 @@ function log(level: number, message: string, data?: any) {
 为了避免在生产环境暴露敏感信息，可以：
 
 1. **环境变量控制：**
+
 ```typescript
-const DEBUG = process.env.NODE_ENV === 'development';
+const DEBUG = process.env.NODE_ENV === "development";
 
 if (DEBUG) {
   console.log(`[WebRTCService] ...`);
@@ -387,11 +402,13 @@ if (DEBUG) {
 ```
 
 2. **日志级别控制：**
+
 ```typescript
-const LOG_LEVEL = process.env.LOG_LEVEL || 'ERROR';
+const LOG_LEVEL = process.env.LOG_LEVEL || "ERROR";
 ```
 
 3. **日志上报：**
+
 ```typescript
 // 关键错误上报到服务器
 if (error) {
@@ -399,7 +416,7 @@ if (error) {
     timestamp: Date.now(),
     message: error.message,
     stack: error.stack,
-    context: { friendId, sessionId }
+    context: { friendId, sessionId },
   });
 }
 ```
@@ -408,14 +425,14 @@ if (error) {
 
 ## 📝 调试清单
 
-调试WebRTC问题时的检查清单：
+调试 WebRTC 问题时的检查清单：
 
 - [ ] 确认两端都打印了初始化日志
-- [ ] 发起方是否打印了offer创建日志
-- [ ] 响应方是否收到了offer信令
-- [ ] 双方是否都打印了candidate日志
+- [ ] 发起方是否打印了 offer 创建日志
+- [ ] 响应方是否收到了 offer 信令
+- [ ] 双方是否都打印了 candidate 日志
 - [ ] 连接状态是否转变为 'connected'
-- [ ] DataChannel是否打印了 onopen 日志
+- [ ] DataChannel 是否打印了 onopen 日志
 - [ ] 消息发送和接收是否都有日志
 - [ ] 关闭时是否有清理日志
 

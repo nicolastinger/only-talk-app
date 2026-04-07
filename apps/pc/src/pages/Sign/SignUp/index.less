@@ -48,11 +48,7 @@
       rgba(100, 180, 255, 0.6) 0%,
       transparent 40%
     ),
-    radial-gradient(
-      ellipse at 50% 50%,
-      var(--bg-white-30) 0%,
-      transparent 50%
-    );
+    radial-gradient(ellipse at 50% 50%, var(--bg-white-30) 0%, transparent 50%);
   animation: pulseGlow 4s ease-in-out infinite;
 }
 
@@ -155,16 +151,15 @@
   overflow: hidden;
   background: var(--bg-white-20);
   padding: 3px;
-  box-shadow: var(--shadow-glow),
-    0 0 40px rgba(100, 180, 255, 0.3), 0 0 60px rgba(100, 180, 255, 0.2);
+  box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 0.3),
+    0 0 60px rgba(100, 180, 255, 0.2);
   animation: avatarGlow 3s ease-in-out infinite alternate;
   margin-bottom: 16px;
 }
 
 @keyframes avatarGlow {
   0% {
-    box-shadow: var(--shadow-glow),
-      0 0 40px rgba(100, 180, 255, 0.3);
+    box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 0.3);
   }
   100% {
     box-shadow: 0 0 30px rgba(100, 180, 255, 0.8),
@@ -273,8 +268,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: var(--shadow-primary),
-    0 0 20px rgba(100, 180, 255, 0.2);
+  box-shadow: var(--shadow-primary), 0 0 20px rgba(100, 180, 255, 0.2);
   letter-spacing: 1px;
   position: relative;
   overflow: hidden;
@@ -309,8 +303,7 @@
 
 .submitBtn:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-primary-lg),
-    0 0 30px rgba(100, 180, 255, 0.4);
+  box-shadow: var(--shadow-primary-lg), 0 0 30px rgba(100, 180, 255, 0.4);
   background: var(--btn-gradient-primary-hover);
 }
 

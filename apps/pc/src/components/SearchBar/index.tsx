@@ -1,7 +1,11 @@
 import FriendRequestsModal from '@/components/FriendRequestsModal';
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
 import { useBearStore } from '@/store/store';
-import { BellOutlined, SearchOutlined, UserAddOutlined } from '@ant-design/icons';
+import {
+  BellOutlined,
+  SearchOutlined,
+  UserAddOutlined,
+} from '@ant-design/icons';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import type { WindowOptions } from '@tauri-apps/api/window';
 import { Badge } from 'antd';
@@ -58,7 +62,11 @@ const SearchBar = () => {
         </div>
         <div className={styles.divider} />
         <div className={styles.actionBtn} onClick={handleNotificationClick}>
-          <Badge count={totalUnread > 99 ? '99+' : totalUnread} overflowCount={99} size="small">
+          <Badge
+            count={totalUnread > 99 ? '99+' : totalUnread}
+            overflowCount={99}
+            size="small"
+          >
             <BellOutlined className={styles.actionIcon} />
           </Badge>
           <span>好友通知</span>

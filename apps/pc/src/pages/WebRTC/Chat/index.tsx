@@ -264,9 +264,9 @@ const WebRTCChat: React.FC = () => {
           message.error('创建连接失败');
         }
       } else if (initialSignalData) {
-      /**
-       * 响应方流程：处理offer并发送answer
-       */
+        /**
+         * 响应方流程：处理offer并发送answer
+         */
         console.log(`[WebRTCChat] 本端为响应方，处理对端的offer...`);
         try {
           // 从URL参数解析对端的offer
@@ -377,10 +377,10 @@ const WebRTCChat: React.FC = () => {
               await service.handleAnswer(friendId, signalMsg.data);
               console.log(`[WebRTCChat.onWebRTCSignal] ✅ answer已处理`);
             } else if (signalMsg.type === 'candidate') {
-            /**
-             * 处理candidate信令
-             * 双方都需要处理candidate来建立完整的连接
-             */
+              /**
+               * 处理candidate信令
+               * 双方都需要处理candidate来建立完整的连接
+               */
               console.log(
                 `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的ICE candidate`,
               );
