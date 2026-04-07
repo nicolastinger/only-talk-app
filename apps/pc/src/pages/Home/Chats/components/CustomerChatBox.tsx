@@ -138,6 +138,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   };
 
   const isImageMessage = text_type === 2;
+  const isSpecialMessage = [4, 5, 12, 13, 14, 15, 100].includes(text_type);
 
   return (
     <div className={styles.container}>
@@ -152,7 +153,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         />
       </div>
       <div className={styles.chatContainerWrapper}>
-        <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''}`}>
+        <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
           {renderMessage(raw)}
         </div>
         <div className={styles.tooltip}>

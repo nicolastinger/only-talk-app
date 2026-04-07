@@ -149,7 +149,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  word-break: break-all;
+  word-break: break-word;
+  overflow-wrap: break-word;
   color: #ffffff;
   background: linear-gradient(135deg, #1540ff 0%, #499eff 100%);
   border-radius: 18px 18px 4px 18px;
@@ -216,5 +217,27 @@
   &:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     transform: translateY(-2px);
+  }
+}
+
+.specialMessage {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+  margin-right: 0;
+
+  &::after {
+    display: none;
+  }
+
+  &::before {
+    display: none;
+  }
+
+  &:hover {
+    box-shadow: none;
+    transform: none;
   }
 }

@@ -192,13 +192,14 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   };
 
   const isImageMessage = text_type === 2;
+  const isSpecialMessage = [4, 5, 12, 13, 14, 15, 100].includes(text_type);
 
   return (
     <div className={styles.container}>
       <div className={styles.messageWrapper}>
         {renderAck()}
         <div className={styles.chatContainerWrapper}>
-          <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''}`}>
+          <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
             {renderMessage(raw)}
           </div>
           <div className={styles.tooltip}>

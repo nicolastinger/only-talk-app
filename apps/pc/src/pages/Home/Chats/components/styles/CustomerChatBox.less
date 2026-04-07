@@ -1,5 +1,5 @@
 .container {
-  max-width: 70%;
+  max-width: 80%;
   min-height: 40px;
   padding: 8px;
   display: flex;
@@ -96,7 +96,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  word-break: break-all;
+  word-break: break-word;
+  overflow-wrap: break-word;
   font-size: 14px;
   line-height: 1.6;
   overflow: hidden;
@@ -160,5 +161,27 @@
   &:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     transform: translateY(-2px);
+  }
+}
+
+.specialMessage {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+  margin-left: 0;
+
+  &::after {
+    display: none;
+  }
+
+  &::before {
+    display: none;
+  }
+
+  &:hover {
+    box-shadow: none;
+    transform: none;
   }
 }
