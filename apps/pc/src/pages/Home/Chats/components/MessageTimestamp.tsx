@@ -1,5 +1,6 @@
 import { formatMessageTime } from '@/utils/format';
 import React from 'react';
+import styles from './styles/MessageTimestamp.less';
 
 interface MessageTimestampProps {
   timestamp: number;
@@ -13,17 +14,10 @@ const MessageTimestamp: React.FC<MessageTimestampProps> = ({
   style,
 }) => {
   return (
-    <div
-      className={className}
-      style={{
-        textAlign: 'center',
-        fontSize: '12px',
-        color: '#999',
-        margin: '10px 0',
-        ...style,
-      }}
-    >
-      {formatMessageTime(timestamp)}
+    <div className={`${styles.timestamp} ${className || ''}`} style={style}>
+      <span className={styles.timestampText}>
+        {formatMessageTime(timestamp)}
+      </span>
     </div>
   );
 };

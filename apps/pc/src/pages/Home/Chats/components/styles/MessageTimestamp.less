@@ -1,0 +1,49 @@
+.timestamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+  margin: 8px 0;
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.06) 50%,
+      transparent 100%
+    );
+  }
+
+  &::before {
+    margin-right: 16px;
+  }
+
+  &::after {
+    margin-left: 16px;
+  }
+}
+
+.timestampText {
+  font-size: 12px;
+  color: #999999;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 4px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}

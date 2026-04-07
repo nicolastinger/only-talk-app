@@ -1,3 +1,4 @@
+import { DEFAULT_ICON } from '@/constants';
 import React from 'react';
 
 interface LocalImageProps {
@@ -17,7 +18,7 @@ const LocalImage: React.FC<LocalImageProps> = ({
 }) => {
   return (
     <img
-      src="/images/default.jpg"
+      src={DEFAULT_ICON}
       alt={alt}
       width={width}
       height={height}

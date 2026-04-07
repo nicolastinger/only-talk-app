@@ -1,5 +1,6 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
+import { formatFullTime } from '@/utils/format';
 import {
   convertPathToTauriUrl,
   getChatFileByBizId,
@@ -30,7 +31,7 @@ const isLocalFilePath = (raw: string): boolean => {
 const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   const {
     msg: {
-      text_msg_raw: { raw, text_type },
+      text_msg_raw: { raw, text_type, timestamp },
     },
     isAck = true,
     icon,
@@ -166,13 +167,34 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   };
 
   const renderAck = () => {
-    return <div>{ackFlag === 1 && <div>发送失败</div>}</div>;
+    if (ackFlag === 1) {
+      return (
+        <div className={styles.ackStatus}>
+          <div className={styles.ackError}>
+            <span className={styles.ackIcon}>!</span>
+            <span>发送失败</span>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
+
+  const isImageMessage = text_type === 2;
 
   return (
     <div className={styles.container}>
-      {renderAck()}
-      <div className={styles.chatContainer}>{renderMessage(raw)}</div>
+      <div className={styles.messageWrapper}>
+        {renderAck()}
+        <div className={styles.chatContainerWrapper}>
+          <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''}`}>
+            {renderMessage(raw)}
+          </div>
+          <div className={styles.tooltip}>
+            {formatFullTime(timestamp)}
+          </div>
+        </div>
+      </div>
       <div className={styles.userIcon}>
         <img
           src={userIcon || DEFAULT_ICON}

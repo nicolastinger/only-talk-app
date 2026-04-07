@@ -1,4 +1,5 @@
 import { useBearStore } from '@/store/store';
+import { formatFullTime } from '@/utils/format';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
@@ -17,7 +18,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   props: CustomerChatBoxProps,
 ) => {
   const {
-    text_msg_raw: { raw, text_type },
+    text_msg_raw: { raw, text_type, timestamp },
     img,
     friendUuid,
     currentBizId,
@@ -125,6 +126,8 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
     }
   };
 
+  const isImageMessage = text_type === 2;
+
   return (
     <div className={styles.container}>
       <div className={styles.userIcon}>
@@ -137,7 +140,14 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
           style={{ opacity: loading ? 0.7 : 1 }}
         />
       </div>
-      <div className={styles.chatContainer}>{renderMessage(raw)}</div>
+      <div className={styles.chatContainerWrapper}>
+        <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''}`}>
+          {renderMessage(raw)}
+        </div>
+        <div className={styles.tooltip}>
+          {formatFullTime(timestamp)}
+        </div>
+      </div>
     </div>
   );
 };

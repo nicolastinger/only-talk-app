@@ -37,9 +37,6 @@ const SignUpPage: React.FC = () => {
 
       <div className={styles.content}>
         <div className={styles.avatarSection}>
-          <div className={styles.avatarWrapper}>
-            <LocalImage width={64} height={64} />
-          </div>
           <div className={styles.welcomeText}>
             <FormattedMessage id="signUp.title" defaultMessage="创建账户" />
           </div>

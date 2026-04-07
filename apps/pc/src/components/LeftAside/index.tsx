@@ -1,6 +1,5 @@
-'use client';
-import defaultImg from '@/assets/png/default.png';
 import LayoutBtn from '@/components/Button/LayoutBtn';
+import { DEFAULT_ICON } from '@/constants';
 import { useChatsUnread } from '@/hooks/useChatsUnread';
 import { useBearStore } from '@/store/store';
 import {
@@ -180,7 +179,7 @@ const LeftAside = () => {
           <img
             width={100}
             height={100}
-            src={userIcon || defaultImg}
+            src={userIcon || DEFAULT_ICON}
             className={styles.imgItem}
             alt={'icon'}
           />
