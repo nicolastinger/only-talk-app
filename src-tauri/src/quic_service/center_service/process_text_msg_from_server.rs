@@ -345,11 +345,10 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
                                     guard.get("uuid").cloned().unwrap_or_default()
                                 };
                                 
-                                tokio::spawn(async move {
-                                    if let Err(e) = send_udp_ping_for_webrtc(&parsed.ip, parsed.port, &local_uuid).await {
-                                        warn!("发送 UDP ping 失败: {}", e);
-                                    }
-                                });
+
+                                if let Err(e) = send_udp_ping_for_webrtc(&parsed.ip, parsed.port, &local_uuid).await {
+                                    warn!("发送 UDP ping 失败: {}", e);
+                                }
                             }
                         } else {
                             warn!("parse_ice_candidate 返回 None, 无法解析 candidate 字符串: {}", candidate_str);
@@ -403,77 +402,34 @@ async fn send_udp_ping_for_webrtc(
     local_uuid: &str,
 ) -> Result<(), anyhow::Error> {
     let remote_addr: SocketAddr = format!("{}:{}", remote_ip, remote_port).parse()?;
-    
-    info!("WebRTC NAT 穿透开始: 目标 {}", remote_addr);
-    
+
+    info!("WebRTC NAT 穿透发送 UDP 信号: 目标 {}", remote_addr);
+
     let sockets: Vec<UdpSocket> = (20000..20010)
         .filter_map(|port| {
             let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().ok()?;
             UdpSocket::bind(addr).ok()
         })
         .collect();
-    
+
     if sockets.is_empty() {
         warn!("无法绑定任何 UDP 端口");
         return Err(anyhow!("无法绑定任何 UDP 端口"));
     }
-    
+
     info!("成功绑定 {} 个 UDP 端口用于打洞", sockets.len());
-    
+
     let ping_data = format!("WEBRTC_HOLE_PUNCH:{}", local_uuid);
-    
+
     for socket in &sockets {
-        let _ = socket.set_nonblocking(true);
-    }
-    
-    let mut buf = [0u8; 1024];
-    let total_duration = std::time::Duration::from_secs(5);
-    let interval = std::time::Duration::from_millis(100);
-    let start = std::time::Instant::now();
-    let mut received_response = false;
-    
-    while start.elapsed() < total_duration {
-        for socket in &sockets {
-            match socket.send_to(ping_data.as_bytes(), remote_addr) {
-                Ok(_) => {}
-                Err(_) => {}
+        match socket.send_to(ping_data.as_bytes(), remote_addr) {
+            Ok(_) => {}
+            Err(e) => {
+                warn!("UDP 发送错误: {}", e);
             }
         }
-        
-        for socket in &sockets {
-            match socket.recv_from(&mut buf) {
-                Ok((size, src)) => {
-                    let msg = String::from_utf8_lossy(&buf[..size]);
-                    info!("收到 UDP 响应: {} -> {}", src, msg);
-                    if msg.starts_with("WEBRTC_HOLE_PUNCH:") {
-                        received_response = true;
-                        let response = format!("WEBRTC_ACK:{}", local_uuid);
-                        let _ = socket.send_to(response.as_bytes(), src);
-                    }
-                }
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
-                Err(e) => {
-                    warn!("UDP 接收错误: {}", e);
-                }
-            }
-        }
-        
-        if received_response {
-            info!("已收到对方响应，打洞成功！");
-            break;
-        }
-        
-        tokio::time::sleep(interval).await;
     }
-    
-    {
-        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
-        guard.insert(
-            "webrtc_remote_addr".to_string(),
-            remote_addr.to_string(),
-        );
-    }
-    
-    info!("WebRTC NAT 打洞完成，目标: {}", remote_addr);
+
+    info!("WebRTC NAT 打洞 UDP 信号已发送，目标: {}", remote_addr);
     Ok(())
 }
