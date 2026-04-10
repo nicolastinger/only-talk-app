@@ -5,16 +5,32 @@ import { nanoid } from 'nanoid';
 /**
  * WebRTC 默认配置 - NAT3穿透优化版
  *
- * 优化策略：
+ * 【NAT3穿透原理】
+ * NAT3（端口限制型锥形NAT）特点：
+ * - 内部IP:Port映射到外部IP:Port，但限制外部地址
+ * - 只有在内部主机先向外部地址X发送数据后，NAT才会接受来自X的数据
+ * - 不同的外部地址/端口需要使用不同的映射
+ *
+ * 【现代WebRTC如何支持NAT3】
+ * 1. STUN服务器发现公网映射地址（srflx候选）
+ * 2. 同时发送host候选和srflx候选给对方
+ * 3. 双方尝试所有候选对（candidate pairs）
+ * 4. 利用NAT的"打孔"特性：一旦建立映射，双向通信都可进行
+ * 5. 某些路由器支持hairpinning（环回），host候选也能工作
+ *
+ * 【优化策略】
  * 1. 大量STUN服务器：覆盖国内外、不同端口、不同提供商，提高获取公网IP的成功率
  * 2. 多端口探测：同一服务器使用多个端口（3478, 19302, 5349等）
  * 3. ICE候选池：预收集候选，加快连接建立
  * 4. ICE重启机制：连接失败时自动重启ICE
  * 5. 超时配置：合理的超时时间避免长时间等待
+ * 6. 【关键】不过滤host候选：让WebRTC自动尝试所有可能的路径
  *
- * 注意：
- * - 不使用TURN/relay服务器
- * - 过滤host和relay候选，仅保留srflx候选用于P2P直连
+ * 【重要说明】
+ * - 不使用TURN/relay服务器（纯P2P）
+ * - 只过滤relay候选，保留host和srflx候选
+ * - WebRTC会自动按优先级尝试所有候选对
+ * - 不要人为过滤候选类型，让浏览器自动决策
  */
 const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -152,7 +168,7 @@ class WebRTCService {
   /** ICE连接超时时间 (毫秒) - NAT3环境需要更长时间 */
   private static ICE_CONNECTION_TIMEOUT = 45000; // 45秒（NAT3环境）
   /** ICE重启间隔时间 (毫秒) */
-  private static ICE_RESTART_INTERVAL = 10000; // 10秒（更频繁的重启）
+  private static ICE_RESTART_INTERVAL = 50000; // 50秒（更频繁的重启）
   /** 检测到的NAT类型 */
   private detectedNATType: string | null = null;
   /** 是否已完成NAT检测 */
@@ -372,27 +388,41 @@ class WebRTCService {
      * ICE候选事件处理器
      * 当浏览器收集到ICE候选地址时触发
      * 需要将候选信息通过信令通道发送给对端
+     *
+     * NAT3穿透关键：必须发送所有类型的候选（host、srflx），让对端尝试所有组合
      */
     connection.onicecandidate = async (event) => {
       if (event.candidate) {
         const candidateType = event.candidate.type;
         console.log(
-          `[WebRTCService.onicecandidate] 收集到ICE候选 - 类型: ${candidateType}, 地址: ${event.candidate.address}:${event.candidate.port}`,
+          `[WebRTCService.onicecandidate] 📍 收集到ICE候选 - 类型: ${candidateType}, 地址: ${event.candidate.address}:${event.candidate.port}, 协议: ${event.candidate.protocol || '未知'}`,
         );
 
-        // 跳过relay类型的候选(中继候选)，仅使用host和srflx候选
+        // 【重要修复】NAT3穿透需要发送所有候选类型（除了relay）
+        // - host候选：本地局域网地址，用于同局域网或端口映射成功的情况
+        // - srflx候选：通过STUN获取的公网映射地址，用于NAT穿透
+        // - relay候选：TURN中继地址（我们禁用了TURN，所以不会有）
         if (candidateType === 'relay') {
           console.log(
-            `[WebRTCService.onicecandidate] 跳过中继候选(relay candidate)`,
+            `[WebRTCService.onicecandidate] ⏭️ 跳过中继候选(relay candidate) - 因为禁用了TURN服务器`,
           );
           return;
         }
-        // 跳过本地host候选
+
+        // 【关键】不要跳过host候选！NAT3环境下host候选也可能成功：
+        // 1. 如果双方在同一个NAT后面（同局域网），host候选可以直接连通
+        // 2. 某些路由器支持环回(hairpinning)，host候选也能工作
+        // 3. WebRTC会按优先级自动尝试所有候选，我们不应该人为过滤
         if (candidateType === 'host') {
           console.log(
-            `[WebRTCService.onicecandidate] 跳过本地host候选(host candidate)`,
+            `[WebRTCService.onicecandidate] ✅ 保留host候选 - NAT3环境下也可能有用（同局域网或hairpinning支持）`,
           );
-          return;
+        }
+
+        if (candidateType === 'srflx') {
+          console.log(
+            `[WebRTCService.onicecandidate] ✅ 保留srflx候选 - 这是NAT3穿透的关键（公网映射地址）`,
+          );
         }
 
         // 构建ICE候选信令消息并发送给对端
@@ -405,10 +435,14 @@ class WebRTCService {
           timestamp: Date.now(),
         };
 
-        console.log(`[WebRTCService.onicecandidate] 发送ICE候选给 ${friendId}`);
+        console.log(
+          `[WebRTCService.onicecandidate] 📤 发送ICE候选给 ${friendId} - 类型: ${candidateType}`,
+        );
         await this.sendSignal(signalMessage);
       } else {
-        console.log(`[WebRTCService.onicecandidate] ICE候选收集完成`);
+        console.log(
+          `[WebRTCService.onicecandidate] 🏁 ICE候选收集完成 - 总共收集了 ${this.connections.get(friendId)?.localDescription?.sdp?.split('\n').filter(line => line.startsWith('a=candidate:')).length || 0} 个候选`,
+        );
       }
     };
 
@@ -418,15 +452,26 @@ class WebRTCService {
      * connecting -> connected -> disconnected/closed/failed
      */
     connection.onconnectionstatechange = () => {
+      const state = connection.connectionState;
+      const iceState = connection.iceConnectionState;
+      const gatheringState = connection.iceGatheringState;
+      
       console.log(
-        `[WebRTCService.onconnectionstatechange] 连接状态: ${connection.connectionState} (ICE状态: ${connection.iceConnectionState}, 收集状态: ${connection.iceGatheringState})`,
+        `[WebRTCService.onconnectionstatechange] 🔄 连接状态变化:`,
       );
+      console.log(`  - 连接状态 (connectionState): ${state}`);
+      console.log(`  - ICE状态 (iceConnectionState): ${iceState}`);
+      console.log(`  - 收集状态 (iceGatheringState): ${gatheringState}`);
+      console.log(`  - 信令状态 (signalingState): ${connection.signalingState}`);
+      
+      // 打印当前候选对统计
+      this.logCandidatePairStats(friendId, connection);
 
       // 触发状态变化回调，供UI层更新显示
-      this.onConnectionStateChange?.(friendId, connection.connectionState);
+      this.onConnectionStateChange?.(friendId, state);
 
       // 根据状态处理ICE重启和超时
-      this.handleConnectionStateChange(friendId, connection.connectionState);
+      this.handleConnectionStateChange(friendId, state);
     };
 
     /**
@@ -713,6 +758,120 @@ class WebRTCService {
   }
 
   /**
+   * 打印ICE候选对统计信息（用于调试）
+   * @param friendId 对端用户ID
+   * @param connection RTCPeerConnection对象
+   */
+  private async logCandidatePairStats(
+    friendId: string,
+    connection: RTCPeerConnection,
+  ): Promise<void> {
+    try {
+      const stats = await connection.getStats();
+      let activeCandidatePair: any = null;
+      let totalCandidatePairs = 0;
+      let succeededPairs = 0;
+      let failedPairs = 0;
+
+      stats.forEach((report) => {
+        if (report.type === 'candidate-pair') {
+          totalCandidatePairs++;
+          if (report.state === 'succeeded') {
+            succeededPairs++;
+            activeCandidatePair = report;
+          } else if (report.state === 'failed') {
+            failedPairs++;
+          }
+        }
+      });
+
+      if (totalCandidatePairs > 0) {
+        console.log(
+          `[WebRTCService.logCandidatePairStats] 📊 ICE候选对统计 [${friendId}]:`,
+        );
+        console.log(`  - 总候选对数: ${totalCandidatePairs}`);
+        console.log(`  - 成功连接数: ${succeededPairs}`);
+        console.log(`  - 失败连接数: ${failedPairs}`);
+
+        if (activeCandidatePair) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pair = activeCandidatePair as any;
+          console.log(`  - ✅ 活跃候选对详情:`);
+          console.log(`    • 本地候选ID: ${pair.localCandidateId || pair.get('localCandidateId')}`);
+          console.log(`    • 远程候选ID: ${pair.remoteCandidateId || pair.get('remoteCandidateId')}`);
+          const rtt = pair.currentRoundTripTime ?? pair.get('currentRoundTripTime');
+          console.log(`    • 往返延迟(RTT): ${rtt?.toFixed?.(3) || '未知'}s`);
+          console.log(`    • 接收字节: ${(pair.bytesReceived ?? pair.get('bytesReceived')) || 0}`);
+          console.log(`    • 发送字节: ${(pair.bytesSent ?? pair.get('bytesSent')) || 0}`);
+        } else if (succeededPairs === 0 && failedPairs > 0) {
+          console.warn(
+            `[WebRTCService.logCandidatePairStats] ⚠️ 所有候选对都失败了！`,
+          );
+        }
+      }
+    } catch (error) {
+      // 忽略统计信息获取错误（不影响连接）
+      console.debug(
+        `[WebRTCService.logCandidatePairStats] 获取统计信息失败（可忽略）:`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * 打印详细的ICE连接诊断信息
+   * @param friendId 对端用户ID
+   * @param connection RTCPeerConnection对象
+   */
+  async logIceDiagnostics(
+    friendId: string,
+    connection: RTCPeerConnection,
+  ): Promise<void> {
+    console.log(
+      `[WebRTCService.logIceDiagnostics] 🔍 ICE连接诊断信息 [${friendId}]:`,
+    );
+    console.log(`  - 连接状态: ${connection.connectionState}`);
+    console.log(`  - ICE状态: ${connection.iceConnectionState}`);
+    console.log(`  - 收集状态: ${connection.iceGatheringState}`);
+    console.log(`  - 信令状态: ${connection.signalingState}`);
+
+    // 打印本地描述中的候选
+    if (connection.localDescription?.sdp) {
+      const localCandidates = connection.localDescription.sdp
+        .split('\n')
+        .filter((line) => line.startsWith('a=candidate:'));
+      console.log(`  - 本地候选数: ${localCandidates.length}`);
+      localCandidates.forEach((line, index) => {
+        const parts = line.split(' ');
+        if (parts.length >= 8) {
+          console.log(
+            `    ${index + 1}. ${parts[6]} - ${parts[4]}:${parts[5]} (${parts[2]})`,
+          );
+        }
+      });
+    }
+
+    // 打印远程描述中的候选
+    if (connection.remoteDescription?.sdp) {
+      const remoteCandidates = connection.remoteDescription.sdp
+        .split('\n')
+        .filter((line) => line.startsWith('a=candidate:'));
+      console.log(`  - 远程候选数: ${remoteCandidates.length}`);
+      remoteCandidates.forEach((line, index) => {
+        const parts = line.split(' ');
+        if (parts.length >= 8) {
+          console.log(
+            `    ${index + 1}. ${parts[6]} - ${parts[4]}:${parts[5]} (${parts[2]})`,
+          );
+        }
+      });
+    }
+
+    // 打印候选对统计
+    await this.logCandidatePairStats(friendId, connection);
+  }
+
+  /**
    * 优化SDP以提高NAT穿透成功率
    *
    * 保守策略：不做任何SDP修改，让浏览器自动处理
@@ -903,14 +1062,14 @@ class WebRTCService {
    * @returns RTCSessionDescriptionInit (offer)
    */
   async createOffer(friendId: string): Promise<RTCSessionDescriptionInit> {
-    console.log(`[WebRTCService.createOffer] 开始为 ${friendId} 创建offer...`);
+    console.log(`[WebRTCService.createOffer] 🚀 开始为 ${friendId} 创建offer...`);
 
     let connection = this.connections.get(friendId);
     if (!connection) {
-      console.log(`[WebRTCService.createOffer] 连接不存在，创建新连接`);
+      console.log(`[WebRTCService.createOffer] 🔨 连接不存在，创建新连接`);
       connection = await this.createConnection(friendId);
     } else {
-      console.log(`[WebRTCService.createOffer] 使用已存在的连接`);
+      console.log(`[WebRTCService.createOffer] ♻️ 使用已存在的连接`);
     }
 
     /**
@@ -918,41 +1077,57 @@ class WebRTCService {
      * ordered: true 保证消息顺序传递
      * 响应方会通过ondatachannel事件接收此通道
      */
-    console.log(`[WebRTCService.createOffer] 创建DataChannel...`);
+    console.log(`[WebRTCService.createOffer] 📡 创建DataChannel...`);
     const dataChannel = connection.createDataChannel('webrtc-chat', {
       ordered: true,
     });
     this.setupDataChannel(friendId, dataChannel);
-    console.log(`[WebRTCService.createOffer] DataChannel 已创建`);
+    console.log(`[WebRTCService.createOffer] ✅ DataChannel 已创建`);
 
     /**
      * 创建offer
      * offerToReceiveAudio/Video: true 接收对方的音频和视频
      */
-    console.log(`[WebRTCService.createOffer] 调用 createOffer()...`);
+    console.log(`[WebRTCService.createOffer] 📝 调用 createOffer()...`);
     const offer = await connection.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
     });
     console.log(
-      `[WebRTCService.createOffer] offer 已创建，SDP长度: ${
+      `[WebRTCService.createOffer] 📝 offer 已创建，SDP长度: ${
         offer.sdp?.length || 0
       }`,
     );
+
+    // 输出SDP中的候选信息（用于调试）
+    if (offer.sdp) {
+      const candidateLines = offer.sdp.split('\n').filter(line => line.startsWith('a=candidate:'));
+      console.log(`[WebRTCService.createOffer] 📊 SDP中包含 ${candidateLines.length} 个ICE候选:`);
+      candidateLines.forEach((line, index) => {
+        // 提取候选类型和地址信息
+        const parts = line.split(' ');
+        if (parts.length >= 8) {
+          const type = parts[6]; // 第7个字段是候选类型
+          const address = parts[4]; // 第5个字段是地址
+          const port = parts[5]; // 第6个字段是端口
+          console.log(`  ${index + 1}. 类型: ${type}, 地址: ${address}:${port}`);
+        }
+      });
+    }
 
     // 优化SDP以提高NAT穿透成功率
     if (offer.sdp) {
       offer.sdp = this.optimizeSDPForNAT(offer.sdp);
       console.log(
-        `[WebRTCService.createOffer] SDP已优化，新长度: ${offer.sdp.length}`,
+        `[WebRTCService.createOffer] 🔧 SDP已优化，新长度: ${offer.sdp.length}`,
       );
     }
 
     // 设置本地描述，告知WebRTC此端的能力
-    console.log(`[WebRTCService.createOffer] 设置本地描述...`);
+    console.log(`[WebRTCService.createOffer] ⚙️ 设置本地描述...`);
     await connection.setLocalDescription(offer);
     console.log(
-      `[WebRTCService.createOffer] 本地描述已设置，连接状态: ${connection.connectionState}`,
+      `[WebRTCService.createOffer] ✅ 本地描述已设置，连接状态: ${connection.connectionState}, ICE状态: ${connection.iceConnectionState}`,
     );
 
     return offer;
@@ -976,48 +1151,79 @@ class WebRTCService {
     offer: RTCSessionDescriptionInit,
   ): Promise<RTCSessionDescriptionInit> {
     console.log(
-      `[WebRTCService.handleOffer] 开始处理来自 ${friendId} 的offer...`,
+      `[WebRTCService.handleOffer] 📨 开始处理来自 ${friendId} 的offer...`,
     );
 
     let connection = this.connections.get(friendId);
     if (!connection) {
-      console.log(`[WebRTCService.handleOffer] 连接不存在，创建新连接`);
+      console.log(`[WebRTCService.handleOffer] 🔨 连接不存在，创建新连接`);
       connection = await this.createConnection(friendId);
     } else {
-      console.log(`[WebRTCService.handleOffer] 使用已存在的连接`);
+      console.log(`[WebRTCService.handleOffer] ♻️ 使用已存在的连接`);
     }
 
     // 设置远程描述，表示接受对端的offer
     console.log(
-      `[WebRTCService.handleOffer] 设置远程描述，SDP长度: ${
+      `[WebRTCService.handleOffer] ⚙️ 设置远程描述，SDP长度: ${
         offer.sdp?.length || 0
       }`,
     );
+    
+    // 分析offer中的候选信息
+    if (offer.sdp) {
+      const candidateLines = offer.sdp.split('\n').filter(line => line.startsWith('a=candidate:'));
+      console.log(`[WebRTCService.handleOffer] 📊 对端offer中包含 ${candidateLines.length} 个ICE候选:`);
+      candidateLines.forEach((line, index) => {
+        const parts = line.split(' ');
+        if (parts.length >= 8) {
+          const type = parts[6];
+          const address = parts[4];
+          const port = parts[5];
+          console.log(`  ${index + 1}. 类型: ${type}, 地址: ${address}:${port}`);
+        }
+      });
+    }
+    
     await connection.setRemoteDescription(new RTCSessionDescription(offer));
-    console.log(`[WebRTCService.handleOffer] 远程描述已设置`);
+    console.log(`[WebRTCService.handleOffer] ✅ 远程描述已设置`);
 
     // 创建answer作为本端的回应
-    console.log(`[WebRTCService.handleOffer] 调用 createAnswer()...`);
+    console.log(`[WebRTCService.handleOffer] 📝 调用 createAnswer()...`);
     const answer = await connection.createAnswer();
     console.log(
-      `[WebRTCService.handleOffer] answer 已创建，SDP长度: ${
+      `[WebRTCService.handleOffer] 📝 answer 已创建，SDP长度: ${
         answer.sdp?.length || 0
       }`,
     );
+
+    // 分析answer中的候选信息
+    if (answer.sdp) {
+      const candidateLines = answer.sdp.split('\n').filter(line => line.startsWith('a=candidate:'));
+      console.log(`[WebRTCService.handleOffer] 📊 本地answer中包含 ${candidateLines.length} 个ICE候选:`);
+      candidateLines.forEach((line, index) => {
+        const parts = line.split(' ');
+        if (parts.length >= 8) {
+          const type = parts[6];
+          const address = parts[4];
+          const port = parts[5];
+          console.log(`  ${index + 1}. 类型: ${type}, 地址: ${address}:${port}`);
+        }
+      });
+    }
 
     // 优化answer SDP
     if (answer.sdp) {
       answer.sdp = this.optimizeSDPForNAT(answer.sdp);
       console.log(
-        `[WebRTCService.handleOffer] Answer SDP已优化，新长度: ${answer.sdp.length}`,
+        `[WebRTCService.handleOffer] 🔧 Answer SDP已优化，新长度: ${answer.sdp.length}`,
       );
     }
 
     // 设置本地描述
-    console.log(`[WebRTCService.handleOffer] 设置本地描述...`);
+    console.log(`[WebRTCService.handleOffer] ⚙️ 设置本地描述...`);
     await connection.setLocalDescription(answer);
     console.log(
-      `[WebRTCService.handleOffer] 本地描述已设置，连接状态: ${connection.connectionState}`,
+      `[WebRTCService.handleOffer] ✅ 本地描述已设置，连接状态: ${connection.connectionState}, ICE状态: ${connection.iceConnectionState}`,
     );
 
     return answer;
@@ -1039,24 +1245,39 @@ class WebRTCService {
     answer: RTCSessionDescriptionInit,
   ): Promise<void> {
     console.log(
-      `[WebRTCService.handleAnswer] 开始处理来自 ${friendId} 的answer...`,
+      `[WebRTCService.handleAnswer] 📨 开始处理来自 ${friendId} 的answer...`,
     );
 
     const connection = this.connections.get(friendId);
     if (!connection) {
-      console.error(`[WebRTCService.handleAnswer] 未找到 ${friendId} 的连接`);
+      console.error(`[WebRTCService.handleAnswer] ❌ 未找到 ${friendId} 的连接`);
       throw new Error('未找到该联系人的连接');
+    }
+
+    // 分析answer中的候选信息
+    if (answer.sdp) {
+      const candidateLines = answer.sdp.split('\n').filter(line => line.startsWith('a=candidate:'));
+      console.log(`[WebRTCService.handleAnswer] 📊 对端answer中包含 ${candidateLines.length} 个ICE候选:`);
+      candidateLines.forEach((line, index) => {
+        const parts = line.split(' ');
+        if (parts.length >= 8) {
+          const type = parts[6];
+          const address = parts[4];
+          const port = parts[5];
+          console.log(`  ${index + 1}. 类型: ${type}, 地址: ${address}:${port}`);
+        }
+      });
     }
 
     // 设置远程描述
     console.log(
-      `[WebRTCService.handleAnswer] 设置远程描述，SDP长度: ${
+      `[WebRTCService.handleAnswer] ⚙️ 设置远程描述，SDP长度: ${
         answer.sdp?.length || 0
       }`,
     );
     await connection.setRemoteDescription(new RTCSessionDescription(answer));
     console.log(
-      `[WebRTCService.handleAnswer] 远程描述已设置，连接状态: ${connection.connectionState}`,
+      `[WebRTCService.handleAnswer] ✅ 远程描述已设置，连接状态: ${connection.connectionState}, ICE状态: ${connection.iceConnectionState}`,
     );
   }
 
@@ -1066,10 +1287,13 @@ class WebRTCService {
    * 流程：
    * 1. 查询已存在的连接
    * 2. 创建RTCIceCandidate对象
-   * 3. 过滤relay类型候选
-   * 4. 添加候选到连接
+   * 3. 【重要】不过滤任何候选类型（除了relay），全部添加到连接
+   * 4. WebRTC会自动尝试所有候选对，找到最优路径
    *
-   * ICE候选用于建立两个对等端之间的媒体路径
+   * NAT3穿透关键：
+   * - 必须添加所有候选（host + srflx），让WebRTC自动选择最佳路径
+   * - host候选：用于同局域网或hairpinning支持的情况
+   * - srflx候选：用于NAT穿透的公网映射地址
    *
    * @param friendId 对端用户ID
    * @param candidate 对端发来的ICE候选
@@ -1078,33 +1302,51 @@ class WebRTCService {
     friendId: string,
     candidate: RTCIceCandidateInit,
   ): Promise<void> {
+    // 提取候选类型用于日志
+    const candidateType = candidate.candidate?.split(' ')[7] || '未知';
+    const candidateAddress = candidate.candidate?.split(' ')[4] || '未知';
+    const candidatePort = candidate.candidate?.split(' ')[5] || '未知';
+    
     console.log(
-      `[WebRTCService.handleCandidate] 处理来自 ${friendId} 的candidate - 类型: ${
-        candidate.candidate?.split(' ')[7]
-      }`,
+      `[WebRTCService.handleCandidate] 📥 处理来自 ${friendId} 的ICE候选 - 类型: ${candidateType}, 地址: ${candidateAddress}:${candidatePort}`,
     );
 
     const connection = this.connections.get(friendId);
     if (!connection) {
       console.error(
-        `[WebRTCService.handleCandidate] 未找到 ${friendId} 的连接`,
+        `[WebRTCService.handleCandidate] ❌ 未找到 ${friendId} 的连接`,
       );
       throw new Error('未找到该联系人的连接');
     }
 
     const iceCandidate = new RTCIceCandidate(candidate);
-    // 跳过relay类型的候选
-    if (iceCandidate.type === 'relay' || iceCandidate.type === 'host') {
+    
+    // 【重要修复】只跳过relay类型的候选，保留host和srflx
+    // NAT3穿透需要所有候选类型，让WebRTC自动尝试所有组合
+    if (iceCandidate.type === 'relay') {
       console.log(
-        `[WebRTCService.handleCandidate] 跳过中继候选(relay candidate)`,
+        `[WebRTCService.handleCandidate] ⏭️ 跳过中继候选(relay candidate) - 因为禁用了TURN服务器`,
       );
       return;
     }
 
+    // 记录添加的候选类型
+    if (iceCandidate.type === 'host') {
+      console.log(
+        `[WebRTCService.handleCandidate] ✅ 添加host候选 - 同局域网或hairpinning可能成功`,
+      );
+    } else if (iceCandidate.type === 'srflx') {
+      console.log(
+        `[WebRTCService.handleCandidate] ✅ 添加srflx候选 - NAT3穿透的关键（公网映射）`,
+      );
+    }
+
     // 添加候选到连接，WebRTC栈会尝试连接
-    console.log(`[WebRTCService.handleCandidate] 添加ICE候选到连接...`);
+    console.log(`[WebRTCService.handleCandidate] ⚙️ 添加ICE候选到连接...`);
     await connection.addIceCandidate(iceCandidate);
-    console.log(`[WebRTCService.handleCandidate] ICE候选已添加`);
+    console.log(
+      `[WebRTCService.handleCandidate] ✅ ICE候选已添加，当前ICE状态: ${connection.iceConnectionState}`,
+    );
   }
 
   /**
