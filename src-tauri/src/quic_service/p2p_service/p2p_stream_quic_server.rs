@@ -131,10 +131,12 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
     while let Ok((send, mut recv)) = connection.accept_bi().await {
         let send_stream = Arc::new(Mutex::new(send));
 
-        // 第一个流为Default通道，第二个流为MediaInfo通道
+        // 按流序号分配通道: 0=Default, 1=MediaInfo, 2=MediaData, 3=File
         let channel_type = match stream_index {
             0 => P2pChannelType::Default,
             1 => P2pChannelType::MediaInfo,
+            2 => P2pChannelType::MediaData,
+            3 => P2pChannelType::File,
             _ => P2pChannelType::Default, // 后续流默认为Default通道
         };
         let channel_key = channel_type.to_string();

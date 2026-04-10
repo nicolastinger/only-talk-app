@@ -9,14 +9,15 @@ use tauri::Emitter;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, Mutex};
 
-use crate::entity::p2p_models::{P2pChannelType, P2pMediaConfig, P2pMediaControl, P2pMediaInfo, P2pVideoConfig, P2pVideoData};
+use crate::entity::p2p_models::{P2pChannelType, P2pFileTransferRequest, P2pFileTransferResponse, P2pMediaConfig, P2pMediaControl, P2pMediaInfo, P2pVideoConfig, P2pVideoData};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
-    MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
+    MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
+    MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
     MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
     MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
     MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
@@ -40,7 +41,7 @@ lazy_static! {
                         String::new(),
                         String::new()
                     ).expect("generate_text_msg error");
-                    let send_stream = get_sender(&msg.uuid, &P2pChannelType::Default).await.expect("no send_stream");
+                    let send_stream = get_sender(&msg.uuid, &P2pChannelType::MediaData).await.expect("no send_stream");
                     send_stream.lock().await.write_all(&video_data).await.expect("write_all error");
                 });
             }
@@ -237,6 +238,37 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 let _media_info = serde_json::from_slice::<P2pMediaInfo>(&msg.raw)?;
                 if let Some(handle) = APP_HANDLE.get() {
                     handle.emit("media_info", &msg.raw)?;
+                }
+            }
+            
+            // ==================== 文件传输处理 ====================
+            
+            // 文件数据分片
+            // 通过File通道传输的文件分片数据
+            MSG_TYPE_P2P_FILE_DATA => {
+                info!("接收到p2p文件数据分片 {:?}", msg);
+                if let Some(handle) = APP_HANDLE.get() {
+                    handle.emit("p2p_file_data", &msg.raw)?;
+                }
+            }
+            
+            // 文件传输请求
+            // 发送方发起文件传输时的握手消息
+            MSG_TYPE_P2P_FILE_TRANSFER_REQUEST => {
+                info!("接收到p2p文件传输请求 {:?}", msg);
+                let _request = serde_json::from_slice::<P2pFileTransferRequest>(&msg.raw)?;
+                if let Some(handle) = APP_HANDLE.get() {
+                    handle.emit("p2p_file_transfer_request", &msg.raw)?;
+                }
+            }
+            
+            // 文件传输响应
+            // 接收方确认或拒绝文件传输
+            MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE => {
+                info!("接收到p2p文件传输响应 {:?}", msg);
+                let _response = serde_json::from_slice::<P2pFileTransferResponse>(&msg.raw)?;
+                if let Some(handle) = APP_HANDLE.get() {
+                    handle.emit("p2p_file_transfer_response", &msg.raw)?;
                 }
             }
             

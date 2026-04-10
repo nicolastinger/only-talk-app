@@ -54,11 +54,17 @@ pub struct UserAddressInfo {
 /// 每个通道类型对应QUIC上的一个独立双向流
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub enum P2pChannelType {
-    /// 默认通道 - 用于视频帧、音频帧、文本消息等数据传输
+    /// 默认通道 - 用于信令、文本消息、控制命令等
     Default,
     /// 媒体信息通道 - 用于传输媒体状态信息、分辨率变化、码率调整等控制信令
     /// 与数据通道分离，避免大数据帧阻塞控制信息
     MediaInfo,
+    /// 媒体数据通道 - 专门用于视频帧和音频帧的传输
+    /// 与信令通道分离，保证音视频数据的传输带宽和低延迟
+    MediaData,
+    /// 文件通道 - 专门用于文件传输
+    /// 独立于音视频通道，避免大文件传输影响实时通话质量
+    File,
 }
 
 impl std::fmt::Display for P2pChannelType {
@@ -66,6 +72,8 @@ impl std::fmt::Display for P2pChannelType {
         match self {
             P2pChannelType::Default => write!(f, "default"),
             P2pChannelType::MediaInfo => write!(f, "media_info"),
+            P2pChannelType::MediaData => write!(f, "media_data"),
+            P2pChannelType::File => write!(f, "file"),
         }
     }
 }
@@ -108,6 +116,58 @@ pub struct P2pVideoData {
     pub uuid: String,
     /// 视频帧数据 (已编码)
     pub video_data: Vec<u8>,
+}
+
+/// P2P文件数据包
+/// 用于通过File通道传输文件数据
+#[derive(Debug, Serialize, Deserialize)]
+pub struct P2pFileData {
+    /// 目标用户UUID
+    pub uuid: String,
+    /// 文件名
+    pub file_name: String,
+    /// 文件MIME类型
+    pub mime_type: String,
+    /// 文件总大小 (字节)
+    pub total_size: u64,
+    /// 当前分片索引 (从0开始)
+    pub chunk_index: u32,
+    /// 总分片数
+    pub total_chunks: u32,
+    /// 分片数据
+    pub chunk_data: Vec<u8>,
+    /// 文件传输ID - 用于关联同一次文件传输的所有分片
+    pub transfer_id: String,
+}
+
+/// P2P文件传输请求
+/// 发起文件传输时的握手消息
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pFileTransferRequest {
+    /// 文件名
+    pub file_name: String,
+    /// 文件MIME类型
+    pub mime_type: String,
+    /// 文件总大小 (字节)
+    pub total_size: u64,
+    /// 总分片数
+    pub total_chunks: u32,
+    /// 文件传输ID
+    pub transfer_id: String,
+    /// 时间戳
+    pub timestamp: u64,
+}
+
+/// P2P文件传输响应
+/// 接收方响应文件传输请求
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pFileTransferResponse {
+    /// 文件传输ID
+    pub transfer_id: String,
+    /// 是否接受传输
+    pub accept: bool,
+    /// 时间戳
+    pub timestamp: u64,
 }
 
 /// P2P音频数据包

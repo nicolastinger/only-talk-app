@@ -74,8 +74,10 @@ interface MediaConfig {
  * 每个通道类型对应QUIC上的一个独立双向流
  */
 type P2pChannelType =
-  | "Default" // 默认通道 - 用于视频帧、音频帧、文本消息等数据传输
-  | "MediaInfo"; // 媒体信息通道 - 用于传输媒体状态信息、分辨率变化、码率调整等控制信令
+  | "Default" // 默认通道 - 用于信令、文本消息、控制命令等
+  | "MediaInfo" // 媒体信息通道 - 用于传输媒体状态信息、分辨率变化、码率调整等控制信令
+  | "MediaData" // 媒体数据通道 - 用于视频帧和音频帧传输
+  | "File"; // 文件传输通道 - 用于文件分片数据和文件传输握手
 
 /**
  * 媒体信息类型枚举
@@ -186,6 +188,73 @@ type VideoCallState =
   | "InCall" // 通话中 - 双方已建立连接
   | "Ended"; // 已结束 - 通话结束
 
+/**
+ * 文件数据接口
+ * 用于P2P文件传输中的单个分片
+ */
+interface FileData {
+  /** 文件唯一标识 */
+  uuid: string;
+  /** 文件名 */
+  file_name: string;
+  /** MIME类型 (如: "image/png", "application/pdf") */
+  mime_type: string;
+  /** 文件总大小 (字节) */
+  total_size: number;
+  /** 当前分片索引 (从0开始) */
+  chunk_index: number;
+  /** 总分片数 */
+  total_chunks: number;
+  /** 分片数据 (Base64编码) */
+  chunk_data: string;
+  /** 传输ID - 用于关联同一次文件传输的所有分片 */
+  transfer_id: string;
+}
+
+/**
+ * 文件传输请求接口
+ * 在发送文件数据前，先发送请求等待对方确认
+ */
+interface FileTransferRequest {
+  /** 传输ID - 唯一标识一次文件传输 */
+  transfer_id: string;
+  /** 文件名 */
+  file_name: string;
+  /** 文件总大小 (字节) */
+  total_size: number;
+  /** MIME类型 */
+  mime_type: string;
+  /** 分片大小 (字节) */
+  chunk_size: number;
+  /** 总分片数 */
+  total_chunks: number;
+  /** 请求者UUID */
+  from_uuid: string;
+  /** 目标UUID */
+  to_uuid: string;
+  /** 请求时间戳 */
+  timestamp: number;
+}
+
+/**
+ * 文件传输响应接口
+ * 对方收到文件传输请求后的回复
+ */
+interface FileTransferResponse {
+  /** 传输ID - 对应请求中的transfer_id */
+  transfer_id: string;
+  /** 是否接受传输 */
+  accept: boolean;
+  /** 响应者UUID */
+  from_uuid: string;
+  /** 目标UUID */
+  to_uuid: string;
+  /** 拒绝原因 (拒绝时可选) */
+  reject_reason?: string;
+  /** 响应时间戳 */
+  timestamp: number;
+}
+
 export {
   P2pChannelType,
   MediaInfoType,
@@ -200,4 +269,7 @@ export {
   VideoCallInvite,
   VideoCallResponse,
   VideoCallState,
+  FileData,
+  FileTransferRequest,
+  FileTransferResponse,
 };

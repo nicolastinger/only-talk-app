@@ -98,6 +98,42 @@ pub async fn run_client(
 
     info!("建立p2p客户端成功! 已建立Default和MediaInfo两个通道");
 
+    // ==================== 打开MediaData通道（双向流2） ====================
+    let (send_media_data, mut recv_media_data) = connection.open_bi().await?;
+    let send_stream_media_data = Arc::new(Mutex::new(send_media_data));
+
+    {
+        if let Some(user_channels) = P2P_STREAM_SENDER.get(&target_uuid) {
+            let target_send_stream = TargetSendStream {
+                addr: server_addr.to_string(),
+                send_stream: send_stream_media_data.clone(),
+                is_server: true,
+                channel_type: P2pChannelType::MediaData,
+            };
+            info!("[p2p客户端]添加连接 {} channel: media_data", target_uuid);
+            user_channels.insert("media_data".to_string(), target_send_stream);
+        }
+    }
+
+    // ==================== 打开File通道（双向流3） ====================
+    let (send_file, mut recv_file) = connection.open_bi().await?;
+    let send_stream_file = Arc::new(Mutex::new(send_file));
+
+    {
+        if let Some(user_channels) = P2P_STREAM_SENDER.get(&target_uuid) {
+            let target_send_stream = TargetSendStream {
+                addr: server_addr.to_string(),
+                send_stream: send_stream_file.clone(),
+                is_server: true,
+                channel_type: P2pChannelType::File,
+            };
+            info!("[p2p客户端]添加连接 {} channel: file", target_uuid);
+            user_channels.insert("file".to_string(), target_send_stream);
+        }
+    }
+
+    info!("建立p2p客户端成功! 已建立Default、MediaInfo、MediaData、File四个通道");
+
     // 设置p2p连接活跃状态
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
@@ -161,6 +197,66 @@ pub async fn run_client(
                 }
                 Err(e) => {
                     error!("Failed to read from media_info channel stream: {}", e);
+                    break;
+                }
+            }
+        }
+    });
+
+    // ==================== 接收MediaData通道消息 ====================
+    let buffer_msg_media_data: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    tokio::spawn(async move {
+        loop {
+            let mut buf = vec![0u8; 1024 * 1024 * 10]; // 视频帧数据较大，10MB缓冲
+            match recv_media_data.read(&mut buf).await {
+                Ok(Some(n)) => {
+                    info!("Received {} bytes on media_data channel", n);
+                    if let Err(e) = process_rec_msg(
+                        &mut buf,
+                        n,
+                        &ConnectionType::Video,
+                        buffer_msg_media_data.clone(),
+                        head_length,
+                    ).await {
+                        error!("处理media_data通道消息失败: {}", e);
+                    }
+                }
+                Ok(None) => {
+                    info!("Media_data channel stream closed");
+                    break;
+                }
+                Err(e) => {
+                    error!("Failed to read from media_data channel stream: {}", e);
+                    break;
+                }
+            }
+        }
+    });
+
+    // ==================== 接收File通道消息 ====================
+    let buffer_msg_file: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    tokio::spawn(async move {
+        loop {
+            let mut buf = vec![0u8; 1024 * 1024 * 10]; // 文件分片数据较大，10MB缓冲
+            match recv_file.read(&mut buf).await {
+                Ok(Some(n)) => {
+                    info!("Received {} bytes on file channel", n);
+                    if let Err(e) = process_rec_msg(
+                        &mut buf,
+                        n,
+                        &ConnectionType::Video,
+                        buffer_msg_file.clone(),
+                        head_length,
+                    ).await {
+                        error!("处理file通道消息失败: {}", e);
+                    }
+                }
+                Ok(None) => {
+                    info!("File channel stream closed");
+                    break;
+                }
+                Err(e) => {
+                    error!("Failed to read from file channel stream: {}", e);
                     break;
                 }
             }

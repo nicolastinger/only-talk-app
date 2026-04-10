@@ -18,6 +18,7 @@
 - [udp_utils.rs](file://src-tauri/src/quic_service/udp_utils.rs)
 - [InitP2pMsg.tsx](file://apps/pc/src/components/P2p/InitP2pMsg.tsx)
 - [ProcessQuicP2pStream.tsx](file://apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx)
+- [index.tsx](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx)
 - [NAT3_WEBRTC_FIX.md](file://NAT3_WEBRTC_FIX.md)
 </cite>
 
@@ -40,45 +41,49 @@
 - QUIC 协议在 P2P 通信中的应用
 - NAT 穿越与 UDP 端口探测策略
 - 数据模型设计与前后端差异
+- **新增** 双通道 QUIC 架构支持媒体信息通道，包括 Default 通道和专用的 MediaInfo 通道
+- **新增** 完整的媒体统计跟踪系统，支持分辨率变化、码率调整、帧率统计、网络质量等实时监控
 - 完整流程、错误处理与性能优化建议
 - 代码级流程图与序列图，帮助开发者扩展与调试
 
 ## 项目结构
 P2P 服务主要分布在以下模块：
-- 服务端/客户端 QUIC 层：负责底层连接与双向流读写
-- 业务服务层：封装 P2P 初始化、NAT 穿越、媒体配置与控制命令
-- 控制器层：暴露 Tauri 命令给前端调用
-- 实体与消息类型：定义 P2P 数据模型与消息类型常量
-- 前端组件：演示如何发起 P2P 请求与监听 P2P 事件
+- 服务端/客户端 QUIC 层：负责底层连接与双向流读写，现已支持四通道架构
+- 业务服务层：封装 P2P 初始化、NAT 穿越、媒体配置与控制命令，新增媒体信息通道服务
+- 控制器层：暴露 Tauri 命令给前端调用，新增媒体信息发送命令
+- 实体与消息类型：定义 P2P 数据模型与消息类型常量，新增通道类型和媒体信息模型
+- 前端组件：演示如何发起 P2P 请求、监听 P2P 事件和实现媒体统计跟踪
 
 ```mermaid
 graph TB
 subgraph "前端(PC)"
 FE_Init["InitP2pMsg.tsx<br/>发起UDP P2P初始化"]
 FE_Listen["ProcessQuicP2pStream.tsx<br/>监听P2P请求事件"]
+FE_MediaInfo["PrivacyVideoCall/index.tsx<br/>媒体统计跟踪与信息发送"]
 end
 subgraph "Tauri命令层"
-CMD["p2p_controller.rs<br/>Tauri命令入口"]
+CMD["p2p_controller.rs<br/>Tauri命令入口<br/>新增媒体信息命令"]
 end
 subgraph "服务层"
-SVC["service/p2p_service.rs<br/>P2P业务编排"]
+SVC["service/p2p_service.rs<br/>P2P业务编排<br/>新增媒体信息服务"]
 UDP["udp_utils.rs<br/>UDP端口探测"]
 end
 subgraph "QUIC层"
-CLI["p2p_stream_quic_client.rs<br/>P2P客户端"]
-SRV["p2p_stream_quic_server.rs<br/>P2P服务端"]
-CORE["p2p_quic_service.rs<br/>消息处理与心跳"]
+CLI["p2p_stream_quic_client.rs<br/>P2P客户端<br/>四通道支持"]
+SRV["p2p_stream_quic_server.rs<br/>P2P服务端<br/>四通道支持"]
+CORE["p2p_quic_service.rs<br/>消息处理与心跳<br/>媒体信息通道处理"]
 CFG_D["dangerous_configuration.rs<br/>服务端不安全配置"]
 CFG_S["safe_configuration.rs<br/>客户端安全配置"]
 end
 subgraph "实体与消息"
-MODELS["p2p_models.rs<br/>P2P数据模型"]
+MODELS["p2p_models.rs<br/>P2P数据模型<br/>新增通道类型和媒体信息"]
 TYPES["message_types.rs<br/>消息类型常量"]
 QCONN["quic_connection.rs<br/>QUIC连接模型"]
 GLOB["global_static_str.rs<br/>全局静态常量"]
 end
 FE_Init --> CMD
 FE_Listen --> CMD
+FE_MediaInfo --> CMD
 CMD --> SVC
 SVC --> UDP
 SVC --> CLI
@@ -95,63 +100,62 @@ SVC --> GLOB
 ```
 
 **图表来源**
-- [p2p_controller.rs:1-170](file://src-tauri/src/cmd/p2p_controller.rs#L1-L170)
-- [p2p_service.rs:1-704](file://src-tauri/src/service/p2p_service.rs#L1-L704)
-- [p2p_stream_quic_client.rs:1-137](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L1-L137)
-- [p2p_stream_quic_server.rs:1-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L1-L168)
-- [p2p_quic_service.rs:1-308](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L308)
-- [p2p_models.rs:1-283](file://src-tauri/src/entity/p2p_models.rs#L1-L283)
-- [message_types.rs:1-108](file://src-tauri/src/utils/message_types.rs#L1-L108)
-- [quic_connection.rs:1-64](file://src-tauri/src/entity/quic_connection.rs#L1-L64)
-- [dangerous_configuration.rs:1-52](file://src-tauri/src/quic_service/dangerous_configuration.rs#L1-L52)
-- [safe_configuration.rs:1-69](file://src-tauri/src/quic_service/safe_configuration.rs#L1-L69)
-- [InitP2pMsg.tsx:1-35](file://apps/pc/src/components/P2p/InitP2pMsg.tsx#L1-L35)
-- [ProcessQuicP2pStream.tsx:1-34](file://apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx#L1-L34)
+- [p2p_controller.rs:170-184](file://src-tauri/src/cmd/p2p_controller.rs#L170-L184)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_quic_service.rs:233-242](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L233-L242)
+- [p2p_models.rs:52-80](file://src-tauri/src/entity/p2p_models.rs#L52-L80)
+- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
 
 **章节来源**
-- [p2p_controller.rs:1-170](file://src-tauri/src/cmd/p2p_controller.rs#L1-L170)
-- [p2p_service.rs:1-704](file://src-tauri/src/service/p2p_service.rs#L1-L704)
-- [p2p_stream_quic_client.rs:1-137](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L1-L137)
-- [p2p_stream_quic_server.rs:1-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L1-L168)
-- [p2p_quic_service.rs:1-308](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L308)
-- [p2p_models.rs:1-283](file://src-tauri/src/entity/p2p_models.rs#L1-L283)
-- [message_types.rs:1-108](file://src-tauri/src/utils/message_types.rs#L1-L108)
-- [quic_connection.rs:1-64](file://src-tauri/src/entity/quic_connection.rs#L1-L64)
-- [dangerous_configuration.rs:1-52](file://src-tauri/src/quic_service/dangerous_configuration.rs#L1-L52)
-- [safe_configuration.rs:1-69](file://src-tauri/src/quic_service/safe_configuration.rs#L1-L69)
-- [InitP2pMsg.tsx:1-35](file://apps/pc/src/components/P2p/InitP2pMsg.tsx#L1-L35)
-- [ProcessQuicP2pStream.tsx:1-34](file://apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx#L1-L34)
+- [p2p_controller.rs:170-184](file://src-tauri/src/cmd/p2p_controller.rs#L170-L184)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_quic_service.rs:233-242](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L233-L242)
+- [p2p_models.rs:52-80](file://src-tauri/src/entity/p2p_models.rs#L52-L80)
+- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
 
 ## 核心组件
-- QUIC P2P 服务核心
+- **双通道 QUIC 架构**
+  - Default 通道：用于信令、文本消息、控制命令等传统 P2P 业务
+  - MediaInfo 通道：专用的媒体信息通道，传输分辨率变化、码率调整、帧率统计等控制信令
+  - MediaData 通道：专门用于视频帧和音频帧的传输
+  - File 通道：专门用于文件传输
+- **媒体统计跟踪系统**
+  - 实时帧率统计、码率监控、网络延迟测量、丢帧计数
+  - 每2秒自动上报媒体状态信息到对端
+  - 支持分辨率变化通知、编码器信息、网络质量评估
+- **QUIC P2P 服务核心**
   - 发送通道与心跳：通过异步通道将视频帧转为文本消息并通过 QUIC 发送；周期性发送心跳维持连接活性。
-  - 消息分发：根据消息类型分发到视频/音频数据、媒体配置、媒体控制、文本消息、信令等处理分支。
-- P2P 客户端/服务端
-  - 客户端：建立到服务器的 QUIC 连接，开启双向流，发送验证消息，注册发送通道，循环读取并处理消息。
+  - 消息分发：根据消息类型分发到视频/音频数据、媒体配置、媒体控制、媒体信息、文本消息、信令等处理分支。
+- **P2P 客户端/服务端**
+  - 客户端：建立到服务器的 QUIC 连接，开启四个双向流，发送验证消息，注册发送通道，循环读取并处理消息。
   - 服务端：接受来自客户端的连接，为每个连接创建发送通道，循环读取并处理消息。
-- 业务服务
+- **业务服务**
   - P2P 初始化：构造初始化消息，通过文本通道发送至服务器，由服务器转发给目标用户。
-  - NAT 穿越：探测本机 IPv4/IPv6 可用端口，向服务器发送地址信息，再通过 UDP “ping” 试探对端可达性。
+  - NAT 穿越：探测本机 IPv4/IPv6 可用端口，向服务器发送地址信息，再通过 UDP "ping" 试探对端可达性。
   - 媒体配置与控制：发送媒体配置、媒体控制命令（如开关视频/音频、暂停/恢复、结束通话）。
+  - **新增** 媒体信息服务：通过 MediaInfo 通道发送媒体状态信息，支持多种媒体统计类型。
   - 视频通话邀请/响应/结束：发送邀请、接受/拒绝、结束通话通知。
-- 控制器与前端
-  - Tauri 命令：封装发送视频帧、音频帧、文本消息、关闭连接、发送媒体配置/控制、视频通话邀请/响应/结束等。
-  - 前端组件：演示如何发起 UDP P2P 初始化与监听 P2P 请求事件。
+- **控制器与前端**
+  - Tauri 命令：封装发送视频帧、音频帧、文本消息、关闭连接、发送媒体配置/控制、视频通话邀请/响应/结束、**新增** 发送媒体信息等。
+  - 前端组件：演示如何发起 UDP P2P 初始化与监听 P2P 请求事件，实现媒体统计跟踪。
 
 **章节来源**
-- [p2p_quic_service.rs:26-308](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L26-L308)
-- [p2p_stream_quic_client.rs:18-113](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L18-L113)
-- [p2p_stream_quic_server.rs:89-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L89-L168)
-- [p2p_service.rs:52-704](file://src-tauri/src/service/p2p_service.rs#L52-L704)
-- [p2p_controller.rs:1-170](file://src-tauri/src/cmd/p2p_controller.rs#L1-L170)
-- [InitP2pMsg.tsx:1-35](file://apps/pc/src/components/P2p/InitP2pMsg.tsx#L1-L35)
-- [ProcessQuicP2pStream.tsx:1-34](file://apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx#L1-L34)
+- [p2p_models.rs:52-80](file://src-tauri/src/entity/p2p_models.rs#L52-L80)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
+- [p2p_controller.rs:170-184](file://src-tauri/src/cmd/p2p_controller.rs#L170-L184)
+- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
 
 ## 架构总览
-P2P 通信采用“服务器中转 + QUIC 直连”的混合架构：
+P2P 通信采用"服务器中转 + QUIC 直连"的混合架构，现已升级为四通道架构：
 - 初始阶段：通过服务器中转完成 P2P 初始化与地址交换，随后进行 NAT 穿越探测。
-- 建立阶段：若 NAT 类型允许直连，直接建立 QUIC 双向流；否则通过服务器中继。
-- 传输阶段：媒体数据与信令通过 QUIC 流传输，心跳维持连接活性。
+- 建立阶段：若 NAT 类型允许直连，直接建立 QUIC 四个双向流；否则通过服务器中继。
+- 传输阶段：媒体数据与信令通过 QUIC 流传输，心跳维持连接活性，媒体信息通过专用通道传输。
 
 ```mermaid
 sequenceDiagram
@@ -161,32 +165,95 @@ participant SVC as "业务服务(p2p_service.rs)"
 participant SRV as "P2P服务端(p2p_stream_quic_server.rs)"
 participant CLI as "P2P客户端(p2p_stream_quic_client.rs)"
 participant CORE as "QUIC核心(p2p_quic_service.rs)"
-FE->>CMD : 发起P2P请求/发送媒体配置
+FE->>CMD : 发起P2P请求/发送媒体配置/发送媒体信息
 CMD->>SVC : 调用业务服务
 SVC->>SVC : 探测IPv4/IPv6端口并发送UDP"ping"
-SVC->>SRV : 启动服务端监听
-SVC->>CLI : 启动客户端连接
-CLI->>CORE : 注册发送通道/发送验证消息
+SVC->>SRV : 启动服务端监听(4个通道)
+SVC->>CLI : 启动客户端连接(4个通道)
+CLI->>CORE : 注册发送通道/发送验证消息(Default通道)
 SRV->>CORE : 注册发送通道/处理消息
-CORE->>FE : 事件通知(视频/音频/信令)
+CORE->>FE : 事件通知(视频/音频/媒体信息/信令)
 ```
 
 **图表来源**
-- [p2p_controller.rs:1-170](file://src-tauri/src/cmd/p2p_controller.rs#L1-L170)
-- [p2p_service.rs:150-293](file://src-tauri/src/service/p2p_service.rs#L150-L293)
-- [p2p_stream_quic_server.rs:89-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L89-L168)
-- [p2p_stream_quic_client.rs:18-113](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L18-L113)
-- [p2p_quic_service.rs:79-98](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L79-L98)
+- [p2p_controller.rs:170-184](file://src-tauri/src/cmd/p2p_controller.rs#L170-L184)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_quic_service.rs:233-242](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L233-L242)
 
 ## 详细组件分析
+
+### 双通道 QUIC 架构
+
+#### 通道类型与分配策略
+- **Default 通道 (流0)**：用于传统 P2P 业务，包括视频通话邀请、接受/拒绝、结束通知、文本消息等
+- **MediaInfo 通道 (流1)**：专用媒体信息通道，传输分辨率变化、码率调整、帧率统计、网络质量等控制信令
+- **MediaData 通道 (流2)**：专门用于视频帧和音频帧的传输
+- **File 通道 (流3)**：专门用于文件传输
+
+```mermaid
+flowchart TD
+Start(["QUIC连接建立"]) --> OpenDefault["打开Default通道(流0)<br/>用于信令和控制"]
+OpenDefault --> OpenMediaInfo["打开MediaInfo通道(流1)<br/>用于媒体统计信息"]
+OpenMediaInfo --> OpenMediaData["打开MediaData通道(流2)<br/>用于音视频数据"]
+OpenMediaData --> OpenFile["打开File通道(流3)<br/>用于文件传输"]
+OpenFile --> Heartbeat["仅Default通道发送心跳"]
+Heartbeat --> Active["连接活跃状态"]
+```
+
+**图表来源**
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+
+**章节来源**
+- [p2p_models.rs:52-80](file://src-tauri/src/entity/p2p_models.rs#L52-L80)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+
+### 媒体统计跟踪系统
+
+#### 媒体信息类型与数据结构
+- **分辨率变化 (ResolutionChange)**：通知对端分辨率调整
+- **码率调整 (BitrateChange)**：通知对端码率变化
+- **帧率统计 (FrameRateStats)**：实时帧率、码率、延迟、丢帧统计
+- **网络质量 (NetworkQuality)**：网络质量评估指标
+- **编码器信息 (EncoderInfo)**：编码器类型和配置信息
+- **自定义媒体信息 (Custom)**：支持扩展的媒体统计类型
+
+#### 前端媒体统计实现
+- 每2秒自动收集和发送媒体统计信息
+- 支持实时监控视频帧率、音频码率、网络延迟、丢帧数量
+- 提供分辨率变化通知和编码器信息展示
+
+```mermaid
+flowchart TD
+Start(["开始媒体通话"]) --> InitStats["初始化媒体统计<br/>frameRate: 0<br/>videoBitrate: 0<br/>audioBitrate: 0<br/>latency: 0<br/>droppedFrames: 0"]
+InitStats --> Timer["启动2秒定时器"]
+Timer --> Collect["收集媒体统计数据"]
+Collect --> Send["通过MediaInfo通道发送<br/>FrameRateStats"]
+Send --> Timer
+Timer --> EndCall{"通话结束?"}
+EndCall -- 否 --> Collect
+EndCall -- 是 --> Stop["停止定时器并清理"]
+```
+
+**图表来源**
+- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
+- [p2p_service.rs:544-593](file://src-tauri/src/service/p2p_service.rs#L544-L593)
+
+**章节来源**
+- [p2p_models.rs:84-109](file://src-tauri/src/entity/p2p_models.rs#L84-L109)
+- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
+- [p2p_service.rs:544-593](file://src-tauri/src/service/p2p_service.rs#L544-L593)
 
 ### QUIC P2P 核心服务
 - 异步发送通道与视频帧处理
   - 使用异步通道将视频帧数据排队，后台任务统一序列化为文本消息并通过 QUIC 发送。
-  - 通过全局映射维护每条目标用户的发送流，按 UUID 获取发送通道。
+  - 通过全局映射维护每条目标用户的发送流，按 UUID 和通道类型获取发送通道。
 - 消息处理与事件派发
-  - 根据消息类型分发到不同处理分支：视频/音频数据、媒体配置、媒体控制、文本消息、信令等。
-  - 通过 Tauri 事件向前端派发，如 video_frame、audio_frame、media_config、media_control、p2p_text_message 等。
+  - 根据消息类型分发到不同处理分支：视频/音频数据、媒体配置、媒体控制、**新增** 媒体信息、文本消息、信令等。
+  - 通过 Tauri 事件向前端派发，如 video_frame、audio_frame、media_config、media_control、**新增** media_info、p2p_text_message 等。
 - 心跳保活
   - 周期性发送心跳消息，检查连接活跃状态，异常时停止发送并清理资源。
 
@@ -201,6 +268,7 @@ Type --> |VIDEO_DATA| VFrame["emit video_frame"]
 Type --> |AUDIO_DATA| AFrame["emit audio_frame"]
 Type --> |MEDIA_CONFIG| SaveCfg["保存配置并emit media_config"]
 Type --> |MEDIA_CONTROL| EmitCtl["emit media_control"]
+Type --> |MEDIA_INFO| EmitInfo["emit media_info<br/>新增媒体信息处理"]
 Type --> |TEXT| TextEvt["emit p2p_text_message"]
 Type --> |PING| Ping["记录日志"]
 Type --> |其他| Warn["记录警告"]
@@ -212,25 +280,27 @@ VFrame --> End
 AFrame --> End
 SaveCfg --> End
 EmitCtl --> End
+EmitInfo --> End
 TextEvt --> End
 Ping --> End
 Warn --> End
 ```
 
 **图表来源**
-- [p2p_quic_service.rs:79-259](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L79-L259)
+- [p2p_quic_service.rs:119-306](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L119-L306)
 
 **章节来源**
-- [p2p_quic_service.rs:26-308](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L26-L308)
+- [p2p_quic_service.rs:53-355](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L53-L355)
 
 ### P2P 客户端
 - 连接建立
-  - 创建 QUIC 客户端端点，禁用证书验证（开发用途），连接服务器，开启双向流。
+  - 创建 QUIC 客户端端点，禁用证书验证（开发用途），连接服务器，开启四个双向流。
   - 发送验证消息（包含请求令牌），注册发送通道，标记连接为活跃。
 - 消息处理
   - 循环读取服务器返回的消息，调用核心服务的消息处理函数，派发前端事件。
+  - **新增** 为每个通道启动独立的接收任务，避免阻塞。
 - 心跳保活
-  - 启动心跳发送协程，周期性发送心跳，连接关闭时退出。
+  - 仅对 Default 通道发送心跳，周期性发送心跳，连接关闭时退出。
 
 ```mermaid
 sequenceDiagram
@@ -241,30 +311,32 @@ participant CORE as "核心服务"
 CLI->>EP : 创建客户端端点
 CLI->>EP : 连接服务器
 EP-->>CLI : 建立连接
-CLI->>SRV : open_bi() 双向流
-CLI->>SRV : 发送验证消息
-CLI->>CORE : 注册发送通道
-loop 循环读取
-SRV-->>CLI : 返回消息
+CLI->>CORE : 注册Default通道
+CLI->>CORE : 注册MediaInfo通道
+CLI->>CORE : 注册MediaData通道
+CLI->>CORE : 注册File通道
+CLI->>CORE : 仅Default通道发送心跳
+loop 各通道独立接收
+SRV-->>CLI : Default通道消息
 CLI->>CORE : process_rec_msg()
 end
-CLI->>CORE : send_ping_msg()
 ```
 
 **图表来源**
-- [p2p_stream_quic_client.rs:18-113](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L18-L113)
-- [p2p_quic_service.rs:272-307](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L272-L307)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_quic_service.rs:319-354](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L319-L354)
 
 **章节来源**
-- [p2p_stream_quic_client.rs:18-113](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L18-L113)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
 
 ### P2P 服务端
 - 连接接受
   - 创建 QUIC 服务端端点，接受客户端连接，为每个连接创建发送通道，标记连接为活跃。
+- 通道分配
+  - 按流序号分配通道：0=Default, 1=MediaInfo, 2=MediaData, 3=File
+  - 仅对 Default 通道发送心跳
 - 消息处理
   - 循环读取客户端消息，调用核心服务的消息处理函数，派发前端事件。
-- NAT 穿越辅助
-  - 提供 UDP 端口转发工具函数，用于发送“ping”探测包。
 
 ```mermaid
 sequenceDiagram
@@ -274,29 +346,32 @@ participant CLI as "客户端"
 participant CORE as "核心服务"
 SRV->>EP : bind监听
 EP-->>SRV : accept() 新连接
-SRV->>CLI : accept_bi() 双向流
-SRV->>CORE : 注册发送通道
-loop 循环读取
-CLI-->>SRV : 发送消息
+SRV->>CORE : 注册Default通道
+SRV->>CORE : 注册MediaInfo通道
+SRV->>CORE : 注册MediaData通道
+SRV->>CORE : 注册File通道
+loop 各通道独立接收
+CLI-->>SRV : Default通道消息
 SRV->>CORE : process_rec_msg()
 end
 ```
 
 **图表来源**
-- [p2p_stream_quic_server.rs:89-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L89-L168)
-- [p2p_quic_service.rs:79-98](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L79-L98)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_quic_service.rs:319-354](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L319-L354)
 
 **章节来源**
-- [p2p_stream_quic_server.rs:89-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L89-L168)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
 
 ### 业务服务（NAT 穿越与媒体协商）
 - P2P 初始化
   - 生成请求令牌，构造初始化消息，通过文本通道发送至服务器，由服务器转发给目标用户。
 - NAT 穿越
-  - 探测本机可用 UDP 端口，构造用户地址信息，通过 UDP “ping” 发送给服务器，服务器再转发给对端。
+  - 探测本机可用 UDP 端口，构造用户地址信息，通过 UDP "ping" 发送给服务器，服务器再转发给对端。
   - 支持 IPv4 与 IPv6，分别发送探测包并记录端口。
 - 媒体配置与控制
   - 发送媒体配置（视频/音频参数、缓冲策略），发送媒体控制命令（开关、暂停/恢复、结束通话）。
+  - **新增** 通过 MediaInfo 通道发送媒体状态信息，避免阻塞主数据通道。
 - 视频通话邀请/响应/结束
   - 发送邀请（可携带默认媒体配置），接收方接受/拒绝，最终结束通话。
 
@@ -304,7 +379,7 @@ end
 flowchart TD
 A["发起P2P请求"] --> B["生成请求令牌"]
 B --> C["构造P2P初始化消息"]
-C --> D["通过文本通道发送至服务器"]
+C --> D["通过Default通道发送至服务器"]
 D --> E["服务器转发给目标用户"]
 E --> F{"目标用户接受?"}
 F -- 是 --> G["记录目标UUID/令牌"]
@@ -313,121 +388,121 @@ G --> I["探测IPv4/IPv6端口"]
 I --> J["发送UDP'ping'给服务器"]
 J --> K["服务器转发给对端"]
 K --> L["对端回传地址信息"]
-L --> M["对端建立P2P服务端/客户端"]
-M --> N["建立QUIC双向流"]
-N --> O["发送媒体配置/控制/数据"]
+L --> M["对端建立P2P服务端(4通道)"]
+L --> N["本机建立P2P客户端(4通道)"]
+M --> O["建立各通道连接"]
+N --> O
+O --> P["发送媒体配置/控制/数据"]
+P --> Q["通过MediaInfo通道发送媒体统计"]
 ```
 
 **图表来源**
-- [p2p_service.rs:52-193](file://src-tauri/src/service/p2p_service.rs#L52-L193)
-- [p2p_service.rs:222-293](file://src-tauri/src/service/p2p_service.rs#L222-L293)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
 
 **章节来源**
-- [p2p_service.rs:52-704](file://src-tauri/src/service/p2p_service.rs#L52-L704)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
 
 ### 数据模型与消息类型
-- P2P 数据模型
+- **P2P 通道类型**
+  - Default：默认通道，用于信令、文本消息、控制命令等
+  - MediaInfo：媒体信息通道，用于传输媒体状态信息
+  - MediaData：媒体数据通道，专门用于音视频数据传输
+  - File：文件通道，专门用于文件传输
+- **P2P 媒体信息**
+  - 包含媒体信息类型、数据内容、时间戳
+  - 支持多种媒体统计类型：分辨率变化、码率调整、帧率统计、网络质量、编码器信息等
+- **P2P 数据模型**
   - 初始化消息、用户地址信息、视频/音频数据包、媒体配置、媒体控制命令、视频通话邀请/响应/状态等。
-- 消息类型常量
-  - 定义 P2P 相关消息类型（视频/音频数据、媒体配置/控制、文本消息、视频通话邀请/接受/拒绝/结束、心跳等）。
+- **消息类型常量**
+  - 定义 P2P 相关消息类型（视频/音频数据、媒体配置/控制、**新增** 媒体信息、文本消息、视频通话邀请/接受/拒绝/结束、心跳等）。
 
 ```mermaid
 classDiagram
+class P2pChannelType {
++Default
++MediaInfo
++MediaData
++File
+}
+class P2pMediaInfo {
++P2pMediaInfoType info_type
++String data
++u64 timestamp
+}
+class P2pMediaInfoType {
++ResolutionChange
++BitrateChange
++FrameRateStats
++NetworkQuality
++EncoderInfo
++Custom(String)
+}
 class P2pInitMsg {
-+string request_uuid
-+string accept_uuid
-+string request_token
++String request_uuid
++String accept_uuid
++String request_token
 +bool accept
 +u8 ip_type
 +u8 step
 +bool is_server
 }
 class UserAddressInfo {
-+string uuid
-+string address
-+string token
++String uuid
++String address
++String token
 +u8 ip_type
-+string target_uuid
++String target_uuid
 +u8 nat_type
 +bool is_server
-}
-class P2pVideoData {
-+string uuid
-+Vec~u8~ video_data
-}
-class P2pAudioData {
-+string uuid
-+Vec~u8~ audio_data
-+u64 timestamp
-+u32 sequence
-}
-class P2pMediaConfig {
-+P2pVideoConfig video_config
-+P2pAudioConfig audio_config
-+P2pBufferConfig buffer_config
-}
-class P2pMediaControl {
-+P2pMediaControlType control_type
-+bool enabled
-+u64 timestamp
-}
-class P2pVideoCallInvite {
-+string from_uuid
-+string to_uuid
-+u64 timestamp
-+Option~P2pMediaConfig~ media_config
-+Option~string~ from_name
-}
-class P2pVideoCallResponse {
-+string from_uuid
-+string to_uuid
-+bool accept
-+u64 timestamp
-+Option~P2pMediaConfig~ media_config
-+Option~string~ reject_reason
 }
 ```
 
 **图表来源**
-- [p2p_models.rs:1-283](file://src-tauri/src/entity/p2p_models.rs#L1-L283)
+- [p2p_models.rs:52-109](file://src-tauri/src/entity/p2p_models.rs#L52-L109)
 
 **章节来源**
-- [p2p_models.rs:1-283](file://src-tauri/src/entity/p2p_models.rs#L1-L283)
+- [p2p_models.rs:52-109](file://src-tauri/src/entity/p2p_models.rs#L52-L109)
 - [message_types.rs:1-108](file://src-tauri/src/utils/message_types.rs#L1-L108)
 
 ### 前后端实现差异与交互
 - 前端
   - 发起 P2P 请求：通过 Tauri invoke 调用 send_p2p_init_msg。
   - 监听 P2P 请求事件：监听 listen_p2p_request，解析 P2P 初始化消息列表。
+  - **新增** 媒体统计跟踪：通过 send_p2p_media_info 命令发送媒体状态信息。
 - 后端
   - 通过 Tauri 命令层暴露统一接口，封装业务逻辑与 QUIC 交互。
   - 通过事件向前端派发媒体数据与控制指令。
+  - **新增** 媒体信息通道处理：通过 media_info 事件接收对端媒体状态。
 
 **章节来源**
 - [InitP2pMsg.tsx:1-35](file://apps/pc/src/components/P2p/InitP2pMsg.tsx#L1-L35)
 - [ProcessQuicP2pStream.tsx:1-34](file://apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx#L1-L34)
-- [p2p_controller.rs:1-170](file://src-tauri/src/cmd/p2p_controller.rs#L1-L170)
+- [p2p_controller.rs:170-184](file://src-tauri/src/cmd/p2p_controller.rs#L170-L184)
+- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
 
 ## 依赖关系分析
 - 组件耦合
-  - p2p_quic_service 依赖消息类型常量与实体模型，负责消息分发与事件派发。
-  - p2p_stream_quic_client/server 依赖 QUIC 端点与核心服务，负责连接建立与消息循环。
-  - service/p2p_service 依赖控制器命令、UDP 工具与 QUIC 配置，负责业务编排与 NAT 穿越。
+  - p2p_quic_service 依赖消息类型常量与实体模型，负责消息分发与事件派发，**新增** 媒体信息通道处理。
+  - p2p_stream_quic_client/server 依赖 QUIC 端点与核心服务，负责连接建立与消息循环，**支持四通道架构**。
+  - service/p2p_service 依赖控制器命令、UDP 工具与 QUIC 配置，负责业务编排与 NAT 穿越，**新增** 媒体信息服务。
 - 外部依赖
   - QUIC（quinn）、TLS（rustls）、异步运行时（tokio）、事件系统（tauri Emitter）。
 - 潜在风险
   - 不安全证书配置仅用于开发环境，生产需替换为安全配置。
   - 心跳与连接状态需严格管理，避免僵尸连接与资源泄漏。
+  - **新增** 媒体信息通道的独立处理，确保控制信息不被大数据帧阻塞。
 
 ```mermaid
 graph LR
-CMD["p2p_controller.rs"] --> SVC["service/p2p_service.rs"]
-SVC --> CLI["p2p_stream_quic_client.rs"]
-SVC --> SRV["p2p_stream_quic_server.rs"]
-CLI --> CORE["p2p_quic_service.rs"]
+CMD["p2p_controller.rs<br/>新增媒体信息命令"] --> SVC["service/p2p_service.rs<br/>新增媒体信息服务"]
+SVC --> CLI["p2p_stream_quic_client.rs<br/>四通道支持"]
+SVC --> SRV["p2p_stream_quic_server.rs<br/>四通道支持"]
+CLI --> CORE["p2p_quic_service.rs<br/>媒体信息通道处理"]
 SRV --> CORE
 SVC --> UDP["udp_utils.rs"]
-CORE --> MODELS["p2p_models.rs"]
+CORE --> MODELS["p2p_models.rs<br/>新增通道类型和媒体信息"]
 SVC --> CFG_D["dangerous_configuration.rs"]
 CLI --> CFG_S["safe_configuration.rs"]
 CORE --> QCONN["quic_connection.rs"]
@@ -435,67 +510,73 @@ SVC --> GLOB["global_static_str.rs"]
 ```
 
 **图表来源**
-- [p2p_controller.rs:1-170](file://src-tauri/src/cmd/p2p_controller.rs#L1-L170)
-- [p2p_service.rs:1-704](file://src-tauri/src/service/p2p_service.rs#L1-L704)
-- [p2p_stream_quic_client.rs:1-137](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L1-L137)
-- [p2p_stream_quic_server.rs:1-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L1-L168)
-- [p2p_quic_service.rs:1-308](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L308)
-- [p2p_models.rs:1-283](file://src-tauri/src/entity/p2p_models.rs#L1-L283)
-- [quic_connection.rs:1-64](file://src-tauri/src/entity/quic_connection.rs#L1-L64)
-- [dangerous_configuration.rs:1-52](file://src-tauri/src/quic_service/dangerous_configuration.rs#L1-L52)
-- [safe_configuration.rs:1-69](file://src-tauri/src/quic_service/safe_configuration.rs#L1-L69)
-- [udp_utils.rs:1-100](file://src-tauri/src/quic_service/udp_utils.rs#L1-L100)
-- [global_static_str.rs:1-59](file://src-tauri/src/utils/global_static_str.rs#L1-L59)
+- [p2p_controller.rs:170-184](file://src-tauri/src/cmd/p2p_controller.rs#L170-L184)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_quic_service.rs:233-242](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L233-L242)
+- [p2p_models.rs:52-109](file://src-tauri/src/entity/p2p_models.rs#L52-L109)
 
 **章节来源**
 - [mod.rs:1-4](file://src-tauri/src/quic_service/p2p_service/mod.rs#L1-L4)
 - [models.rs:1-11](file://src-tauri/src/quic_service/models.rs#L1-L11)
 
 ## 性能考量
-- 媒体缓冲与带宽
+- **双通道架构优势**
+  - 媒体信息通道与数据通道分离，避免大数据帧阻塞控制信息
+  - 提升媒体统计信息的实时性和可靠性
+  - 减少网络拥塞对控制信令的影响
+- **媒体缓冲与带宽**
   - 媒体配置包含视频/音频缓冲大小与最大延迟，可根据网络状况动态调整。
   - 建议在弱网环境下降低帧率与码率，启用自适应缓冲。
-- 心跳与空闲超时
+- **心跳与空闲超时**
   - 心跳间隔与连接空闲超时需平衡保活与资源消耗，避免频繁唤醒。
-- 发送通道背压
+  - **新增** 仅对 Default 通道发送心跳，减少不必要的网络开销。
+- **发送通道背压**
   - 异步发送通道具备容量限制，建议前端控制发送速率，避免阻塞。
-- NAT 穿越效率
+  - **新增** 媒体信息通道独立处理，确保控制信息优先级。
+- **NAT 穿越效率**
   - IPv4/IPv6 双栈探测可提升成功率，但会增加网络负载，建议按需启用。
-
-[本节为通用性能建议，无需特定文件引用]
+- **媒体统计开销**
+  - 每2秒发送一次媒体统计信息，频率适中，不会造成显著网络负担。
+  - 媒体信息数据量小，通过专用通道传输，不影响主数据流。
 
 ## 故障排查指南
-- 连接无法建立
+- **连接无法建立**
   - 检查 QUIC 服务端/客户端配置是否正确，证书配置是否符合环境要求。
   - 确认服务器地址与端口可达，防火墙放行相应端口。
-- NAT 穿越失败
-  - 确认 UDP “ping” 是否成功发送与接收，服务器是否正确转发地址信息。
+  - **新增** 检查四通道是否都能正常建立连接。
+- **NAT 穿越失败**
+  - 确认 UDP "ping" 是否成功发送与接收，服务器是否正确转发地址信息。
   - 参考 WebRTC NAT 分类与候选对策略，结合日志定位问题。
-- 媒体数据丢失或卡顿
+- **媒体数据丢失或卡顿**
   - 检查缓冲配置与网络带宽，适当降低分辨率/帧率/码率。
   - 关注心跳与连接状态，确保连接未被闲置超时关闭。
-- 事件未到达前端
+  - **新增** 检查 MediaInfo 通道是否正常工作，避免媒体统计信息阻塞。
+- **事件未到达前端**
   - 确认事件名称与 payload 格式，检查前端监听逻辑是否正确。
+  - **新增** 检查 media_info 事件是否正确处理媒体统计信息。
+- **媒体统计异常**
+  - 确认前端定时器是否正常运行，检查媒体统计数据收集逻辑。
+  - **新增** 检查媒体信息通道的发送和接收是否正常。
 
 **章节来源**
 - [NAT3_WEBRTC_FIX.md:198-220](file://NAT3_WEBRTC_FIX.md#L198-L220)
-- [p2p_stream_quic_client.rs:115-137](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L115-L137)
-- [p2p_stream_quic_server.rs:1-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L1-L168)
-- [p2p_service.rs:354-386](file://src-tauri/src/service/p2p_service.rs#L354-L386)
+- [p2p_stream_quic_client.rs:135-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L135-L135)
+- [p2p_stream_quic_server.rs:195-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L195-L198)
+- [p2p_service.rs:591-593](file://src-tauri/src/service/p2p_service.rs#L591-L593)
 
 ## 结论
-该 P2P 服务以 QUIC 为基础，结合服务器中转与 NAT 穿越策略，实现了从连接建立、媒体传输到信令交换的完整闭环。通过清晰的模块划分与事件驱动的前端交互，既保证了功能的可扩展性，也为后续优化与调试提供了明确路径。建议在生产环境中替换为安全的 TLS 配置，并持续优化媒体参数与缓冲策略以适配复杂网络场景。
-
-[本节为总结性内容，无需特定文件引用]
+该 P2P 服务以 QUIC 为基础，结合服务器中转与 NAT 穿越策略，实现了从连接建立、媒体传输到信令交换的完整闭环。**最新版本**引入了双通道 QUIC 架构，将媒体信息通道与数据通道分离，显著提升了媒体统计信息的实时性和可靠性。同时，完整的媒体统计跟踪系统为开发者提供了丰富的运行时监控能力。通过清晰的模块划分与事件驱动的前端交互，既保证了功能的可扩展性，也为后续优化与调试提供了明确路径。建议在生产环境中替换为安全的 TLS 配置，并持续优化媒体参数与缓冲策略以适配复杂网络场景。
 
 ## 附录
 
-### 代码级流程图：P2P 连接建立与媒体协商
+### 代码级流程图：双通道 QUIC 架构连接建立
 ```mermaid
 flowchart TD
 S["开始"] --> GenToken["生成请求令牌"]
 GenToken --> BuildMsg["构造P2P初始化消息"]
-BuildMsg --> SendToSrv["发送至服务器"]
+BuildMsg --> SendToSrv["通过Default通道发送至服务器"]
 SendToSrv --> RecvFromSrv["服务器转发给目标用户"]
 RecvFromSrv --> Accept{"目标用户接受?"}
 Accept -- 否 --> Reject["记录拒绝状态"]
@@ -503,21 +584,42 @@ Accept -- 是 --> Detect["探测IPv4/IPv6端口"]
 Detect --> UDPPing["发送UDP'ping'给服务器"]
 UDPPing --> SrvFwd["服务器转发给对端"]
 SrvFwd --> AddrBack["对端回传地址信息"]
-AddrBack --> RunSrv["对端启动P2P服务端"]
-AddrBack --> RunCli["本机启动P2P客户端"]
-RunSrv --> Establish["建立QUIC双向流"]
+AddrBack --> RunSrv["对端启动P2P服务端(4通道)"]
+AddrBack --> RunCli["本机启动P2P客户端(4通道)"]
+RunSrv --> Establish["建立Default、MediaInfo、MediaData、File通道"]
 RunCli --> Establish
 Establish --> SendCfg["发送媒体配置"]
 SendCfg --> StartMedia["开始媒体传输"]
-Reject --> End["结束"]
-StartMedia --> End
+StartMedia --> StartStats["启动媒体统计跟踪(每2秒)"]
+StartStats --> End["通话进行中"]
+Reject --> End
 ```
 
 **图表来源**
-- [p2p_service.rs:52-193](file://src-tauri/src/service/p2p_service.rs#L52-L193)
-- [p2p_service.rs:222-293](file://src-tauri/src/service/p2p_service.rs#L222-L293)
-- [p2p_stream_quic_client.rs:18-113](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L18-L113)
-- [p2p_stream_quic_server.rs:89-168](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L89-L168)
+- [p2p_service.rs:532-593](file://src-tauri/src/service/p2p_service.rs#L532-L593)
+- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [index.tsx:704-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L704-L720)
+
+### 代码级流程图：媒体统计跟踪系统
+```mermaid
+flowchart TD
+Init["初始化媒体统计"] --> Timer["启动2秒定时器"]
+Timer --> Collect["收集统计数据<br/>帧率/码率/延迟/丢帧"]
+Collect --> CreateMsg["创建P2pMediaInfo消息"]
+CreateMsg --> Send["通过MediaInfo通道发送"]
+Send --> Handle["对端接收并处理媒体信息"]
+Handle --> Display["前端显示媒体统计"]
+Display --> Timer
+Timer --> EndCall{"通话结束?"}
+EndCall -- 否 --> Collect
+EndCall -- 是 --> Stop["停止定时器并清理"]
+```
+
+**图表来源**
+- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
+- [p2p_service.rs:544-593](file://src-tauri/src/service/p2p_service.rs#L544-L593)
+- [p2p_quic_service.rs:233-242](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L233-L242)
 
 ### 代码级流程图：心跳保活与资源清理
 ```mermaid
@@ -525,12 +627,13 @@ flowchart TD
 HBStart["启动心跳协程"] --> CheckActive{"连接是否活跃?"}
 CheckActive -- 否 --> StopHB["停止发送心跳"]
 CheckActive -- 是 --> SendPing["生成心跳消息"]
-SendPing --> Write["写入发送流"]
+SendPing --> Write["仅Default通道写入发送流"]
 Write --> Sleep["休眠2秒"]
 Sleep --> CheckActive
 StopHB --> Cleanup["关闭发送流并清理状态"]
 ```
 
 **图表来源**
-- [p2p_quic_service.rs:272-307](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L272-L307)
-- [p2p_service.rs:354-386](file://src-tauri/src/service/p2p_service.rs#L354-L386)
+- [p2p_quic_service.rs:319-354](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L319-L354)
+- [p2p_stream_quic_client.rs:142-143](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L142-L143)
+- [p2p_stream_quic_server.rs:144-147](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L144-L147)

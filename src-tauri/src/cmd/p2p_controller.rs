@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::entity::p2p_models::{P2pInitMsg, P2pVideoData};
+use crate::entity::p2p_models::{P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg, P2pVideoData};
 use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
@@ -8,6 +8,7 @@ use crate::service::p2p_service::{
     send_p2p_audio_frame_service, send_p2p_media_config_service, send_p2p_media_control_service,
     send_p2p_media_info_service, send_p2p_text_msg_service, send_p2p_video_call_end_service, send_p2p_video_call_invite_service,
     send_p2p_video_call_response_service, send_p2p_video_config_service, send_p2p_video_frame_service,
+    send_p2p_file_data_service, send_p2p_file_transfer_request_service, send_p2p_file_transfer_response_service,
 };
 use crate::utils::global_static_str::UDP_SOCKET;
 
@@ -178,6 +179,48 @@ pub async fn send_p2p_media_info(
     target_uuid: String,
 ) -> Result<(), String> {
     send_p2p_media_info_service(info_type, data, target_uuid)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+// ==================== 文件传输相关命令 ====================
+
+/// 发送p2p文件数据
+/// 通过File通道发送文件分片数据
+/// 文件会被切分为多个分片，每个分片独立发送
+#[tauri::command]
+pub async fn send_p2p_file_data(
+    file_data: String,
+    target_uuid: String,
+) -> Result<(), String> {
+    let file_data = serde_json::from_str::<P2pFileData>(&file_data).map_err(|e| e.to_string())?;
+    send_p2p_file_data_service(file_data, target_uuid)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 发送p2p文件传输请求
+/// 在发送文件数据前，先发送请求等待对方确认
+#[tauri::command]
+pub async fn send_p2p_file_transfer_request(
+    transfer_request: String,
+    target_uuid: String,
+) -> Result<(), String> {
+    let transfer_request = serde_json::from_str::<P2pFileTransferRequest>(&transfer_request).map_err(|e| e.to_string())?;
+    send_p2p_file_transfer_request_service(transfer_request, target_uuid)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 发送p2p文件传输响应
+/// 对方收到文件传输请求后，通过此命令回复接受或拒绝
+#[tauri::command]
+pub async fn send_p2p_file_transfer_response(
+    transfer_response: String,
+    target_uuid: String,
+) -> Result<(), String> {
+    let transfer_response = serde_json::from_str::<P2pFileTransferResponse>(&transfer_response).map_err(|e| e.to_string())?;
+    send_p2p_file_transfer_response_service(transfer_response, target_uuid)
         .await
         .map_err(|e| e.to_string())
 }

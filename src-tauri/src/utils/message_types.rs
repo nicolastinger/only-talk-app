@@ -74,6 +74,17 @@ pub const MSG_TYPE_P2P_VIDEO_CALL_END: u16 = 15;
 /// 与视频/音频数据通道分离，避免大数据帧阻塞控制信息
 pub const MSG_TYPE_P2P_MEDIA_INFO: u16 = 16;
 
+/// P2P文件数据 - 通过File通道传输文件分片数据
+/// 支持大文件分片传输，与音视频通道分离
+pub const MSG_TYPE_P2P_FILE_DATA: u16 = 17;
+
+/// P2P文件传输请求 - 发起文件传输握手
+/// 发送方发起文件传输时首先发送此消息，等待接收方确认
+pub const MSG_TYPE_P2P_FILE_TRANSFER_REQUEST: u16 = 18;
+
+/// P2P文件传输响应 - 接收方确认或拒绝文件传输
+pub const MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE: u16 = 19;
+
 // ==================== P2P请求响应类型 ====================
 
 /// 接受P2P请求
