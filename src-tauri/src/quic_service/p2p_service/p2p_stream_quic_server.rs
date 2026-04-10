@@ -156,38 +156,41 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
                     channel_type: channel_type.clone(),
                 };
                 info!("添加p2p连接 {} channel: {}", target_uuid, channel_key);
-                user_channels.insert(channel_key, target_send_stream);
+                user_channels.insert(channel_key.clone(), target_send_stream);
             }
         }
 
+        // 将每个流的接收循环spawn到独立任务，避免阻塞accept_bi循环
         let head_length = 9;
         let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
-        // 处理双向流
-        loop {
-            let mut buf = vec![0u8; 1024 * 1024 * 10];
-            match recv.read(&mut buf).await {
-                Ok(Some(n)) => {
-                    info!("收到 {} bytes on channel {}", n, stream_index);
-                    process_rec_msg(
-                        &mut buf,
-                        n,
-                        &ConnectionType::Video,
-                        buffer_msg.clone(),
-                        head_length,
-                    )
-                    .await
-                    .expect("处理消息失败");
-                }
-                Ok(None) => {
-                    info!("Stream closed on channel {}", stream_index);
-                    break;
-                }
-                Err(e) => {
-                    error!("Failed to read from stream on channel {}: {}", stream_index, e);
-                    break;
+        let recv_channel_key = channel_key.clone();
+        tokio::spawn(async move {
+            loop {
+                let mut buf = vec![0u8; 1024 * 1024 * 10];
+                match recv.read(&mut buf).await {
+                    Ok(Some(n)) => {
+                        if let Err(e) = process_rec_msg(
+                            &mut buf,
+                            n,
+                            &ConnectionType::Video,
+                            buffer_msg.clone(),
+                            head_length,
+                        ).await {
+                            error!("处理{}通道消息失败: {}", recv_channel_key, e);
+                        }
+                    }
+                    Ok(None) => {
+                        info!("Stream closed on channel {}", recv_channel_key);
+                        break;
+                    }
+                    Err(e) => {
+                        error!("Failed to read from stream on channel {}: {}", recv_channel_key, e);
+                        break;
+                    }
                 }
             }
-        }
+        });
+
         stream_index += 1;
     }
 
