@@ -508,10 +508,14 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     }
   }, []);
 
-  // ==================== 设置事件监听器 ====================
+  // ==================== 设置事件监听器 + 组件初始化 ====================
 
   /**
-   * 设置所有事件监听器
+   * 设置所有事件监听器并初始化组件
+   *
+   * 重要：必须先注册监听器，再发送通话信令
+   * 否则服务端的视频帧可能在监听器注册前到达，导致初始化段丢失
+   * 初始化段一旦丢失，后续所有帧都无法解码 → 黑屏
    *
    * 监听的事件:
    * - video_frame: 接收视频帧数据
@@ -522,7 +526,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * - video_call_end: 对方结束通话
    */
   useEffect(() => {
-    const setupListeners = async () => {
+    const setup = async () => {
+      // ==================== 第一步：注册所有事件监听器 ====================
+      // 必须在任何信令之前完成，避免视频帧到达时监听器未就绪
+
       // 监听视频帧数据
       const unlistenVideo = await listen<number[]>('video_frame', (event) => {
         if (event.payload.length > 0) {
@@ -546,7 +553,14 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       // 监听媒体控制命令
       const unlistenControl = await listen<string>('media_control', (event) => {
         try {
-          const control: MediaControl = JSON.parse(event.payload);
+          // 兼容处理：payload可能是string或object（Tauri序列化差异）
+          let controlStr: string;
+          if (typeof event.payload === 'string') {
+            controlStr = event.payload;
+          } else {
+            controlStr = JSON.stringify(event.payload);
+          }
+          const control: MediaControl = JSON.parse(controlStr);
           handleMediaControl(control);
         } catch (error) {
           console.error('处理媒体控制失败:', error);
@@ -605,9 +619,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         unlistenEnd,
         unlistenMediaInfo,
       ];
+
+      console.log('[PrivacyVideoCall] 所有事件监听器已注册完成');
     };
 
-    setupListeners();
+    setup();
 
     // 组件卸载时清理所有监听器
     return () => {
@@ -965,13 +981,31 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /**
    * 组件初始化
    *
-   * 流程:
-   * 1. 初始化远程媒体接收器
-   * 2. 如果是发起方，发送邀请
-   * 3. 如果是被邀请方，自动接受邀请
+   * 流程（严格按序执行，避免竞态条件）:
+   * 1. 等待事件监听器注册完成（确保视频帧不丢失）
+   * 2. 初始化远程媒体接收器
+   * 3. 如果是发起方，发送邀请
+   * 4. 如果是被邀请方，自动接受邀请
    */
   useEffect(() => {
     const init = async () => {
+      // 等待事件监听器注册完成
+      // 监听器在另一个useEffect中异步注册，需要等待其完成
+      // 否则服务端发送的视频帧可能在监听器注册前到达，导致初始化段丢失
+      const maxWait = 50; // 最多等待5秒
+      for (let i = 0; i < maxWait; i++) {
+        if (unlistenRef.current.length > 0) {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      if (unlistenRef.current.length === 0) {
+        console.warn('[PrivacyVideoCall] 事件监听器注册超时，继续初始化');
+      } else {
+        console.log('[PrivacyVideoCall] 事件监听器已就绪，开始初始化');
+      }
+
       // 初始化远程媒体接收器
       await initRemoteMediaReceiver();
 
@@ -980,7 +1014,6 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         await sendVideoCallInvite();
       } else {
         // 被邀请方：自动接受邀请
-        // 实际应用中可以弹出确认框让用户选择
         await sendVideoCallResponse(true);
       }
     };

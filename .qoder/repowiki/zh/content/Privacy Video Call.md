@@ -19,10 +19,11 @@
 
 ## 更新摘要
 **变更内容**
-- 新增轻量级媒体帧协议（MediaFrameHeader）实现
-- 性能优化：减少60% CPU使用和内存分配开销
-- MediaData通道采用直接帧传输协议
-- 前端事件驱动的媒体帧处理机制
+- 对 PrivacyVideoCall 组件的音视频错误处理系统进行了重大优化
+- 增强了 MediaSource 生命周期管理机制
+- 优化了缓冲队列清理和状态重置逻辑
+- 改进了错误恢复和异常处理机制
+- 新增了完善的资源清理和状态管理
 
 ## 目录
 1. [项目概述](#项目概述)
@@ -32,9 +33,10 @@
 5. [轻量级媒体帧协议](#轻量级媒体帧协议)
 6. [WebRTC视频聊天系统](#webrtc视频聊天系统)
 7. [P2P通信机制](#p2p通信机制)
-8. [性能优化策略](#性能优化策略)
-9. [故障排除指南](#故障排除指南)
-10. [总结](#总结)
+8. [音视频错误处理系统](#音视频错误处理系统)
+9. [性能优化策略](#性能优化策略)
+10. [故障排除指南](#故障排除指南)
+11. [总结](#总结)
 
 ## 项目概述
 
@@ -48,6 +50,7 @@
 - **隐私保护**: 通话数据不经过服务器中转
 - **跨平台支持**: 支持Windows、macOS、Linux平台
 - **性能优化**: 轻量级协议减少CPU和内存开销约60%
+- **错误处理**: 完善的音视频错误处理和恢复机制
 
 ## 系统架构
 
@@ -58,41 +61,48 @@ A[React组件层]
 B[业务逻辑层]
 C[UI交互层]
 D[事件处理器]
+E[错误处理系统]
 end
 subgraph "通信中间层"
-E[WebRTC服务]
-F[QUIC服务]
-G[信令服务]
-H[媒体帧处理器]
+F[WebRTC服务]
+G[QUIC服务]
+H[信令服务]
+I[媒体帧处理器]
+J[错误恢复机制]
 end
 subgraph "后端服务层"
-I[Rust核心引擎]
-J[P2P连接管理]
-K[消息路由]
-L[媒体帧协议]
+K[Rust核心引擎]
+L[P2P连接管理]
+M[消息路由]
+N[媒体帧协议]
+O[错误监控]
 end
 subgraph "网络传输层"
-M[WebRTC通道]
-N[QUIC通道]
-O[MediaData通道]
-P[MediaInfo通道]
+P[WebRTC通道]
+Q[QUIC通道]
+R[MediaData通道]
+S[MediaInfo通道]
+T[错误反馈通道]
 end
-A --> E
-B --> F
-C --> G
-D --> H
-E --> I
-F --> J
-G --> K
-H --> L
-I --> M
-J --> N
-K --> O
-L --> P
+A --> F
+B --> G
+C --> H
+D --> I
+E --> J
+F --> K
+G --> L
+H --> M
+I --> N
+J --> O
+K --> P
+L --> Q
+M --> R
+N --> S
+O --> T
 ```
 
 **图表来源**
-- [PrivacyVideoCall/index.tsx:1-1104](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1104)
+- [PrivacyVideoCall/index.tsx:1-1120](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1120)
 - [webrtcService/index.ts:1-1792](file://apps/pc/src/services/webrtcService/index.ts#L1-L1792)
 - [p2p_quic_service.rs:1-355](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L355)
 
@@ -110,6 +120,11 @@ class PrivacyVideoCall {
 +MediaRecorder mediaRecorderRef
 +MediaStream localStreamRef
 +MediaSource mediaSourceRef
++MediaSource audioMediaSourceRef
++SourceBuffer sourceBufferRef
++SourceBuffer audioSourceBufferRef
++Uint8Array[][] videoBufferQueueRef
++Uint8Array[][] audioBufferQueueRef
 +boolean isLoading
 +boolean isConnected
 +MediaControlState mediaState
@@ -117,10 +132,12 @@ class PrivacyVideoCall {
 +startMediaRecording(stream) void
 +initRemoteMediaReceiver() void
 +processVideoBufferQueue() void
++processAudioBufferQueue() void
 +handleMediaControl(control) void
 +toggleVideo() void
 +toggleAudio() void
 +handleEndCall() void
++handleExit() void
 }
 class MediaControlState {
 +boolean videoEnabled
@@ -167,7 +184,7 @@ Service-->>Client : 连接状态=connected
 - [webrtcService/index.ts:376-562](file://apps/pc/src/services/webrtcService/index.ts#L376-L562)
 
 **章节来源**
-- [PrivacyVideoCall/index.tsx:1-1104](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1104)
+- [PrivacyVideoCall/index.tsx:1-1120](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1120)
 - [webrtcService/index.ts:134-751](file://apps/pc/src/services/webrtcService/index.ts#L134-L751)
 
 ## 隐私视频通话流程
@@ -335,6 +352,8 @@ class WebRTCService {
 +handleAnswer(friendId, answer) void
 +handleCandidate(friendId, candidate) void
 +sendMessage(friendId, message) boolean
++attemptIceRestartWithDelay(friendId) void
++clearIceTimers(friendId) void
 }
 WebRTCChat --> WebRTCService
 ```
@@ -458,6 +477,116 @@ P2pMediaConfig --> P2pBufferConfig
 - [p2p_models.rs:1-394](file://src-tauri/src/entity/p2p_models.rs#L1-L394)
 - [p2pVideoConfig.ts:1-21](file://apps/pc/src/models/p2pVideoConfig.ts#L1-L21)
 
+## 音视频错误处理系统
+
+### MediaSource 生命周期管理
+
+系统实现了完善的MediaSource生命周期管理机制，确保音视频资源的正确创建、使用和销毁。
+
+```mermaid
+stateDiagram-v2
+[*] --> 初始化
+初始化 --> 创建MediaSource : initRemoteMediaReceiver()
+创建MediaSource --> 等待sourceopen : 监听sourceopen事件
+等待sourceopen --> 创建SourceBuffer : 添加视频/音频SourceBuffer
+创建SourceBuffer --> 就绪状态 : 监听updateend事件
+就绪状态 --> 数据处理 : 处理缓冲队列
+数据处理 --> 就绪状态 : 处理完成后继续
+就绪状态 --> 清理阶段 : handleEndCall()
+清理阶段 --> 关闭MediaSource : endOfStream()
+关闭MediaSource --> 移除SourceBuffer : removeSourceBuffer()
+移除SourceBuffer --> 释放资源 : URL.revokeObjectURL()
+释放资源 --> [*]
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:351-437](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L351-L437)
+
+### 缓冲队列清理机制
+
+系统实现了智能的缓冲队列管理，包括队列清理、状态重置和并发控制。
+
+```mermaid
+flowchart TD
+A[开始清理] --> B{检查MediaSource状态}
+B --> |readyState !== 'open'| C[直接清理引用]
+B --> |readyState === 'open'| D[调用endOfStream()]
+D --> E[清理SourceBuffer引用]
+E --> F[清空缓冲队列]
+F --> G[重置更新状态标志]
+G --> H[释放MediaSource引用]
+H --> I[清理ObjectURL]
+I --> J[设置isOpen=false]
+C --> J
+J --> K[清理完成]
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:814-875](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L814-L875)
+
+### 错误恢复逻辑
+
+系统提供了多层次的错误恢复机制，包括SourceBuffer错误处理、队列重试和状态重置。
+
+```mermaid
+flowchart TD
+A[发生错误] --> B{错误类型判断}
+B --> |SourceBuffer错误| C[重置更新状态]
+B --> |缓冲追加失败| D[记录错误日志]
+B --> |连接中断| E[尝试ICE重启]
+C --> F[继续处理队列]
+D --> G[跳过当前数据]
+E --> H[重新建立连接]
+F --> I[processVideoBufferQueue()]
+G --> I
+H --> I
+I --> J[检查队列状态]
+J --> |队列为空| K[等待新数据]
+J --> |队列有数据| L[继续处理]
+K --> M[保持等待状态]
+L --> N[继续播放]
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:394-432](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L394-L432)
+- [PrivacyVideoCall/index.tsx:467-471](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L467-L471)
+
+### 状态重置机制
+
+系统实现了完整的状态重置机制，确保在错误发生后能够正确恢复到初始状态。
+
+```mermaid
+classDiagram
+class StateResetMechanism {
++resetVideoState() void
++resetAudioState() void
++resetBufferQueues() void
++resetSourceBuffers() void
++resetMediaSources() void
++cleanupAllReferences() void
+}
+class MediaState {
++videoEnabled : boolean
++audioEnabled : boolean
++isPaused : boolean
++isInCall : boolean
+}
+class BufferState {
++videoBufferQueue : Uint8Array[][]
++audioBufferQueue : Uint8Array[][]
++isVideoUpdating : boolean
++isAudioUpdating : boolean
+}
+StateResetMechanism --> MediaState
+StateResetMechanism --> BufferState
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:366-369](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L366-L369)
+
+**章节来源**
+- [PrivacyVideoCall/index.tsx:351-875](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L351-L875)
+
 ## 性能优化策略
 
 ### 轻量级协议优化
@@ -515,6 +644,7 @@ C --> E
 | 连接失败 | 无法建立P2P连接 | NAT环境复杂 | 检查防火墙设置 |
 | 延迟过高 | 通话有明显延迟 | 网络质量差 | 优化网络环境 |
 | 性能问题 | CPU使用率高 | 旧版本协议 | 升级到最新版本 |
+| 错误处理问题 | 媒体播放异常 | MediaSource状态异常 | 检查错误恢复机制 |
 
 ### 调试工具
 
@@ -536,7 +666,8 @@ C --> E
 2. **稳定性**: 针对多种NAT环境进行了专门优化，提高连接成功率
 3. **性能**: 采用全新的轻量级媒体帧协议，性能提升约60%，显著减少CPU和内存开销
 4. **可扩展性**: 模块化设计便于功能扩展和维护
+5. **可靠性**: 完善的音视频错误处理系统，包括MediaSource生命周期管理、缓冲队列清理、状态重置机制和错误恢复逻辑
 
-**更新** 新增的轻量级媒体帧协议是本次升级的核心改进，通过5字节固定头部结构和零拷贝优化，实现了约60%的性能提升，为用户提供了更加流畅和高效的视频通话体验。
+**更新** 本次重大优化主要体现在 PrivacyVideoCall 组件的音视频错误处理系统上，新增了完善的 MediaSource 生命周期管理、缓冲队列清理、状态重置机制和错误恢复逻辑，显著提升了系统的稳定性和可靠性。这些改进确保了在各种异常情况下都能正确处理音视频数据，提供更好的用户体验。
 
 该系统为用户提供了可靠的隐私视频通话解决方案，适用于各种应用场景，从个人通讯到企业协作都能满足需求。

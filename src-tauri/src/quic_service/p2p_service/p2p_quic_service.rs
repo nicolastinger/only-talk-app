@@ -192,7 +192,9 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 let media_str = serde_json::to_string(&media_config)?;
                 insert_user_info(&key, &media_str).await?;
                 if let Some(handle) = APP_HANDLE.get() {
-                    handle.emit("media_config", msg.raw)?;
+                    // 转为JSON字符串emit，避免Vec<u8>被序列化为number[]
+                    let config_str = String::from_utf8_lossy(&msg.raw).to_string();
+                    handle.emit("media_config", config_str)?;
                 }
             }
             
@@ -202,7 +204,9 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到p2p媒体控制信息 {:?}", msg);
                 let _control = serde_json::from_slice::<P2pMediaControl>(&msg.raw)?;
                 if let Some(handle) = APP_HANDLE.get() {
-                    handle.emit("media_control", &msg.raw)?;
+                    // 转为JSON字符串emit，避免Vec<u8>被序列化为number[]
+                    let control_str = String::from_utf8_lossy(&msg.raw).to_string();
+                    handle.emit("media_control", control_str)?;
                 }
             }
             
@@ -213,7 +217,9 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到p2p媒体信息 {:?}", msg);
                 let _media_info = serde_json::from_slice::<P2pMediaInfo>(&msg.raw)?;
                 if let Some(handle) = APP_HANDLE.get() {
-                    handle.emit("media_info", &msg.raw)?;
+                    // 转为JSON字符串emit，避免Vec<u8>被序列化为number[]
+                    let info_str = String::from_utf8_lossy(&msg.raw).to_string();
+                    handle.emit("media_info", info_str)?;
                 }
             }
             
@@ -224,7 +230,8 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             MSG_TYPE_P2P_FILE_DATA => {
                 info!("接收到p2p文件数据分片 {:?}", msg);
                 if let Some(handle) = APP_HANDLE.get() {
-                    handle.emit("p2p_file_data", &msg.raw)?;
+                    let data_str = String::from_utf8_lossy(&msg.raw).to_string();
+                    handle.emit("p2p_file_data", data_str)?;
                 }
             }
             
@@ -234,7 +241,8 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到p2p文件传输请求 {:?}", msg);
                 let _request = serde_json::from_slice::<P2pFileTransferRequest>(&msg.raw)?;
                 if let Some(handle) = APP_HANDLE.get() {
-                    handle.emit("p2p_file_transfer_request", &msg.raw)?;
+                    let request_str = String::from_utf8_lossy(&msg.raw).to_string();
+                    handle.emit("p2p_file_transfer_request", request_str)?;
                 }
             }
             
@@ -244,7 +252,8 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到p2p文件传输响应 {:?}", msg);
                 let _response = serde_json::from_slice::<P2pFileTransferResponse>(&msg.raw)?;
                 if let Some(handle) = APP_HANDLE.get() {
-                    handle.emit("p2p_file_transfer_response", &msg.raw)?;
+                    let response_str = String::from_utf8_lossy(&msg.raw).to_string();
+                    handle.emit("p2p_file_transfer_response", response_str)?;
                 }
             }
             
