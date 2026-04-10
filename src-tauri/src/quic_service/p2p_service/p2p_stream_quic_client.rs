@@ -3,11 +3,13 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use dashmap::DashMap;
 use log::{error, info};
 use quinn::{ClientConfig, Endpoint};
 use rustls::ClientConfig as RustlsClientConfig;
 use tokio::sync::Mutex;
 
+use crate::entity::p2p_models::P2pChannelType;
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::models::TargetSendStream;
@@ -39,9 +41,6 @@ pub async fn run_client(
     let connection = endpoint.connect(server_addr, "localhost")?.await?;
     info!("Connected to server at {}", connection.remote_address());
 
-    // 开启一个双向流
-    let (mut send, mut recv) = connection.open_bi().await?;
-
     let (p2p_request_token, target_uuid) = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         let p2p_request_token = guard.get("p2p_request_token").expect("p2p_request_token");
@@ -50,6 +49,12 @@ pub async fn run_client(
     };
     let ping_uuid = target_uuid.clone();
 
+    // 确保P2P_STREAM_SENDER中存在该用户的DashMap
+    P2P_STREAM_SENDER.entry(target_uuid.clone()).or_insert_with(DashMap::new);
+
+    // ==================== 打开Default通道（双向流0） ====================
+    let (mut send_default, mut recv_default) = connection.open_bi().await?;
+
     // 发送验证消息
     let verify_msg = generate_text_msg(
         MSG_TYPE_TEXT,
@@ -57,57 +62,110 @@ pub async fn run_client(
         "".to_string(),
         "".to_string(),
     )?;
-    send.write_all(&verify_msg).await?;
-    //send.finish().await?;
+    send_default.write_all(&verify_msg).await?;
 
-    let send_stream = Arc::new(Mutex::new(send));
+    let send_stream_default = Arc::new(Mutex::new(send_default));
 
     {
-        let mut write_guard = P2P_STREAM_SENDER.write().await;
-        let target_send_stream = TargetSendStream {
-            addr: server_addr.to_string(),
-            send_stream: send_stream.clone(),
-            is_server: true,
-        };
-        info!("[p2p客户端]添加连接 {}", target_uuid);
-        write_guard.insert(target_uuid, target_send_stream);
+        if let Some(user_channels) = P2P_STREAM_SENDER.get(&target_uuid) {
+            let target_send_stream = TargetSendStream {
+                addr: server_addr.to_string(),
+                send_stream: send_stream_default.clone(),
+                is_server: true,
+                channel_type: P2pChannelType::Default,
+            };
+            info!("[p2p客户端]添加连接 {} channel: default", target_uuid);
+            user_channels.insert("default".to_string(), target_send_stream);
+        }
     }
 
-    info!("建立p2p客户端成功!");
+    // ==================== 打开MediaInfo通道（双向流1） ====================
+    let (send_media_info, mut recv_media_info) = connection.open_bi().await?;
+    let send_stream_media_info = Arc::new(Mutex::new(send_media_info));
+
+    {
+        if let Some(user_channels) = P2P_STREAM_SENDER.get(&target_uuid) {
+            let target_send_stream = TargetSendStream {
+                addr: server_addr.to_string(),
+                send_stream: send_stream_media_info.clone(),
+                is_server: true,
+                channel_type: P2pChannelType::MediaInfo,
+            };
+            info!("[p2p客户端]添加连接 {} channel: media_info", target_uuid);
+            user_channels.insert("media_info".to_string(), target_send_stream);
+        }
+    }
+
+    info!("建立p2p客户端成功! 已建立Default和MediaInfo两个通道");
+
     // 设置p2p连接活跃状态
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
         guard.insert("p2p_active".to_string(), "true".to_string());
     }
-    send_ping_msg(send_stream.clone(), ping_uuid);
+    // 仅对Default通道发送心跳
+    send_ping_msg(send_stream_default.clone(), ping_uuid);
+
+    // ==================== 接收Default通道消息 ====================
     let head_length = 9;
-    let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    let buffer_msg_default: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
     loop {
-        // 接收响应 - 使用1MB缓冲区以容纳视频帧数据(约230KB/帧)
+        // 接收响应 - 使用10MB缓冲区以容纳视频帧数据
         let mut buf = vec![0u8; 1024 * 1024 * 10];
-        match recv.read(&mut buf).await {
+        match recv_default.read(&mut buf).await {
             Ok(Some(n)) => {
-                info!("Received {} bytes: {:?}", n, &buf[..n]);
+                info!("Received {} bytes on default channel", n);
                 process_rec_msg(
                     &mut buf,
                     n,
                     &ConnectionType::Video,
-                    buffer_msg.clone(),
+                    buffer_msg_default.clone(),
                     head_length,
                 )
                 .await
                 .expect("处理消息失败");
             }
             Ok(None) => {
-                info!("Stream closed");
+                info!("Default channel stream closed");
                 break;
             }
             Err(e) => {
-                error!("Failed to read from stream: {}", e);
+                error!("Failed to read from default channel stream: {}", e);
                 break;
             }
         }
     }
+
+    // ==================== 接收MediaInfo通道消息 ====================
+    // 在单独的任务中处理MediaInfo通道的接收
+    let buffer_msg_media: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    tokio::spawn(async move {
+        loop {
+            let mut buf = vec![0u8; 1024 * 1024]; // 媒体信息通常较小，1MB足够
+            match recv_media_info.read(&mut buf).await {
+                Ok(Some(n)) => {
+                    info!("Received {} bytes on media_info channel", n);
+                    if let Err(e) = process_rec_msg(
+                        &mut buf,
+                        n,
+                        &ConnectionType::Video,
+                        buffer_msg_media.clone(),
+                        head_length,
+                    ).await {
+                        error!("处理media_info通道消息失败: {}", e);
+                    }
+                }
+                Ok(None) => {
+                    info!("Media_info channel stream closed");
+                    break;
+                }
+                Err(e) => {
+                    error!("Failed to read from media_info channel stream: {}", e);
+                    break;
+                }
+            }
+        }
+    });
 
     Ok(())
 }

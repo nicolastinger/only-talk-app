@@ -69,6 +69,40 @@ interface MediaConfig {
 }
 
 /**
+ * P2P通道类型枚举
+ * 用于区分不同的P2P数据通道
+ * 每个通道类型对应QUIC上的一个独立双向流
+ */
+type P2pChannelType =
+  | "Default" // 默认通道 - 用于视频帧、音频帧、文本消息等数据传输
+  | "MediaInfo"; // 媒体信息通道 - 用于传输媒体状态信息、分辨率变化、码率调整等控制信令
+
+/**
+ * 媒体信息类型枚举
+ */
+type MediaInfoType =
+  | "ResolutionChange" // 分辨率变化通知
+  | "BitrateChange" // 码率调整通知
+  | "FrameRateStats" // 帧率统计信息
+  | "NetworkQuality" // 网络质量信息
+  | "EncoderInfo" // 编码器信息
+  | { Custom: string }; // 自定义媒体信息
+
+/**
+ * 媒体信息接口
+ * 用于隐私模式视频聊天的媒体信息通道
+ * 传输实时媒体状态信息，如分辨率变化、码率调整、帧率统计等
+ */
+interface MediaInfo {
+  /** 媒体信息类型 */
+  info_type: MediaInfoType;
+  /** 信息数据 (JSON序列化) */
+  data: string;
+  /** 时间戳 */
+  timestamp: number;
+}
+
+/**
  * 媒体控制类型枚举
  */
 type MediaControlType =
@@ -153,6 +187,9 @@ type VideoCallState =
   | "Ended"; // 已结束 - 通话结束
 
 export {
+  P2pChannelType,
+  MediaInfoType,
+  MediaInfo,
   VideoConfig,
   AudioConfig,
   BufferConfig,

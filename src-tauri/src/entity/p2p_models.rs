@@ -49,6 +49,57 @@ pub struct UserAddressInfo {
     pub is_lock: bool,
 }
 
+/// P2P通道类型
+/// 用于区分不同的P2P数据通道
+/// 每个通道类型对应QUIC上的一个独立双向流
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+pub enum P2pChannelType {
+    /// 默认通道 - 用于视频帧、音频帧、文本消息等数据传输
+    Default,
+    /// 媒体信息通道 - 用于传输媒体状态信息、分辨率变化、码率调整等控制信令
+    /// 与数据通道分离，避免大数据帧阻塞控制信息
+    MediaInfo,
+}
+
+impl std::fmt::Display for P2pChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            P2pChannelType::Default => write!(f, "default"),
+            P2pChannelType::MediaInfo => write!(f, "media_info"),
+        }
+    }
+}
+
+/// P2P媒体信息
+/// 用于隐私模式视频聊天的媒体信息通道
+/// 传输实时媒体状态信息，如分辨率变化、码率调整、帧率统计等
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pMediaInfo {
+    /// 媒体信息类型
+    pub info_type: P2pMediaInfoType,
+    /// 信息数据 (JSON序列化)
+    pub data: String,
+    /// 时间戳
+    pub timestamp: u64,
+}
+
+/// 媒体信息类型枚举
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum P2pMediaInfoType {
+    /// 分辨率变化通知
+    ResolutionChange,
+    /// 码率调整通知
+    BitrateChange,
+    /// 帧率统计信息
+    FrameRateStats,
+    /// 网络质量信息
+    NetworkQuality,
+    /// 编码器信息
+    EncoderInfo,
+    /// 自定义媒体信息
+    Custom(String),
+}
+
 /// P2P视频数据包
 /// 用于传输视频帧数据
 #[derive(Debug, Serialize, Deserialize)]

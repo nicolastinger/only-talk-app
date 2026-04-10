@@ -9,7 +9,7 @@ use tauri::Emitter;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, Mutex};
 
-use crate::entity::p2p_models::{P2pMediaConfig, P2pMediaControl, P2pVideoConfig, P2pVideoData};
+use crate::entity::p2p_models::{P2pChannelType, P2pMediaConfig, P2pMediaControl, P2pMediaInfo, P2pVideoConfig, P2pVideoData};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
@@ -17,7 +17,7 @@ use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
     MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
+    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
     MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
     MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
 };
@@ -40,7 +40,7 @@ lazy_static! {
                         String::new(),
                         String::new()
                     ).expect("generate_text_msg error");
-                    let send_stream = get_sender(&msg.uuid).await.expect("no send_stream");
+                    let send_stream = get_sender(&msg.uuid, &P2pChannelType::Default).await.expect("no send_stream");
                     send_stream.lock().await.write_all(&video_data).await.expect("write_all error");
                 });
             }
@@ -50,18 +50,22 @@ lazy_static! {
 }
 
 /// 获取P2P连接的发送流
-/// 根据目标用户UUID获取对应的QUIC发送流
+/// 根据目标用户UUID和通道类型获取对应的QUIC发送流
 /// 
 /// # 参数
 /// - `target_uuid`: 目标用户UUID
+/// - `channel_type`: 通道类型 (Default/MediaInfo)
 /// 
 /// # 返回
 /// - 成功返回发送流的Arc包装
 /// - 失败返回错误信息
-pub async fn get_sender(target_uuid: &str) -> Result<Arc<Mutex<SendStream>>, anyhow::Error> {
+pub async fn get_sender(target_uuid: &str, channel_type: &P2pChannelType) -> Result<Arc<Mutex<SendStream>>, anyhow::Error> {
+    let channel_key = channel_type.to_string();
     let sender = {
-        let guard = P2P_STREAM_SENDER.read().await;
-        let target_sender = guard.get(target_uuid).ok_or(anyhow!("no target_sender"))?;
+        let user_channels = P2P_STREAM_SENDER.get(target_uuid)
+            .ok_or(anyhow!("no channels for target: {}", target_uuid))?;
+        let target_sender = user_channels.get(&channel_key)
+            .ok_or(anyhow!("no sender for channel: {} target: {}", channel_key, target_uuid))?;
         target_sender.send_stream.clone()
     };
     Ok(sender)
@@ -222,6 +226,17 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 let _control = serde_json::from_slice::<P2pMediaControl>(&msg.raw)?;
                 if let Some(handle) = APP_HANDLE.get() {
                     handle.emit("media_control", &msg.raw)?;
+                }
+            }
+            
+            // 媒体信息
+            // 通过媒体信息通道传输的控制信令
+            // 如分辨率变化、码率调整、帧率统计等
+            MSG_TYPE_P2P_MEDIA_INFO => {
+                info!("接收到p2p媒体信息 {:?}", msg);
+                let _media_info = serde_json::from_slice::<P2pMediaInfo>(&msg.raw)?;
+                if let Some(handle) = APP_HANDLE.get() {
+                    handle.emit("media_info", &msg.raw)?;
                 }
             }
             

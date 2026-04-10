@@ -69,6 +69,11 @@ pub const MSG_TYPE_P2P_VIDEO_CALL_REJECT: u16 = 14;
 /// 当一方结束视频通话时发送此消息通知对方
 pub const MSG_TYPE_P2P_VIDEO_CALL_END: u16 = 15;
 
+/// P2P媒体信息 - 用于隐私模式视频聊天的媒体信息通道
+/// 传输实时媒体状态信息，如分辨率变化、码率调整、帧率统计等
+/// 与视频/音频数据通道分离，避免大数据帧阻塞控制信息
+pub const MSG_TYPE_P2P_MEDIA_INFO: u16 = 16;
+
 // ==================== P2P请求响应类型 ====================
 
 /// 接受P2P请求

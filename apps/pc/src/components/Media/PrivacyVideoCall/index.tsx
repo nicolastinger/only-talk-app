@@ -29,6 +29,7 @@ import {
   MediaConfig,
   MediaControl,
   MediaControlState,
+  MediaInfo,
   VideoCallInvite,
 } from '@workspace/types';
 import { Button, message, Spin, Tooltip } from 'antd';
@@ -113,6 +114,31 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
   /** 存储所有事件监听器的取消函数，用于组件卸载时清理 */
   const unlistenRef = useRef<(() => void)[]>([]);
+
+  // ==================== 媒体信息通道引用 ====================
+
+  /** 媒体信息统计 - 用于跟踪和发送媒体状态 */
+  const mediaInfoStatsRef = useRef<{
+    /** 视频帧率 */
+    frameRate: number;
+    /** 视频码率 (bps) */
+    videoBitrate: number;
+    /** 音频码率 (bps) */
+    audioBitrate: number;
+    /** 网络延迟 (ms) */
+    latency: number;
+    /** 丢帧数 */
+    droppedFrames: number;
+  }>({
+    frameRate: 0,
+    videoBitrate: 0,
+    audioBitrate: 0,
+    latency: 0,
+    droppedFrames: 0,
+  });
+
+  /** 媒体信息发送定时器 */
+  const mediaInfoIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ==================== 组件状态 ====================
 
@@ -225,6 +251,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
       // 开始录制媒体数据
       startMediaRecording(stream);
+
+      // 启动媒体信息定时发送
+      startMediaInfoReporting();
     } catch (error) {
       console.error('初始化本地媒体失败:', error);
       message.error('无法访问摄像头或麦克风');
@@ -546,6 +575,16 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         handleEndCall();
       });
 
+      // 监听媒体信息（通过MediaInfo通道传输）
+      const unlistenMediaInfo = await listen<string>('media_info', (event) => {
+        try {
+          const mediaInfo: MediaInfo = JSON.parse(event.payload);
+          handleMediaInfo(mediaInfo);
+        } catch (error) {
+          console.error('处理媒体信息失败:', error);
+        }
+      });
+
       // 保存所有取消监听函数
       unlistenRef.current = [
         unlistenVideo,
@@ -554,6 +593,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         unlistenAccept,
         unlistenReject,
         unlistenEnd,
+        unlistenMediaInfo,
       ];
     };
 
@@ -596,6 +636,98 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         break;
     }
   };
+
+  // ==================== 处理媒体信息 ====================
+
+  /**
+   * 处理接收到的媒体信息
+   * 通过MediaInfo通道传输的实时媒体状态信息
+   *
+   * @param info - 媒体信息对象
+   */
+  const handleMediaInfo = useCallback((info: MediaInfo) => {
+    const infoType = typeof info.info_type === 'string' ? info.info_type : (info.info_type as { Custom: string }).Custom;
+    console.log(`[MediaInfo] 收到媒体信息: type=${infoType}, data=${info.data}`);
+
+    try {
+      const data = JSON.parse(info.data);
+      switch (infoType) {
+        case 'ResolutionChange':
+          console.log(`[MediaInfo] 对方分辨率变化: ${JSON.stringify(data)}`);
+          break;
+        case 'BitrateChange':
+          console.log(`[MediaInfo] 对方码率调整: ${JSON.stringify(data)}`);
+          break;
+        case 'FrameRateStats':
+          console.log(`[MediaInfo] 对方帧率统计: ${JSON.stringify(data)}`);
+          break;
+        case 'NetworkQuality':
+          console.log(`[MediaInfo] 对方网络质量: ${JSON.stringify(data)}`);
+          break;
+        case 'EncoderInfo':
+          console.log(`[MediaInfo] 对方编码器信息: ${JSON.stringify(data)}`);
+          break;
+        default:
+          console.log(`[MediaInfo] 自定义媒体信息: ${infoType} - ${info.data}`);
+      }
+    } catch {
+      console.log(`[MediaInfo] 原始数据: type=${infoType}, data=${info.data}`);
+    }
+  }, []);
+
+  // ==================== 发送媒体信息 ====================
+
+  /**
+   * 发送媒体信息给对方
+   * 通过MediaInfo通道发送，与视频/音频数据通道分离
+   * 避免大数据帧阻塞控制信息
+   *
+   * @param infoType - 媒体信息类型
+   * @param data - 媒体信息数据
+   */
+  const sendMediaInfo = useCallback(async (infoType: string, data: Record<string, unknown>) => {
+    try {
+      await invoke('send_p2p_media_info', {
+        infoType,
+        data: JSON.stringify(data),
+        targetUuid: friendId,
+      });
+    } catch (error) {
+      console.error('发送媒体信息失败:', error);
+    }
+  }, [friendId]);
+
+  /**
+   * 启动媒体信息定时发送
+   * 每隔2秒通过MediaInfo通道发送一次帧率统计信息
+   */
+  const startMediaInfoReporting = useCallback(() => {
+    if (mediaInfoIntervalRef.current) {
+      clearInterval(mediaInfoIntervalRef.current);
+    }
+
+    mediaInfoIntervalRef.current = setInterval(() => {
+      if (mediaState.isInCall) {
+        sendMediaInfo('FrameRateStats', {
+          frameRate: mediaInfoStatsRef.current.frameRate,
+          videoBitrate: mediaInfoStatsRef.current.videoBitrate,
+          audioBitrate: mediaInfoStatsRef.current.audioBitrate,
+          latency: mediaInfoStatsRef.current.latency,
+          droppedFrames: mediaInfoStatsRef.current.droppedFrames,
+        });
+      }
+    }, 2000);
+  }, [mediaState.isInCall, sendMediaInfo]);
+
+  /**
+   * 停止媒体信息定时发送
+   */
+  const stopMediaInfoReporting = useCallback(() => {
+    if (mediaInfoIntervalRef.current) {
+      clearInterval(mediaInfoIntervalRef.current);
+      mediaInfoIntervalRef.current = null;
+    }
+  }, []);
 
   // ==================== 切换视频 ====================
 
@@ -670,6 +802,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 5. 调用关闭回调
    */
   const handleEndCall = useCallback(async () => {
+    // 停止媒体信息定时发送
+    stopMediaInfoReporting();
+
     // 停止视频录制器
     if (
       mediaRecorderRef.current &&
@@ -721,7 +856,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
     // 调用关闭回调
     onClose?.();
-  }, [friendId, onClose]);
+  }, [friendId, onClose, stopMediaInfoReporting]);
 
   // ==================== 退出隐私聊天 ====================
 

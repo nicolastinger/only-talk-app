@@ -44,8 +44,8 @@ use crate::cmd::notification_controller::{
 };
 use crate::cmd::p2p_controller::{
     close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
-    send_p2p_init_msg, send_p2p_media_config, send_p2p_media_control, send_p2p_text_msg,
-    send_p2p_video_call_end, send_p2p_video_call_invite,
+    send_p2p_init_msg, send_p2p_media_config, send_p2p_media_control, send_p2p_media_info,
+    send_p2p_text_msg, send_p2p_video_call_end, send_p2p_video_call_invite,
     send_p2p_video_call_response, send_p2p_video_config, send_p2p_video_frame, send_video_frame,
 };
 use crate::cmd::user_controller::{add_user_map, get_user_map};
@@ -63,8 +63,8 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_QUIC_USER_INFO: Arc<RwLock<HashMap<String, String>>> =
         Arc::new(RwLock::new(HashMap::new()));
-    pub static ref P2P_STREAM_SENDER: Arc<RwLock<HashMap<String, TargetSendStream>>> =
-        Arc::new(RwLock::new(HashMap::new()));
+    pub static ref P2P_STREAM_SENDER: DashMap<String, DashMap<String, TargetSendStream>> =
+        DashMap::new();
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_PRIVATE_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
@@ -138,6 +138,7 @@ pub fn run() {
             send_p2p_audio_frame,
             send_p2p_media_config,
             send_p2p_media_control,
+            send_p2p_media_info,
             send_p2p_text_msg,
             close_p2p_connection,
             send_p2p_video_call_invite,
