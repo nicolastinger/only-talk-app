@@ -214,7 +214,7 @@ pub async fn send_p2p_video_frame_service(
         let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
         // 锁作用范围最小化
         {
-            let mut guard = send_stream.try_lock()?;
+            let mut guard = send_stream.lock().await;
             guard.write_all(&video_data).await?;
         }
         Ok(())
@@ -311,7 +311,7 @@ pub async fn send_p2p_video_config_service(
             match get_sender(&uuid, &P2pChannelType::Default).await {
                 Ok(sender) => {
                     info!("发送p2p视频配置信息 {}", uuid);
-                    let mut guard = sender.try_lock()?;
+                    let mut guard = sender.lock().await;
                     guard.write_all(&p2p_data).await?;
                     return Ok(());
                 }
@@ -345,7 +345,7 @@ pub async fn send_p2p_text_msg_service(
 
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&text_data).await?;
     }
     
@@ -416,7 +416,7 @@ pub async fn send_p2p_audio_frame_service(
     {
         let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
         {
-            let mut guard = send_stream.try_lock()?;
+            let mut guard = send_stream.lock().await;
             guard.write_all(&audio_msg).await?;
         }
         Ok(())
@@ -450,7 +450,7 @@ pub async fn send_p2p_media_config_service(
             match get_sender(&uuid, &P2pChannelType::Default).await {
                 Ok(sender) => {
                     info!("发送p2p媒体配置信息 {}", uuid);
-                    let mut guard = sender.try_lock()?;
+                    let mut guard = sender.lock().await;
                     guard.write_all(&p2p_data).await?;
                     return Ok(());
                 }
@@ -517,7 +517,7 @@ pub async fn send_p2p_media_control_service(
     
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&control_msg).await?;
     }
     
@@ -584,7 +584,7 @@ pub async fn send_p2p_media_info_service(
     // 使用MediaInfo通道发送
     let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaInfo).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&info_msg).await?;
     }
     
@@ -647,7 +647,7 @@ pub async fn send_p2p_video_call_invite_service(
     // 发送邀请消息
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&invite_msg).await?;
     }
     
@@ -725,7 +725,7 @@ pub async fn send_p2p_video_call_response_service(
     // 发送响应消息
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&response_msg).await?;
     }
     
@@ -764,7 +764,7 @@ pub async fn send_p2p_video_call_end_service(
     // 发送结束消息
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&end_msg).await?;
     }
     
@@ -813,7 +813,7 @@ pub async fn send_p2p_file_data_service(
     // 使用File通道发送
     let send_stream = get_sender(&target_uuid, &P2pChannelType::File).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&file_msg).await?;
     }
 
@@ -859,7 +859,7 @@ pub async fn send_p2p_file_transfer_request_service(
     // 使用File通道发送
     let send_stream = get_sender(&target_uuid, &P2pChannelType::File).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&request_msg).await?;
     }
 
@@ -904,7 +904,7 @@ pub async fn send_p2p_file_transfer_response_service(
     // 使用File通道发送
     let send_stream = get_sender(&target_uuid, &P2pChannelType::File).await?;
     {
-        let mut guard = send_stream.try_lock()?;
+        let mut guard = send_stream.lock().await;
         guard.write_all(&response_msg).await?;
     }
 
