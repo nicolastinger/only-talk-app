@@ -18,19 +18,21 @@ import { nanoid } from 'nanoid';
  * 4. 利用NAT的"打孔"特性：一旦建立映射，双向通信都可进行
  * 5. 某些路由器支持hairpinning（环回），host候选也能工作
  *
- * 【优化策略】
- * 1. 大量STUN服务器：覆盖国内外、不同端口、不同提供商，提高获取公网IP的成功率
- * 2. 多端口探测：同一服务器使用多个端口（3478, 19302, 5349等）
- * 3. ICE候选池：预收集候选，加快连接建立
- * 4. ICE重启机制：连接失败时自动重启ICE
- * 5. 超时配置：合理的超时时间避免长时间等待
- * 6. 【关键】不过滤host候选：让WebRTC自动尝试所有可能的路径
+ * 【关键配置】
+ * - iceTransportPolicy: 'all' - 使用所有候选类型（host、srflx）
+ * - bundlePolicy: 'max-bundle' - 复用传输通道
+ * - iceCandidatePoolSize: 10 - 预收集10个候选
  *
  * 【重要说明】
  * - 不使用TURN/relay服务器（纯P2P）
  * - 只过滤relay候选，保留host和srflx候选
  * - WebRTC会自动按优先级尝试所有候选对
  * - 不要人为过滤候选类型，让浏览器自动决策
+ * 
+ * 【NAT3特殊要求】
+ * - 必须使用 Trickle ICE（渐进式候选交换）
+ * - 需要等待候选收集完成或收到足够候选后再开始连接
+ * - 可能需要多次 ICE 重启才能成功
  */
 const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -94,10 +96,11 @@ const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
     { urls: 'stun:stun.noc.ams-ix.net:3478' },
     { urls: 'stun:stun.noc.euro-ix.net:3478' },
   ],
-  iceTransportPolicy: 'all',
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require',
-  iceCandidatePoolSize: 10,
+  iceTransportPolicy: 'all', // 使用所有候选类型
+  bundlePolicy: 'max-bundle', // 最大复用
+  rtcpMuxPolicy: 'require', // 要求 RTCP 复用
+  iceCandidatePoolSize: 10, // 预收集候选池大小
+  // NAT3 关键：使用 Trickle ICE，不等待候选收集完成
 };
 
 /**
@@ -372,17 +375,27 @@ class WebRTCService {
    */
   async createConnection(friendId: string): Promise<RTCPeerConnection> {
     console.log(
-      `[WebRTCService.createConnection] 开始为 ${friendId} 创建连接...`,
+      `[WebRTCService.createConnection] 🚀 开始为 ${friendId} 创建连接...`,
     );
 
     const config = createWebRTCConfig();
+    console.log(`[WebRTCService.createConnection] WebRTC配置:`, {
+      iceServersCount: config.iceServers?.length || 0,
+      iceTransportPolicy: config.iceTransportPolicy,
+      bundlePolicy: config.bundlePolicy,
+      iceCandidatePoolSize: config.iceCandidatePoolSize,
+    });
+
     const connection = new RTCPeerConnection(config);
     console.log(
-      `[WebRTCService.createConnection] RTCPeerConnection 对象已创建`,
+      `[WebRTCService.createConnection] ✅ RTCPeerConnection 对象已创建`,
     );
 
     // 存储连接对象供后续使用
     this.connections.set(friendId, connection);
+
+    // 初始化ICE重启计数
+    this.iceRestartCount.set(friendId, 0);
 
     /**
      * ICE候选事件处理器
@@ -819,6 +832,38 @@ class WebRTCService {
   }
 
   /**
+   * 获取连接对象
+   * @param friendId 对端用户ID
+   * @returns RTCPeerConnection对象或undefined
+   */
+  getConnection(friendId: string): RTCPeerConnection | undefined {
+    return this.connections.get(friendId);
+  }
+
+  /**
+   * 获取所有连接的状态摘要
+   * @returns 连接状态摘要对象
+   */
+  getAllConnectionsSummary(): Record<string, any> {
+    const summary: Record<string, any> = {};
+    
+    this.connections.forEach((connection, friendId) => {
+      summary[friendId] = {
+        connectionState: connection.connectionState,
+        iceConnectionState: connection.iceConnectionState,
+        iceGatheringState: connection.iceGatheringState,
+        signalingState: connection.signalingState,
+        iceRestartCount: this.iceRestartCount.get(friendId) || 0,
+        hasLocalStream: !!this.localStream,
+        hasRemoteStream: this.remoteStreams.has(friendId),
+        dataChannelOpen: this.dataChannels.get(friendId)?.readyState === 'open',
+      };
+    });
+    
+    return summary;
+  }
+
+  /**
    * 打印详细的ICE连接诊断信息
    * @param friendId 对端用户ID
    * @param connection RTCPeerConnection对象
@@ -1050,6 +1095,45 @@ class WebRTCService {
   }
 
   /**
+   * 等待ICE候选收集完成
+   * 对NAT3环境很重要，确保收集到所有可能的候选
+   * 
+   * @param connection RTCPeerConnection对象
+   * @param timeout 超时时间（毫秒），默认5秒
+   * @returns Promise，当候选收集完成或超时时resolve
+   */
+  private async waitForIceGathering(
+    connection: RTCPeerConnection,
+    timeout: number = 5000,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      // 如果已经完成，直接返回
+      if (connection.iceGatheringState === 'complete') {
+        console.log('[WebRTCService.waitForIceGathering] ✅ ICE候选已收集完成');
+        resolve();
+        return;
+      }
+
+      console.log(`[WebRTCService.waitForIceGathering] ⏳ 等待ICE候选收集，当前状态: ${connection.iceGatheringState}`);
+
+      // 设置超时
+      const timer = setTimeout(() => {
+        console.log('[WebRTCService.waitForIceGathering] ⏰ 等待超时，继续执行');
+        resolve();
+      }, timeout);
+
+      // 监听收集完成事件
+      connection.onicegatheringstatechange = () => {
+        if (connection.iceGatheringState === 'complete') {
+          console.log('[WebRTCService.waitForIceGathering] ✅ ICE候选收集完成');
+          clearTimeout(timer);
+          resolve();
+        }
+      };
+    });
+  }
+
+  /**
    * 发起方创建offer
    *
    * 流程：
@@ -1129,6 +1213,30 @@ class WebRTCService {
     console.log(
       `[WebRTCService.createOffer] ✅ 本地描述已设置，连接状态: ${connection.connectionState}, ICE状态: ${connection.iceConnectionState}`,
     );
+
+    // 【NAT3关键】等待ICE候选收集完成
+    // 这确保offer中包含所有候选，对端可以立即尝试所有路径
+    console.log(`[WebRTCService.createOffer] ⏳ 等待ICE候选收集完成（NAT3环境需要）...`);
+    await this.waitForIceGathering(connection, 8000); // 等待最多8秒
+    
+    // 获取更新后的本地描述（包含所有候选）
+    const finalOffer = connection.localDescription;
+    if (finalOffer) {
+      console.log(`[WebRTCService.createOffer] ✅ ICE候选收集完成，最终SDP长度: ${finalOffer.sdp?.length || 0}`);
+      
+      // 统计最终候选数量
+      if (finalOffer.sdp) {
+        const candidateLines = finalOffer.sdp.split('\n').filter(line => line.startsWith('a=candidate:'));
+        console.log(`[WebRTCService.createOffer] 📊 最终包含 ${candidateLines.length} 个ICE候选`);
+        
+        // 分类统计
+        const hostCount = candidateLines.filter(line => line.includes(' host ')).length;
+        const srflxCount = candidateLines.filter(line => line.includes(' srflx ')).length;
+        console.log(`[WebRTCService.createOffer] 📊 候选类型分布: host=${hostCount}, srflx=${srflxCount}`);
+      }
+      
+      return finalOffer;
+    }
 
     return offer;
   }
@@ -1225,6 +1333,28 @@ class WebRTCService {
     console.log(
       `[WebRTCService.handleOffer] ✅ 本地描述已设置，连接状态: ${connection.connectionState}, ICE状态: ${connection.iceConnectionState}`,
     );
+
+    // 【NAT3关键】等待ICE候选收集完成
+    console.log(`[WebRTCService.handleOffer] ⏳ 等待ICE候选收集完成（NAT3环境需要）...`);
+    await this.waitForIceGathering(connection, 8000);
+    
+    // 获取更新后的本地描述（包含所有候选）
+    const finalAnswer = connection.localDescription;
+    if (finalAnswer) {
+      console.log(`[WebRTCService.handleOffer] ✅ ICE候选收集完成，最终SDP长度: ${finalAnswer.sdp?.length || 0}`);
+      
+      // 统计最终候选数量
+      if (finalAnswer.sdp) {
+        const candidateLines = finalAnswer.sdp.split('\n').filter(line => line.startsWith('a=candidate:'));
+        console.log(`[WebRTCService.handleOffer] 📊 最终包含 ${candidateLines.length} 个ICE候选`);
+        
+        const hostCount = candidateLines.filter(line => line.includes(' host ')).length;
+        const srflxCount = candidateLines.filter(line => line.includes(' srflx ')).length;
+        console.log(`[WebRTCService.handleOffer] 📊 候选类型分布: host=${hostCount}, srflx=${srflxCount}`);
+      }
+      
+      return finalAnswer;
+    }
 
     return answer;
   }
