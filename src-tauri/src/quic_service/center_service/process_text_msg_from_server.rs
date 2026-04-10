@@ -339,17 +339,6 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
                                 parsed.candidate_type, parsed.ip, parsed.port
                             );
                             
-                            if parsed.candidate_type != "relay" {
-                                let local_uuid = {
-                                    let guard = GLOBAL_QUIC_USER_INFO.read().await;
-                                    guard.get("uuid").cloned().unwrap_or_default()
-                                };
-                                
-
-                                if let Err(e) = send_udp_ping_for_webrtc(&parsed.ip, parsed.port, &local_uuid).await {
-                                    warn!("发送 UDP ping 失败: {}", e);
-                                }
-                            }
                         } else {
                             warn!("parse_ice_candidate 返回 None, 无法解析 candidate 字符串: {}", candidate_str);
                         }
@@ -394,42 +383,4 @@ fn parse_ice_candidate(candidate_str: &str) -> Option<ParsedCandidate> {
         port,
         candidate_type,
     })
-}
-
-async fn send_udp_ping_for_webrtc(
-    remote_ip: &str,
-    remote_port: u16,
-    local_uuid: &str,
-) -> Result<(), anyhow::Error> {
-    let remote_addr: SocketAddr = format!("{}:{}", remote_ip, remote_port).parse()?;
-
-    info!("WebRTC NAT 穿透发送 UDP 信号: 目标 {}", remote_addr);
-
-    let sockets: Vec<UdpSocket> = (20000..20010)
-        .filter_map(|port| {
-            let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().ok()?;
-            UdpSocket::bind(addr).ok()
-        })
-        .collect();
-
-    if sockets.is_empty() {
-        warn!("无法绑定任何 UDP 端口");
-        return Err(anyhow!("无法绑定任何 UDP 端口"));
-    }
-
-    info!("成功绑定 {} 个 UDP 端口用于打洞", sockets.len());
-
-    let ping_data = format!("WEBRTC_HOLE_PUNCH:{}", local_uuid);
-
-    for socket in &sockets {
-        match socket.send_to(ping_data.as_bytes(), remote_addr) {
-            Ok(_) => {}
-            Err(e) => {
-                warn!("UDP 发送错误: {}", e);
-            }
-        }
-    }
-
-    info!("WebRTC NAT 打洞 UDP 信号已发送，目标: {}", remote_addr);
-    Ok(())
 }
