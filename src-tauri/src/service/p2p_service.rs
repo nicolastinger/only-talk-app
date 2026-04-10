@@ -626,6 +626,7 @@ pub async fn send_p2p_video_call_invite_service(
 
 /// 发送视频通话响应
 /// 当用户接受或拒绝视频通话邀请时发送
+/// 添加重试逻辑等待P2P连接就绪，解决首次通话时连接未建立导致响应丢失的问题
 /// 
 /// # 参数
 /// - `target_uuid`: 目标用户UUID (邀请者)
@@ -691,15 +692,24 @@ pub async fn send_p2p_video_call_response_service(
         from_uuid,
     )?;
     
-    // 发送响应消息
-    let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
-    {
-        let mut guard = send_stream.lock().await;
-        guard.write_all(&response_msg).await?;
+    // 重试逻辑：等待P2P连接就绪（最多10秒）
+    // 解决首次通话时P2P连接尚未建立导致响应丢失的问题
+    for attempt in 0..10 {
+        match get_sender(&target_uuid, &P2pChannelType::Default).await {
+            Ok(sender) => {
+                info!("视频通话响应发送成功 (尝试{}/{})", attempt + 1, 10);
+                let mut guard = sender.lock().await;
+                guard.write_all(&response_msg).await?;
+                return Ok(());
+            }
+            Err(e) => {
+                warn!("等待P2P连接就绪... 尝试{}/10: {}", attempt + 1, e);
+            }
+        };
+        tokio::time::sleep(Duration::from_secs(1)).await;
     }
     
-    info!("视频通话响应发送完成");
-    Ok(())
+    Err(anyhow!("发送视频通话响应失败: P2P连接在10秒内未就绪"))
 }
 
 /// 发送视频通话结束通知

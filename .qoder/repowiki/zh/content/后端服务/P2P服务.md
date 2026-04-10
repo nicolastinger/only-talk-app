@@ -1,37 +1,24 @@
 # P2P服务
 
 <cite>
-**本文引用的文件**
+**本文档引用的文件**
+- [p2p_models.rs](file://src-tauri/src/entity/p2p_models.rs)
 - [p2p_quic_service.rs](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs)
 - [p2p_stream_quic_client.rs](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs)
 - [p2p_stream_quic_server.rs](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs)
-- [mod.rs](file://src-tauri/src/quic_service/p2p_service/mod.rs)
-- [models.rs](file://src-tauri/src/quic_service/models.rs)
-- [p2p_models.rs](file://src-tauri/src/entity/p2p_models.rs)
-- [quic_connection.rs](file://src-tauri/src/entity/quic_connection.rs)
-- [message_types.rs](file://src-tauri/src/utils/message_types.rs)
-- [p2p_controller.rs](file://src-tauri/src/cmd/p2p_controller.rs)
 - [p2p_service.rs](file://src-tauri/src/service/p2p_service.rs)
-- [dangerous_configuration.rs](file://src-tauri/src/quic_service/dangerous_configuration.rs)
-- [safe_configuration.rs](file://src-tauri/src/quic_service/safe_configuration.rs)
-- [global_static_str.rs](file://src-tauri/src/utils/global_static_str.rs)
-- [udp_utils.rs](file://src-tauri/src/quic_service/udp_utils.rs)
-- [InitP2pMsg.tsx](file://apps/pc/src/components/P2p/InitP2pMsg.tsx)
-- [ProcessQuicP2pStream.tsx](file://apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx)
+- [p2p_controller.rs](file://src-tauri/src/cmd/p2p_controller.rs)
 - [index.tsx](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx)
 - [useP2pMessageApi.ts](file://apps/pc/src/hooks/useP2pMessageApi.ts)
-- [FileSelectorTest.tsx](file://apps/pc/src/pages/TestComponent/components/FileSelectorTest.tsx)
-- [NAT3_WEBRTC_FIX.md](file://NAT3_WEBRTC_FIX.md)
 </cite>
 
 ## 更新摘要
 **所做更改**
-- 新增P2P文件传输功能章节，详细介绍文件传输通道类型和协议
-- 更新双通道架构部分，添加File通道的详细说明
-- 新增文件传输协议和数据模型章节
-- 更新消息类型定义，添加文件传输相关常量
-- 新增文件传输事件监听和处理章节
-- 更新故障排查指南，添加文件传输相关问题诊断
+- 新增轻量级媒体帧协议（MediaFrameHeader）章节，详细介绍新的视频音频传输优化方案
+- 更新媒体传输章节，说明MediaData通道采用的新协议格式
+- 新增媒体帧发送服务实现细节
+- 更新性能考量，突出新协议的性能优势
+- 更新故障排查指南，添加媒体帧协议相关问题诊断
 
 ## 目录
 1. [简介](#简介)
@@ -39,7 +26,7 @@
 3. [核心组件](#核心组件)
 4. [架构总览](#架构总览)
 5. [详细组件分析](#详细组件分析)
-6. [文件传输功能](#文件传输功能)
+6. [轻量级媒体帧协议](#轻量级媒体帧协议)
 7. [依赖关系分析](#依赖关系分析)
 8. [性能考量](#性能考量)
 9. [故障排查指南](#故障排查指南)
@@ -53,7 +40,8 @@
 - QUIC 协议在 P2P 通信中的应用
 - NAT 穿越与 UDP 端口探测策略
 - 数据模型设计与前后端差异
-- **新增** 双通道 QUIC 架构支持媒体信息通道，包括 Default 通道和专用的 MediaInfo 通道
+- **新增** 轻量级媒体帧协议（MediaFrameHeader）替代原有 TextQuicMsg 序列化方案，显著提升视频音频传输性能
+- **新增** 四通道 QUIC 架构支持媒体信息通道，包括 Default 通道、MediaInfo 通道、MediaData 通道和 File 通道
 - **新增** 完整的媒体统计跟踪系统，支持分辨率变化、码率调整、帧率统计、网络质量等实时监控
 - **新增** P2P 文件传输功能，支持文件分片传输和握手协议
 - 完整流程、错误处理与性能优化建议
@@ -70,35 +58,35 @@ P2P 服务主要分布在以下模块：
 ```mermaid
 graph TB
 subgraph "前端(PC)"
-FE_Init["InitP2pMsg.tsx<br/>发起UDP P2P初始化"]
-FE_Listen["ProcessQuicP2pStream.tsx<br/>监听P2P请求事件"]
-FE_MediaInfo["PrivacyVideoCall/index.tsx<br/>媒体统计跟踪与信息发送"]
-FE_FileSel["FileSelectorTest.tsx<br/>文件选择与传输"]
+FE_Init["PrivacyVideoCall/index.tsx<br/>发起P2P请求"]
+FE_Listen["useP2pMessageApi.ts<br/>监听P2P事件"]
+FE_MediaInfo["PrivacyVideoCall/index.tsx<br/>媒体统计跟踪"]
+FE_Video["CameraControl.tsx<br/>视频帧发送"]
+FE_Audio["CameraControl.tsx<br/>音频帧发送"]
 end
 subgraph "Tauri命令层"
-CMD["p2p_controller.rs<br/>Tauri命令入口<br/>新增文件传输命令"]
+CMD["p2p_controller.rs<br/>Tauri命令入口<br/>新增媒体帧命令"]
 end
 subgraph "服务层"
-SVC["service/p2p_service.rs<br/>P2P业务编排<br/>新增文件传输服务"]
+SVC["service/p2p_service.rs<br/>P2P业务编排<br/>新增媒体帧服务"]
 UDP["udp_utils.rs<br/>UDP端口探测"]
 end
 subgraph "QUIC层"
 CLI["p2p_stream_quic_client.rs<br/>P2P客户端<br/>四通道支持"]
 SRV["p2p_stream_quic_server.rs<br/>P2P服务端<br/>四通道支持"]
-CORE["p2p_quic_service.rs<br/>消息处理与心跳<br/>文件传输事件处理"]
+CORE["p2p_quic_service.rs<br/>消息处理与心跳<br/>新增媒体帧处理"]
 CFG_D["dangerous_configuration.rs<br/>服务端不安全配置"]
 CFG_S["safe_configuration.rs<br/>客户端安全配置"]
 end
 subgraph "实体与消息"
-MODELS["p2p_models.rs<br/>P2P数据模型<br/>新增文件传输模型"]
-TYPES["message_types.rs<br/>消息类型常量<br/>新增文件传输类型"]
-QCONN["quic_connection.rs<br/>QUIC连接模型"]
+MODELS["p2p_models.rs<br/>P2P数据模型<br/>新增MediaFrameHeader"]
 GLOB["global_static_str.rs<br/>全局静态常量"]
 end
 FE_Init --> CMD
 FE_Listen --> CMD
 FE_MediaInfo --> CMD
-FE_FileSel --> CMD
+FE_Video --> CMD
+FE_Audio --> CMD
 CMD --> SVC
 SVC --> UDP
 SVC --> CLI
@@ -107,37 +95,32 @@ CLI --> CORE
 SRV --> CORE
 CORE --> MODELS
 SVC --> MODELS
-CMD --> TYPES
+CMD --> MODELS
 CLI --> CFG_D
 SRV --> CFG_S
-CORE --> QCONN
+CORE --> MODELS
 SVC --> GLOB
 ```
 
 **图表来源**
-- [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
-- [p2p_quic_service.rs:245-273](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L245-L273)
-- [p2p_models.rs:121-171](file://src-tauri/src/entity/p2p_models.rs#L121-L171)
-- [message_types.rs:77-86](file://src-tauri/src/utils/message_types.rs#L77-L86)
-
-**章节来源**
-- [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
-- [p2p_quic_service.rs:245-273](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L245-L273)
-- [p2p_models.rs:121-171](file://src-tauri/src/entity/p2p_models.rs#L121-L171)
-- [message_types.rs:77-86](file://src-tauri/src/utils/message_types.rs#L77-L86)
+- [p2p_controller.rs:55-226](file://src-tauri/src/cmd/p2p_controller.rs#L55-L226)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
 
 ## 核心组件
-- **双通道 QUIC 架构**
+- **四通道 QUIC 架构**
   - Default 通道：用于信令、文本消息、控制命令等传统 P2P 业务
   - MediaInfo 通道：专用的媒体信息通道，传输分辨率变化、码率调整、帧率统计等控制信令
-  - MediaData 通道：专门用于视频帧和音频帧的传输
+  - MediaData 通道：专门用于视频帧和音频帧的传输，采用轻量级 MediaFrameHeader 协议
   - File 通道：专门用于文件传输，支持大文件分片传输和握手协议
+- **轻量级媒体帧协议**
+  - MediaFrameHeader 固定5字节头部：frame_type(1字节) + data_len(4字节)
+  - 替代通用的 HeadMsg(9字节) + TextQuicMsg(bincode序列化) 方案
+  - 显著减少序列化开销和内存拷贝
+  - 避免了对 Vec<u8> 的 bincode 长度前缀编码
 - **媒体统计跟踪系统**
   - 实时帧率统计、码率监控、网络延迟测量、丢帧计数
   - 每2秒自动上报媒体状态信息到对端
@@ -148,7 +131,7 @@ SVC --> GLOB
   - 传输ID：每个文件传输分配唯一ID，关联所有分片
   - MIME类型：支持文件类型识别和处理
 - **QUIC P2P 服务核心**
-  - 发送通道与心跳：通过异步通道将视频帧转为文本消息并通过 QUIC 发送；周期性发送心跳维持连接活性。
+  - 发送通道与心跳：通过异步通道将视频帧转为轻量级帧并通过 QUIC 发送；周期性发送心跳维持连接活性。
   - 消息分发：根据消息类型分发到视频/音频数据、媒体配置、媒体控制、媒体信息、文件传输、文本消息、信令等处理分支。
 - **P2P 客户端/服务端**
   - 客户端：建立到服务器的 QUIC 连接，开启四个双向流，发送验证消息，注册发送通道，循环读取并处理消息。
@@ -159,25 +142,26 @@ SVC --> GLOB
   - 媒体配置与控制：发送媒体配置、媒体控制命令（如开关视频/音频、暂停/恢复、结束通话）。
   - **新增** 媒体信息服务：通过 MediaInfo 通道发送媒体状态信息，支持多种媒体统计类型。
   - **新增** 文件传输服务：发送文件分片、文件传输请求和响应，实现完整的文件传输协议。
+  - **新增** 媒体帧发送服务：使用 MediaFrameHeader 协议发送视频帧和音频帧，替代原有的 TextQuicMsg 序列化方案。
   - 视频通话邀请/响应/结束：发送邀请、接受/拒绝、结束通话通知。
 - **控制器与前端**
   - Tauri 命令：封装发送视频帧、音频帧、文本消息、关闭连接、发送媒体配置/控制、视频通话邀请/响应/结束、**新增** 发送媒体信息、**新增** 文件传输等。
-  - 前端组件：演示如何发起 UDP P2P 初始化与监听 P2P 请求事件，实现媒体统计跟踪，**新增** 文件选择和传输功能。
+  - 前端组件：演示如何发起 UDP P2P 初始化与监听 P2P 请求事件，实现媒体统计跟踪，**新增** 视频帧和音频帧发送功能。
 
 **章节来源**
-- [p2p_models.rs:52-80](file://src-tauri/src/entity/p2p_models.rs#L52-L80)
-- [p2p_models.rs:121-171](file://src-tauri/src/entity/p2p_models.rs#L121-L171)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
-- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
+- [p2p_models.rs:135-151](file://src-tauri/src/entity/p2p_models.rs#L135-L151)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
+- [p2p_controller.rs:55-226](file://src-tauri/src/cmd/p2p_controller.rs#L55-L226)
+- [index.tsx:680-879](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L680-L879)
 
 ## 架构总览
 P2P 通信采用"服务器中转 + QUIC 直连"的混合架构，现已升级为四通道架构：
 - 初始阶段：通过服务器中转完成 P2P 初始化与地址交换，随后进行 NAT 穿越探测。
 - 建立阶段：若 NAT 类型允许直连，直接建立 QUIC 四个双向流；否则通过服务器中继。
-- 传输阶段：媒体数据与信令通过 QUIC 流传输，心跳维持连接活性，媒体信息通过专用通道传输，**新增** 文件传输通过 File 通道进行分片传输。
+- 传输阶段：媒体数据与信令通过 QUIC 流传输，心跳维持连接活性，媒体信息通过专用通道传输，**新增** 文件传输通过 File 通道进行分片传输，**新增** 媒体帧通过 MediaData 通道采用轻量级协议传输。
 
 ```mermaid
 sequenceDiagram
@@ -187,9 +171,12 @@ participant SVC as "业务服务(p2p_service.rs)"
 participant SRV as "P2P服务端(p2p_stream_quic_server.rs)"
 participant CLI as "P2P客户端(p2p_stream_quic_client.rs)"
 participant CORE as "QUIC核心(p2p_quic_service.rs)"
-FE->>CMD : 发起P2P请求/发送媒体配置/发送媒体信息/文件传输
+FE->>CMD : 发送视频帧/音频帧
+CMD->>SVC : 调用媒体帧发送服务
+SVC->>CORE : 使用MediaFrameHeader发送帧
+CORE->>FE : 事件通知(video_frame/audio_frame)
+FE->>CMD : 发送媒体配置/媒体信息/文件传输
 CMD->>SVC : 调用业务服务
-SVC->>SVC : 探测IPv4/IPv6端口并发送UDP"ping"
 SVC->>SRV : 启动服务端监听(4个通道)
 SVC->>CLI : 启动客户端连接(4个通道)
 CLI->>CORE : 注册发送通道/发送验证消息(Default通道)
@@ -198,40 +185,78 @@ CORE->>FE : 事件通知(视频/音频/媒体信息/文件传输/信令)
 ```
 
 **图表来源**
-- [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_quic_service.rs:245-273](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L245-L273)
+- [p2p_controller.rs:55-226](file://src-tauri/src/cmd/p2p_controller.rs#L55-L226)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
 
 ## 详细组件分析
 
-### 双通道 QUIC 架构
+### 四通道 QUIC 架构
 
 #### 通道类型与分配策略
 - **Default 通道 (流0)**：用于传统 P2P 业务，包括视频通话邀请、接受/拒绝、结束通知、文本消息等
 - **MediaInfo 通道 (流1)**：专用媒体信息通道，传输分辨率变化、码率调整、帧率统计、网络质量等控制信令
-- **MediaData 通道 (流2)**：专门用于视频帧和音频帧的传输
+- **MediaData 通道 (流2)**：专门用于视频帧和音频帧的传输，采用轻量级 MediaFrameHeader 协议
 - **File 通道 (流3)**：专门用于文件传输，支持大文件分片传输和握手协议
 
 ```mermaid
 flowchart TD
 Start(["QUIC连接建立"]) --> OpenDefault["打开Default通道(流0)<br/>用于信令和控制"]
 OpenDefault --> OpenMediaInfo["打开MediaInfo通道(流1)<br/>用于媒体统计信息"]
-OpenMediaInfo --> OpenMediaData["打开MediaData通道(流2)<br/>用于音视频数据"]
+OpenMediaInfo --> OpenMediaData["打开MediaData通道(流2)<br/>用于音视频数据<br/>采用轻量级协议"]
 OpenMediaData --> OpenFile["打开File通道(流3)<br/>用于文件传输"]
 OpenFile --> Heartbeat["仅Default通道发送心跳"]
 Heartbeat --> Active["连接活跃状态"]
 ```
 
 **图表来源**
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_stream_quic_client.rs:101-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L135)
+- [p2p_stream_quic_server.rs:133-140](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L140)
 
 **章节来源**
-- [p2p_models.rs:52-80](file://src-tauri/src/entity/p2p_models.rs#L52-L80)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_models.rs:135-151](file://src-tauri/src/entity/p2p_models.rs#L135-L151)
+- [p2p_stream_quic_client.rs:101-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L135)
+- [p2p_stream_quic_server.rs:133-140](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L140)
+
+### 轻量级媒体帧协议
+
+#### MediaFrameHeader 数据结构
+- **固定5字节头部布局**：[frame_type: u8][data_len: u32(大端序)]
+- **frame_type**：1=视频帧，2=音频帧
+- **data_len**：帧数据长度（字节数）
+- **性能优势**：
+  - 头部仅5字节（vs 原方案9字节HeadMsg + bincode序列化的TextQuicMsg开销）
+  - 帧体直接写入原始二进制数据，无需bincode序列化
+  - 省去了nano_id/recv_user/send_user/timestamp等媒体帧不需要的字段
+  - 避免了对Vec<u8>的bincode长度前缀编码
+
+#### 协议格式与处理流程
+```mermaid
+sequenceDiagram
+participant SVC as "业务服务"
+participant CORE as "QUIC核心"
+participant NET as "网络传输"
+SVC->>CORE : send_media_frame(Video, frame_data)
+CORE->>CORE : MediaFrameHeader : : build_frame(Video, data_len)
+CORE->>NET : 写入5字节头部
+NET-->>NET : 写入原始帧数据
+NET-->>CORE : 传输完成
+CORE->>CORE : process_media_data_channel()
+CORE->>CORE : 读取5字节头部
+CORE->>CORE : 解析frame_type和data_len
+CORE->>NET : 读取精确长度的帧数据
+CORE->>SVC : 发送video_frame事件
+```
+
+**图表来源**
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
+
+**章节来源**
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
 
 ### 媒体统计跟踪系统
 
@@ -261,20 +286,21 @@ EndCall -- 是 --> Stop["停止定时器并清理"]
 ```
 
 **图表来源**
-- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
-- [p2p_service.rs:544-593](file://src-tauri/src/service/p2p_service.rs#L544-L593)
+- [index.tsx:704-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L704-L720)
+- [p2p_service.rs:395-449](file://src-tauri/src/service/p2p_service.rs#L395-L449)
 
 **章节来源**
-- [p2p_models.rs:84-109](file://src-tauri/src/entity/p2p_models.rs#L84-L109)
-- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
-- [p2p_service.rs:544-593](file://src-tauri/src/service/p2p_service.rs#L544-L593)
+- [p2p_models.rs:164-192](file://src-tauri/src/entity/p2p_models.rs#L164-L192)
+- [index.tsx:704-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L704-L720)
+- [p2p_service.rs:395-449](file://src-tauri/src/service/p2p_service.rs#L395-L449)
 
 ### QUIC P2P 核心服务
-- 异步发送通道与视频帧处理
-  - 使用异步通道将视频帧数据排队，后台任务统一序列化为文本消息并通过 QUIC 发送。
+- 异步发送通道与媒体帧处理
+  - 使用异步通道将视频帧数据通过轻量级 MediaFrameHeader 协议排队，后台任务统一发送。
   - 通过全局映射维护每条目标用户的发送流，按 UUID 和通道类型获取发送通道。
 - 消息处理与事件派发
   - 根据消息类型分发到不同处理分支：视频/音频数据、媒体配置、媒体控制、**新增** 媒体信息、**新增** 文件传输、文本消息、信令等。
+  - **新增** MediaData 通道采用专用接收循环，使用 MediaFrameHeader 协议处理媒体帧。
   - 通过 Tauri 事件向前端派发，如 video_frame、audio_frame、media_config、media_control、**新增** media_info、**新增** p2p_file_data、**新增** p2p_file_transfer_request、**新增** p2p_file_transfer_response、p2p_text_message 等。
 - 心跳保活
   - 周期性发送心跳消息，检查连接活跃状态，异常时停止发送并清理资源。
@@ -327,6 +353,7 @@ Warn --> End
 - 消息处理
   - 循环读取服务器返回的消息，调用核心服务的消息处理函数，派发前端事件。
   - **新增** 为每个通道启动独立的接收任务，避免阻塞。
+  - **新增** MediaData 通道使用专用接收循环，处理轻量级帧格式。
 - 心跳保活
   - 仅对 Default 通道发送心跳，周期性发送心跳，连接关闭时退出。
 
@@ -347,15 +374,17 @@ CLI->>CORE : 仅Default通道发送心跳
 loop 各通道独立接收
 SRV-->>CLI : Default通道消息
 CLI->>CORE : process_rec_msg()
+SRV-->>CLI : MediaData通道消息
+CLI->>CORE : process_media_data_channel()
 end
 ```
 
 **图表来源**
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_quic_service.rs:319-354](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L319-L354)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
 
 **章节来源**
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
 
 ### P2P 服务端
 - 连接接受
@@ -365,6 +394,7 @@ end
   - 仅对 Default 通道发送心跳
 - 消息处理
   - 循环读取客户端消息，调用核心服务的消息处理函数，派发前端事件。
+  - **新增** MediaData 通道使用专用接收循环，处理轻量级帧格式。
 
 ```mermaid
 sequenceDiagram
@@ -381,15 +411,17 @@ SRV->>CORE : 注册File通道
 loop 各通道独立接收
 CLI-->>SRV : Default通道消息
 SRV->>CORE : process_rec_msg()
+CLI-->>SRV : MediaData通道消息
+SRV->>CORE : process_media_data_channel()
 end
 ```
 
 **图表来源**
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
-- [p2p_quic_service.rs:319-354](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L319-L354)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
 
 **章节来源**
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
 
 ### 业务服务（NAT 穿越与媒体协商）
 - P2P 初始化
@@ -400,6 +432,10 @@ end
 - 媒体配置与控制
   - 发送媒体配置（视频/音频参数、缓冲策略），发送媒体控制命令（开关、暂停/恢复、结束通话）。
   - **新增** 通过 MediaInfo 通道发送媒体状态信息，避免阻塞主数据通道。
+- **新增** 媒体帧发送服务
+  - 使用轻量级 MediaFrameHeader 协议发送视频帧和音频帧
+  - 直接使用原始二进制数据，避免 bincode 序列化开销
+  - 减少内存分配和拷贝操作
 - **新增** 文件传输服务
   - 发送文件分片数据：将大文件切分为多个分片，每个分片独立发送
   - 文件传输请求：发送方先发送请求，等待接收方确认
@@ -434,12 +470,12 @@ T --> U["文件传输完成"]
 ```
 
 **图表来源**
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
 
 **章节来源**
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
 
 ### 数据模型与消息类型
 - **P2P 通道类型**
@@ -454,6 +490,10 @@ T --> U["文件传输完成"]
   - **P2pFileData**：文件分片数据，包含文件名、MIME类型、总大小、分片索引、总分片数、分片数据、传输ID
   - **P2pFileTransferRequest**：文件传输请求，包含文件名、MIME类型、总大小、总分片数、传输ID、时间戳
   - **P2pFileTransferResponse**：文件传输响应，包含传输ID、接受状态、时间戳
+- **P2P 媒体帧模型**
+  - **MediaFrameType**：媒体帧类型枚举，Video=1，Audio=2
+  - **MediaFrameHeader**：轻量级帧头部，固定5字节，包含帧类型和数据长度
+  - **MEDIA_FRAME_HEADER_SIZE**：常量，值为5
 - **P2P 数据模型**
   - 初始化消息、用户地址信息、视频/音频数据包、媒体配置、媒体控制命令、视频通话邀请/响应/状态等。
 - **消息类型常量**
@@ -467,18 +507,16 @@ class P2pChannelType {
 +MediaData
 +File
 }
-class P2pMediaInfo {
-+P2pMediaInfoType info_type
-+String data
-+u64 timestamp
+class MediaFrameType {
++Video = 1
++Audio = 2
 }
-class P2pMediaInfoType {
-+ResolutionChange
-+BitrateChange
-+FrameRateStats
-+NetworkQuality
-+EncoderInfo
-+Custom(String)
+class MediaFrameHeader {
++MediaFrameType frame_type
++u32 data_len
++to_bytes() [5字节数组]
++from_bytes() MediaFrameHeader
++build_frame() Vec<u8>
 }
 class P2pFileData {
 +String uuid
@@ -503,206 +541,197 @@ class P2pFileTransferResponse {
 +bool accept
 +u64 timestamp
 }
-class P2pInitMsg {
-+String request_uuid
-+String accept_uuid
-+String request_token
-+bool accept
-+u8 ip_type
-+u8 step
-+bool is_server
-}
-class UserAddressInfo {
-+String uuid
-+String address
-+String token
-+u8 ip_type
-+String target_uuid
-+u8 nat_type
-+bool is_server
-}
 ```
 
 **图表来源**
-- [p2p_models.rs:52-171](file://src-tauri/src/entity/p2p_models.rs#L52-L171)
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
+- [p2p_models.rs:135-151](file://src-tauri/src/entity/p2p_models.rs#L135-L151)
+- [p2p_models.rs:207-257](file://src-tauri/src/entity/p2p_models.rs#L207-L257)
 
 **章节来源**
-- [p2p_models.rs:52-171](file://src-tauri/src/entity/p2p_models.rs#L52-L171)
-- [message_types.rs:1-124](file://src-tauri/src/utils/message_types.rs#L1-L124)
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
+- [p2p_models.rs:135-151](file://src-tauri/src/entity/p2p_models.rs#L135-L151)
+- [p2p_models.rs:207-257](file://src-tauri/src/entity/p2p_models.rs#L207-L257)
+- [p2p_models.rs:164-192](file://src-tauri/src/entity/p2p_models.rs#L164-L192)
 
 ### 前后端实现差异与交互
 - 前端
   - 发起 P2P 请求：通过 Tauri invoke 调用 send_p2p_init_msg。
   - 监听 P2P 请求事件：监听 listen_p2p_request，解析 P2P 初始化消息列表。
   - **新增** 媒体统计跟踪：通过 send_p2p_media_info 命令发送媒体状态信息。
+  - **新增** 视频帧发送：通过 send_p2p_video_frame 或 send_video_frame 命令发送视频帧数据。
+  - **新增** 音频帧发送：通过 send_p2p_audio_frame 命令发送音频帧数据。
   - **新增** 文件传输：通过文件选择器选择文件，发送文件传输请求，接收文件传输响应，分片发送文件数据。
 - 后端
   - 通过 Tauri 命令层暴露统一接口，封装业务逻辑与 QUIC 交互。
   - 通过事件向前端派发媒体数据与控制指令。
   - **新增** 媒体信息通道处理：通过 media_info 事件接收对端媒体状态。
+  - **新增** 媒体帧事件处理：通过 video_frame 和 audio_frame 事件接收媒体数据。
   - **新增** 文件传输事件处理：通过 p2p_file_data、p2p_file_transfer_request、p2p_file_transfer_response 事件处理文件传输相关消息。
 
 **章节来源**
-- [InitP2pMsg.tsx:1-35](file://apps/pc/src/components/P2p/InitP2pMsg.tsx#L1-L35)
-- [ProcessQuicP2pStream.tsx:1-34](file://apps/pc/src/components/P2p/ProcessQuicP2pStream.tsx#L1-L34)
-- [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
-- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
+- [index.tsx:680-879](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L680-L879)
 - [useP2pMessageApi.ts:1-114](file://apps/pc/src/hooks/useP2pMessageApi.ts#L1-L114)
+- [p2p_controller.rs:55-226](file://src-tauri/src/cmd/p2p_controller.rs#L55-L226)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
 
-## 文件传输功能
+## 轻量级媒体帧协议
 
-### 文件传输协议概述
-P2P 文件传输采用基于 QUIC 的四通道架构，通过 File 通道实现可靠的大文件传输。协议包含三个主要阶段：握手阶段、传输阶段和完成阶段。
+### 协议设计原理
+轻量级媒体帧协议（MediaFrameHeader）专为 MediaData 通道设计，旨在替代原有的 TextQuicMsg 序列化方案，显著提升视频音频传输性能。
 
-#### 文件传输协议流程
-```mermaid
-sequenceDiagram
-participant Sender as "发送方"
-participant FileChannel as "File通道"
-participant Receiver as "接收方"
-participant Core as "核心服务"
-Sender->>Core : 发送文件传输请求
-Core->>FileChannel : 通过File通道发送请求
-FileChannel-->>Receiver : 传输请求消息
-Receiver->>Core : 发送文件传输响应
-Core->>FileChannel : 通过File通道发送响应
-FileChannel-->>Sender : 传输响应消息
-alt 接收方接受传输
-loop 文件分片传输
-Sender->>Core : 发送文件分片数据
-Core->>FileChannel : 通过File通道发送分片
-FileChannel-->>Receiver : 传输分片消息
-Receiver->>Core : 确认接收
-Core->>FileChannel : 发送确认消息
-end
-end
+#### 协议优势
+- **头部尺寸优化**：固定5字节头部（frame_type + data_len），相比原方案减少4字节
+- **零拷贝友好**：帧体直接写入原始二进制数据，避免额外内存分配
+- **序列化优化**：省去 bincode 序列化开销，直接传输编码后的媒体数据
+- **字段精简**：去除 nano_id、recv_user、send_user、timestamp 等媒体帧不需要的字段
+
+#### 协议格式
+```
+[5字节头部] + [变长帧体]
+├── frame_type: 1字节 (1=视频, 2=音频)
+├── data_len: 4字节 (大端序, 字节数)
+└── frame_data: data_len字节 (原始媒体数据)
 ```
 
-**图表来源**
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_quic_service.rs:245-273](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L245-L273)
+### 协议实现细节
 
-### 文件传输数据模型
+#### MediaFrameHeader 结构体
+```rust
+#[derive(Debug, Clone)]
+pub struct MediaFrameHeader {
+    pub frame_type: MediaFrameType,
+    pub data_len: u32,
+}
 
-#### P2pFileData - 文件分片数据
-- **uuid**: 目标用户UUID
-- **file_name**: 文件名
-- **mime_type**: MIME类型（如 application/pdf, image/jpeg）
-- **total_size**: 文件总大小（字节）
-- **chunk_index**: 当前分片索引（从0开始）
-- **total_chunks**: 总分片数
-- **chunk_data**: 分片数据（字节数组）
-- **transfer_id**: 文件传输ID（关联同一次传输的所有分片）
+impl MediaFrameHeader {
+    /// 创建新的媒体帧头部
+    pub fn new(frame_type: MediaFrameType, data_len: u32) -> Self {
+        Self { frame_type, data_len }
+    }
 
-#### P2pFileTransferRequest - 文件传输请求
-- **file_name**: 文件名
-- **mime_type**: MIME类型
-- **total_size**: 文件总大小（字节）
-- **total_chunks**: 总分片数
-- **transfer_id**: 文件传输ID
-- **timestamp**: 时间戳
+    /// 将头部序列化为字节数组（5字节，零拷贝友好）
+    pub fn to_bytes(&self) -> [u8; 5] {
+        let mut buf = [0u8; 5];
+        buf[0] = self.frame_type as u8;
+        buf[1..5].copy_from_slice(&self.data_len.to_be_bytes());
+        buf
+    }
 
-#### P2pFileTransferResponse - 文件传输响应
-- **transfer_id**: 文件传输ID
-- **accept**: 是否接受传输
-- **timestamp**: 时间戳
+    /// 从字节数组反序列化头部
+    pub fn from_bytes(bytes: &[u8; 5]) -> Result<Self, anyhow::Error> {
+        let frame_type = MediaFrameType::try_from(bytes[0])?;
+        let data_len = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+        Ok(Self { frame_type, data_len })
+    }
 
-**章节来源**
-- [p2p_models.rs:121-171](file://src-tauri/src/entity/p2p_models.rs#L121-L171)
+    /// 构建完整的媒体帧数据（头部 + 帧体）
+    pub fn build_frame(frame_type: MediaFrameType, data: &[u8]) -> Vec<u8> {
+        let header = Self::new(frame_type, data.len() as u32);
+        let mut frame = Vec::with_capacity(5 + data.len());
+        frame.extend_from_slice(&header.to_bytes());
+        frame.extend_from_slice(data);
+        frame
+    }
+}
+```
 
-### 文件传输服务实现
-
-#### 文件分片发送服务
+#### 接收端处理流程
 ```mermaid
 flowchart TD
-Start(["send_p2p_file_data_service"]) --> GetSender["获取发送者UUID"]
-GetSender --> Serialize["序列化P2pFileData"]
-Serialize --> CreateMsg["创建文本消息"]
-CreateMsg --> GetStream["获取File通道发送流"]
-GetStream --> WriteData["写入分片数据"]
-WriteData --> Log["记录发送日志"]
-Log --> End(["完成"])
+Start(["process_media_data_channel"]) --> ReadHeader["读取5字节头部"]
+ReadHeader --> ParseHeader["解析frame_type和data_len"]
+ParseHeader --> ReadBody["精确读取data_len字节帧体"]
+ReadBody --> Dispatch{"帧类型?"}
+Dispatch --> |Video| EmitVideo["发送video_frame事件"]
+Dispatch --> |Audio| EmitAudio["发送audio_frame事件"]
+EmitVideo --> Loop["继续接收循环"]
+EmitAudio --> Loop
+Loop --> End(["结束"])
 ```
 
 **图表来源**
-- [p2p_service.rs:788-822](file://src-tauri/src/service/p2p_service.rs#L788-L822)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
 
-#### 文件传输请求服务
-发送方在发送文件数据前必须先发送传输请求，等待接收方确认。
+### 发送端服务实现
 
-#### 文件传输响应服务
-接收方收到传输请求后，通过响应服务回复接受或拒绝。
+#### send_media_frame 函数
+```rust
+pub async fn send_media_frame(
+    frame_type: MediaFrameType,
+    data: Vec<u8>,
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    let frame_data = MediaFrameHeader::build_frame(frame_type, &data);
+    let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
+    {
+        let mut guard = send_stream.lock().await;
+        guard.write_all(&frame_data).await?;
+    }
+    Ok(())
+}
+```
+
+#### 业务服务集成
+- **send_p2p_video_frame_service**：发送视频帧，调用 send_media_frame
+- **send_p2p_audio_frame_service**：发送音频帧，调用 send_media_frame
+- **send_video_frame**：本地缓存版本，直接调用 send_media_frame
 
 **章节来源**
-- [p2p_service.rs:788-913](file://src-tauri/src/service/p2p_service.rs#L788-L913)
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
 
-### 文件传输事件处理
+### 前端集成与事件处理
 
 #### 前端事件监听
-前端通过 Tauri 事件系统监听文件传输相关事件：
+```typescript
+// 监听视频帧事件
+const unlistenVideo = await listen<number[]>('video_frame', (event) => {
+  const videoFrame = Uint8Array.from(event.payload);
+  // 处理视频帧数据
+});
 
-- **p2p_file_data**: 接收文件分片数据
-- **p2p_file_transfer_request**: 接收文件传输请求
-- **p2p_file_transfer_response**: 接收文件传输响应
-
-#### 事件处理流程
-```mermaid
-flowchart TD
-Event["接收P2P事件"] --> CheckType{"事件类型?"}
-CheckType --> |p2p_file_data| HandleFile["处理文件分片数据"]
-CheckType --> |p2p_file_transfer_request| HandleReq["处理传输请求"]
-CheckType --> |p2p_file_transfer_response| HandleResp["处理传输响应"]
-HandleFile --> UpdateUI["更新文件传输UI"]
-HandleReq --> ShowDialog["显示传输确认对话框"]
-HandleResp --> ProcessResponse["处理响应结果"]
-UpdateUI --> End(["完成"])
-ShowDialog --> End
-ProcessResponse --> End
+// 监听音频帧事件  
+const unlistenAudio = await listen<number[]>('audio_frame', (event) => {
+  const audioFrame = Uint8Array.from(event.payload);
+  // 处理音频帧数据
+});
 ```
 
-**图表来源**
-- [p2p_quic_service.rs:245-273](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L245-L273)
+#### 媒体帧发送接口
+- **send_p2p_video_frame**：发送视频帧（通过业务服务）
+- **send_p2p_audio_frame**：发送音频帧（通过业务服务）
+- **send_video_frame**：本地缓存版本（直接调用核心服务）
 
 **章节来源**
-- [p2p_quic_service.rs:245-273](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L245-L273)
-
-### 文件传输命令接口
-
-#### Tauri 命令定义
-- **send_p2p_file_data**: 发送文件分片数据
-- **send_p2p_file_transfer_request**: 发送文件传输请求
-- **send_p2p_file_transfer_response**: 发送文件传输响应
-
-#### 命令参数与返回值
-- 所有命令接收 JSON 字符串和目标用户UUID
-- 返回 Result 类型，成功返回 Ok(()), 失败返回错误字符串
-- 内部自动进行 JSON 反序列化和错误处理
-
-**章节来源**
-- [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
+- [index.tsx:506-530](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L506-L530)
+- [p2p_controller.rs:55-115](file://src-tauri/src/cmd/p2p_controller.rs#L55-L115)
 
 ## 依赖关系分析
 - 组件耦合
-  - p2p_quic_service 依赖消息类型常量与实体模型，负责消息分发与事件派发，**新增** 文件传输事件处理。
+  - p2p_quic_service 依赖消息类型常量与实体模型，负责消息分发与事件派发，**新增** 媒体帧处理和文件传输事件处理。
   - p2p_stream_quic_client/server 依赖 QUIC 端点与核心服务，负责连接建立与消息循环，**支持四通道架构**。
-  - service/p2p_service 依赖控制器命令、UDP 工具与 QUIC 配置，负责业务编排与 NAT 穿越，**新增** 文件传输服务。
+  - service/p2p_service 依赖控制器命令、UDP 工具与 QUIC 配置，负责业务编排与 NAT 穿越，**新增** 媒体帧发送服务。
 - 外部依赖
   - QUIC（quinn）、TLS（rustls）、异步运行时（tokio）、事件系统（tauri Emitter）。
 - 潜在风险
   - 不安全证书配置仅用于开发环境，生产需替换为安全配置。
   - 心跳与连接状态需严格管理，避免僵尸连接与资源泄漏。
+  - **新增** 轻量级协议的兼容性测试，确保与现有系统的互操作性。
+  - **新增** 媒体帧协议的错误处理，避免协议解析失败导致的连接中断。
   - **新增** 文件传输的分片处理需要确保数据完整性。
   - **新增** 文件传输ID的唯一性保证，避免不同传输之间的数据混淆。
 
 ```mermaid
 graph LR
-CMD["p2p_controller.rs<br/>新增文件传输命令"] --> SVC["service/p2p_service.rs<br/>新增文件传输服务"]
+CMD["p2p_controller.rs<br/>新增媒体帧命令"] --> SVC["service/p2p_service.rs<br/>新增媒体帧服务"]
 SVC --> CLI["p2p_stream_quic_client.rs<br/>四通道支持"]
 SVC --> SRV["p2p_stream_quic_server.rs<br/>四通道支持"]
-CLI --> CORE["p2p_quic_service.rs<br/>文件传输事件处理"]
+CLI --> CORE["p2p_quic_service.rs<br/>新增媒体帧处理"]
 SRV --> CORE
 SVC --> UDP["udp_utils.rs"]
-CORE --> MODELS["p2p_models.rs<br/>新增文件传输模型"]
+CORE --> MODELS["p2p_models.rs<br/>新增MediaFrameHeader"]
 SVC --> CFG_D["dangerous_configuration.rs"]
 CLI --> CFG_S["safe_configuration.rs"]
 CORE --> QCONN["quic_connection.rs"]
@@ -710,19 +739,24 @@ SVC --> GLOB["global_static_str.rs"]
 ```
 
 **图表来源**
-- [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
-- [p2p_quic_service.rs:245-273](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L245-L273)
-- [p2p_models.rs:121-171](file://src-tauri/src/entity/p2p_models.rs#L121-L171)
+- [p2p_controller.rs:55-226](file://src-tauri/src/cmd/p2p_controller.rs#L55-L226)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
 
 **章节来源**
-- [mod.rs:1-4](file://src-tauri/src/quic_service/p2p_service/mod.rs#L1-L4)
-- [models.rs:1-11](file://src-tauri/src/quic_service/models.rs#L1-L11)
+- [p2p_models.rs:26-84](file://src-tauri/src/entity/p2p_models.rs#L26-L84)
+- [p2p_models.rs:135-151](file://src-tauri/src/entity/p2p_models.rs#L135-L151)
 
 ## 性能考量
-- **双通道架构优势**
+- **轻量级协议优势**
+  - **头部开销减少**：5字节固定头部 vs 9字节HeadMsg + bincode序列化
+  - **序列化成本降低**：避免 bincode 序列化和反序列化开销
+  - **内存分配优化**：直接传输原始二进制数据，减少内存拷贝
+  - **带宽利用率提升**：协议开销从约50%降低到约10%
+- **四通道架构优势**
   - 媒体信息通道与数据通道分离，避免大数据帧阻塞控制信息
   - 提升媒体统计信息的实时性和可靠性
   - 减少网络拥塞对控制信令的影响
@@ -742,6 +776,7 @@ SVC --> GLOB["global_static_str.rs"]
   - 异步发送通道具备容量限制，建议前端控制发送速率，避免阻塞。
   - **新增** 媒体信息通道独立处理，确保控制信息优先级。
   - **新增** 文件传输通道的背压处理，避免大文件阻塞其他通道。
+  - **新增** 媒体帧通道的高效处理，减少序列化开销。
 - **NAT 穿越效率**
   - IPv4/IPv6 双栈探测可提升成功率，但会增加网络负载，建议按需启用。
 - **媒体统计开销**
@@ -759,7 +794,9 @@ SVC --> GLOB["global_static_str.rs"]
 - **媒体数据丢失或卡顿**
   - 检查缓冲配置与网络带宽，适当降低分辨率/帧率/码率。
   - 关注心跳与连接状态，确保连接未被闲置超时关闭。
-  - **新增** 检查 MediaInfo 通道是否正常工作，避免媒体统计信息阻塞。
+  - **新增** 检查 MediaData 通道的轻量级协议处理是否正常。
+  - **新增** 验证 MediaFrameHeader 的序列化和反序列化是否正确。
+  - **新增** 监控视频帧和音频帧事件的接收情况。
 - **文件传输失败**
   - **传输请求失败**：检查文件传输请求消息格式和目标用户UUID
   - **传输响应失败**：确认接收方是否正确处理传输请求并发送响应
@@ -768,27 +805,52 @@ SVC --> GLOB["global_static_str.rs"]
   - **内存不足**：监控分片大小和并发数量，避免内存溢出
 - **事件未到达前端**
   - 确认事件名称与 payload 格式，检查前端监听逻辑是否正确。
+  - **新增** 检查 video_frame 和 audio_frame 事件是否正确处理。
   - **新增** 检查 p2p_file_data、p2p_file_transfer_request、p2p_file_transfer_response 事件是否正确处理。
 - **媒体统计异常**
   - 确认前端定时器是否正常运行，检查媒体统计数据收集逻辑。
   - **新增** 检查媒体信息通道的发送和接收是否正常。
 - **性能问题**
-  - **高CPU占用**：检查文件传输的分片处理和序列化开销
-  - **高内存使用**：监控文件传输过程中的内存占用情况
+  - **高CPU占用**：检查媒体帧处理的序列化开销和内存分配
+  - **高内存使用**：监控媒体帧传输过程中的内存占用情况
   - **网络拥塞**：观察传输速度和重传次数，调整分片大小和并发度
+  - **新增** 检查轻量级协议的性能提升效果
+  - **新增** 监控协议转换过程中的性能指标
 
 **章节来源**
-- [NAT3_WEBRTC_FIX.md:198-220](file://NAT3_WEBRTC_FIX.md#L198-L220)
-- [p2p_stream_quic_client.rs:135-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L135-L135)
-- [p2p_stream_quic_server.rs:195-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L195-L198)
-- [p2p_service.rs:911-913](file://src-tauri/src/service/p2p_service.rs#L911-L913)
+- [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
+- [p2p_stream_quic_client.rs:207-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L207-L244)
+- [p2p_stream_quic_server.rs:167-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L167-L210)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
 
 ## 结论
-该 P2P 服务以 QUIC 为基础，结合服务器中转与 NAT 穿越策略，实现了从连接建立、媒体传输到信令交换的完整闭环。**最新版本**引入了双通道 QUIC 架构，将媒体信息通道与数据通道分离，显著提升了媒体统计信息的实时性和可靠性。**新增的文件传输功能**进一步扩展了 P2P 服务的应用场景，支持大文件的可靠传输，通过分片传输和握手协议确保数据完整性。完整的媒体统计跟踪系统为开发者提供了丰富的运行时监控能力。通过清晰的模块划分与事件驱动的前端交互，既保证了功能的可扩展性，也为后续优化与调试提供了明确路径。建议在生产环境中替换为安全的 TLS 配置，并持续优化媒体参数与缓冲策略以适配复杂网络场景。
+该 P2P 服务以 QUIC 为基础，结合服务器中转与 NAT 穿越策略，实现了从连接建立、媒体传输到信令交换的完整闭环。**最新版本**引入了四通道 QUIC 架构，将媒体信息通道与数据通道分离，显著提升了媒体统计信息的实时性和可靠性。**新增的轻量级媒体帧协议（MediaFrameHeader）** 进一步优化了视频音频传输性能，通过固定5字节头部和零拷贝设计，大幅减少了序列化开销和内存分配。**新增的文件传输功能** 进一步扩展了 P2P 服务的应用场景，支持大文件的可靠传输，通过分片传输和握手协议确保数据完整性。完整的媒体统计跟踪系统为开发者提供了丰富的运行时监控能力。通过清晰的模块划分与事件驱动的前端交互，既保证了功能的可扩展性，也为后续优化与调试提供了明确路径。建议在生产环境中替换为安全的 TLS 配置，并持续优化媒体参数与缓冲策略以适配复杂网络场景。
 
 ## 附录
 
-### 代码级流程图：双通道 QUIC 架构连接建立
+### 代码级流程图：轻量级媒体帧协议
+```mermaid
+flowchart TD
+Start(["send_p2p_video_frame_service"]) --> BuildHeader["MediaFrameHeader::new(Video, data_len)"]
+BuildHeader --> BuildFrame["MediaFrameHeader::build_frame()"]
+BuildFrame --> GetStream["get_sender(target_uuid, MediaData)"]
+GetStream --> WriteData["write_all(frame_data)"]
+WriteData --> EmitEvent["发送video_frame事件"]
+EmitEvent --> End(["完成"])
+Start2(["process_media_data_channel"]) --> ReadHeader["读取5字节头部"]
+ReadHeader --> ParseHeader["解析frame_type和data_len"]
+ParseHeader --> ReadBody["精确读取data_len字节"]
+ReadBody --> EmitEvent2["发送video_frame/audio_frame事件"]
+EmitEvent2 --> Loop["继续接收循环"]
+Loop --> End2(["结束"])
+```
+
+**图表来源**
+- [p2p_service.rs:195-205](file://src-tauri/src/service/p2p_service.rs#L195-L205)
+- [p2p_quic_service.rs:411-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L411-L431)
+- [p2p_models.rs:68-76](file://src-tauri/src/entity/p2p_models.rs#L68-L76)
+
+### 代码级流程图：四通道 QUIC 架构连接建立
 ```mermaid
 flowchart TD
 S["开始"] --> GenToken["生成请求令牌"]
@@ -806,7 +868,7 @@ AddrBack --> RunCli["本机启动P2P客户端(4通道)"]
 RunSrv --> Establish["建立Default、MediaInfo、MediaData、File通道"]
 RunCli --> Establish
 Establish --> SendCfg["发送媒体配置"]
-SendCfg --> StartMedia["开始媒体传输"]
+SendCfg --> StartMedia["开始媒体传输<br/>使用轻量级协议"]
 StartMedia --> StartStats["启动媒体统计跟踪(每2秒)"]
 StartStats --> FileTrans["文件传输准备"]
 FileTrans --> End["通话进行中"]
@@ -814,10 +876,9 @@ Reject --> End
 ```
 
 **图表来源**
-- [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
-- [p2p_stream_quic_client.rs:55-135](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L55-L135)
-- [p2p_stream_quic_server.rs:129-198](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L129-L198)
-- [index.tsx:704-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L704-L720)
+- [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
+- [p2p_stream_quic_client.rs:101-244](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L101-L244)
+- [p2p_stream_quic_server.rs:133-210](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L133-L210)
 
 ### 代码级流程图：媒体统计跟踪系统
 ```mermaid
@@ -835,8 +896,8 @@ EndCall -- 是 --> Stop["停止定时器并清理"]
 ```
 
 **图表来源**
-- [index.tsx:688-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L688-L720)
-- [p2p_service.rs:544-593](file://src-tauri/src/service/p2p_service.rs#L544-L593)
+- [index.tsx:704-720](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L704-L720)
+- [p2p_service.rs:395-449](file://src-tauri/src/service/p2p_service.rs#L395-L449)
 - [p2p_quic_service.rs:233-242](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L233-L242)
 
 ### 代码级流程图：文件传输协议

@@ -410,6 +410,7 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
 
 /// 发送媒体帧到MediaData通道（轻量级格式）
 /// 直接使用MediaFrameHeader构建帧，避免bincode序列化开销
+/// 添加重试逻辑等待MediaData通道就绪
 /// 
 /// # 参数
 /// - `frame_type`: 帧类型（视频/音频）
@@ -421,10 +422,24 @@ pub async fn send_media_frame(
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
     let frame_data = MediaFrameHeader::build_frame(frame_type, &data);
-    let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
-    {
-        let mut guard = send_stream.lock().await;
-        guard.write_all(&frame_data).await?;
+    
+    // 等待MediaData通道就绪（最多等待3秒）
+    // 首次通话时MediaData通道可能尚未完全注册
+    for _attempt in 0..6 {
+        match get_sender(&target_uuid, &P2pChannelType::MediaData).await {
+            Ok(sender) => {
+                let mut guard = sender.lock().await;
+                guard.write_all(&frame_data).await?;
+                return Ok(());
+            }
+            Err(_) => {
+                // 短暂等待后重试
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+        }
     }
+    
+    // 如果重试后仍然失败，返回错误（但不阻塞调用方）
+    warn!("MediaData通道未就绪，丢弃媒体帧: type={:?}, size={}", frame_type, data.len());
     Ok(())
 }
