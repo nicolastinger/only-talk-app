@@ -1,7 +1,7 @@
 use log::info;
 
-use crate::entity::p2p_models::{P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg, P2pVideoData};
-use crate::quic_service::p2p_service::p2p_quic_service::LOG_SENDER;
+use crate::entity::p2p_models::{MediaFrameType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg};
+use crate::quic_service::p2p_service::p2p_quic_service::send_media_frame;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
     access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
@@ -104,15 +104,14 @@ pub async fn send_p2p_media_control(
 
 /// 发送视频帧数据-本地缓存
 /// 将视频帧数据缓存到本地队列后发送
+/// 使用轻量级MediaFrameHeader格式，减少序列化开销
 #[tauri::command]
 pub async fn send_video_frame(frame_data: Vec<u8>, uuid: String) -> Result<(), String> {
     info!("帧大小 {}", frame_data.len());
-    let p2p_video_data = P2pVideoData { uuid, video_data: frame_data };
-    {
-        LOG_SENDER.lock().await.send(p2p_video_data).await.map_err(|e| e.to_string())?;
-    }
-    info!("发送完成");
-    Ok(())
+    // 直接使用轻量级帧格式发送，不走LOG_SENDER队列
+    send_media_frame(MediaFrameType::Video, frame_data, uuid)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// 发送p2p文本消息

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
 use std::time::Duration;
@@ -8,24 +7,23 @@ use log::{info, warn};
 use nanoid::nanoid;
 use tauri::Emitter;
 
-use crate::entity::p2p_models::{P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMsg, P2pVideoConfig, UserAddressInfo};
+use crate::entity::p2p_models::{MediaFrameType, P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMsg, P2pVideoConfig, UserAddressInfo};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
-use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
+use crate::quic_service::p2p_service::p2p_quic_service::{get_sender, send_media_frame};
 use crate::quic_service::p2p_service::p2p_stream_quic_client::run_client;
 use crate::quic_service::p2p_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward, udp_port_forward_ipv6,
 };
-use crate::service::api_service::post_with_body;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{
-    TALK_API, UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
+    UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
 };
 use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_FILE_DATA,
+    MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA,
     MSG_TYPE_P2P_FILE_TRANSFER_REQUEST, MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE,
     MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
+    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
     MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
     MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
@@ -195,30 +193,15 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
 }
 
 /// 发送视频帧信息
+/// 使用轻量级MediaFrameHeader格式，替代通用的TextQuicMsg序列化
+/// 减少bincode序列化开销和内存拷贝
 pub async fn send_p2p_video_frame_service(
     frame_data: Vec<u8>,
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
     info!("帧大小 {}", frame_data.len());
-    let sender = {
-        let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let sender = guard.get("uuid").ok_or(anyhow!("no sender"))?.clone();
-        sender
-    };
-
-    let video_data =
-        generate_text_msg(MSG_TYPE_P2P_VIDEO_CALL, frame_data, target_uuid.clone(), sender)?;
-
-    // 发送帧数据 - 使用MediaData通道
-    {
-        let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
-        // 锁作用范围最小化
-        {
-            let mut guard = send_stream.lock().await;
-            guard.write_all(&video_data).await?;
-        }
-        Ok(())
-    }
+    // 使用轻量级帧格式：5字节头部 + 原始数据，避免bincode序列化
+    send_media_frame(MediaFrameType::Video, frame_data, target_uuid).await
 }
 
 /// 建立p2p服务端
@@ -390,7 +373,8 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
 }
 
 /// 发送p2p音频数据
-/// 用于隐私模式视频聊天中的音频传输
+/// 使用轻量级MediaFrameHeader格式，替代通用的TextQuicMsg序列化
+/// 减少bincode序列化开销和内存拷贝
 /// 
 /// # 参数
 /// - `audio_data`: 音频帧数据 (Opus编码)
@@ -404,23 +388,8 @@ pub async fn send_p2p_audio_frame_service(
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
     info!("音频帧大小 {}", audio_data.len());
-    let sender = {
-        let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        guard.get("uuid").ok_or(anyhow!("no sender"))?.clone()
-    };
-
-    let audio_msg =
-        generate_text_msg(MSG_TYPE_P2P_AUDIO_DATA, audio_data, target_uuid.clone(), sender)?;
-
-    // 使用MediaData通道发送音频帧
-    {
-        let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
-        {
-            let mut guard = send_stream.lock().await;
-            guard.write_all(&audio_msg).await?;
-        }
-        Ok(())
-    }
+    // 使用轻量级帧格式：5字节头部 + 原始数据，避免bincode序列化
+    send_media_frame(MediaFrameType::Audio, audio_data, target_uuid).await
 }
 
 /// 发送p2p媒体配置信息

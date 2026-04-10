@@ -7,12 +7,11 @@ use log::{error, info};
 use quinn::Endpoint;
 use tokio::sync::Mutex;
 
-use crate::entity::p2p_models::UserAddressInfo;
+use crate::entity::p2p_models::{P2pChannelType, UserAddressInfo};
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::dangerous_configuration::configure_server;
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg};
-use crate::entity::p2p_models::P2pChannelType;
+use crate::quic_service::p2p_service::p2p_quic_service::{process_media_data_channel, process_rec_msg, send_ping_msg};
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
 pub async fn udp_port_forward(
@@ -164,32 +163,41 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
         let head_length = 9;
         let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
         let recv_channel_key = channel_key.clone();
-        tokio::spawn(async move {
-            loop {
-                let mut buf = vec![0u8; 1024 * 1024 * 10];
-                match recv.read(&mut buf).await {
-                    Ok(Some(n)) => {
-                        if let Err(e) = process_rec_msg(
-                            &mut buf,
-                            n,
-                            &ConnectionType::Video,
-                            buffer_msg.clone(),
-                            head_length,
-                        ).await {
-                            error!("处理{}通道消息失败: {}", recv_channel_key, e);
+        
+        // MediaData通道使用轻量级帧格式，不走通用的TextQuicMsg反序列化
+        if channel_type == P2pChannelType::MediaData {
+            tokio::spawn(async move {
+                process_media_data_channel(recv).await;
+            });
+        } else {
+            // 其他通道仍使用通用的HeadMsg + TextQuicMsg协议
+            tokio::spawn(async move {
+                loop {
+                    let mut buf = vec![0u8; 1024 * 1024 * 10];
+                    match recv.read(&mut buf).await {
+                        Ok(Some(n)) => {
+                            if let Err(e) = process_rec_msg(
+                                &mut buf,
+                                n,
+                                &ConnectionType::Video,
+                                buffer_msg.clone(),
+                                head_length,
+                            ).await {
+                                error!("处理{}通道消息失败: {}", recv_channel_key, e);
+                            }
+                        }
+                        Ok(None) => {
+                            info!("Stream closed on channel {}", recv_channel_key);
+                            break;
+                        }
+                        Err(e) => {
+                            error!("Failed to read from stream on channel {}: {}", recv_channel_key, e);
+                            break;
                         }
                     }
-                    Ok(None) => {
-                        info!("Stream closed on channel {}", recv_channel_key);
-                        break;
-                    }
-                    Err(e) => {
-                        error!("Failed to read from stream on channel {}: {}", recv_channel_key, e);
-                        break;
-                    }
                 }
-            }
-        });
+            });
+        }
 
         stream_index += 1;
     }

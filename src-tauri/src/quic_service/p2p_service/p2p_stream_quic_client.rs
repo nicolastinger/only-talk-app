@@ -13,7 +13,7 @@ use crate::entity::p2p_models::P2pChannelType;
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::p2p_service::p2p_quic_service::{process_rec_msg, send_ping_msg};
+use crate::quic_service::p2p_service::p2p_quic_service::{process_media_data_channel, process_rec_msg, send_ping_msg};
 use crate::utils::message_types::MSG_TYPE_TEXT;
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
@@ -99,7 +99,7 @@ pub async fn run_client(
     info!("建立p2p客户端成功! 已建立Default和MediaInfo两个通道");
 
     // ==================== 打开MediaData通道（双向流2） ====================
-    let (send_media_data, mut recv_media_data) = connection.open_bi().await?;
+    let (send_media_data, recv_media_data) = connection.open_bi().await?;
     let send_stream_media_data = Arc::new(Mutex::new(send_media_data));
 
     {
@@ -205,33 +205,9 @@ pub async fn run_client(
     });
 
     // ==================== 接收MediaData通道消息 ====================
-    let buffer_msg_media_data: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    // MediaData通道使用轻量级帧格式，不走通用的TextQuicMsg反序列化
     tokio::spawn(async move {
-        loop {
-            let mut buf = vec![0u8; 1024 * 1024 * 10]; // 视频帧数据较大，10MB缓冲
-            match recv_media_data.read(&mut buf).await {
-                Ok(Some(n)) => {
-                    info!("Received {} bytes on media_data channel", n);
-                    if let Err(e) = process_rec_msg(
-                        &mut buf,
-                        n,
-                        &ConnectionType::Video,
-                        buffer_msg_media_data.clone(),
-                        head_length,
-                    ).await {
-                        error!("处理media_data通道消息失败: {}", e);
-                    }
-                }
-                Ok(None) => {
-                    info!("Media_data channel stream closed");
-                    break;
-                }
-                Err(e) => {
-                    error!("Failed to read from media_data channel stream: {}", e);
-                    break;
-                }
-            }
-        }
+        process_media_data_channel(recv_media_data).await;
     });
 
     // ==================== 接收File通道消息 ====================

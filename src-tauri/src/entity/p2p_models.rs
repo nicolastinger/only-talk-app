@@ -1,5 +1,88 @@
 use serde::{Deserialize, Serialize};
 
+/// 媒体帧类型标识
+/// 用于MediaData通道的轻量级帧头，区分视频帧和音频帧
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum MediaFrameType {
+    /// 视频帧
+    Video = 1,
+    /// 音频帧
+    Audio = 2,
+}
+
+impl TryFrom<u8> for MediaFrameType {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(MediaFrameType::Video),
+            2 => Ok(MediaFrameType::Audio),
+            _ => Err(anyhow::anyhow!("未知的媒体帧类型: {}", value)),
+        }
+    }
+}
+
+/// 媒体帧头部 - MediaData通道专用
+/// 固定5字节头部: frame_type(1字节) + data_len(4字节)
+/// 替代通用的 HeadMsg(9字节) + TextQuicMsg(bincode序列化) 方案
+/// 
+/// # 性能优势
+/// - 头部仅5字节（vs 原方案9字节HeadMsg + bincode序列化的TextQuicMsg开销）
+/// - 帧体直接写入原始二进制数据，无需bincode序列化
+/// - 省去了nano_id/recv_user/send_user/timestamp等媒体帧不需要的字段
+/// - 避免了对Vec<u8>的bincode长度前缀编码
+#[derive(Debug, Clone)]
+pub struct MediaFrameHeader {
+    /// 帧类型: 1=视频, 2=音频
+    pub frame_type: MediaFrameType,
+    /// 帧数据长度 (字节数)
+    pub data_len: u32,
+}
+
+/// 媒体帧头部固定大小: frame_type(1) + data_len(4)
+pub const MEDIA_FRAME_HEADER_SIZE: usize = 5;
+
+impl MediaFrameHeader {
+    /// 创建新的媒体帧头部
+    pub fn new(frame_type: MediaFrameType, data_len: u32) -> Self {
+        Self { frame_type, data_len }
+    }
+
+    /// 将头部序列化为字节数组（5字节，零拷贝友好）
+    /// 布局: [frame_type: u8][data_len: u32(大端序)]
+    pub fn to_bytes(&self) -> [u8; MEDIA_FRAME_HEADER_SIZE] {
+        let mut buf = [0u8; MEDIA_FRAME_HEADER_SIZE];
+        buf[0] = self.frame_type as u8;
+        buf[1..5].copy_from_slice(&self.data_len.to_be_bytes());
+        buf
+    }
+
+    /// 从字节数组反序列化头部
+    pub fn from_bytes(bytes: &[u8; MEDIA_FRAME_HEADER_SIZE]) -> Result<Self, anyhow::Error> {
+        let frame_type = MediaFrameType::try_from(bytes[0])?;
+        let data_len = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+        Ok(Self { frame_type, data_len })
+    }
+
+    /// 构建完整的媒体帧数据（头部 + 帧体）
+    /// 直接拼接，避免bincode序列化带来的额外开销
+    pub fn build_frame(frame_type: MediaFrameType, data: &[u8]) -> Vec<u8> {
+        let header = Self::new(frame_type, data.len() as u32);
+        let mut frame = Vec::with_capacity(MEDIA_FRAME_HEADER_SIZE + data.len());
+        frame.extend_from_slice(&header.to_bytes());
+        frame.extend_from_slice(data);
+        frame
+    }
+
+    /// 将头部写入已有buffer（避免额外分配）
+    #[allow(dead_code)]
+    pub fn write_to(&self, buf: &mut [u8]) {
+        buf[0] = self.frame_type as u8;
+        buf[1..5].copy_from_slice(&self.data_len.to_be_bytes());
+    }
+}
+
 /// P2P连接初始化消息
 /// 用于建立P2P连接时的握手信息交换
 #[derive(Debug, Serialize, Deserialize)]
@@ -110,7 +193,10 @@ pub enum P2pMediaInfoType {
 
 /// P2P视频数据包
 /// 用于传输视频帧数据
+/// 注意: MediaData通道已改用轻量级MediaFrameHeader格式，
+/// 此结构体保留供其他场景使用
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct P2pVideoData {
     /// 目标用户UUID
     pub uuid: String,
@@ -172,7 +258,10 @@ pub struct P2pFileTransferResponse {
 
 /// P2P音频数据包
 /// 用于传输音频帧数据
+/// 注意: MediaData通道已改用轻量级MediaFrameHeader格式，
+/// 此结构体保留供其他场景使用
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct P2pAudioData {
     /// 目标用户UUID
     pub uuid: String,
@@ -316,6 +405,7 @@ pub struct P2pVideoCallResponse {
 /// 视频通话状态
 /// 用于跟踪视频通话的生命周期状态
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum P2pVideoCallState {
     /// 空闲状态 - 无通话
     Idle,

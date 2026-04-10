@@ -2,14 +2,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::anyhow;
-use lazy_static::lazy_static;
 use log::{error, info, warn};
-use quinn::SendStream;
+use quinn::{RecvStream, SendStream};
 use tauri::Emitter;
-use tokio::sync::mpsc::Sender;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::Mutex;
 
-use crate::entity::p2p_models::{P2pChannelType, P2pFileTransferRequest, P2pFileTransferResponse, P2pMediaConfig, P2pMediaControl, P2pMediaInfo, P2pVideoConfig, P2pVideoData};
+use crate::entity::p2p_models::{
+    MediaFrameHeader, MediaFrameType, P2pChannelType, P2pFileTransferRequest,
+    P2pFileTransferResponse, P2pMediaConfig, P2pMediaControl, P2pMediaInfo, P2pVideoConfig,
+    MEDIA_FRAME_HEADER_SIZE,
+};
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
@@ -23,32 +25,6 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
-
-/// 视频帧发送通道
-/// 用于将视频数据从前端传递到后端发送队列
-/// 采用异步通道设计，避免阻塞主线程
-lazy_static! {
-    pub static ref LOG_SENDER: Mutex<Sender<P2pVideoData>> = {
-        // 创建容量为1000的异步通道
-        let (tx, mut rx) = mpsc::channel::<P2pVideoData>(1000);
-        // 启动后台任务处理视频帧发送
-        tokio::spawn(async move {
-            while let Some(msg) = rx.recv().await {
-                tokio::spawn(async move {
-                    let video_data = generate_text_msg(
-                        MSG_TYPE_P2P_VIDEO_DATA,
-                        msg.video_data,
-                        String::new(),
-                        String::new()
-                    ).expect("generate_text_msg error");
-                    let send_stream = get_sender(&msg.uuid, &P2pChannelType::MediaData).await.expect("no send_stream");
-                    send_stream.lock().await.write_all(&video_data).await.expect("write_all error");
-                });
-            }
-        });
-        Mutex::new(tx)
-    };
-}
 
 /// 获取P2P连接的发送流
 /// 根据目标用户UUID和通道类型获取对应的QUIC发送流
@@ -351,4 +327,104 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
             tokio::time::sleep(Duration::from_secs(2)).await;
         }
     });
+}
+
+// ==================== MediaData通道专用帧处理 ====================
+
+/// 处理MediaData通道的接收循环
+/// 使用轻量级MediaFrameHeader协议，替代通用的TextQuicMsg反序列化
+/// 
+/// # 协议格式
+/// ```text
+/// [frame_type: u8][data_len: u32(大端序)][data: data_len字节]
+/// ```
+/// 
+/// # 性能优势
+/// - 固定5字节头部，无需bincode反序列化
+/// - 帧体直接读取原始二进制数据
+/// - 避免TextQuicMsg的nano_id/recv_user/send_user/timestamp等冗余字段
+/// - 减少内存分配和拷贝
+/// 
+/// # 参数
+/// - `recv_stream`: QUIC接收流
+pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
+    info!("MediaData通道接收循环启动（轻量级帧格式）");
+    
+    // 读取头部用的固定缓冲区
+    let mut header_buf = [0u8; MEDIA_FRAME_HEADER_SIZE];
+    
+    loop {
+        // 1. 读取帧头部（固定5字节）
+        match recv_stream.read_exact(&mut header_buf).await {
+            Ok(()) => {}
+            Err(quinn::ReadExactError::FinishedEarly) => {
+                info!("MediaData通道流提前关闭");
+                break;
+            }
+            Err(quinn::ReadExactError::ReadError(e)) => {
+                error!("MediaData通道读取头部失败: {}", e);
+                break;
+            }
+        }
+        
+        // 2. 解析帧头部
+        let header = match MediaFrameHeader::from_bytes(&header_buf) {
+            Ok(h) => h,
+            Err(e) => {
+                error!("MediaData通道解析帧头失败: {}", e);
+                break;
+            }
+        };
+        
+        // 3. 读取帧体数据（精确读取，避免多余分配）
+        let mut data_buf = vec![0u8; header.data_len as usize];
+        match recv_stream.read_exact(&mut data_buf).await {
+            Ok(()) => {}
+            Err(e) => {
+                error!("MediaData通道读取帧体失败 (期望{}字节): {}", header.data_len, e);
+                break;
+            }
+        }
+        
+        // 4. 根据帧类型分发处理
+        match header.frame_type {
+            MediaFrameType::Video => {
+                if let Some(handle) = APP_HANDLE.get() {
+                    if let Err(e) = handle.emit("video_frame", &data_buf) {
+                        error!("发送video_frame事件失败: {}", e);
+                    }
+                }
+            }
+            MediaFrameType::Audio => {
+                if let Some(handle) = APP_HANDLE.get() {
+                    if let Err(e) = handle.emit("audio_frame", &data_buf) {
+                        error!("发送audio_frame事件失败: {}", e);
+                    }
+                }
+            }
+        }
+    }
+    
+    info!("MediaData通道接收循环结束");
+}
+
+/// 发送媒体帧到MediaData通道（轻量级格式）
+/// 直接使用MediaFrameHeader构建帧，避免bincode序列化开销
+/// 
+/// # 参数
+/// - `frame_type`: 帧类型（视频/音频）
+/// - `data`: 帧数据
+/// - `target_uuid`: 目标用户UUID
+pub async fn send_media_frame(
+    frame_type: MediaFrameType,
+    data: Vec<u8>,
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    let frame_data = MediaFrameHeader::build_frame(frame_type, &data);
+    let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
+    {
+        let mut guard = send_stream.lock().await;
+        guard.write_all(&frame_data).await?;
+    }
+    Ok(())
 }
