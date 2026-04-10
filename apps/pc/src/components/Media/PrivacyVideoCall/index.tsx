@@ -349,7 +349,25 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 4. 创建 SourceBuffer 用于缓冲音频数据
    */
   const initRemoteMediaReceiver = useCallback(async () => {
-    // 创建 MediaSource 用于视频流
+    if (mediaSourceRef.current) {
+      if (mediaSourceRef.current.readyState === 'open') {
+        mediaSourceRef.current.endOfStream();
+      }
+      mediaSourceRef.current = null;
+    }
+    if (audioMediaSourceRef.current) {
+      if (audioMediaSourceRef.current.readyState === 'open') {
+        audioMediaSourceRef.current.endOfStream();
+      }
+      audioMediaSourceRef.current = null;
+    }
+    sourceBufferRef.current = null;
+    audioSourceBufferRef.current = null;
+    videoBufferQueueRef.current = [];
+    audioBufferQueueRef.current = [];
+    isVideoSourceBufferUpdatingRef.current = false;
+    isAudioSourceBufferUpdatingRef.current = false;
+
     const mediaSource = new MediaSource();
     mediaSourceRef.current = mediaSource;
 
@@ -429,31 +447,26 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 当 SourceBuffer 完成当前操作后，从队列中取出下一个数据处理。
    */
   const processVideoBufferQueue = useCallback(() => {
-    // 如果 SourceBuffer 不存在或正在更新，直接返回
     if (
       !sourceBufferRef.current ||
+      !mediaSourceRef.current ||
+      mediaSourceRef.current.readyState !== 'open' ||
       isVideoSourceBufferUpdatingRef.current ||
       videoBufferQueueRef.current.length === 0
     ) {
       return;
     }
 
-    // 从队列中取出数据
     const data = videoBufferQueueRef.current.shift();
     if (data) {
       try {
-        // 标记为正在更新
         isVideoSourceBufferUpdatingRef.current = true;
-        // 追加缓冲区
-        // 注意: Uint8Array.buffer 可能是 SharedArrayBuffer，需要转换为 ArrayBuffer
-        // 创建一个新的 ArrayBuffer 副本，避免 SharedArrayBuffer 类型问题
         const newBuffer = new ArrayBuffer(data.byteLength);
         new Uint8Array(newBuffer).set(data);
         sourceBufferRef.current.appendBuffer(newBuffer);
       } catch (error) {
         console.error('追加视频缓冲失败:', error);
         isVideoSourceBufferUpdatingRef.current = false;
-        // 如果追加失败，继续处理队列中的下一个
         processVideoBufferQueue();
       }
     }
@@ -470,29 +483,26 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 当 SourceBuffer 完成当前操作后，从队列中取出下一个数据处理。
    */
   const processAudioBufferQueue = useCallback(() => {
-    // 如果 SourceBuffer 不存在或正在更新，直接返回
     if (
       !audioSourceBufferRef.current ||
+      !audioMediaSourceRef.current ||
+      audioMediaSourceRef.current.readyState !== 'open' ||
       isAudioSourceBufferUpdatingRef.current ||
       audioBufferQueueRef.current.length === 0
     ) {
       return;
     }
 
-    // 从队列中取出数据
     const data = audioBufferQueueRef.current.shift();
     if (data) {
       try {
-        // 标记为正在更新
         isAudioSourceBufferUpdatingRef.current = true;
-        // 追加缓冲区
         const newBuffer = new ArrayBuffer(data.byteLength);
         new Uint8Array(newBuffer).set(data);
         audioSourceBufferRef.current.appendBuffer(newBuffer);
       } catch (error) {
         console.error('追加音频缓冲失败:', error);
         isAudioSourceBufferUpdatingRef.current = false;
-        // 如果追加失败，继续处理队列中的下一个
         processAudioBufferQueue();
       }
     }
@@ -826,21 +836,27 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       localStreamRef.current.getTracks().forEach((track) => track.stop());
     }
 
-    // 关闭视频 MediaSource
-    if (
-      mediaSourceRef.current &&
-      mediaSourceRef.current.readyState === 'open'
-    ) {
-      mediaSourceRef.current.endOfStream();
+    // 关闭视频 MediaSource 并清理引用
+    if (mediaSourceRef.current) {
+      if (mediaSourceRef.current.readyState === 'open') {
+        mediaSourceRef.current.endOfStream();
+      }
+      mediaSourceRef.current = null;
     }
+    sourceBufferRef.current = null;
+    videoBufferQueueRef.current = [];
+    isVideoSourceBufferUpdatingRef.current = false;
 
-    // 关闭音频 MediaSource
-    if (
-      audioMediaSourceRef.current &&
-      audioMediaSourceRef.current.readyState === 'open'
-    ) {
-      audioMediaSourceRef.current.endOfStream();
+    // 关闭音频 MediaSource 并清理引用
+    if (audioMediaSourceRef.current) {
+      if (audioMediaSourceRef.current.readyState === 'open') {
+        audioMediaSourceRef.current.endOfStream();
+      }
+      audioMediaSourceRef.current = null;
     }
+    audioSourceBufferRef.current = null;
+    audioBufferQueueRef.current = [];
+    isAudioSourceBufferUpdatingRef.current = false;
 
     // 发送结束通知给对方
     try {
