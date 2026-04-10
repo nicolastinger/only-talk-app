@@ -145,35 +145,36 @@ pub async fn run_client(
     // ==================== 接收Default通道消息 ====================
     let head_length = 9;
     let buffer_msg_default: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
-    loop {
-        // 接收响应 - 使用10MB缓冲区以容纳视频帧数据
-        let mut buf = vec![0u8; 1024 * 1024 * 10];
-        match recv_default.read(&mut buf).await {
-            Ok(Some(n)) => {
-                info!("Received {} bytes on default channel", n);
-                process_rec_msg(
-                    &mut buf,
-                    n,
-                    &ConnectionType::Video,
-                    buffer_msg_default.clone(),
-                    head_length,
-                )
-                .await
-                .expect("处理消息失败");
-            }
-            Ok(None) => {
-                info!("Default channel stream closed");
-                break;
-            }
-            Err(e) => {
-                error!("Failed to read from default channel stream: {}", e);
-                break;
+    tokio::spawn(async move {
+        loop {
+            // 接收响应 - 使用10MB缓冲区以容纳视频帧数据
+            let mut buf = vec![0u8; 1024 * 1024 * 10];
+            match recv_default.read(&mut buf).await {
+                Ok(Some(n)) => {
+                    info!("Received {} bytes on default channel", n);
+                    if let Err(e) = process_rec_msg(
+                        &mut buf,
+                        n,
+                        &ConnectionType::Video,
+                        buffer_msg_default.clone(),
+                        head_length,
+                    ).await {
+                        error!("处理default通道消息失败: {}", e);
+                    }
+                }
+                Ok(None) => {
+                    info!("Default channel stream closed");
+                    break;
+                }
+                Err(e) => {
+                    error!("Failed to read from default channel stream: {}", e);
+                    break;
+                }
             }
         }
-    }
+    });
 
     // ==================== 接收MediaInfo通道消息 ====================
-    // 在单独的任务中处理MediaInfo通道的接收
     let buffer_msg_media: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
     tokio::spawn(async move {
         loop {
