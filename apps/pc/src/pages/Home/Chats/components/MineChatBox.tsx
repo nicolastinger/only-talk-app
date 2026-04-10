@@ -215,6 +215,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           className={styles.imgItem}
           alt="icon"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
         />
       </div>
     </div>

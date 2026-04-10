@@ -1,3 +1,4 @@
+import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import {
@@ -169,7 +170,7 @@ const SearchFriend = () => {
               >
                 <List.Item.Meta
                   avatar={
-                    <Avatar src={avatarUrls[item.uuid || '']}>
+                    <Avatar src={avatarUrls[item.uuid || ''] || DEFAULT_ICON}>
                       {item.username}
                     </Avatar>
                   }

@@ -1,4 +1,4 @@
-import { TALK_API } from '@/constants';
+import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { useBearStore } from '@/store/store';
 import {
   CameraOutlined,
@@ -136,7 +136,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             >
               <Avatar
                 size={80}
-                src={previewUrl || avatarUrl}
+                src={previewUrl || avatarUrl || DEFAULT_ICON}
                 icon={<UserOutlined />}
                 className={styles.largeAvatar}
               />

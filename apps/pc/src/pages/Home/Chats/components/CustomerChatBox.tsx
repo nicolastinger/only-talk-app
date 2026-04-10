@@ -1,3 +1,4 @@
+import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
@@ -144,12 +145,13 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
     <div className={styles.container}>
       <div className={styles.userIcon}>
         <img
-          src={friendIcon}
+          src={friendIcon || DEFAULT_ICON}
           width={40}
           height={40}
           className={styles.imgItem}
-          alt="123"
+          alt="avatar"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
         />
       </div>
       <div className={styles.chatContainerWrapper}>

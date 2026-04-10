@@ -10,15 +10,16 @@
 - [p2p_controller.rs](file://src-tauri/src/cmd/p2p_controller.rs)
 - [index.tsx](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx)
 - [useP2pMessageApi.ts](file://apps/pc/src/hooks/useP2pMessageApi.ts)
+- [message_types.rs](file://src-tauri/src/utils/message_types.rs)
 </cite>
 
 ## 更新摘要
 **所做更改**
-- 新增轻量级媒体帧协议（MediaFrameHeader）章节，详细介绍新的视频音频传输优化方案
-- 更新媒体传输章节，说明MediaData通道采用的新协议格式
-- 新增媒体帧发送服务实现细节
-- 更新性能考量，突出新协议的性能优势
-- 更新故障排查指南，添加媒体帧协议相关问题诊断
+- 新增P2P连接可靠性增强章节，详细介绍重试逻辑的实现
+- 更新媒体传输章节，说明MediaData通道的重试机制
+- 新增视频通话响应的重试逻辑实现细节
+- 更新故障排查指南，添加连接可靠性相关问题诊断
+- 新增性能考量，突出重试机制对连接稳定性的影响
 
 ## 目录
 1. [简介](#简介)
@@ -27,11 +28,12 @@
 4. [架构总览](#架构总览)
 5. [详细组件分析](#详细组件分析)
 6. [轻量级媒体帧协议](#轻量级媒体帧协议)
-7. [依赖关系分析](#依赖关系分析)
-8. [性能考量](#性能考量)
-9. [故障排查指南](#故障排查指南)
-10. [结论](#结论)
-11. [附录](#附录)
+7. [P2P连接可靠性增强](#p2p连接可靠性增强)
+8. [依赖关系分析](#依赖关系分析)
+9. [性能考量](#性能考量)
+10. [故障排查指南](#故障排查指南)
+11. [结论](#结论)
+12. [附录](#附录)
 
 ## 简介
 本文件系统性梳理 Rust + Tauri 项目中的 P2P 服务实现，重点覆盖：
@@ -44,6 +46,9 @@
 - **新增** 四通道 QUIC 架构支持媒体信息通道，包括 Default 通道、MediaInfo 通道、MediaData 通道和 File 通道
 - **新增** 完整的媒体统计跟踪系统，支持分辨率变化、码率调整、帧率统计、网络质量等实时监控
 - **新增** P2P 文件传输功能，支持文件分片传输和握手协议
+- **新增** P2P 连接可靠性增强，包括重试逻辑和连接状态管理
+- **新增** MediaData 通道的重试机制，解决首次连接时的媒体帧丢失问题
+- **新增** 视频通话响应的重试逻辑，确保首次连接时的响应不丢失
 - 完整流程、错误处理与性能优化建议
 - 代码级流程图与序列图，帮助开发者扩展与调试
 
@@ -68,19 +73,20 @@ subgraph "Tauri命令层"
 CMD["p2p_controller.rs<br/>Tauri命令入口<br/>新增媒体帧命令"]
 end
 subgraph "服务层"
-SVC["service/p2p_service.rs<br/>P2P业务编排<br/>新增媒体帧服务"]
+SVC["service/p2p_service.rs<br/>P2P业务编排<br/>新增媒体帧服务<br/>新增重试逻辑"]
 UDP["udp_utils.rs<br/>UDP端口探测"]
 end
 subgraph "QUIC层"
 CLI["p2p_stream_quic_client.rs<br/>P2P客户端<br/>四通道支持"]
 SRV["p2p_stream_quic_server.rs<br/>P2P服务端<br/>四通道支持"]
-CORE["p2p_quic_service.rs<br/>消息处理与心跳<br/>新增媒体帧处理"]
+CORE["p2p_quic_service.rs<br/>消息处理与心跳<br/>新增媒体帧处理<br/>新增重试机制"]
 CFG_D["dangerous_configuration.rs<br/>服务端不安全配置"]
 CFG_S["safe_configuration.rs<br/>客户端安全配置"]
 end
 subgraph "实体与消息"
 MODELS["p2p_models.rs<br/>P2P数据模型<br/>新增MediaFrameHeader"]
 GLOB["global_static_str.rs<br/>全局静态常量"]
+MT["message_types.rs<br/>消息类型常量"]
 end
 FE_Init --> CMD
 FE_Listen --> CMD
@@ -100,6 +106,7 @@ CLI --> CFG_D
 SRV --> CFG_S
 CORE --> MODELS
 SVC --> GLOB
+SVC --> MT
 ```
 
 **图表来源**
@@ -130,6 +137,10 @@ SVC --> GLOB
   - 握手协议：传输前先发送请求，等待接收方确认
   - 传输ID：每个文件传输分配唯一ID，关联所有分片
   - MIME类型：支持文件类型识别和处理
+- **P2P 连接可靠性增强**
+  - **新增** 视频通话响应重试逻辑：等待P2P连接就绪（最多10秒），解决首次通话时连接未建立导致响应丢失的问题
+  - **新增** MediaData通道重试机制：等待MediaData通道就绪（最多3秒），解决首次连接时媒体帧丢失的问题
+  - **新增** 连接状态监控：通过重试机制确保关键消息的可靠传输
 - **QUIC P2P 服务核心**
   - 发送通道与心跳：通过异步通道将视频帧转为轻量级帧并通过 QUIC 发送；周期性发送心跳维持连接活性。
   - 消息分发：根据消息类型分发到视频/音频数据、媒体配置、媒体控制、媒体信息、文件传输、文本消息、信令等处理分支。
@@ -143,6 +154,7 @@ SVC --> GLOB
   - **新增** 媒体信息服务：通过 MediaInfo 通道发送媒体状态信息，支持多种媒体统计类型。
   - **新增** 文件传输服务：发送文件分片、文件传输请求和响应，实现完整的文件传输协议。
   - **新增** 媒体帧发送服务：使用 MediaFrameHeader 协议发送视频帧和音频帧，替代原有的 TextQuicMsg 序列化方案。
+  - **新增** 视频通话响应服务：包含重试逻辑，确保首次连接时的响应可靠传输。
   - 视频通话邀请/响应/结束：发送邀请、接受/拒绝、结束通话通知。
 - **控制器与前端**
   - Tauri 命令：封装发送视频帧、音频帧、文本消息、关闭连接、发送媒体配置/控制、视频通话邀请/响应/结束、**新增** 发送媒体信息、**新增** 文件传输等。
@@ -161,7 +173,7 @@ SVC --> GLOB
 P2P 通信采用"服务器中转 + QUIC 直连"的混合架构，现已升级为四通道架构：
 - 初始阶段：通过服务器中转完成 P2P 初始化与地址交换，随后进行 NAT 穿越探测。
 - 建立阶段：若 NAT 类型允许直连，直接建立 QUIC 四个双向流；否则通过服务器中继。
-- 传输阶段：媒体数据与信令通过 QUIC 流传输，心跳维持连接活性，媒体信息通过专用通道传输，**新增** 文件传输通过 File 通道进行分片传输，**新增** 媒体帧通过 MediaData 通道采用轻量级协议传输。
+- 传输阶段：媒体数据与信令通过 QUIC 流传输，心跳维持连接活性，媒体信息通过专用通道传输，**新增** 文件传输通过 File 通道进行分片传输，**新增** 媒体帧通过 MediaData 通道采用轻量级协议传输，**新增** 重试机制确保关键消息的可靠传输。
 
 ```mermaid
 sequenceDiagram
@@ -173,7 +185,7 @@ participant CLI as "P2P客户端(p2p_stream_quic_client.rs)"
 participant CORE as "QUIC核心(p2p_quic_service.rs)"
 FE->>CMD : 发送视频帧/音频帧
 CMD->>SVC : 调用媒体帧发送服务
-SVC->>CORE : 使用MediaFrameHeader发送帧
+SVC->>CORE : 使用MediaFrameHeader发送帧<br/>包含重试逻辑
 CORE->>FE : 事件通知(video_frame/audio_frame)
 FE->>CMD : 发送媒体配置/媒体信息/文件传输
 CMD->>SVC : 调用业务服务
@@ -301,6 +313,7 @@ EndCall -- 是 --> Stop["停止定时器并清理"]
 - 消息处理与事件派发
   - 根据消息类型分发到不同处理分支：视频/音频数据、媒体配置、媒体控制、**新增** 媒体信息、**新增** 文件传输、文本消息、信令等。
   - **新增** MediaData 通道采用专用接收循环，使用 MediaFrameHeader 协议处理媒体帧。
+  - **新增** 重试机制：在发送媒体帧时等待通道就绪，解决首次连接时的媒体帧丢失问题。
   - 通过 Tauri 事件向前端派发，如 video_frame、audio_frame、media_config、media_control、**新增** media_info、**新增** p2p_file_data、**新增** p2p_file_transfer_request、**新增** p2p_file_transfer_response、p2p_text_message 等。
 - 心跳保活
   - 周期性发送心跳消息，检查连接活跃状态，异常时停止发送并清理资源。
@@ -436,11 +449,15 @@ end
   - 使用轻量级 MediaFrameHeader 协议发送视频帧和音频帧
   - 直接使用原始二进制数据，避免 bincode 序列化开销
   - 减少内存分配和拷贝操作
+  - **新增** 包含重试逻辑：等待MediaData通道就绪（最多3秒），解决首次连接时媒体帧丢失的问题
 - **新增** 文件传输服务
   - 发送文件分片数据：将大文件切分为多个分片，每个分片独立发送
   - 文件传输请求：发送方先发送请求，等待接收方确认
   - 文件传输响应：接收方回复接受或拒绝
   - 支持文件名、MIME类型、总大小、分片索引等元数据
+- **新增** 视频通话响应服务
+  - 发送视频通话接受/拒绝响应
+  - **新增** 包含重试逻辑：等待P2P连接就绪（最多10秒），解决首次通话时连接未建立导致响应丢失的问题
 - 视频通话邀请/响应/结束
   - 发送邀请（可携带默认媒体配置），接收方接受/拒绝，最终结束通话。
 
@@ -460,8 +477,7 @@ K --> L["对端回传地址信息"]
 L --> M["对端建立P2P服务端(4通道)"]
 L --> N["本机建立P2P客户端(4通道)"]
 M --> O["建立各通道连接"]
-N --> O
-O --> P["发送媒体配置/控制/数据"]
+N --> O --> P["发送媒体配置/控制/数据"]
 P --> Q["通过MediaInfo通道发送媒体统计"]
 Q --> R["文件传输: 发送请求"]
 R --> S["接收方响应: 接受/拒绝"]
@@ -663,11 +679,25 @@ pub async fn send_media_frame(
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
     let frame_data = MediaFrameHeader::build_frame(frame_type, &data);
-    let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaData).await?;
-    {
-        let mut guard = send_stream.lock().await;
-        guard.write_all(&frame_data).await?;
+    
+    // 等待MediaData通道就绪（最多等待3秒）
+    // 首次通话时MediaData通道可能尚未完全注册
+    for _attempt in 0..6 {
+        match get_sender(&target_uuid, &P2pChannelType::MediaData).await {
+            Ok(sender) => {
+                let mut guard = sender.lock().await;
+                guard.write_all(&frame_data).await?;
+                return Ok(());
+            }
+            Err(_) => {
+                // 短暂等待后重试
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+        }
     }
+    
+    // 如果重试后仍然失败，返回错误（但不阻塞调用方）
+    warn!("MediaData通道未就绪，丢弃媒体帧: type={:?}, size={}", frame_type, data.len());
     Ok(())
 }
 ```
@@ -708,11 +738,77 @@ const unlistenAudio = await listen<number[]>('audio_frame', (event) => {
 - [index.tsx:506-530](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L506-L530)
 - [p2p_controller.rs:55-115](file://src-tauri/src/cmd/p2p_controller.rs#L55-L115)
 
+## P2P连接可靠性增强
+
+### 重试逻辑设计原理
+为了增强P2P连接的可靠性，特别是在首次连接时可能出现的媒体帧丢失和响应丢失问题，系统引入了多层重试机制：
+
+#### 重试策略
+- **视频通话响应重试**：等待P2P连接就绪（最多10秒），解决首次通话时连接未建立导致响应丢失的问题
+- **媒体帧重试**：等待MediaData通道就绪（最多3秒），解决首次连接时媒体帧丢失的问题
+- **指数退避**：采用线性等待策略，每次重试间隔固定时间
+
+#### 重试实现细节
+
+##### 视频通话响应重试
+```rust
+// 重试逻辑：等待P2P连接就绪（最多10秒）
+// 解决首次通话时P2P连接尚未建立导致响应丢失的问题
+for attempt in 0..10 {
+    match get_sender(&target_uuid, &P2pChannelType::Default).await {
+        Ok(sender) => {
+            info!("视频通话响应发送成功 (尝试{}/{})", attempt + 1, 10);
+            let mut guard = sender.lock().await;
+            guard.write_all(&response_msg).await?;
+            return Ok(());
+        }
+        Err(e) => {
+            warn!("等待P2P连接就绪... 尝试{}/10: {}", attempt + 1, e);
+        }
+    };
+    tokio::time::sleep(Duration::from_secs(1)).await;
+}
+```
+
+##### 媒体帧重试
+```rust
+// 等待MediaData通道就绪（最多等待3秒）
+// 首次通话时MediaData通道可能尚未完全注册
+for _attempt in 0..6 {
+    match get_sender(&target_uuid, &P2pChannelType::MediaData).await {
+        Ok(sender) => {
+            let mut guard = sender.lock().await;
+            guard.write_all(&frame_data).await?;
+            return Ok(());
+        }
+        Err(_) => {
+            // 短暂等待后重试
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+    }
+}
+```
+
+### 重试机制的优势
+- **连接稳定性提升**：通过重试机制确保关键消息的可靠传输
+- **用户体验改善**：减少首次连接时的失败率，提升通话成功率
+- **资源利用优化**：重试机制在保证可靠性的同时，避免过度占用系统资源
+- **错误处理完善**：当重试失败时，系统会记录警告并继续执行，避免阻塞调用方
+
+### 重试机制的监控与日志
+- **重试次数记录**：每次重试都会记录尝试次数和结果
+- **错误信息追踪**：当重试失败时，系统会记录详细的错误信息
+- **性能影响评估**：重试机制对系统性能的影响最小化，避免阻塞主线程
+
+**章节来源**
+- [p2p_service.rs:640-713](file://src-tauri/src/service/p2p_service.rs#L640-L713)
+- [p2p_quic_service.rs:428-454](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L428-L454)
+
 ## 依赖关系分析
 - 组件耦合
   - p2p_quic_service 依赖消息类型常量与实体模型，负责消息分发与事件派发，**新增** 媒体帧处理和文件传输事件处理。
   - p2p_stream_quic_client/server 依赖 QUIC 端点与核心服务，负责连接建立与消息循环，**支持四通道架构**。
-  - service/p2p_service 依赖控制器命令、UDP 工具与 QUIC 配置，负责业务编排与 NAT 穿越，**新增** 媒体帧发送服务。
+  - service/p2p_service 依赖控制器命令、UDP 工具与 QUIC 配置，负责业务编排与 NAT 穿越，**新增** 媒体帧发送服务和重试逻辑。
 - 外部依赖
   - QUIC（quinn）、TLS（rustls）、异步运行时（tokio）、事件系统（tauri Emitter）。
 - 潜在风险
@@ -722,13 +818,14 @@ const unlistenAudio = await listen<number[]>('audio_frame', (event) => {
   - **新增** 媒体帧协议的错误处理，避免协议解析失败导致的连接中断。
   - **新增** 文件传输的分片处理需要确保数据完整性。
   - **新增** 文件传输ID的唯一性保证，避免不同传输之间的数据混淆。
+  - **新增** 重试机制的资源消耗监控，避免过度重试导致系统过载。
 
 ```mermaid
 graph LR
-CMD["p2p_controller.rs<br/>新增媒体帧命令"] --> SVC["service/p2p_service.rs<br/>新增媒体帧服务"]
+CMD["p2p_controller.rs<br/>新增媒体帧命令"] --> SVC["service/p2p_service.rs<br/>新增媒体帧服务<br/>新增重试逻辑"]
 SVC --> CLI["p2p_stream_quic_client.rs<br/>四通道支持"]
 SVC --> SRV["p2p_stream_quic_server.rs<br/>四通道支持"]
-CLI --> CORE["p2p_quic_service.rs<br/>新增媒体帧处理"]
+CLI --> CORE["p2p_quic_service.rs<br/>新增媒体帧处理<br/>新增重试机制"]
 SRV --> CORE
 SVC --> UDP["udp_utils.rs"]
 CORE --> MODELS["p2p_models.rs<br/>新增MediaFrameHeader"]
@@ -736,6 +833,7 @@ SVC --> CFG_D["dangerous_configuration.rs"]
 CLI --> CFG_S["safe_configuration.rs"]
 CORE --> QCONN["quic_connection.rs"]
 SVC --> GLOB["global_static_str.rs"]
+SVC --> MT["message_types.rs"]
 ```
 
 **图表来源**
@@ -761,6 +859,10 @@ SVC --> GLOB["global_static_str.rs"]
   - 提升媒体统计信息的实时性和可靠性
   - 减少网络拥塞对控制信令的影响
   - **新增** 文件通道独立于音视频通道，避免大文件传输影响实时通话质量
+- **重试机制的性能影响**
+  - **连接建立延迟**：重试机制可能增加首次连接的建立时间，但显著提升成功率
+  - **资源消耗**：重试机制会占用少量CPU和内存资源，但远小于潜在的连接失败成本
+  - **网络开销**：重试机制对网络带宽的影响微乎其微
 - **媒体缓冲与带宽**
   - 媒体配置包含视频/音频缓冲大小与最大延迟，可根据网络状况动态调整。
   - 建议在弱网环境下降低帧率与码率，启用自适应缓冲。
@@ -777,6 +879,7 @@ SVC --> GLOB["global_static_str.rs"]
   - **新增** 媒体信息通道独立处理，确保控制信息优先级。
   - **新增** 文件传输通道的背压处理，避免大文件阻塞其他通道。
   - **新增** 媒体帧通道的高效处理，减少序列化开销。
+  - **新增** 重试机制的背压处理，避免重试风暴导致系统过载。
 - **NAT 穿越效率**
   - IPv4/IPv6 双栈探测可提升成功率，但会增加网络负载，建议按需启用。
 - **媒体统计开销**
@@ -797,6 +900,11 @@ SVC --> GLOB["global_static_str.rs"]
   - **新增** 检查 MediaData 通道的轻量级协议处理是否正常。
   - **新增** 验证 MediaFrameHeader 的序列化和反序列化是否正确。
   - **新增** 监控视频帧和音频帧事件的接收情况。
+  - **新增** 检查重试机制是否正常工作，避免因重试失败导致的媒体帧丢失。
+- **视频通话响应丢失**
+  - **新增** 检查视频通话响应重试逻辑是否正常执行
+  - **新增** 确认P2P连接是否在10秒内成功建立
+  - **新增** 验证Default通道的发送功能是否正常
 - **文件传输失败**
   - **传输请求失败**：检查文件传输请求消息格式和目标用户UUID
   - **传输响应失败**：确认接收方是否正确处理传输请求并发送响应
@@ -816,6 +924,11 @@ SVC --> GLOB["global_static_str.rs"]
   - **网络拥塞**：观察传输速度和重传次数，调整分片大小和并发度
   - **新增** 检查轻量级协议的性能提升效果
   - **新增** 监控协议转换过程中的性能指标
+  - **新增** 检查重试机制对系统性能的影响
+- **重试机制问题**
+  - **新增** 检查重试次数是否合理，避免过度重试
+  - **新增** 确认重试间隔设置是否合适
+  - **新增** 验证重试机制是否正确处理通道就绪状态
 
 **章节来源**
 - [p2p_quic_service.rs:334-431](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L334-L431)
@@ -824,7 +937,7 @@ SVC --> GLOB["global_static_str.rs"]
 - [p2p_service.rs:195-394](file://src-tauri/src/service/p2p_service.rs#L195-L394)
 
 ## 结论
-该 P2P 服务以 QUIC 为基础，结合服务器中转与 NAT 穿越策略，实现了从连接建立、媒体传输到信令交换的完整闭环。**最新版本**引入了四通道 QUIC 架构，将媒体信息通道与数据通道分离，显著提升了媒体统计信息的实时性和可靠性。**新增的轻量级媒体帧协议（MediaFrameHeader）** 进一步优化了视频音频传输性能，通过固定5字节头部和零拷贝设计，大幅减少了序列化开销和内存分配。**新增的文件传输功能** 进一步扩展了 P2P 服务的应用场景，支持大文件的可靠传输，通过分片传输和握手协议确保数据完整性。完整的媒体统计跟踪系统为开发者提供了丰富的运行时监控能力。通过清晰的模块划分与事件驱动的前端交互，既保证了功能的可扩展性，也为后续优化与调试提供了明确路径。建议在生产环境中替换为安全的 TLS 配置，并持续优化媒体参数与缓冲策略以适配复杂网络场景。
+该 P2P 服务以 QUIC 为基础，结合服务器中转与 NAT 穿越策略，实现了从连接建立、媒体传输到信令交换的完整闭环。**最新版本**引入了四通道 QUIC 架构，将媒体信息通道与数据通道分离，显著提升了媒体统计信息的实时性和可靠性。**新增的轻量级媒体帧协议（MediaFrameHeader）** 进一步优化了视频音频传输性能，通过固定5字节头部和零拷贝设计，大幅减少了序列化开销和内存分配。**新增的文件传输功能** 进一步扩展了 P2P 服务的应用场景，支持大文件的可靠传输，通过分片传输和握手协议确保数据完整性。**新增的P2P连接可靠性增强** 通过重试机制解决了首次连接时的媒体帧丢失和响应丢失问题，显著提升了系统的稳定性和用户体验。完整的媒体统计跟踪系统为开发者提供了丰富的运行时监控能力。通过清晰的模块划分与事件驱动的前端交互，既保证了功能的可扩展性，也为后续优化与调试提供了明确路径。建议在生产环境中替换为安全的 TLS 配置，并持续优化媒体参数与缓冲策略以适配复杂网络场景。
 
 ## 附录
 
@@ -833,7 +946,8 @@ SVC --> GLOB["global_static_str.rs"]
 flowchart TD
 Start(["send_p2p_video_frame_service"]) --> BuildHeader["MediaFrameHeader::new(Video, data_len)"]
 BuildHeader --> BuildFrame["MediaFrameHeader::build_frame()"]
-BuildFrame --> GetStream["get_sender(target_uuid, MediaData)"]
+BuildFrame --> RetryLogic["等待MediaData通道就绪<br/>最多3秒重试"]
+RetryLogic --> GetStream["get_sender(target_uuid, MediaData)"]
 GetStream --> WriteData["write_all(frame_data)"]
 WriteData --> EmitEvent["发送video_frame事件"]
 EmitEvent --> End(["完成"])
@@ -866,8 +980,8 @@ SrvFwd --> AddrBack["对端回传地址信息"]
 AddrBack --> RunSrv["对端启动P2P服务端(4通道)"]
 AddrBack --> RunCli["本机启动P2P客户端(4通道)"]
 RunSrv --> Establish["建立Default、MediaInfo、MediaData、File通道"]
-RunCli --> Establish
-Establish --> SendCfg["发送媒体配置"]
+RunCli --> Establish --> Retry["执行重试机制<br/>确保连接可靠性"]
+Retry --> SendCfg["发送媒体配置"]
 SendCfg --> StartMedia["开始媒体传输<br/>使用轻量级协议"]
 StartMedia --> StartStats["启动媒体统计跟踪(每2秒)"]
 StartStats --> FileTrans["文件传输准备"]
@@ -939,3 +1053,23 @@ StopHB --> Cleanup["关闭发送流并清理状态"]
 - [p2p_quic_service.rs:319-354](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L319-L354)
 - [p2p_stream_quic_client.rs:142-143](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_client.rs#L142-L143)
 - [p2p_stream_quic_server.rs:144-147](file://src-tauri/src/quic_service/p2p_service/p2p_stream_quic_server.rs#L144-L147)
+
+### 代码级流程图：P2P连接可靠性增强
+```mermaid
+flowchart TD
+Start["发送视频通话响应"] --> BuildResponse["构建响应消息"]
+BuildResponse --> RetryLoop["重试循环<br/>最多10次"]
+RetryLoop --> CheckSender{"检查Default通道发送器"}
+CheckSender -- 成功 --> SendMsg["发送响应消息"]
+CheckSender -- 失败 --> Wait["等待1秒"]
+Wait --> RetryLoop
+SendMsg --> Success["响应发送成功"]
+Success --> End(["完成"])
+RetryLoop --> Attempts{"超过10次尝试?"}
+Attempts -- 是 --> Fail["发送失败"]
+Fail --> End
+```
+
+**图表来源**
+- [p2p_service.rs:640-713](file://src-tauri/src/service/p2p_service.rs#L640-L713)
+- [p2p_quic_service.rs:428-454](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L428-L454)

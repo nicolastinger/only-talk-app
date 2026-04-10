@@ -8,6 +8,7 @@
 - [VideoReceiver.tsx](file://apps/pc/src/components/Media/VideoReceiver.tsx)
 - [p2p_quic_service.rs](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs)
 - [p2p_models.rs](file://src-tauri/src/entity/p2p_models.rs)
+- [text_msg.rs](file://src-tauri/src/entity/text_msg.rs)
 - [webrtcService/index.ts](file://apps/pc/src/services/webrtcService/index.ts)
 - [VideoCall/index.tsx](file://apps/pc/src/pages/Media/VideoCall/index.tsx)
 - [WebRTC/Chat/index.tsx](file://apps/pc/src/pages/WebRTC/Chat/index.tsx)
@@ -19,11 +20,11 @@
 
 ## 更新摘要
 **变更内容**
-- 对 PrivacyVideoCall 组件的音视频错误处理系统进行了重大优化
-- 增强了 MediaSource 生命周期管理机制
-- 优化了缓冲队列清理和状态重置逻辑
-- 改进了错误恢复和异常处理机制
-- 新增了完善的资源清理和状态管理
+- 修复了隐私视频通话系统的音频/视频初始化错误，解决了导致黑屏问题的时序问题
+- 新增了复杂的初始化序列、同步机制、超时处理和事件监听器清理程序
+- 前端组件重构了初始化逻辑，后端QUIC服务改进了二进制数据序列化兼容性
+- 增强了MediaSource生命周期管理和缓冲队列处理机制
+- 改进了错误恢复和异常处理系统
 
 ## 目录
 1. [项目概述](#项目概述)
@@ -34,9 +35,10 @@
 6. [WebRTC视频聊天系统](#webrtc视频聊天系统)
 7. [P2P通信机制](#p2p通信机制)
 8. [音视频错误处理系统](#音视频错误处理系统)
-9. [性能优化策略](#性能优化策略)
-10. [故障排除指南](#故障排除指南)
-11. [总结](#总结)
+9. [时序问题修复与初始化优化](#时序问题修复与初始化优化)
+10. [性能优化策略](#性能优化策略)
+11. [故障排除指南](#故障排除指南)
+12. [总结](#总结)
 
 ## 项目概述
 
@@ -51,6 +53,7 @@
 - **跨平台支持**: 支持Windows、macOS、Linux平台
 - **性能优化**: 轻量级协议减少CPU和内存开销约60%
 - **错误处理**: 完善的音视频错误处理和恢复机制
+- **时序保障**: 严格的初始化序列确保系统稳定性
 
 ## 系统架构
 
@@ -62,49 +65,58 @@ B[业务逻辑层]
 C[UI交互层]
 D[事件处理器]
 E[错误处理系统]
+F[时序控制机制]
 end
 subgraph "通信中间层"
-F[WebRTC服务]
-G[QUIC服务]
-H[信令服务]
-I[媒体帧处理器]
-J[错误恢复机制]
+G[WebRTC服务]
+H[QUIC服务]
+I[信令服务]
+J[媒体帧处理器]
+K[错误恢复机制]
+L[同步机制]
 end
 subgraph "后端服务层"
-K[Rust核心引擎]
-L[P2P连接管理]
-M[消息路由]
-N[媒体帧协议]
-O[错误监控]
+M[Rust核心引擎]
+N[P2P连接管理]
+O[消息路由]
+P[媒体帧协议]
+Q[错误监控]
+R[二进制序列化兼容]
 end
 subgraph "网络传输层"
-P[WebRTC通道]
-Q[QUIC通道]
-R[MediaData通道]
-S[MediaInfo通道]
-T[错误反馈通道]
+S[WebRTC通道]
+T[QUIC通道]
+U[MediaData通道]
+V[MediaInfo通道]
+W[错误反馈通道]
+X[事件监听器]
 end
 A --> F
 B --> G
 C --> H
 D --> I
 E --> J
-F --> K
-G --> L
-H --> M
-I --> N
-J --> O
-K --> P
-L --> Q
-M --> R
-N --> S
-O --> T
+F --> L
+G --> K
+H --> L
+I --> M
+J --> N
+K --> O
+L --> P
+M --> Q
+N --> R
+O --> S
+P --> T
+Q --> U
+R --> V
+S --> W
+T --> X
 ```
 
 **图表来源**
-- [PrivacyVideoCall/index.tsx:1-1120](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1120)
+- [PrivacyVideoCall/index.tsx:1-1153](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1153)
 - [webrtcService/index.ts:1-1792](file://apps/pc/src/services/webrtcService/index.ts#L1-L1792)
-- [p2p_quic_service.rs:1-355](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L355)
+- [p2p_quic_service.rs:1-455](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L455)
 
 ## 核心组件分析
 
@@ -138,6 +150,8 @@ class PrivacyVideoCall {
 +toggleAudio() void
 +handleEndCall() void
 +handleExit() void
++setupEventListeners() void
++waitForEventListenersReady() void
 }
 class MediaControlState {
 +boolean videoEnabled
@@ -184,7 +198,7 @@ Service-->>Client : 连接状态=connected
 - [webrtcService/index.ts:376-562](file://apps/pc/src/services/webrtcService/index.ts#L376-L562)
 
 **章节来源**
-- [PrivacyVideoCall/index.tsx:1-1120](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1120)
+- [PrivacyVideoCall/index.tsx:1-1153](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L1-L1153)
 - [webrtcService/index.ts:134-751](file://apps/pc/src/services/webrtcService/index.ts#L134-L751)
 
 ## 隐私视频通话流程
@@ -193,12 +207,16 @@ Service-->>Client : 连接状态=connected
 
 ```mermaid
 flowchart TD
-Start([开始通话]) --> Invite[发送通话邀请]
+Start([开始通话]) --> SetupEventListeners[设置事件监听器]
+SetupEventListeners --> WaitReady{等待监听器就绪}
+WaitReady --> |监听器就绪| InitRemoteMedia[初始化远程媒体接收器]
+WaitReady --> |超时| InitRemoteMedia
+InitRemoteMedia --> Invite[发送通话邀请]
 Invite --> Wait[等待对方响应]
 Wait --> Accepted{对方接受?}
-Accepted --> |是| InitMedia[初始化本地媒体]
+Accepted --> |是| InitLocalMedia[初始化本地媒体]
 Accepted --> |否| EndCall[结束通话]
-InitMedia --> SendConfig[发送媒体配置]
+InitLocalMedia --> SendConfig[发送媒体配置]
 SendConfig --> StartRecording[开始媒体录制]
 StartRecording --> ReceiveConfig[接收媒体配置]
 ReceiveConfig --> EstablishConnection[建立P2P连接]
@@ -410,6 +428,7 @@ subgraph "消息处理层"
 H[消息分发]
 I[事件发射]
 J[状态管理]
+K[二进制序列化兼容]
 end
 A --> B
 B --> C
@@ -422,6 +441,7 @@ F --> H
 G --> H
 H --> I
 I --> J
+J --> K
 ```
 
 **图表来源**
@@ -473,7 +493,7 @@ P2pMediaConfig --> P2pBufferConfig
 - [p2pVideoConfig.ts:4-18](file://apps/pc/src/models/p2pVideoConfig.ts#L4-L18)
 
 **章节来源**
-- [p2p_quic_service.rs:1-355](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L355)
+- [p2p_quic_service.rs:1-455](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L1-L455)
 - [p2p_models.rs:1-394](file://src-tauri/src/entity/p2p_models.rs#L1-L394)
 - [p2pVideoConfig.ts:1-21](file://apps/pc/src/models/p2pVideoConfig.ts#L1-L21)
 
@@ -587,6 +607,104 @@ StateResetMechanism --> BufferState
 **章节来源**
 - [PrivacyVideoCall/index.tsx:351-875](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L351-L875)
 
+## 时序问题修复与初始化优化
+
+### 严格的初始化序列
+
+系统引入了严格的初始化序列，确保所有组件按照正确的顺序初始化，避免时序问题导致的黑屏现象。
+
+```mermaid
+sequenceDiagram
+participant Component as PrivacyVideoCall组件
+participant EventManager as 事件管理器
+participant MediaManager as 媒体管理器
+participant Backend as 后端服务
+Component->>EventManager : 注册所有事件监听器
+EventManager->>Component : 确认监听器就绪
+Component->>MediaManager : 初始化远程媒体接收器
+MediaManager->>Component : 创建MediaSource和SourceBuffer
+Component->>Backend : 发送通话邀请
+Backend->>Component : 接收媒体配置
+Component->>MediaManager : 开始媒体录制
+MediaManager->>Component : 开始数据传输
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:511-710](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L511-L710)
+- [PrivacyVideoCall/index.tsx:988-1034](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L988-L1034)
+
+### 事件监听器注册等待机制
+
+系统实现了智能的事件监听器注册等待机制，确保在发送任何信令之前所有监听器都已准备就绪。
+
+```mermaid
+flowchart TD
+A[开始初始化] --> B[注册事件监听器]
+B --> C[等待监听器就绪]
+C --> D{监听器是否就绪?}
+D --> |是| E[继续初始化流程]
+D --> |否| F[等待100ms]
+F --> G{超过最大等待时间?}
+G --> |否| C
+G --> |是| H[记录警告并继续]
+E --> I[初始化远程媒体接收器]
+H --> I
+I --> J[发送通话邀请]
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:990-1019](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L990-L1019)
+
+### 超时处理机制
+
+系统实现了完善的超时处理机制，防止初始化过程中的无限等待。
+
+```mermaid
+classDiagram
+class TimeoutHandler {
++maxWaitTime : number
++currentWaitTime : number
++timeoutCallback : Function
++checkTimeout() boolean
++resetTimer() void
++extendTimeout(time : number) void
+}
+class InitializationSequence {
++setupEventListeners() Promise<void>
++waitForEventListenersReady() Promise<void>
++initRemoteMediaReceiver() Promise<void>
++sendVideoCallInvite() Promise<void>
+}
+InitializationSequence --> TimeoutHandler
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:995-1001](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L995-L1001)
+
+### 事件监听器清理程序
+
+系统实现了完整的事件监听器清理程序，确保组件卸载时不会留下悬挂的监听器。
+
+```mermaid
+flowchart TD
+A[组件卸载] --> B[停止媒体录制器]
+B --> C[停止媒体轨道]
+C --> D[关闭MediaSource]
+D --> E[清理SourceBuffer]
+E --> F[清空缓冲队列]
+F --> G[重置更新状态]
+G --> H[释放引用]
+H --> I[调用所有取消函数]
+I --> J[清理ObjectURL]
+J --> K[更新组件状态]
+```
+
+**图表来源**
+- [PrivacyVideoCall/index.tsx:830-891](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L830-L891)
+
+**章节来源**
+- [PrivacyVideoCall/index.tsx:511-1034](file://apps/pc/src/components/Media/PrivacyVideoCall/index.tsx#L511-L1034)
+
 ## 性能优化策略
 
 ### 轻量级协议优化
@@ -630,6 +748,30 @@ C --> E
 - **超时处理**: 设置合理的连接超时时间
 - **状态监控**: 实时监控连接状态变化
 
+### 二进制数据序列化兼容性
+
+后端QUIC服务改进了二进制数据序列化兼容性，确保与前端的完美配合。
+
+```mermaid
+classDiagram
+class BinarySerializer {
++serializeToBytes(data : any) Vec<u8>
++deserializeFromBytes(buffer : &[u8]) Result<any, Error>
++validateHeader(header : &[u8]) bool
++getCompatibleFormat() String
+}
+class MediaFrameProcessor {
++processVideoFrame(data : Vec<u8>) Result<Vec<u8>, Error>
++processAudioFrame(data : Vec<u8>) Result<Vec<u8>, Error>
++emitEvent(eventName : String, payload : Vec<u8>) Result<void, Error>
+}
+BinarySerializer --> MediaFrameProcessor
+```
+
+**图表来源**
+- [p2p_models.rs:52-84](file://src-tauri/src/entity/p2p_models.rs#L52-L84)
+- [p2p_quic_service.rs:420-455](file://src-tauri/src/quic_service/p2p_service/p2p_quic_service.rs#L420-L455)
+
 **章节来源**
 - [webrtcService/index.ts:564-771](file://apps/pc/src/services/webrtcService/index.ts#L564-L771)
 
@@ -640,11 +782,12 @@ C --> E
 | 问题类型 | 症状 | 可能原因 | 解决方案 |
 |---------|------|----------|----------|
 | 音频问题 | 无法听到对方声音 | 麦克风权限未授权 | 检查浏览器权限设置 |
-| 视频问题 | 画面卡顿或黑屏 | 网络带宽不足 | 调整视频质量设置 |
+| 视频问题 | 画面卡顿或黑屏 | 初始化时序问题 | 确保事件监听器先注册 |
 | 连接失败 | 无法建立P2P连接 | NAT环境复杂 | 检查防火墙设置 |
 | 延迟过高 | 通话有明显延迟 | 网络质量差 | 优化网络环境 |
 | 性能问题 | CPU使用率高 | 旧版本协议 | 升级到最新版本 |
 | 错误处理问题 | 媒体播放异常 | MediaSource状态异常 | 检查错误恢复机制 |
+| 时序问题 | 初始化失败 | 监听器注册顺序错误 | 检查初始化序列 |
 
 ### 调试工具
 
@@ -654,6 +797,7 @@ C --> E
 - **媒体信息**: 帧率、码率、延迟等实时监控
 - **错误日志**: 详细的操作错误和异常信息
 - **性能监控**: CPU使用率、内存分配情况
+- **时序监控**: 初始化序列执行时间和状态
 
 **章节来源**
 - [webrtcService/index.ts:778-800](file://apps/pc/src/services/webrtcService/index.ts#L778-L800)
@@ -667,7 +811,8 @@ C --> E
 3. **性能**: 采用全新的轻量级媒体帧协议，性能提升约60%，显著减少CPU和内存开销
 4. **可扩展性**: 模块化设计便于功能扩展和维护
 5. **可靠性**: 完善的音视频错误处理系统，包括MediaSource生命周期管理、缓冲队列清理、状态重置机制和错误恢复逻辑
+6. **时序保障**: 严格的初始化序列和事件监听器注册等待机制，确保系统稳定运行
 
-**更新** 本次重大优化主要体现在 PrivacyVideoCall 组件的音视频错误处理系统上，新增了完善的 MediaSource 生命周期管理、缓冲队列清理、状态重置机制和错误恢复逻辑，显著提升了系统的稳定性和可靠性。这些改进确保了在各种异常情况下都能正确处理音视频数据，提供更好的用户体验。
+**更新** 本次重大优化主要体现在 PrivacyVideoCall 组件的音视频错误处理系统上，新增了完善的 MediaSource 生命周期管理、缓冲队列清理、状态重置机制和错误恢复逻辑，显著提升了系统的稳定性和可靠性。同时，系统修复了导致黑屏问题的时序问题，通过严格的初始化序列和超时处理机制确保所有组件按正确顺序初始化。后端QUIC服务也改进了二进制数据序列化兼容性，与前端的轻量级协议完美配合。这些改进确保了在各种异常情况下都能正确处理音视频数据，提供更好的用户体验。
 
 该系统为用户提供了可靠的隐私视频通话解决方案，适用于各种应用场景，从个人通讯到企业协作都能满足需求。

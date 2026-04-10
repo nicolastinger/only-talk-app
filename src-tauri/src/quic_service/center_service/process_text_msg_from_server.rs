@@ -1,14 +1,12 @@
 use std::time::Duration;
 
-use std::net::{SocketAddr, UdpSocket};
-
 use anyhow::anyhow;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::time::timeout;
 
-use crate::dao::chat_record_ack::{query_ack_record_from_db, update_chat_record_ack};
+use crate::dao::chat_record_ack::update_chat_record_ack;
 use crate::dao::chat_record_db::insert_chat_record;
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
@@ -29,7 +27,7 @@ use crate::utils::message_types::{
 };
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WebRTCSignalMessage {
@@ -203,13 +201,14 @@ pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow
 async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     info!("收到ack消息{:?}", text_quic_msg);
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
-    let text_type = msg.text_type;
 
     let payload = serde_json::to_string(&msg)?;
     //1.查询ack表中该条消息
     let ack_record = query_record_send_from_db(&msg.raw).await;
     if ack_record.is_err() {
-        warn!("查询ack表中该条消息失败 {:?}", ack_record.err());
+        // P2P信令消息（如视频通话邀请、P2P握手等）不经过chat_service发送流程，
+        // 不会在chat_record_send表中留有记录，收到ACK时查不到是正常情况，静默跳过即可
+        info!("ACK对应的消息不在发送记录表中(可能是P2P信令消息)，跳过处理: send_id={}", msg.raw);
         return Ok(());
     }
     let ack_record = ack_record?;

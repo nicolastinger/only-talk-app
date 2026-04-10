@@ -108,6 +108,7 @@ const MediaPage: React.FC = () => {
             src={userInfo?.icon || DEFAULT_ICON}
             alt="用户头像"
             className={styles.imgItem}
+            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
           />
         </div>
         <div className={styles.right}>

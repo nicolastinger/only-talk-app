@@ -1,3 +1,4 @@
+import { DEFAULT_ICON } from '@/constants';
 import { history } from '@umijs/max';
 import { getFiles } from '@workspace/services';
 import { FriendVo } from '@workspace/types';
@@ -32,7 +33,7 @@ const FriendBox = (props: { friend: FriendVo }) => {
     <div className={styles.container} onClick={routeToFriendInfo}>
       <div className={styles.left}>
         <Badge>
-          <img src={userIcon || ''} className={styles.imgItem} alt="123" />
+          <img src={userIcon || DEFAULT_ICON} className={styles.imgItem} alt="avatar" onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }} />
         </Badge>
       </div>
       <div className={styles.center}>

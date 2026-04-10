@@ -1,3 +1,4 @@
+import { DEFAULT_ICON } from '@/constants';
 import { formatMessageTime } from '@/utils/format';
 import { getFiles } from '@workspace/services';
 import { MessageQueueProps } from '@workspace/types';
@@ -107,10 +108,11 @@ const MessageBox = (props: MessageQueueProps) => {
       <div className={styles.left}>
         <Badge count={count}>
           <img
-            src={friendIcon || ''}
+            src={friendIcon || DEFAULT_ICON}
             className={styles.imgItem}
-            alt="123"
+            alt="avatar"
             style={{ opacity: loading ? 0.7 : 1 }}
+            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
           />
         </Badge>
       </div>

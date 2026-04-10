@@ -1,3 +1,4 @@
+import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { history } from '@umijs/max';
 import { get_friend_info, getFiles } from '@workspace/services';
@@ -65,7 +66,7 @@ const FriendInfo = (props: { uuid: string }) => {
     <div className={styles.container}>
       <div className={styles.content}>
         <div className={styles.header}>
-          <img className={styles.icon} src={friendIcon || ''} alt="icon" />
+          <img className={styles.icon} src={friendIcon || DEFAULT_ICON} alt="avatar" onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }} />
         </div>
         <div className={styles.body}>
           <div className={styles.name}>{currentFriend?.friend_name}</div>

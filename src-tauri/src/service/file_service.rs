@@ -9,7 +9,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use crate::config::get_config;
-use crate::dao::file_record_db::{delete_file_record_by_id, insert_file_record};
+use crate::dao::file_record_db::{delete_file_record_by_id, increment_download_retry_count, insert_failed_file_record, insert_file_record, MAX_DOWNLOAD_RETRY_COUNT};
 use crate::dto::http_result::HttpResult;
 use crate::entity::file_record::FileRecord;
 use crate::service::api_service::{get_with_token, post_with_body};
@@ -30,12 +30,44 @@ pub async fn get_file_by_biz_id_service(
     if !uuid_utils::is_uuid(&biz_id) {
         return Err(anyhow::anyhow!("biz_id格式错误，必须为uuid格式"));
     }
-    // 1、从本地获取文件记录
+    // 1、从本地获取文件记录（仅正常状态）
     let mut file_list = FileRecord::get_by_biz_id(&biz_id).await?;
     // 2、是否存在文件
     if file_list.is_empty() {
+        // 2-0 检查是否存在下载失败超过重试上限的记录
+        let failed_list = FileRecord::get_by_biz_id_include_failed(&biz_id).await?;
+        let has_exceeded_retry = failed_list.iter().any(|f| {
+            f.status == Some(3) || f.download_retry_count.unwrap_or(0) >= MAX_DOWNLOAD_RETRY_COUNT
+        });
+        if has_exceeded_retry {
+            return Err(anyhow::anyhow!(
+                "文件下载失败次数已达上限({}次)，不再重试",
+                MAX_DOWNLOAD_RETRY_COUNT
+            ));
+        }
+
         // 2-1 从远程下载文件
-        download_file_by_biz_service(&biz_id, url).await?;
+        match download_file_by_biz_service(&biz_id, url).await {
+            Ok(()) => {}
+            Err(e) => {
+                error!("文件下载失败: biz_id={}, 错误: {}", biz_id, e);
+                // 下载失败，查找该biz_id下已有记录并递增重试次数
+                let retry_list = FileRecord::get_by_biz_id_include_failed(&biz_id).await?;
+                if let Some(record) = retry_list.first() {
+                    let file_uuid = record.uuid.clone().unwrap_or_default();
+                    if !file_uuid.is_empty() {
+                        increment_download_retry_count(&biz_id, &file_uuid).await?;
+                    }
+                } else {
+                    // 首次下载就失败，没有记录，插入一条失败记录用于追踪重试次数
+                    let uuid = uuid::Uuid::new_v4().to_string();
+                    let now = chrono::Local::now().timestamp();
+                    insert_failed_file_record(&biz_id, &uuid, now).await?;
+                    increment_download_retry_count(&biz_id, &uuid).await?;
+                }
+                return Err(e);
+            }
+        }
         // 2-2 再重新获取文件记录
         file_list = FileRecord::get_by_biz_id(&biz_id).await?;
         // 2-3 如果还是不存在，抛出错误
@@ -53,10 +85,18 @@ pub async fn get_file_by_biz_id_service(
         if raw.is_err() {
             // 文件不存在
             error!("文件不存在: {:?}", file_path);
-            // 删除文件记录
-            let file_id = file.uuid.ok_or(anyhow::anyhow!("文件不存在"))?;
-            delete_file_record_by_id(&biz_id, &file_id).await?;
-            return Err(anyhow::anyhow!("文件不存在"));
+            // 递增下载重试次数
+            let file_id = file.uuid.clone().ok_or(anyhow::anyhow!("文件不存在"))?;
+            let retry_count = increment_download_retry_count(&biz_id, &file_id).await?;
+            if retry_count >= MAX_DOWNLOAD_RETRY_COUNT {
+                // 超过重试上限，删除文件记录
+                delete_file_record_by_id(&biz_id, &file_id).await?;
+                return Err(anyhow::anyhow!(
+                    "文件下载失败次数已达上限({}次)，不再重试",
+                    MAX_DOWNLOAD_RETRY_COUNT
+                ));
+            }
+            return Err(anyhow::anyhow!("文件不存在，等待重试"));
         }
         let file_vo = FileVo {
             file_id: file.uuid,
@@ -108,7 +148,7 @@ pub async fn download_file_by_biz_service(biz_id: &str, url: String) -> Result<(
         // 3、遍历文件ID列表，下载每个文件
         for file_url in file_urls.into_iter() {
             if let Value::String(file_url_str) = file_url {
-                let file_url_str = format!("{}{}", TALK_API, file_url_str);
+                let file_url_str = format!("{}", file_url_str);
                 info!("下载文件URL: {}", file_url_str);
 
                 let response = get_with_token(file_url_str).await?;
