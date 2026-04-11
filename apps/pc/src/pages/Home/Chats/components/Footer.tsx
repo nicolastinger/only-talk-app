@@ -17,11 +17,15 @@ const { TextArea } = Input;
 interface ChatFooterProps {
   friendUuid: string;
   onMessageSent: (message: string) => void;
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
 }
 
 const ChatFooter: React.FC<ChatFooterProps> = ({
   friendUuid,
   onMessageSent,
+  onUploadStart,
+  onUploadEnd,
 }) => {
   const [message, setMessage] = useState('');
   const textareaRef = useRef<TextAreaRef>(null); // 需要获取ref
@@ -69,6 +73,8 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
         friendUuid={friendUuid}
         onEmojiSelect={handleEmojiSelect}
         onMessageSent={onMessageSent}
+        onUploadStart={onUploadStart}
+        onUploadEnd={onUploadEnd}
       />
       <div className={styles.footerMessage}>
         <TextArea

@@ -7,7 +7,7 @@ use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
 use crate::entity::Page;
 use crate::service::chat_service::{
     get_chat_record_by_type_service, get_chat_record_service, send_image_msg_service,
-    send_text_msg_service, update_last_read_msg_from_db,
+    send_text_msg_service, send_file_msg_service, update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -40,6 +40,12 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
 #[tauri::command]
 pub async fn send_image_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
     send_image_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
+}
+
+// 发送文件数据
+#[tauri::command]
+pub async fn send_file_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
+    send_file_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
 /// 已读当前记录

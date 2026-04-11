@@ -57,4 +57,28 @@ impl ChatRecord {
             .await?;
         Ok(record.0)
     }
+
+    /// 通过 biz_id 查询文件消息的原始文件名和文件类型
+    /// biz_id 存储在 raw 字段的 JSON 中
+    pub async fn get_file_info_by_biz_id(biz_id: &str) -> Result<Option<(String, String)>, anyhow::Error> {
+        let pool_sqlite = get_private_db_client().await?;
+        // 查询 text_type=3 (文件类型) 且 raw 中包含该 biz_id 的记录
+        let record: Option<(String,)> = sqlx::query_as(
+            r#"SELECT raw FROM chat_record WHERE text_type = 3 AND raw LIKE ? LIMIT 1"#
+        )
+        .bind(format!("%\"biz_id\":\"{}\"%", biz_id))
+        .fetch_optional(&pool_sqlite)
+        .await?;
+
+        if let Some((raw,)) = record {
+            // 解析 JSON 获取 file_name 和 file_type
+            let json: serde_json::Value = serde_json::from_str(&raw)?;
+            let file_name = json["file_name"].as_str().map(|s| s.to_string());
+            let file_type = json["file_type"].as_str().map(|s| s.to_string());
+            if let (Some(name), Some(ext)) = (file_name, file_type) {
+                return Ok(Some((name, ext)));
+            }
+        }
+        Ok(None)
+    }
 }

@@ -73,6 +73,9 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
         setPreviewUrl(preview);
       }
 
+      // 触发全局上传开始事件
+      window.dispatchEvent(new CustomEvent('uploadStart'));
+
       const uploadResult = await Promise.race([
         invoke<{ status: number; body: string }>('upload_file_request', {
           url: `${TALK_API}/file_integrated/upload/user_avatar`,
@@ -83,6 +86,9 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           setTimeout(() => reject(new Error('上传超时（30秒）')), TIMEOUT_MS),
         ),
       ]);
+
+      // 触发全局上传结束事件
+      window.dispatchEvent(new CustomEvent('uploadEnd'));
 
       if (uploadResult.status === 200) {
         const responseBody = JSON.parse(uploadResult.body);
@@ -109,6 +115,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
     } catch (error: any) {
       console.error('头像更新失败:', error);
       message.error(error.message || '头像更新失败');
+      window.dispatchEvent(new CustomEvent('uploadEnd'));
     } finally {
       setLoading(false);
       setPreviewUrl(null);

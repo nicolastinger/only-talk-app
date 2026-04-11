@@ -46,13 +46,15 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
 /**
  * 获取文件列表
  * @param bizId 业务ID
+ * @param nanoId 可选的消息nano_id，如果提供且raw中有文件名，则优先使用raw中的文件名
  * @returns 文件列表
  */
-export const getFiles = async (bizId: string): Promise<FileVo[] | null> => {
+export const getFiles = async (bizId: string, nanoId?: string): Promise<FileVo[] | null> => {
   try {
     let files = [] as FileVo[];
     const FileVos: FileVo[] = await invoke("get_file_by_biz_id", {
       bizId,
+      nanoId,
     });
 
     if (FileVos.length > 0) {
@@ -76,15 +78,18 @@ export const getFiles = async (bizId: string): Promise<FileVo[] | null> => {
 /**
  * 获取聊天文件
  * @param bizId 业务ID
+ * @param nanoId 可选的消息nano_id，如果提供且raw中有文件名，则优先使用raw中的文件名
  * @returns 文件列表
  */
 export const getChatFileByBizId = async (
-  bizId: string
+  bizId: string,
+  nanoId?: string
 ): Promise<FileVo[] | null> => {
   try {
     let files = [] as FileVo[];
     const FileVos: FileVo[] = await invoke("get_chat_file_by_biz_id", {
       bizId,
+      nanoId,
     });
 
     console.log("get_chat_file_by_biz_id result:", FileVos);
@@ -157,12 +162,14 @@ export const getChatRecordByType = async (
  * @param meUuid 当前用户UUID
  * @param friendUuid 好友UUID
  * @param currentBizId 当前点击的图片bizId
+ * @param currentNanoId 可选的当前消息nano_id，用于获取原始文件名
  * @returns 图片URL列表和当前索引
  */
 export const getFriendImageMessages = async (
   meUuid: string,
   friendUuid: string,
-  currentBizId: string
+  currentBizId: string,
+  currentNanoId?: string
 ): Promise<{ imageUrls: string[]; currentIndex: number }> => {
   try {
     const page: Page = { size: 1000, current: 1, total: 0 };
@@ -180,7 +187,9 @@ export const getFriendImageMessages = async (
           currentIndex = imageUrls.length;
         }
 
-        const files = await getChatFileByBizId(bizId);
+        // 如果是当前点击的图片，传入nano_id以获取原始文件名
+        const nanoId = bizId === currentBizId ? currentNanoId : record.nano_id;
+        const files = await getChatFileByBizId(bizId, nanoId);
         if (files && files.length > 0 && files[0].tauri_file_path) {
           imageUrls.push(files[0].tauri_file_path);
         }

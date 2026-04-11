@@ -2,8 +2,9 @@ import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
-import { ChatMessage, ImageRecord } from '@workspace/types';
+import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
+import ChatFile from './ChatFile';
 import ChatImage from './ChatImage';
 import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/CustomerChatBox.less';
@@ -21,7 +22,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   props: CustomerChatBoxProps,
 ) => {
   const {
-    text_msg_raw: { raw, text_type, timestamp },
+    text_msg_raw: { raw, text_type, timestamp, nano_id },
     img,
     friendUuid,
     currentBizId,
@@ -31,6 +32,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
 
   useEffect(() => {
     if (!img) return;
@@ -65,7 +67,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         }
 
         setLoading(true);
-        getChatFileByBizId(bizId)
+        getChatFileByBizId(bizId, nano_id)
           .then((files) => {
             console.log('CustomerChatBox - Files returned:', files);
             if (files && files.length > 0) {
@@ -88,6 +90,16 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
           });
       } catch (error) {
         console.error('CustomerChatBox - Error parsing image record:', error);
+      }
+    }
+
+    // 处理文件消息
+    if (text_type === 3) {
+      try {
+        const record: FileRecord = JSON.parse(raw);
+        setFileRecord(record);
+      } catch (error) {
+        console.error('CustomerChatBox - Error parsing file record:', error);
       }
     }
   }, [raw, text_type]);
@@ -124,6 +136,20 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
             meUuid={userInfo?.uuid || ''}
           />
         );
+      case 3:
+        if (fileRecord) {
+          return (
+            <ChatFile
+              bizId={fileRecord.biz_id}
+              fileName={fileRecord.file_name}
+              fileSize={fileRecord.file_size}
+              fileType={fileRecord.file_type}
+              nanoId={nano_id}
+              loading={loading}
+            />
+          );
+        }
+        return <div className={styles.container}>[文件]</div>;
       case 4:
         return <PrivacyModeMessage isMine={false} />;
       case 5:
@@ -139,6 +165,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   };
 
   const isImageMessage = text_type === 2;
+  const isFileMessage = text_type === 3;
   const isSpecialMessage = [4, 5, 12, 13, 14, 15, 100].includes(text_type);
 
   return (
@@ -155,7 +182,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         />
       </div>
       <div className={styles.chatContainerWrapper}>
-        <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
+        <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isFileMessage ? styles.fileMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
           {renderMessage(raw)}
         </div>
         <div className={styles.tooltip}>

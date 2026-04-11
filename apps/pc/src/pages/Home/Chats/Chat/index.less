@@ -35,6 +35,44 @@
   z-index: 1;
 }
 
+.uploadLoadingBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(64, 150, 255, 0.1);
+  overflow: hidden;
+  z-index: 2;
+  animation: fadeIn 0.3s ease;
+}
+
+.uploadLoadingProgress {
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(
+    90deg,
+    #4096ff,
+    #69b1ff,
+    #4096ff
+  );
+  background-size: 200% 100%;
+  animation: loadingSlide 1.5s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(64, 150, 255, 0.5);
+}
+
+@keyframes loadingSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(250%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
 .mainContainer {
   width: 100%;
   height: calc(100% - 40px);

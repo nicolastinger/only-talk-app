@@ -14,13 +14,22 @@ interface ImageRecord {
   platform: number;
 }
 
+interface FileRecord {
+  prev_id: string;
+  biz_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: string; // 文件扩展名
+  platform: number;
+}
+
 interface TextQuicMsgVo {
   nano_id: string; //消息id
-  text_type: number; //消息类型，0: 文本，1: 图片
+  text_type: number; //消息类型，1: 文本，2: 图片，3: 文件
   raw: string; //数据
   recv_user: string; //接收用户
   send_user: string; //发送用户
   timestamp: number; //消息时间戳
 }
 
-export { TextMsgRaw, TextQuicMsgVo, ImageRecord };
+export { TextMsgRaw, TextQuicMsgVo, ImageRecord, FileRecord };

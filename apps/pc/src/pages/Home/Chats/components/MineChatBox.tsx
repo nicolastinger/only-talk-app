@@ -6,8 +6,9 @@ import {
   getChatFileByBizId,
   getFiles,
 } from '@workspace/services';
-import { ChatMessage, ImageRecord } from '@workspace/types';
+import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
+import ChatFile from './ChatFile';
 import ChatImage from './ChatImage';
 import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/MineChatBox.less';
@@ -33,7 +34,7 @@ const isLocalFilePath = (raw: string): boolean => {
 const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   const {
     msg: {
-      text_msg_raw: { raw, text_type, timestamp },
+      text_msg_raw: { raw, text_type, timestamp, nano_id },
     },
     isAck = true,
     icon,
@@ -43,6 +44,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
 
   const userInfo = useBearStore((state) => state.userInfo);
   const [ackFlag, setAckFlag] = React.useState(0);
@@ -122,7 +124,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         }
 
         setLoading(true);
-        getChatFileByBizId(bizId)
+        getChatFileByBizId(bizId, nano_id)
           .then((files) => {
             console.log('MineChatBox - Files returned:', files);
             if (files && files.length > 0) {
@@ -147,6 +149,30 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         console.error('MineChatBox - Error parsing image record:', error);
       }
     }
+
+    // 处理文件消息
+    if (text_type === 3) {
+      if (isLocalFilePath(raw)) {
+        // 本地文件路径，显示临时信息
+        const fileName = raw.split(/[/\\]/).pop() || 'unknown';
+        setFileRecord({
+          prev_id: '',
+          biz_id: '',
+          file_name: fileName,
+          file_size: 0,
+          file_type: fileName.split('.').pop() || '',
+          platform: 0,
+        });
+        return;
+      }
+
+      try {
+        const record: FileRecord = JSON.parse(raw);
+        setFileRecord(record);
+      } catch (error) {
+        console.error('MineChatBox - Error parsing file record:', error);
+      }
+    }
   }, [raw, text_type]);
 
   const renderMessage = (message: string) => {
@@ -163,6 +189,20 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             meUuid={userInfo?.uuid || ''}
           />
         );
+      case 3:
+        if (fileRecord) {
+          return (
+            <ChatFile
+              bizId={fileRecord.biz_id}
+              fileName={fileRecord.file_name}
+              fileSize={fileRecord.file_size}
+              fileType={fileRecord.file_type}
+              nanoId={nano_id}
+              loading={loading}
+            />
+          );
+        }
+        return <div className={styles.container}>[文件]</div>;
       case 4:
         return <PrivacyModeMessage isMine={true} />;
       case 5:
@@ -192,6 +232,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   };
 
   const isImageMessage = text_type === 2;
+  const isFileMessage = text_type === 3;
   const isSpecialMessage = [4, 5, 12, 13, 14, 15, 100].includes(text_type);
 
   return (
@@ -199,7 +240,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       <div className={styles.messageWrapper}>
         {renderAck()}
         <div className={styles.chatContainerWrapper}>
-          <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
+          <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isFileMessage ? styles.fileMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
             {renderMessage(raw)}
           </div>
           <div className={styles.tooltip}>

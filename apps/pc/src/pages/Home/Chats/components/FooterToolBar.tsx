@@ -3,6 +3,7 @@ import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
 import { useBearStore } from '@/store/store';
 import {
   ApiOutlined,
+  FileOutlined,
   LockOutlined,
   PictureOutlined,
   SmileOutlined,
@@ -19,6 +20,8 @@ interface FooterToolBarProps {
   friendUuid: string;
   onEmojiSelect?: (emoji: string) => void;
   onMessageSent?: (message: string) => void;
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
 }
 
 const EMOJI_LIST = [
@@ -92,6 +95,8 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
   friendUuid,
   onEmojiSelect,
   onMessageSent,
+  onUploadStart,
+  onUploadEnd,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -135,11 +140,54 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
           ack: false,
         };
 
-        await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
-        onMessageSent?.(JSON.stringify(temp));
+        onUploadStart?.();
+        try {
+          await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
+          onMessageSent?.(JSON.stringify(temp));
+        } finally {
+          onUploadEnd?.();
+        }
       }
     } catch (e) {
       console.log('发送图片失败', e);
+      onUploadEnd?.();
+    }
+  };
+
+  const sendFile = async () => {
+    try {
+      const filePaths = await selectFile(false, false);
+
+      if (filePaths && filePaths.length > 0) {
+        const filePath = filePaths[0];
+        console.log('Selected file path:', filePath);
+
+        let text_msg_raw: TextQuicMsgVo = {
+          nano_id: nanoid(),
+          text_type: 3,
+          raw: filePath,
+          recv_user: friendUuid,
+          send_user: '',
+          timestamp: new Date().getTime(),
+        };
+
+        const temp: ChatMessage = {
+          from: MessageFrom.Mine,
+          text_msg_raw,
+          ack: false,
+        };
+
+        onUploadStart?.();
+        try {
+          await invoke('send_file_msg', { textQuicMsg: text_msg_raw });
+          onMessageSent?.(JSON.stringify(temp));
+        } finally {
+          onUploadEnd?.();
+        }
+      }
+    } catch (e) {
+      console.log('发送文件失败', e);
+      onUploadEnd?.();
     }
   };
 
@@ -207,10 +255,13 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
           </div>
         )}
       </div>
-      <div className={styles.footerBtn} onClick={sendImage}>
+      <div className={styles.footerBtn} onClick={sendImage} title="发送图片">
         <PictureOutlined />
       </div>
-      <div className={styles.footerBtn} onClick={sendRequestToP2p}>
+      <div className={styles.footerBtn} onClick={sendFile} title="发送文件">
+        <FileOutlined />
+      </div>
+      <div className={styles.footerBtn} onClick={sendRequestToP2p} title="隐私聊天">
         <LockOutlined />
       </div>
       <div

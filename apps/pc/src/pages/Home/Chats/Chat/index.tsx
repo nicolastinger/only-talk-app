@@ -33,6 +33,7 @@ const ChatPage: React.FC = () => {
   const [loadedMessageIds, setLoadedMessageIds] = useState<Set<string>>(
     new Set(),
   );
+  const [isUploading, setIsUploading] = useState(false);
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -79,8 +80,17 @@ const ChatPage: React.FC = () => {
     markReadFriend(friendUuid);
     setCurrentFriendSession(friendUuid);
 
+    // 监听全局上传事件
+    const handleUploadStartEvent = () => setIsUploading(true);
+    const handleUploadEndEvent = () => setIsUploading(false);
+    
+    window.addEventListener('uploadStart', handleUploadStartEvent);
+    window.addEventListener('uploadEnd', handleUploadEndEvent);
+
     return () => {
       setCurrentFriendSession('-1');
+      window.removeEventListener('uploadStart', handleUploadStartEvent);
+      window.removeEventListener('uploadEnd', handleUploadEndEvent);
     };
   }, [meUuid, friendUuid]);
 
@@ -303,6 +313,14 @@ const ChatPage: React.FC = () => {
     }, 300);
   };
 
+  const handleUploadStart = () => {
+    setIsUploading(true);
+  };
+
+  const handleUploadEnd = () => {
+    setIsUploading(false);
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -310,6 +328,11 @@ const ChatPage: React.FC = () => {
           title={currentFriend?.friend_name || ''}
           friendInfo={currentFriend}
         />
+        {isUploading && (
+          <div className={styles.uploadLoadingBar}>
+            <div className={styles.uploadLoadingProgress} />
+          </div>
+        )}
       </div>
       <div className={styles.mainContainer}>
         <div
@@ -344,6 +367,8 @@ const ChatPage: React.FC = () => {
           <ChatFooter
             friendUuid={friendUuid}
             onMessageSent={handleMessageSent}
+            onUploadStart={handleUploadStart}
+            onUploadEnd={handleUploadEnd}
           />
         </div>
       </div>

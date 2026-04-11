@@ -25,7 +25,7 @@ use crate::dao::session_db::{
 };
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord, WebRTCSignalRecord};
+use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord, WebRTCSignalRecord, FileRecord};
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
@@ -386,6 +386,11 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         }
+        3 => {
+            let mut chat_record_raw = <FileRecord as ChatRecordRaw>::deserialize(raw)?;
+            chat_record_raw.set_prev_id(prev_id);
+            chat_record_raw.json_serialize()
+        }
         100 => {
             let mut chat_record_raw = <WebRTCSignalRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
@@ -540,9 +545,15 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     let biz_id = file_info.biz_id.clone();
 
     // 6、组装 ImageRecord
+    let file_name = std::path::Path::new(&file_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("image")
+        .to_string();
     let image_record = ImageRecord {
         prev_id: ZERO_UUID.to_string(),
         biz_id,
+        file_name,
         is_preview: false,
         img_width,
         img_height,
@@ -561,6 +572,75 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     let result = timeout(Duration::from_secs(10), async {
         let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
         let res = send_text_msg_service(image_msg).await;
+        res
+    })
+    .await;
+
+    match result {
+        Ok(Ok(_)) => {}
+        Ok(Err(e)) => {
+            error!("获取锁时发生意外错误,{}", e);
+            return Err(anyhow!("获取锁时发生意外错误,{}", e));
+        }
+        Err(elapsed) => {
+            error!("超时：10秒内未能获取锁 {}", elapsed);
+            return Err(anyhow!("超时：10秒内未能获取锁 {}", elapsed));
+        }
+    }
+
+    Ok(())
+}
+
+// 发送文件数据
+pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+    let file_path = text_quic_msg.raw.clone();
+    let path = Path::new(&file_path);
+
+    // 1、获取文件名和文件扩展名
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("unknown")
+        .to_string();
+    
+    let file_type = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    // 2、获取文件大小
+    let metadata = std::fs::metadata(&file_path)?;
+    let file_size = metadata.len() as i64;
+
+    // 3、上传文件到文件服务器
+    let upload_data = upload_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
+
+    // 4、获取第一个 file_info 的 biz_id
+    let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
+    let biz_id = file_info.biz_id.clone();
+
+    // 5、组装 FileRecord
+    let file_record = FileRecord {
+        prev_id: ZERO_UUID.to_string(),
+        biz_id,
+        file_name,
+        file_size,
+        file_type,
+        platform: PLATFORM,
+    };
+
+    let file_raw = file_record.json_serialize()?;
+
+    // 6、创建新的 TextQuicMsgVo 用于发送
+    let mut file_msg = text_quic_msg.clone();
+    file_msg.raw = file_raw;
+
+    // 7、调用 send_text_msg_service 发送消息
+    // 获取全局消息发送锁，保证数据库最新消息，超过10秒后获取不到锁就返回错误
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        let res = send_text_msg_service(file_msg).await;
         res
     })
     .await;

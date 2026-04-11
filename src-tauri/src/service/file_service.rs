@@ -10,16 +10,49 @@ use sha2::{Digest, Sha256};
 
 use crate::config::get_config;
 use crate::dao::file_record_db::{delete_file_record_by_id, increment_download_retry_count, insert_failed_file_record, insert_file_record, MAX_DOWNLOAD_RETRY_COUNT};
+use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
 use crate::dto::http_result::HttpResult;
+use crate::entity::chat_record_raw::{FileRecord as ChatFileRecord, ChatRecordRaw};
 use crate::entity::file_record::FileRecord;
 use crate::service::api_service::{get_with_token, post_with_body};
 use crate::utils::global_static_str::{MONTHLY_RESOURCE_PATH, TALK_API};
 use crate::utils::uuid_utils;
 use crate::vo::file_vo::FileVo;
 
+/// 从nano_id获取聊天记录中的文件名
+async fn get_file_name_from_nano_id(nano_id: Option<&str>) -> Option<String> {
+    if let Some(nano_id) = nano_id {
+        if !nano_id.is_empty() {
+            // 尝试获取当前用户UUID
+            let uuid = crate::service::user_service::get_user_info("uuid").await.ok()?;
+            // 从聊天记录获取raw
+            if let Ok(chat_record) = query_chat_record_by_id_from_db(nano_id, &uuid).await {
+                // 根据text_type解析raw
+                match chat_record.text_type {
+                    2 => {
+                        // 图片消息
+                        if let Ok(image_record) = <crate::entity::chat_record_raw::ImageRecord as ChatRecordRaw>::deserialize(&chat_record.raw) {
+                            return Some(image_record.file_name);
+                        }
+                    }
+                    3 => {
+                        // 文件消息
+                        if let Ok(file_record) = <ChatFileRecord as ChatRecordRaw>::deserialize(&chat_record.raw) {
+                            return Some(file_record.file_name);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    None
+}
+
 pub async fn get_file_by_biz_id_service(
     biz_id: String,
     url: String,
+    nano_id: Option<String>,
 ) -> Result<Vec<FileVo>, anyhow::Error> {
     // 0、从biz业务表获取文件列表id，biz只负责文件业务
     // 校验biz_id是否合规，是否为空，格式为uuid
@@ -30,6 +63,10 @@ pub async fn get_file_by_biz_id_service(
     if !uuid_utils::is_uuid(&biz_id) {
         return Err(anyhow::anyhow!("biz_id格式错误，必须为uuid格式"));
     }
+    
+    // 尝试从nano_id获取原始文件名
+    let original_file_name_from_raw = get_file_name_from_nano_id(nano_id.as_deref()).await;
+    info!("原始文件名: {:?}", original_file_name_from_raw);
     // 1、从本地获取文件记录（仅正常状态）
     let mut file_list = FileRecord::get_by_biz_id(&biz_id).await?;
     // 2、是否存在文件
@@ -47,7 +84,7 @@ pub async fn get_file_by_biz_id_service(
         }
 
         // 2-1 从远程下载文件
-        match download_file_by_biz_service(&biz_id, url).await {
+        match download_file_by_biz_service(&biz_id, url, original_file_name_from_raw.clone()).await {
             Ok(()) => {}
             Err(e) => {
                 error!("文件下载失败: biz_id={}, 错误: {}", biz_id, e);
@@ -98,6 +135,8 @@ pub async fn get_file_by_biz_id_service(
             }
             return Err(anyhow::anyhow!("文件不存在，等待重试"));
         }
+        // 优先使用nano_id对应的raw中的文件名，否则使用数据库中的文件名
+        let final_file_name = original_file_name_from_raw.clone().unwrap_or_else(|| file.file_name.clone().unwrap_or_default());
         let file_vo = FileVo {
             file_id: file.uuid,
             file_hash: file.file_hash,
@@ -109,7 +148,7 @@ pub async fn get_file_by_biz_id_service(
             file_extension: None,
             mime_type: file.mime_type,
             description: None,
-            original_file_name: file.file_name,
+            original_file_name: Some(final_file_name),
             original_file_path: None,
             absolute_file_path: Some(file_path.to_string_lossy().to_string()),
             raw: Some(raw?),
@@ -125,8 +164,11 @@ pub async fn get_file_by_biz_id_service(
 
 /**
  * 通过业务id下载文件
+ * @param biz_id 业务ID
+ * @param url 下载URL
+ * @param original_file_name_from_raw 可选的原始文件名（从消息raw中获取），用于确定扩展名
  */
-pub async fn download_file_by_biz_service(biz_id: &str, url: String) -> Result<(), anyhow::Error> {
+pub async fn download_file_by_biz_service(biz_id: &str, url: String, original_file_name_from_raw: Option<String>) -> Result<(), anyhow::Error> {
     // 1、 从远程获取文件下载url
     info!("获取文件下载URL: {}", url);
 
@@ -179,10 +221,10 @@ pub async fn download_file_by_biz_service(biz_id: &str, url: String) -> Result<(
                 let hash_result = hasher.finalize();
                 let file_hash = format!("{:x}", hash_result);
 
-                // 获取原始文件名（从Content-Disposition头或URL中提取）
-                let original_file_name =
-                    extract_filename_from_content_disposition(&content_disposition)
-                        .unwrap_or_else(|| format!("file_{}.tmp", biz_id));
+                // 获取原始文件名（优先级：1.raw中的文件名 2.Content-Disposition头）
+                let original_file_name = original_file_name_from_raw.clone()
+                    .or_else(|| extract_filename_from_content_disposition(&content_disposition))
+                    .unwrap_or_else(|| format!("file_{}.tmp", biz_id));
 
                 // 提取原始文件的扩展名
                 let ext = std::path::Path::new(&original_file_name)
@@ -195,8 +237,8 @@ pub async fn download_file_by_biz_service(biz_id: &str, url: String) -> Result<(
                 let file_name = if !ext.is_empty() {
                     format!("{}.{}", uuid, ext)
                 } else {
-                    error!("无法获取原始文件的扩展名");
-                    return Err(anyhow!("无法保存文件"));
+                    // 如果没有扩展名，使用.tmp作为默认扩展名
+                    format!("{}.tmp", uuid)
                 };
                 let resource_path = get_config(MONTHLY_RESOURCE_PATH).ok_or(anyhow!("无法获取当月资源路径"))?;
 

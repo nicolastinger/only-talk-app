@@ -23,6 +23,10 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
       return '[图片]';
     }
 
+    if (text_type === 3) {
+      return '[文件]';
+    }
+
     if (text_type === 4) {
       return '[隐私模式]';
     }

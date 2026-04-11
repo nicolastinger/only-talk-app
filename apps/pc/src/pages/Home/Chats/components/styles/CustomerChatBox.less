@@ -164,6 +164,28 @@
   }
 }
 
+.fileMessage {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  border: none;
+  border-radius: 8px;
+  margin-left: 0;
+
+  &::after {
+    display: none;
+  }
+
+  &::before {
+    display: none;
+  }
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+}
+
 .specialMessage {
   background: transparent;
   padding: 0;
