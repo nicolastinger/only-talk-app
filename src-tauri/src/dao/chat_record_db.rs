@@ -42,7 +42,7 @@ pub async fn query_chat_record_by_id_from_db(
 /// 插入聊天记录
 pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    sqlx::query(r#"INSERT INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
+    sqlx::query(r#"INSERT OR IGNORE INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
         .bind(&text_quic_msg.nano_id)
         .bind(&text_quic_msg.raw)
         .bind(text_quic_msg.timestamp)

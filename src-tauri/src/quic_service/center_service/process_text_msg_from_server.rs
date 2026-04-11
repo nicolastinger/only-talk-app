@@ -212,6 +212,13 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         return Ok(());
     }
     let ack_record = ack_record?;
+    
+    // 检查是否已经处理过该ACK（防止重复处理）
+    if ack_record.send_status == 3 {
+        info!("消息已经确认过，跳过重复处理: send_id={}", msg.raw);
+        return Ok(());
+    }
+    
     let text_quic_msg_vo = TextQuicMsgVo {
         nano_id: msg.nano_id,
         text_type: ack_record.text_type,
@@ -220,12 +227,15 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         send_user: ack_record.send_user,
         timestamp: msg.timestamp,
     };
-    // 2.聊天插入数据库
+    
+    // 2.聊天插入数据库（使用INSERT OR IGNORE避免重复插入）
     insert_chat_record(&text_quic_msg_vo).await?;
+    
     // 3. 标记ack表中该条消息为已确认
     update_chat_record_ack(&ack_record.send_id, 1, &text_quic_msg_vo.nano_id).await?;
     // 4. 标记发送列表中某条消息为已确认
     update_chat_record_send_success(&ack_record.send_id, &text_quic_msg_vo.nano_id).await?;
+    
     tokio::spawn(async move {
         // 处理未发送的消息，ack返回
         timeout(Duration::from_secs(10), async {
@@ -235,10 +245,12 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         .await
         .expect("ack返回，处理未发送消息超时");
     });
+    
     // 发送消息给前端
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
     }
+    
     // 清除未读计数
     let chat_session = ChatSession {
         id: 0,
