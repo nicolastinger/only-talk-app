@@ -20,6 +20,7 @@
     "@ant-design/pro-components": "^2.4.4",
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-dialog": "^2.4.2",
+    "@tauri-apps/plugin-opener": "^2.5.3",
     "@umijs/max": "^4.4.11",
     "@workspace/services": "workspace:*",
     "@workspace/types": "workspace:*",
