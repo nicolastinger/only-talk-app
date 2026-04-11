@@ -3,15 +3,15 @@ import { WebRTCSignalMessage } from '@workspace/types';
 import { nanoid } from 'nanoid';
 
 /**
- * WebRTC 默认配置 - NAT3穿透优化版
+ * WebRTC 默认配置 - NAT穿透优化版
  *
- * 【NAT3穿透原理】
- * NAT3（端口限制型锥形NAT）特点：
- * - 内部IP:Port映射到外部IP:Port，但限制外部地址
- * - 只有在内部主机先向外部地址X发送数据后，NAT才会接受来自X的数据
- * - 不同的外部地址/端口需要使用不同的映射
+ * 【NAT穿透原理】
+ * NAT（网络地址转换）特点：
+ * - 内部IP:Port映射到外部IP:Port，但可能限制外部来源
+ * - 不同的NAT类型穿透难度不同
+ * - 对称型NAT（Symmetric NAT）最难穿透，双方都是对称NAT时需要TURN中继
  *
- * 【现代WebRTC如何支持NAT3】
+ * 【现代WebRTC如何支持NAT穿透】
  * 1. STUN服务器发现公网映射地址（srflx候选）
  * 2. 同时发送host候选和srflx候选给对方
  * 3. 双方尝试所有候选对（candidate pairs）
@@ -23,16 +23,22 @@ import { nanoid } from 'nanoid';
  * - bundlePolicy: 'max-bundle' - 复用传输通道
  * - iceCandidatePoolSize: 10 - 预收集10个候选
  *
+ * 【STUN服务器选择原则】
+ * - 只保留2-3个高可用STUN服务器，过多会导致ICE收集延迟
+ * - 浏览器会并行连接所有STUN服务器，不可用的服务器会阻塞收集
+ * - Google STUN服务器最稳定，优先使用
+ * - 国内STUN服务器作为备选，解决国内访问Google慢的问题
+ *
  * 【重要说明】
- * - 不使用TURN/relay服务器（纯P2P）
+ * - 不使用TURN/relay服务器（纯P2P），但预留了配置入口
  * - 只过滤relay候选，保留host和srflx候选
  * - WebRTC会自动按优先级尝试所有候选对
  * - 不要人为过滤候选类型，让浏览器自动决策
  * 
- * 【NAT3特殊要求】
- * - 必须使用 Trickle ICE（渐进式候选交换）
- * - 需要等待候选收集完成或收到足够候选后再开始连接
- * - 可能需要多次 ICE 重启才能成功
+ * 【对称NAT问题】
+ * - 如果双方都在对称NAT后面，仅靠STUN无法穿透
+ * - 此时需要TURN中继服务器作为fallback
+ * - 检测方法：不同STUN服务器返回不同的映射端口 = 对称NAT
  */
 const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -40,67 +46,33 @@ const DEFAULT_WEBRTC_CONFIG: RTCConfiguration = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
 
-    // Google 备用端口
-    { urls: 'stun:stun.l.google.com:19305' },
-    { urls: 'stun:stun1.l.google.com:19305' },
-    { urls: 'stun:stun2.l.google.com:19305' },
-
-    // Google TCP STUN (某些NAT环境TCP更易通过)
-    { urls: 'stuns:stun.l.google.com:19302' },
-    { urls: 'stuns:stun1.l.google.com:19302' },
-
-    // ========== Microsoft STUN 服务器 ==========
-    { urls: 'stun:stun.skype.com:3478' },
-    { urls: 'stun:stun.sipvoip.net:3478' },
-    { urls: 'stun:stun.schlund.de:3478' },
-
-    // ========== Twilio STUN 服务器 ==========
-    { urls: 'stun:global.stun.twilio.com:3478' },
-
-    // ========== Cloudflare STUN 服务器 ==========
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:stun.cloudflare.com:5349' },
-
-    // ========== 国内STUN服务器 ==========
+    // ========== 国内STUN服务器（国内用户优先使用） ==========
     { urls: 'stun:stun.miwifi.com:3478' },
     { urls: 'stun:stun.chat.bilibili.com:3478' },
-    { urls: 'stun:stun.hitv.com:3478' },
-    { urls: 'stun:stun.douyucdn.cn:3500' },
-    { urls: 'stun:stun.huya.com:3478' },
 
     // ========== 其他公共STUN服务器 ==========
-    { urls: 'stun:stun.voip.eutelia.it:3478' },
-    { urls: 'stun:stun.voiparound.com:3478' },
-    { urls: 'stun:stun.voipbuster.com:3478' },
-    { urls: 'stun:stun.voxgratia.org:3478' },
-    { urls: 'stun:stun.xten.com:3478' },
-    { urls: 'stun:stun.sipgate.net:10000' },
-    { urls: 'stun:stun.ekiga.net:3478' },
-    { urls: 'stun:stun.ideasip.com:3478' },
-    { urls: 'stun:stun.rixtelecom.se:3478' },
-    { urls: 'stun:stun.sonetel.com:3478' },
-    { urls: 'stun:stun.internetcalls.com:3478' },
-    { urls: 'stun:numb.viagenie.ca:3478' },
-    { urls: 'stun:stun.phone.com:3478' },
-    { urls: 'stun:stun.ipshka.com:3478' },
-    { urls: 'stun:stun.antisip.com:3478' },
-    { urls: 'stun:stun.bluesip.net:3478' },
-    { urls: 'stun:stun.dynalias.com:3478' },
-    { urls: 'stun:stun.ppy.sh:3478' },
-    { urls: 'stun:stun.rangate.ru:3478' },
-    { urls: 'stun:stun.sipuk.net:3478' },
-    { urls: 'stun:stun.zoiper.com:3478' },
-    { urls: 'stun:stun.noc.ams-ix.net:3478' },
-    { urls: 'stun:stun.noc.euro-ix.net:3478' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:stun.skype.com:3478' },
+
+    // ========== TURN服务器（对称NAT穿透必需） ==========
+    // 如果双方都在对称NAT后面，必须使用TURN中继
+    // 取消下面的注释并填入你的TURN服务器信息即可启用
+    // {
+    //   urls: 'turn:your-turn-server.com:3478',
+    //   username: 'your-username',
+    //   credential: 'your-credential',
+    // },
+    // {
+    //   urls: 'turns:your-turn-server.com:5349',  // TURN over TLS
+    //   username: 'your-username',
+    //   credential: 'your-credential',
+    // },
   ],
   iceTransportPolicy: 'all', // 使用所有候选类型
   bundlePolicy: 'max-bundle', // 最大复用
   rtcpMuxPolicy: 'require', // 要求 RTCP 复用
   iceCandidatePoolSize: 10, // 预收集候选池大小
-  // NAT3 关键：使用 Trickle ICE，不等待候选收集完成
 };
 
 /**
@@ -166,12 +138,18 @@ class WebRTCService {
   private iceTimeoutTimers: Map<string, NodeJS.Timeout> = new Map();
   /** ICE重启次数映射, key为friendId */
   private iceRestartCount: Map<string, number> = new Map();
+  /** 是否等待ICE收集完成后发送完整SDP（true=完整模式，false=Trickle ICE模式） */
+  private useCompleteSDP: boolean = true;
+
+  /** 收集到的本地ICE候选缓存，用于Trickle ICE模式 */
+  private pendingCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
+
   /** 最大ICE重启次数 */
   private static MAX_ICE_RESTART_COUNT = 3;
-  /** ICE连接超时时间 (毫秒) - NAT3环境需要更长时间 */
-  private static ICE_CONNECTION_TIMEOUT = 45000; // 45秒（NAT3环境）
+  /** ICE连接超时时间 (毫秒) */
+  private static ICE_CONNECTION_TIMEOUT = 30000; // 30秒
   /** ICE重启间隔时间 (毫秒) */
-  private static ICE_RESTART_INTERVAL = 50000; // 50秒（更频繁的重启）
+  private static ICE_RESTART_INTERVAL = 5000; // 5秒后重试
   /** 检测到的NAT类型 */
   private detectedNATType: string | null = null;
   /** 是否已完成NAT检测 */
@@ -411,47 +389,46 @@ class WebRTCService {
           `[WebRTCService.onicecandidate] 📍 收集到ICE候选 - 类型: ${candidateType}, 地址: ${event.candidate.address}:${event.candidate.port}, 协议: ${event.candidate.protocol || '未知'}`,
         );
 
-        // 【重要修复】NAT3穿透需要发送所有候选类型（除了relay）
-        // - host候选：本地局域网地址，用于同局域网或端口映射成功的情况
-        // - srflx候选：通过STUN获取的公网映射地址，用于NAT穿透
-        // - relay候选：TURN中继地址（我们禁用了TURN，所以不会有）
+        // relay候选：如果没有TURN服务器配置，跳过
         if (candidateType === 'relay') {
+          const hasTurnServer = DEFAULT_WEBRTC_CONFIG.iceServers?.some(
+            server => typeof server.urls === 'string'
+              ? server.urls.startsWith('turn:') || server.urls.startsWith('turns:')
+              : Array.isArray(server.urls) && server.urls.some(u => u.startsWith('turn:') || u.startsWith('turns:'))
+          ) ?? false;
+          if (!hasTurnServer) {
+            console.log(
+              `[WebRTCService.onicecandidate] ⏭️ 跳过中继候选(relay candidate) - 未配置TURN服务器`,
+            );
+            return;
+          }
           console.log(
-            `[WebRTCService.onicecandidate] ⏭️ 跳过中继候选(relay candidate) - 因为禁用了TURN服务器`,
-          );
-          return;
-        }
-
-        // 【关键】不要跳过host候选！NAT3环境下host候选也可能成功：
-        // 1. 如果双方在同一个NAT后面（同局域网），host候选可以直接连通
-        // 2. 某些路由器支持环回(hairpinning)，host候选也能工作
-        // 3. WebRTC会按优先级自动尝试所有候选，我们不应该人为过滤
-        if (candidateType === 'host') {
-          console.log(
-            `[WebRTCService.onicecandidate] ✅ 保留host候选 - NAT3环境下也可能有用（同局域网或hairpinning支持）`,
-          );
-        }
-
-        if (candidateType === 'srflx') {
-          console.log(
-            `[WebRTCService.onicecandidate] ✅ 保留srflx候选 - 这是NAT3穿透的关键（公网映射地址）`,
+            `[WebRTCService.onicecandidate] ✅ 保留relay候选 - TURN服务器可用`,
           );
         }
 
-        // 构建ICE候选信令消息并发送给对端
-        const signalMessage: WebRTCSignalMessage = {
-          type: 'candidate',
-          sender: this.localUserId,
-          receiver: friendId,
-          sessionId: this.sessionId,
-          data: event.candidate.toJSON(),
-          timestamp: Date.now(),
-        };
+        if (this.useCompleteSDP) {
+          // 完整SDP模式：不单独发送候选，候选已包含在SDP中
+          // waitForIceGathering 会等待所有候选收集完成后发送完整SDP
+          console.log(
+            `[WebRTCService.onicecandidate] 📦 完整SDP模式 - 候选将包含在SDP中，不单独发送`,
+          );
+        } else {
+          // Trickle ICE模式：逐个发送候选给对端
+          const signalMessage: WebRTCSignalMessage = {
+            type: 'candidate',
+            sender: this.localUserId,
+            receiver: friendId,
+            sessionId: this.sessionId,
+            data: event.candidate.toJSON(),
+            timestamp: Date.now(),
+          };
 
-        console.log(
-          `[WebRTCService.onicecandidate] 📤 发送ICE候选给 ${friendId} - 类型: ${candidateType}`,
-        );
-        await this.sendSignal(signalMessage);
+          console.log(
+            `[WebRTCService.onicecandidate] 📤 Trickle ICE - 发送ICE候选给 ${friendId} - 类型: ${candidateType}`,
+          );
+          await this.sendSignal(signalMessage);
+        }
       } else {
         console.log(
           `[WebRTCService.onicecandidate] 🏁 ICE候选收集完成 - 总共收集了 ${this.connections.get(friendId)?.localDescription?.sdp?.split('\n').filter(line => line.startsWith('a=candidate:')).length || 0} 个候选`,
@@ -501,6 +478,15 @@ class WebRTCService {
         console.log(
           `[WebRTCService.oniceconnectionstatechange] ICE连接失败，尝试重启ICE...`,
         );
+        // 如果检测到对称NAT，给出明确提示
+        if (this.detectedNATType === 'symmetric') {
+          console.error(
+            `[WebRTCService.oniceconnectionstatechange] ⚠️ 本端检测到对称NAT，如果对端也是对称NAT，则必须配置TURN中继服务器才能连接`,
+          );
+          console.error(
+            `[WebRTCService.oniceconnectionstatechange] 💡 请在 DEFAULT_WEBRTC_CONFIG.iceServers 中添加 TURN 服务器配置`,
+          );
+        }
         this.attemptIceRestart(friendId, connection);
       }
     };
@@ -935,7 +921,16 @@ class WebRTCService {
 
   /**
    * 检测当前网络的NAT类型
-   * 通过创建临时RTCPeerConnection并分析ICE候选来推断NAT类型
+   *
+   * 正确的对称NAT检测方法：
+   * 向多个不同的STUN服务器发送请求，比对返回的映射地址。
+   * 如果不同STUN服务器返回不同的映射端口，说明是对称NAT。
+   * 如果所有STUN服务器返回相同的映射地址，说明是锥形NAT。
+   *
+   * 这里的简化检测基于收集srflx候选时的观察：
+   * - 如果有多个srflx候选且映射端口不同 → 对称NAT
+   * - 如果只有唯一一个srflx映射地址 → 锥形NAT
+   * - 如果没有srflx候选 → UDP被阻止或STUN服务器不可达
    */
   private async detectNATType(): Promise<void> {
     console.log(`[WebRTCService.detectNATType] 开始检测NAT类型...`);
@@ -945,8 +940,9 @@ class WebRTCService {
       const tempConnection = new RTCPeerConnection(config);
 
       let hasHostCandidate = false;
-      let hasSrflxCandidate = false;
       let candidateCount = 0;
+      // 收集所有srflx候选的映射地址和端口，用于检测对称NAT
+      const srflxMappings: { ip: string; port: number }[] = [];
 
       // 收集ICE候选以分析NAT类型
       tempConnection.onicecandidate = (event) => {
@@ -954,13 +950,17 @@ class WebRTCService {
           candidateCount++;
           const type = event.candidate.type;
           console.log(
-            `[WebRTCService.detectNATType] 收到候选 - 类型: ${type}, 地址: ${event.candidate.address}`,
+            `[WebRTCService.detectNATType] 收到候选 - 类型: ${type}, 地址: ${event.candidate.address}, 端口: ${event.candidate.port}`,
           );
 
           if (type === 'host') {
             hasHostCandidate = true;
           } else if (type === 'srflx') {
-            hasSrflxCandidate = true;
+            // 记录srflx映射地址
+            srflxMappings.push({
+              ip: event.candidate.address || '',
+              port: event.candidate.port || 0,
+            });
           }
         }
       };
@@ -974,10 +974,10 @@ class WebRTCService {
       await tempConnection.setLocalDescription(offer);
 
       // 等待一段时间收集候选
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // 分析NAT类型
-      this.analyzeNATType(hasHostCandidate, hasSrflxCandidate, candidateCount);
+      this.analyzeNATType(hasHostCandidate, srflxMappings, candidateCount);
 
       // 清理临时连接
       tempConnection.close();
@@ -990,33 +990,58 @@ class WebRTCService {
 
   /**
    * 分析收集到的ICE候选，确定NAT类型
+   *
+   * 检测逻辑：
+   * 1. 没有srflx候选 → UDP被阻止或STUN不可达
+   * 2. 有srflx候选，但不同STUN返回不同端口 → 对称NAT（Symmetric NAT）
+   * 3. 有srflx候选，所有STUN返回相同映射 → 锥形NAT（Cone NAT）
+   * 4. 只有host候选，没有srflx → 可能是公网IP或UDP被阻止
    */
   private analyzeNATType(
     hasHost: boolean,
-    hasSrflx: boolean,
+    srflxMappings: { ip: string; port: number }[],
     count: number,
   ): void {
     let natType: string;
+    const hasSrflx = srflxMappings.length > 0;
 
     if (!hasSrflx && !hasHost) {
-      natType = 'blocked'; // 完全阻塞或对称型NAT
+      natType = 'blocked'; // 完全阻塞
       console.warn(
-        `[WebRTCService.analyzeNATType] ⚠️ 检测到网络可能被严重限制`,
+        `[WebRTCService.analyzeNATType] ⚠️ 检测到网络可能被严重限制，无法收集任何候选`,
       );
-    } else if (hasHost && hasSrflx) {
-      natType = 'nat1'; // 全锥型NAT（最易穿透）
-      console.log(
-        `[WebRTCService.analyzeNATType] ✅ 检测到全锥型NAT(NAT1)，穿透性最好`,
-      );
-    } else if (hasSrflx && !hasHost) {
-      natType = 'nat3'; // 对称型NAT（最难穿透）
-      console.warn(
-        `[WebRTCService.analyzeNATType] ⚠️ 检测到对称型NAT(NAT3)，穿透难度较高`,
-      );
+    } else if (hasSrflx) {
+      // 检查是否为对称NAT：不同STUN服务器返回的映射端口是否不同
+      const ports = srflxMappings.map(m => m.port);
+      const uniquePorts = new Set(ports);
+      const uniqueIPs = new Set(srflxMappings.map(m => m.ip));
+
+      if (uniquePorts.size > 1 || uniqueIPs.size > 1) {
+        // 不同STUN返回了不同的映射端口/IP → 对称NAT
+        natType = 'symmetric';
+        console.warn(
+          `[WebRTCService.analyzeNATType] ⚠️ 检测到对称NAT(Symmetric NAT) - 不同STUN返回不同映射:`,
+        );
+        console.warn(
+          `  srflx映射列表: ${srflxMappings.map(m => `${m.ip}:${m.port}`).join(', ')}`,
+        );
+        console.warn(
+          `  对称NAT环境下P2P连接可能失败，建议配置TURN中继服务器`,
+        );
+      } else {
+        // 所有STUN返回相同映射 → 锥形NAT（各种类型）
+        natType = 'cone';
+        console.log(
+          `[WebRTCService.analyzeNATType] ✅ 检测到锥形NAT(Cone NAT)，穿透性较好`,
+        );
+        console.log(
+          `  统一映射地址: ${srflxMappings[0]?.ip}:${srflxMappings[0]?.port}`,
+        );
+      }
     } else if (hasHost && !hasSrflx) {
-      natType = 'public'; // 公网IP
+      natType = 'public'; // 公网IP或UDP被阻止
       console.log(
-        `[WebRTCService.analyzeNATType] ✅ 检测到公网IP，无需NAT穿越`,
+        `[WebRTCService.analyzeNATType] ⚠️ 只有host候选，无srflx候选 - 可能是公网IP或STUN不可达`,
       );
     } else {
       natType = 'unknown';
@@ -1036,20 +1061,20 @@ class WebRTCService {
    */
   private adjustConfigForNATType(natType: string): void {
     switch (natType) {
-      case 'nat3':
+      case 'symmetric':
         console.log(
-          `[WebRTCService.adjustConfigForNATType] 🔄 检测到NAT3（对称型NAT），调整配置...`,
+          `[WebRTCService.adjustConfigForNATType] 🔄 检测到对称NAT(Symmetric NAT)，调整配置...`,
         );
         console.warn(
-          `[WebRTCService.adjustConfigForNATType] ⚠️  对称型NAT穿透难度极高，可能需要多次尝试`,
+          `[WebRTCService.adjustConfigForNATType] ⚠️ 对称NAT穿透难度极高，双方都在对称NAT后时需要TURN中继`,
         );
-        // NAT3环境下增加超时时间和重启次数
+        // 对称NAT环境下增加超时时间和重启次数
         WebRTCService.ICE_CONNECTION_TIMEOUT = 60000; // 增加到60秒
         WebRTCService.ICE_RESTART_INTERVAL = 8000; // 缩短到8秒，更频繁尝试
         WebRTCService.MAX_ICE_RESTART_COUNT = 5; // 增加到5次
         break;
 
-      case 'nat1':
+      case 'cone':
       case 'public':
         console.log(
           `[WebRTCService.adjustConfigForNATType] ✅ 网络条件良好(${natType})，使用标准配置`,
@@ -1119,17 +1144,22 @@ class WebRTCService {
       // 设置超时
       const timer = setTimeout(() => {
         console.log('[WebRTCService.waitForIceGathering] ⏰ 等待超时，继续执行');
+        // 清理监听器，避免内存泄漏
+        connection.removeEventListener('icegatheringstatechange', onGatheringStateChange);
         resolve();
       }, timeout);
 
-      // 监听收集完成事件
-      connection.onicegatheringstatechange = () => {
+      // 使用addEventListener而非直接赋值，避免覆盖已有的处理器
+      const onGatheringStateChange = () => {
         if (connection.iceGatheringState === 'complete') {
           console.log('[WebRTCService.waitForIceGathering] ✅ ICE候选收集完成');
           clearTimeout(timer);
+          connection.removeEventListener('icegatheringstatechange', onGatheringStateChange);
           resolve();
         }
       };
+
+      connection.addEventListener('icegatheringstatechange', onGatheringStateChange);
     });
   }
 
@@ -1451,13 +1481,25 @@ class WebRTCService {
 
     const iceCandidate = new RTCIceCandidate(candidate);
     
-    // 【重要修复】只跳过relay类型的候选，保留host和srflx
-    // NAT3穿透需要所有候选类型，让WebRTC自动尝试所有组合
-    if (iceCandidate.type === 'relay') {
+    // 只有在未配置TURN服务器时才跳过relay候选
+    // 如果配置了TURN服务器，relay候选是对称NAT环境下的关键fallback路径
+    const hasTurnServer = DEFAULT_WEBRTC_CONFIG.iceServers?.some(
+      server => typeof server.urls === 'string'
+        ? server.urls.startsWith('turn:') || server.urls.startsWith('turns:')
+        : Array.isArray(server.urls) && server.urls.some(u => u.startsWith('turn:') || u.startsWith('turns:'))
+    ) ?? false;
+
+    if (iceCandidate.type === 'relay' && !hasTurnServer) {
       console.log(
-        `[WebRTCService.handleCandidate] ⏭️ 跳过中继候选(relay candidate) - 因为禁用了TURN服务器`,
+        `[WebRTCService.handleCandidate] ⏭️ 跳过中继候选(relay candidate) - 未配置TURN服务器`,
       );
       return;
+    }
+
+    if (iceCandidate.type === 'relay' && hasTurnServer) {
+      console.log(
+        `[WebRTCService.handleCandidate] ✅ 添加relay候选 - TURN服务器可用，这是对称NAT穿透的fallback`,
+      );
     }
 
     // 记录添加的候选类型

@@ -376,6 +376,33 @@ const WebRTCChat: React.FC = () => {
               );
               await service.handleAnswer(friendId, signalMsg.data);
               console.log(`[WebRTCChat.onWebRTCSignal] ✅ answer已处理`);
+            } else if (signalMsg.type === 'offer') {
+              /**
+               * 处理offer信令（ICE重启场景）
+               * 当对端发起ICE重启时，会发送新的offer
+               * 需要处理该offer并返回新的answer
+               */
+              console.log(
+                `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的offer（可能是ICE重启），正在处理...`,
+              );
+              try {
+                const restartAnswer = await service.handleOffer(friendId, signalMsg.data);
+                console.log(`[WebRTCChat.onWebRTCSignal] ICE重启answer已创建`);
+
+                // 发送answer给对端
+                const responseSignal: WebRTCSignalMessage = {
+                  type: 'answer',
+                  sender: localUserId,
+                  receiver: friendId,
+                  sessionId: signalMsg.sessionId,
+                  data: restartAnswer,
+                  timestamp: Date.now(),
+                };
+                await service.sendSignal(responseSignal);
+                console.log(`[WebRTCChat.onWebRTCSignal] ✅ ICE重启answer已发送`);
+              } catch (e) {
+                console.error(`[WebRTCChat.onWebRTCSignal] ❌ 处理ICE重启offer失败:`, e);
+              }
             } else if (signalMsg.type === 'candidate') {
               /**
                * 处理candidate信令

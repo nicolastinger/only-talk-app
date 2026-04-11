@@ -159,6 +159,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             // 视频帧数据
             // 直接转发给前端显示
             MSG_TYPE_P2P_VIDEO_DATA => {
+                info!("接收到p2p视频帧数据 {}", msg.raw.len());
                 if let Some(handle) = APP_HANDLE.get() {
                     handle.emit("video_frame", msg.raw)?;
                 }
