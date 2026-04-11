@@ -22,7 +22,7 @@ use crate::service::friend_service::update_friend_list;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
+use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -279,5 +279,55 @@ pub async fn get_user_map(key: &str) -> Result<String, String> {
 
 pub async fn add_user_map(key: &str, value: &str) -> Result<(), String> {
     GLOBAL_QUIC_USER_INFO.write().await.insert(key.to_string(), value.to_string());
+    Ok(())
+}
+
+/// 断开QUIC连接
+/// 清理所有QUIC连接资源，包括文本连接和P2P连接
+pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
+    info!("开始断开QUIC连接");
+    
+    // 清除服务器连接列表
+    {
+        let mut server_list = GLOBAL_QUIC_SERVER_LIST.write().await;
+        server_list.clear();
+        info!("已清理QUIC服务器连接列表");
+    }
+    
+    // 标记用户离线状态
+    {
+        let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
+        user_info.insert("quic_disconnected".to_string(), "true".to_string());
+        info!("已标记QUIC断开状态");
+    }
+    
+    info!("QUIC连接已断开");
+    Ok(())
+}
+
+/// 重新连接QUIC服务
+/// 重新建立与服务器的QUIC连接
+pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
+    info!("开始重新连接QUIC服务");
+    
+    // 先断开现有连接
+    disconnect_quic().await?;
+    
+    // 清除断开状态标记
+    {
+        let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
+        user_info.insert("quic_disconnected".to_string(), "false".to_string());
+    }
+    
+    // 重新启动QUIC客户端
+    let addr = resolve_ipv4(DOMAIN_NAME, 4433).await?;
+    tokio::spawn(async move {
+        match run_client(SocketAddr::from(addr)).await {
+            Ok(_) => info!("QUIC重连成功"),
+            Err(e) => error!("QUIC重连失败: {}", e),
+        }
+    });
+    
+    info!("QUIC重连请求已发送");
     Ok(())
 }

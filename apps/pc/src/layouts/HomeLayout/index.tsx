@@ -5,6 +5,8 @@ import {
   CamouflageButton,
   LanguageButton,
   MuteButton,
+  QuicDisconnectButton,
+  QuicReconnectButton,
   ThemeButton,
 } from '@/components/ToolButtons';
 import { TALK_API } from '@/constants';
@@ -133,6 +135,8 @@ const HomeLayout = () => {
                 <CamouflageButton />
                 <LanguageButton />
                 <ThemeButton />
+                <QuicDisconnectButton />
+                <QuicReconnectButton />
               </>
             )}
           </div>
