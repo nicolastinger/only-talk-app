@@ -19,6 +19,12 @@ const ChatsLayout = () => {
   const { chatSessionEvent } = useChatSession(userInfo.uuid);
   const routeToChat = (item: ChatSessionVo) => {
     console.log('userInfo', userInfo, item);
+    // 判断是否是自己给自己的会话
+    if (item.send_user === item.recv_user) {
+      // 跳转到 self-chat 页面
+      history.push('/home/chats/self-chat?selfUuid=' + item.send_user);
+      return;
+    }
     let uuid =
       item.send_user === userInfo?.uuid ? item.recv_user : item.send_user;
     history.push('/home/chats/chat?currentFriend=' + uuid);
@@ -138,6 +144,8 @@ const ChatsLayout = () => {
                   title={item.friend_name}
                   count={item.unread_count}
                   text_type={item.text_type}
+                  send_user={item.send_user}
+                  recv_user={item.recv_user}
                 />
               </div>
             );

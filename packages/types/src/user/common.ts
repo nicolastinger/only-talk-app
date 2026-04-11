@@ -16,6 +16,8 @@ interface MessageQueueProps {
   title: string;
   count: number;
   text_type?: number;
+  send_user?: string;
+  recv_user?: string;
 }
 
 interface FriendQueueProps {

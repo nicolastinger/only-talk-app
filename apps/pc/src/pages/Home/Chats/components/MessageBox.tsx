@@ -10,7 +10,10 @@ import styles from './styles/MessageBox.less';
 const imageCache = new Map<string, string>();
 
 const MessageBox = (props: MessageQueueProps) => {
-  const { message, title, time, img, count, text_type } = props;
+  const { message, title, time, img, count, text_type, send_user, recv_user } = props;
+
+  // 判断是否是自己给自己的会话
+  const isSelfChat = send_user && recv_user && send_user === recv_user;
 
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -118,14 +121,19 @@ const MessageBox = (props: MessageQueueProps) => {
       </div>
       <div className={styles.center}>
         <div className={styles.centerTitle}>
-          <div className={styles.titleText}>{title}</div>
+          <div className={styles.titleText}>
+            <div className={styles.title}>
+            {title}
+            {isSelfChat && <span className={styles.selfChatBadge}>📝 笔记</span>}
+            </div>
+            <div className={styles.end}>
+            <div className={styles.endTime}>{timeStr}</div>
+          </div>
+          </div>
         </div>
         <div className={styles.centerText}>
           <div className={styles.msgText}>{displayMessage}</div>
         </div>
-      </div>
-      <div className={styles.end}>
-        <div className={styles.endTime}>{timeStr}</div>
       </div>
     </div>
   );

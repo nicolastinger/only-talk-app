@@ -52,6 +52,11 @@ const routes = [
                 component: './Home/Chats/Chat',
               },
               {
+                name: 'menu.chats.self-chat',
+                path: 'self-chat',
+                component: './Home/Chats/SelfChat',
+              },
+              {
                 name: 'menu.chats.dashboard',
                 path: 'dashboard',
                 component: './Home/Chats/Dashboard',

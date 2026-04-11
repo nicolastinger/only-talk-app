@@ -4,6 +4,7 @@ export default {
   'menu.home': 'Home',
   'menu.access': 'Access',
   'menu.table': 'CRUD Example',
+  'menu.chats.self-chat': 'Notes',
   'welcome.title': 'Welcome',
   'welcome.desc': 'This is a sample project based on Umi',
   'not-found': 'Not found',
