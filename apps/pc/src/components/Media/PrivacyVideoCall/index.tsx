@@ -172,6 +172,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 重启媒体按钮的状态 */
   const [isRestarting, setIsRestarting] = useState(false);
 
+  /** 跟踪组件是否真正挂载（用于避免 useEffect cleanup 在依赖变化时误触发） */
+  const isMountedRef = useRef<boolean>(false);
+
   // ==================== 默认媒体配置 ====================
 
   /**
@@ -1125,19 +1128,28 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 2. 初始化远程媒体接收器
    * 3. 如果是发起方，发送邀请，等待对方接受
    * 4. 如果是被邀请方，直接初始化本地媒体（PrivacyChat 已发送接受响应）
+   *
+   * 注意：此 effect 只执行一次（空依赖数组），使用 ref 来访问最新的函数
    */
   useEffect(() => {
+    isMountedRef.current = true;
+
     const init = async () => {
+      if (!isMountedRef.current) return;
+
       // 等待事件监听器注册完成
       // 监听器在另一个useEffect中异步注册，需要等待其完成
       // 否则服务端发送的视频帧可能在监听器注册前到达，导致初始化段丢失
       const maxWait = 50; // 最多等待5秒
       for (let i = 0; i < maxWait; i++) {
+        if (!isMountedRef.current) return;
         if (unlistenRef.current.length > 0) {
           break;
         }
         await new Promise(resolve => setTimeout(resolve, 100));
       }
+
+      if (!isMountedRef.current) return;
 
       if (unlistenRef.current.length === 0) {
         console.warn('[PrivacyVideoCall] 事件监听器注册超时，继续初始化');
@@ -1147,6 +1159,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
       // 初始化远程媒体接收器
       await initRemoteMediaReceiver();
+
+      if (!isMountedRef.current) return;
 
       if (isInitiator) {
         // 发起方：发送邀请
@@ -1161,17 +1175,15 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
     init();
 
-    // 组件卸载时清理资源
+    // 组件真正卸载时清理资源并发送结束消息
     return () => {
+      console.log('[PrivacyVideoCall] 组件卸载，发送结束消息');
+      isMountedRef.current = false;
       handleEndCall();
     };
-  }, [
-    initRemoteMediaReceiver,
-    isInitiator,
-    sendVideoCallInvite,
-    initLocalMedia,
-    handleEndCall,
-  ]);
+  // 空依赖数组确保此 effect 只执行一次
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ==================== 渲染 ====================
 
