@@ -210,6 +210,23 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     },
   };
 
+  // ==================== 发送媒体就绪信号 ====================
+
+  /**
+   * 发送媒体接收就绪信号
+   * 通知对方本地已准备好接收媒体数据
+   */
+  const sendMediaReady = useCallback(async () => {
+    try {
+      console.log('[PrivacyVideoCall] 发送媒体接收就绪信号');
+      await invoke('send_p2p_media_ready', {
+        targetUuid: friendId,
+      });
+    } catch (error) {
+      console.error('发送媒体就绪信号失败:', error);
+    }
+  }, [friendId]);
+
   // ==================== 初始化本地媒体 ====================
 
   /**
@@ -280,7 +297,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       message.error('无法访问摄像头或麦克风');
       setIsLoading(false);
     }
-  }, [friendId, isRemoteReceiverReady]);
+  }, [friendId, isRemoteReceiverReady, sendMediaReady]);
 
   /**
    * 开始发送媒体数据
@@ -293,20 +310,6 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       startMediaInfoReporting();
     }
   }, []);
-  /**
-   * 发送媒体接收就绪信号
-   * 通知对方本地已准备好接收媒体数据
-   */
-  const sendMediaReady = useCallback(async () => {
-    try {
-      console.log('[PrivacyVideoCall] 发送媒体接收就绪信号');
-      await invoke('send_p2p_media_ready', {
-        targetUuid: friendId,
-      });
-    } catch (error) {
-      console.error('发送媒体就绪信号失败:', error);
-    }
-  }, [friendId]);
 
   // ==================== 开始媒体录制 ====================
 
@@ -1120,8 +1123,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 流程（严格按序执行，避免竞态条件）:
    * 1. 等待事件监听器注册完成（确保视频帧不丢失）
    * 2. 初始化远程媒体接收器
-   * 3. 如果是发起方，发送邀请
-   * 4. 如果是被邀请方，自动接受邀请
+   * 3. 如果是发起方，发送邀请，等待对方接受
+   * 4. 如果是被邀请方，直接初始化本地媒体（PrivacyChat 已发送接受响应）
    */
   useEffect(() => {
     const init = async () => {
@@ -1149,8 +1152,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         // 发起方：发送邀请
         await sendVideoCallInvite();
       } else {
-        // 被邀请方：自动接受邀请
-        await sendVideoCallResponse(true);
+        // 被邀请方：PrivacyChat 已发送接受响应，直接初始化本地媒体
+        // 不需要再次发送 video_call_response
+        console.log('[PrivacyVideoCall] 被邀请方，直接初始化本地媒体');
+        await initLocalMedia();
       }
     };
 
@@ -1164,7 +1169,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     initRemoteMediaReceiver,
     isInitiator,
     sendVideoCallInvite,
-    sendVideoCallResponse,
+    initLocalMedia,
     handleEndCall,
   ]);
 

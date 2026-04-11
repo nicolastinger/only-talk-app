@@ -264,10 +264,22 @@ const PrivacyChat: React.FC = () => {
   /**
    * 接受视频通话邀请
    */
-  const acceptVideoCall = () => {
+  const acceptVideoCall = async () => {
     setShowIncomingCallModal(false);
     setIsVideoCallInitiator(false);
     setIsVideoCallActive(true);
+    // 发送接受响应给对方
+    try {
+      await invoke('send_p2p_video_call_response', {
+        targetUuid: friendId,
+        accept: true,
+        mediaConfig: null, // PrivacyVideoCall 组件会发送配置
+        rejectReason: null,
+      });
+    } catch (e) {
+      console.error('接受视频通话失败:', e);
+      message.error('接受视频通话失败');
+    }
   };
 
   /**
@@ -296,6 +308,19 @@ const PrivacyChat: React.FC = () => {
     setIncomingCallInvite(null);
     setIsVideoCallInitiator(false);
   };
+
+  /**
+   * 当 PrivacyVideoCall 组件激活时，取消 PrivacyChat 中的事件监听
+   * 避免两个组件同时监听相同事件导致重复处理
+   */
+  useEffect(() => {
+    if (isVideoCallActive) {
+      // 取消 PrivacyChat 的事件监听器
+      console.log('[PrivacyChat] PrivacyVideoCall 激活，取消 PrivacyChat 事件监听');
+      unlistenRef.current.forEach((unlisten) => unlisten());
+      unlistenRef.current = [];
+    }
+  }, [isVideoCallActive]);
 
   // ==================== 渲染视频通话界面 ====================
 
