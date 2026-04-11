@@ -772,6 +772,10 @@ class WebRTCService {
       let succeededPairs = 0;
       let failedPairs = 0;
 
+      // 收集本地和远程候选的详细信息，用于显示成功连接的地址
+      const localCandidates = new Map<string, { ip: string; port: number; protocol: string; type: string }>();
+      const remoteCandidates = new Map<string, { ip: string; port: number; protocol: string; type: string }>();
+
       stats.forEach((report) => {
         if (report.type === 'candidate-pair') {
           totalCandidatePairs++;
@@ -781,6 +785,20 @@ class WebRTCService {
           } else if (report.state === 'failed') {
             failedPairs++;
           }
+        } else if (report.type === 'local-candidate') {
+          localCandidates.set(report.id, {
+            ip: report.ip || report.get?.('ip') || '未知',
+            port: report.port || report.get?.('port') || 0,
+            protocol: report.protocol || report.get?.('protocol') || '未知',
+            type: report.candidateType || report.get?.('candidateType') || '未知',
+          });
+        } else if (report.type === 'remote-candidate') {
+          remoteCandidates.set(report.id, {
+            ip: report.ip || report.get?.('ip') || '未知',
+            port: report.port || report.get?.('port') || 0,
+            protocol: report.protocol || report.get?.('protocol') || '未知',
+            type: report.candidateType || report.get?.('candidateType') || '未知',
+          });
         }
       });
 
@@ -795,13 +813,30 @@ class WebRTCService {
         if (activeCandidatePair) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const pair = activeCandidatePair as any;
+          const localCandId = pair.localCandidateId || pair.get?.('localCandidateId');
+          const remoteCandId = pair.remoteCandidateId || pair.get?.('remoteCandidateId');
+          
+          // 获取具体的候选地址信息
+          const localCand = localCandidates.get(localCandId);
+          const remoteCand = remoteCandidates.get(remoteCandId);
+          
           console.log(`  - ✅ 活跃候选对详情:`);
-          console.log(`    • 本地候选ID: ${pair.localCandidateId || pair.get('localCandidateId')}`);
-          console.log(`    • 远程候选ID: ${pair.remoteCandidateId || pair.get('remoteCandidateId')}`);
-          const rtt = pair.currentRoundTripTime ?? pair.get('currentRoundTripTime');
+          console.log(`    • 本地候选: ${localCand ? `${localCand.ip}:${localCand.port} (${localCand.protocol}, ${localCand.type})` : `ID: ${localCandId}`}`);
+          console.log(`    • 远程候选: ${remoteCand ? `${remoteCand.ip}:${remoteCand.port} (${remoteCand.protocol}, ${remoteCand.type})` : `ID: ${remoteCandId}`}`);
+          
+          const rtt = pair.currentRoundTripTime ?? pair.get?.('currentRoundTripTime');
           console.log(`    • 往返延迟(RTT): ${rtt?.toFixed?.(3) || '未知'}s`);
-          console.log(`    • 接收字节: ${(pair.bytesReceived ?? pair.get('bytesReceived')) || 0}`);
-          console.log(`    • 发送字节: ${(pair.bytesSent ?? pair.get('bytesSent')) || 0}`);
+          console.log(`    • 接收字节: ${(pair.bytesReceived ?? pair.get?.('bytesReceived')) || 0}`);
+          console.log(`    • 发送字节: ${(pair.bytesSent ?? pair.get?.('bytesSent')) || 0}`);
+          
+          // 如果是通过srflx或relay成功连接，特别标注
+          if (localCand?.type === 'srflx' || remoteCand?.type === 'srflx') {
+            console.log(`    • 🎯 连接方式: NAT穿透成功 (srflx候选)`);
+          } else if (localCand?.type === 'relay' || remoteCand?.type === 'relay') {
+            console.log(`    • 🎯 连接方式: TURN中继 (relay候选)`);
+          } else if (localCand?.type === 'host' && remoteCand?.type === 'host') {
+            console.log(`    • 🎯 连接方式: 直连/同局域网 (host候选)`);
+          }
         } else if (succeededPairs === 0 && failedPairs > 0) {
           console.warn(
             `[WebRTCService.logCandidatePairStats] ⚠️ 所有候选对都失败了！`,

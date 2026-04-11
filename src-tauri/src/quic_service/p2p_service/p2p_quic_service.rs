@@ -395,6 +395,7 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
                 break;
             }
         }
+        info!("接收到媒体帧 {:?}", header.data_len);
         
         // 4. 根据帧类型分发处理
         match header.frame_type {
