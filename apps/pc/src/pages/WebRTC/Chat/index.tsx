@@ -21,9 +21,11 @@ import {
   AudioMutedOutlined,
   AudioOutlined,
   LogoutOutlined,
+  ReloadOutlined,
   VideoCameraAddOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
+import { updateWebRTCWindowState } from '@/hooks/useWebRTCSignalApi';
 import { window } from '@tauri-apps/api';
 import { listen } from '@tauri-apps/api/event';
 import { useLocation } from '@umijs/max';
@@ -106,8 +108,10 @@ const WebRTCChat: React.FC = () => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   /** 音频是否开启 */
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  /** 是否显示视频区域 */
+  /** \u662f\u5426\u663e\u793a\u89c6\u9891\u533a\u57df */
   const [showVideoPanel, setShowVideoPanel] = useState(true);
+  /** \u662f\u5426\u6b63\u5728\u91cd\u8bd5\u8fde\u63a5 */
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // ============ 从URL参数获取信息 ============
   const location = useLocation();
@@ -225,7 +229,8 @@ const WebRTCChat: React.FC = () => {
             console.log(`[WebRTCChat] ⚠️  连接已断开`);
           } else if (state === 'failed') {
             setConnectionStatus('failed');
-            console.log(`[WebRTCChat] ❌ 连接失败`);
+            console.log(`[WebRTCChat] \u274c \u8fde\u63a5\u5931\u8d25`);
+            // \u8fde\u63a5\u5931\u8d25\u65f6\u4e0d\u5173\u95ed\u7a97\u53e3\uff0c\u663e\u793a\u91cd\u8bd5\u6309\u94ae\u8ba9\u7528\u6237\u624b\u52a8\u91cd\u8bd5
           }
         },
       );
@@ -570,11 +575,60 @@ const WebRTCChat: React.FC = () => {
   };
 
   /**
-   * 退出聊天
+   * \u5728\u539f\u7a97\u53e3\u5185\u91cd\u8bd5\u8fde\u63a5
    *
-   * 流程：
-   * 1. 关闭WebRTC连接
-   * 2. 关闭当前窗口
+   * \u6d41\u7a0b\uff1a
+   * 1. \u5173\u95ed\u73b0\u6709\u8fde\u63a5\n   * 2. \u91cd\u65b0\u521b\u5efaoffer\u5e76\u53d1\u9001\n   * 3. \u4e0d\u5f00\u65b0\u7a97\u53e3\uff0c\u5728\u540c\u4e00\u7a97\u53e3\u5185\u5b8c\u6210\u91cd\u8bd5
+   */
+  const handleRetry = async () => {
+    console.log(`[WebRTCChat.handleRetry] \u7528\u6237\u70b9\u51fb\u91cd\u8bd5\u6309\u94ae\uff0c\u5f00\u59cb\u91cd\u8bd5...`);
+    setIsRetrying(true);
+    setConnectionStatus('connecting');
+  
+    try {
+      const service = getWebRTCService();
+      if (!service) {
+        console.error(`[WebRTCChat.handleRetry] WebRTCService\u4e0d\u5b58\u5728`);
+        return;
+      }
+  
+      // \u5173\u95ed\u65e7\u8fde\u63a5\n      console.log(`[WebRTCChat.handleRetry] \u5173\u95ed\u65e7\u8fde\u63a5...`);
+      await service.closeConnection(friendId);
+  
+      if (isInitiator) {
+        // \u53d1\u8d77\u65b9\u91cd\u8bd5\uff1a\u91cd\u65b0\u521b\u5efaoffer
+        console.log(`[WebRTCChat.handleRetry] \u53d1\u8d77\u65b9\u91cd\u8bd5\uff0c\u91cd\u65b0\u521b\u5efaoffer...`);
+        const offer = await service.createOffer(friendId);
+        const signalMessage: WebRTCSignalMessage = {
+          type: 'offer',
+          sender: localUserId,
+          receiver: friendId,
+          sessionId: service.sessionId,
+          data: offer,
+          timestamp: Date.now(),
+        };
+        await service.sendSignal(signalMessage);
+        console.log(`[WebRTCChat.handleRetry] \u2705 \u91cd\u8bd5offer\u5df2\u53d1\u9001`);
+      } else {
+        // \u54cd\u5e94\u65b9\u91cd\u8bd5\uff1a\u7b49\u5f85\u5bf9\u7aef\u7684\u65b0offer
+        console.log(`[WebRTCChat.handleRetry] \u54cd\u5e94\u65b9\u7b49\u5f85\u5bf9\u7aef\u7684\u65b0offer...`);
+        // \u54cd\u5e94\u65b9\u4e0d\u9700\u8981\u4e3b\u52a8\u53d1\u8d77\uff0c\u7b49\u5f85\u53d1\u8d77\u65b9\u7684ICE\u91cd\u542foffer\u5373\u53ef
+      }
+    } catch (e) {
+      console.error(`[WebRTCChat.handleRetry] \u274c \u91cd\u8bd5\u5931\u8d25:`, e);
+      setConnectionStatus('failed');
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+  
+  /**
+   * \u9000\u51fa\u804a\u5929
+   *
+   * \u6d41\u7a0b\uff1a
+   * 1. \u5173\u95edWebRTC\u8fde\u63a5
+   * 2. \u6e05\u7406\u540e\u7aef\u7a97\u53e3\u72b6\u6001
+   * 3. \u5173\u95ed\u5f53\u524d\u7a97\u53e3
    */
   const handleExit = async () => {
     console.log(`[WebRTCChat.handleExit] 用户点击退出按钮，开始清理资源...`);
@@ -592,8 +646,12 @@ const WebRTCChat: React.FC = () => {
         console.log(`[WebRTCChat.handleExit] ⚠️  WebRTCService不存在`);
       }
 
-      // 关闭当前窗口
-      console.log(`[WebRTCChat.handleExit] 关闭当前窗口...`);
+      // \u6e05\u7406\u540e\u7aef\u7a97\u53e3\u72b6\u6001
+      console.log(`[WebRTCChat.handleExit] \u6e05\u7406\u540e\u7aef\u7a97\u53e3\u72b6\u6001...`);
+      await updateWebRTCWindowState(friendId, 'close');
+      
+      // \u5173\u95ed\u5f53\u524d\u7a97\u53e3
+      console.log(`[WebRTCChat.handleExit] \u5173\u95ed\u5f53\u524d\u7a97\u53e3...`);
       const currentWindow = window.getCurrentWindow();
       await currentWindow.close();
       console.log(`[WebRTCChat.handleExit] ✅ 窗口已关闭`);
@@ -713,9 +771,22 @@ const WebRTCChat: React.FC = () => {
             WebRTC P2P 直连聊天，消息不经过服务器，关闭窗口后消息将消失
           </div>
           <div ref={messageContainerRef} className={styles.messageContainer}>
+            {connectionStatus === 'failed' && (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <div style={{ color: '#ff4d4f', marginBottom: '12px' }}>\u8fde\u63a5\u5931\u8d25</div>
+                <Button
+                  type="primary"
+                  icon={<ReloadOutlined />}
+                  loading={isRetrying}
+                  onClick={handleRetry}
+                >
+                  \u91cd\u8bd5\u8fde\u63a5
+                </Button>
+              </div>
+            )}
             {connectionStatus === 'connecting' && (
               <div style={{ textAlign: 'center', padding: '20px' }}>
-                <Spin tip="正在建立连接..." />
+                <Spin tip="\u6b63\u5728\u5efa\u7acb\u8fde\u63a5..." />
               </div>
             )}
             {messages.map((msg) => (
