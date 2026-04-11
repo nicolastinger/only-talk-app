@@ -85,6 +85,12 @@ pub const MSG_TYPE_P2P_FILE_TRANSFER_REQUEST: u16 = 18;
 /// P2P文件传输响应 - 接收方确认或拒绝文件传输
 pub const MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE: u16 = 19;
 
+/// P2P媒体接收就绪 - 媒体接收器已准备好
+/// 用于同步双方的媒体初始化状态，避免发送方在接收方未准备好时发送数据
+/// 发送时机：本地媒体接收器(MediaSource/SourceBuffer)初始化完成后
+/// 接收时机：收到此消息后才开始发送媒体数据
+pub const MSG_TYPE_P2P_MEDIA_READY: u16 = 20;
+
 // ==================== P2P请求响应类型 ====================
 
 /// 接受P2P请求

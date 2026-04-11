@@ -20,6 +20,7 @@ import {
   AudioOutlined,
   LogoutOutlined,
   PhoneOutlined,
+  ReloadOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
@@ -159,6 +160,18 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     isInCall: false,
   });
 
+  /** 对方媒体接收器是否准备好 - 收到对方的media_ready信号后为true */
+  const [isRemoteReceiverReady, setIsRemoteReceiverReady] = useState(false);
+
+  /** 本地媒体接收器是否准备好 - 用于判断是否可以发送media_ready信号 */
+  const isLocalReceiverReadyRef = useRef<boolean>(false);
+
+  /** 等待本地接收器就绪的Promise resolve函数 */
+  const localReceiverReadyResolveRef = useRef<(() => void) | null>(null);
+
+  /** 重启媒体按钮的状态 */
+  const [isRestarting, setIsRestarting] = useState(false);
+
   // ==================== 默认媒体配置 ====================
 
   /**
@@ -208,7 +221,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 3. 配置音频参数 (采样率、回声消除等)
    * 4. 将媒体流绑定到本地视频元素
    * 5. 发送媒体配置给对方
-   * 6. 开始录制并发送媒体数据
+   * 6. 发送媒体接收就绪信号（重要：在发送媒体数据之前）
+   * 7. 等待对方就绪信号后再开始录制并发送媒体数据
    */
   const initLocalMedia = useCallback(async () => {
     try {
@@ -249,15 +263,48 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       setIsLoading(false);
       setIsWaitingResponse(false);
 
-      // 开始录制媒体数据
-      startMediaRecording(stream);
+      // 重要：发送媒体接收就绪信号，通知对方可以开始发送媒体数据
+      // 这是解决视频黑屏问题的关键：确保双方都准备好后再开始传输
+      await sendMediaReady();
 
-      // 启动媒体信息定时发送
-      startMediaInfoReporting();
+      // 检查对方是否已经准备好，如果是，则开始录制
+      if (isRemoteReceiverReady) {
+        console.log('[PrivacyVideoCall] 对方已准备好，立即开始媒体录制');
+        startMediaRecording(stream);
+        startMediaInfoReporting();
+      } else {
+        console.log('[PrivacyVideoCall] 等待对方媒体接收器就绪后再开始录制...');
+      }
     } catch (error) {
       console.error('初始化本地媒体失败:', error);
       message.error('无法访问摄像头或麦克风');
       setIsLoading(false);
+    }
+  }, [friendId, isRemoteReceiverReady]);
+
+  /**
+   * 开始发送媒体数据
+   * 只有在对方媒体接收器准备好后才能调用
+   */
+  const startSendingMedia = useCallback(() => {
+    if (localStreamRef.current) {
+      console.log('[PrivacyVideoCall] 开始发送媒体数据');
+      startMediaRecording(localStreamRef.current);
+      startMediaInfoReporting();
+    }
+  }, []);
+  /**
+   * 发送媒体接收就绪信号
+   * 通知对方本地已准备好接收媒体数据
+   */
+  const sendMediaReady = useCallback(async () => {
+    try {
+      console.log('[PrivacyVideoCall] 发送媒体接收就绪信号');
+      await invoke('send_p2p_media_ready', {
+        targetUuid: friendId,
+      });
+    } catch (error) {
+      console.error('发送媒体就绪信号失败:', error);
     }
   }, [friendId]);
 
@@ -609,6 +656,18 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         }
       });
 
+      // 监听对方媒体接收器就绪信号
+      // 这是解决视频黑屏问题的关键：只有收到此信号后才开始发送媒体数据
+      const unlistenMediaReady = await listen<string>(
+        'media_receiver_ready',
+        (event) => {
+          console.log('[PrivacyVideoCall] 对方媒体接收器已就绪:', event.payload);
+          setIsRemoteReceiverReady(true);
+          // 对方准备好后，开始发送媒体数据
+          startSendingMedia();
+        },
+      );
+
       // 保存所有取消监听函数
       unlistenRef.current = [
         unlistenVideo,
@@ -618,6 +677,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         unlistenReject,
         unlistenEnd,
         unlistenMediaInfo,
+        unlistenMediaReady,
       ];
 
       console.log('[PrivacyVideoCall] 所有事件监听器已注册完成');
@@ -629,7 +689,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     return () => {
       unlistenRef.current.forEach((unlisten) => unlisten());
     };
-  }, [processVideoBufferQueue, processAudioBufferQueue, initLocalMedia]);
+  }, [processVideoBufferQueue, processAudioBufferQueue, initLocalMedia, startSendingMedia]);
 
   // ==================== 处理媒体控制命令 ====================
 
@@ -922,6 +982,82 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     }
   }, [friendId, handleEndCall]);
 
+  // ==================== 重启媒体接收器 ====================
+
+  /**
+   * 重启媒体接收器
+   * 作为视频黑屏问题的兜底解决方案
+   *
+   * 当视频出现黑屏或音频无法播放时，可以手动重启媒体接收器
+   * 流程:
+   * 1. 停止当前的媒体录制器
+   * 2. 重置远程媒体接收器
+   * 3. 重新初始化远程媒体接收器
+   * 4. 发送重新就绪信号
+   */
+  const handleRestartMedia = useCallback(async () => {
+    if (isRestarting) {
+      return;
+    }
+
+    setIsRestarting(true);
+    console.log('[PrivacyVideoCall] 开始重启媒体接收器...');
+
+    try {
+      // 1. 停止当前的媒体录制器
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+      }
+      if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+        audioRecorderRef.current.stop();
+        audioRecorderRef.current = null;
+      }
+
+      // 2. 重置远程媒体接收器
+      if (mediaSourceRef.current) {
+        if (mediaSourceRef.current.readyState === 'open') {
+          mediaSourceRef.current.endOfStream();
+        }
+        mediaSourceRef.current = null;
+      }
+      if (audioMediaSourceRef.current) {
+        if (audioMediaSourceRef.current.readyState === 'open') {
+          audioMediaSourceRef.current.endOfStream();
+        }
+        audioMediaSourceRef.current = null;
+      }
+      sourceBufferRef.current = null;
+      audioSourceBufferRef.current = null;
+      videoBufferQueueRef.current = [];
+      audioBufferQueueRef.current = [];
+      isVideoSourceBufferUpdatingRef.current = false;
+      isAudioSourceBufferUpdatingRef.current = false;
+
+      // 3. 重新初始化远程媒体接收器
+      await initRemoteMediaReceiver();
+
+      // 4. 发送重新就绪信号
+      await sendMediaReady();
+
+      // 5. 重置状态
+      setIsRemoteReceiverReady(false);
+
+      // 6. 如果本地媒体流存在，重新开始发送
+      if (localStreamRef.current && isRemoteReceiverReady) {
+        startSendingMedia();
+      }
+
+      console.log('[PrivacyVideoCall] 媒体接收器重启完成');
+      message.success('媒体接收器已重启');
+    } catch (error) {
+      console.error('重启媒体接收器失败:', error);
+      message.error('重启媒体接收器失败');
+    } finally {
+      setIsRestarting(false);
+    }
+  }, [isRestarting, initRemoteMediaReceiver, sendMediaReady, isRemoteReceiverReady, startSendingMedia]);
+
   // ==================== 发送视频通话邀请 ====================
 
   /**
@@ -1114,6 +1250,19 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
             size="large"
             icon={<VideoCameraOutlined />}
             onClick={toggleVideo}
+            className={styles.controlButton}
+          />
+        </Tooltip>
+
+        {/* 重启媒体按钮 - 作为黑屏问题的兜底方案 */}
+        <Tooltip title="重启视频/音频 (解决黑屏问题)">
+          <Button
+            type="default"
+            shape="circle"
+            size="large"
+            icon={<ReloadOutlined spin={isRestarting} />}
+            onClick={handleRestartMedia}
+            disabled={isRestarting || !isConnected}
             className={styles.controlButton}
           />
         </Tooltip>

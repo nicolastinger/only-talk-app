@@ -6,7 +6,7 @@ use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
     access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
     send_p2p_audio_frame_service, send_p2p_media_config_service, send_p2p_media_control_service,
-    send_p2p_media_info_service, send_p2p_text_msg_service, send_p2p_video_call_end_service, send_p2p_video_call_invite_service,
+    send_p2p_media_info_service, send_p2p_media_ready_service, send_p2p_text_msg_service, send_p2p_video_call_end_service, send_p2p_video_call_invite_service,
     send_p2p_video_call_response_service, send_p2p_video_config_service, send_p2p_video_frame_service,
     send_p2p_file_data_service, send_p2p_file_transfer_request_service, send_p2p_file_transfer_response_service,
 };
@@ -220,6 +220,16 @@ pub async fn send_p2p_file_transfer_response(
 ) -> Result<(), String> {
     let transfer_response = serde_json::from_str::<P2pFileTransferResponse>(&transfer_response).map_err(|e| e.to_string())?;
     send_p2p_file_transfer_response_service(transfer_response, target_uuid)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 发送媒体接收就绪信号
+/// 当本地媒体接收器准备好后调用，通知对方可以开始发送媒体数据
+/// 这是解决视频黑屏问题的关键：确保双方都准备好后再开始传输
+#[tauri::command]
+pub async fn send_p2p_media_ready(target_uuid: String) -> Result<(), String> {
+    send_p2p_media_ready_service(target_uuid)
         .await
         .map_err(|e| e.to_string())
 }

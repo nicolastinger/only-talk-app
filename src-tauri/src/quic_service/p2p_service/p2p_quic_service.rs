@@ -20,7 +20,7 @@ use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
     MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
     MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
+    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_MEDIA_READY, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
     MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
     MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA, MSG_TYPE_PING,
 };
@@ -221,6 +221,17 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                     // 转为JSON字符串emit，避免Vec<u8>被序列化为number[]
                     let info_str = String::from_utf8_lossy(&msg.raw).to_string();
                     handle.emit("media_info", info_str)?;
+                }
+            }
+            
+            // 媒体接收就绪
+            // 对方表示其媒体接收器已准备好，可以开始发送媒体数据
+            // 这是解决视频黑屏问题的关键：确保双方都准备好后再开始传输
+            MSG_TYPE_P2P_MEDIA_READY => {
+                info!("接收到媒体接收就绪信号: {:?}", msg);
+                if let Some(handle) = APP_HANDLE.get() {
+                    // 发送就绪事件给前端，包含发送者的UUID
+                    handle.emit("media_receiver_ready", &msg.send_user)?;
                 }
             }
             

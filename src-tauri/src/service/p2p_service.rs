@@ -23,7 +23,7 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA,
     MSG_TYPE_P2P_FILE_TRANSFER_REQUEST, MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE,
     MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
+    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_MEDIA_READY, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
     MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
     MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
@@ -748,6 +748,49 @@ pub async fn send_p2p_video_call_end_service(
     }
     
     info!("视频通话结束通知发送完成");
+    Ok(())
+}
+
+/// 发送媒体接收就绪信号
+/// 当本地媒体接收器(MediaSource/SourceBuffer)初始化完成后调用
+/// 通知对方可以开始发送媒体数据
+///
+/// 这是解决视频黑屏问题的关键：
+/// 确保接收方准备好后才发送数据，避免初始化段丢失
+///
+/// # 参数
+/// - `target_uuid`: 目标用户UUID
+///
+/// # 返回
+/// - 成功返回Ok(())
+/// - 失败返回错误信息
+pub async fn send_p2p_media_ready_service(
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    info!("发送媒体接收就绪信号给: {}", target_uuid);
+    
+    // 获取当前用户UUID
+    let from_uuid = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
+    };
+    
+    // 生成就绪消息
+    let ready_msg = generate_text_msg(
+        MSG_TYPE_P2P_MEDIA_READY,
+        vec![], // 空payload，只需要知道是谁发的
+        target_uuid.clone(),
+        from_uuid,
+    )?;
+    
+    // 发送就绪消息
+    let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
+    {
+        let mut guard = send_stream.lock().await;
+        guard.write_all(&ready_msg).await?;
+    }
+    
+    info!("媒体接收就绪信号发送完成");
     Ok(())
 }
 
