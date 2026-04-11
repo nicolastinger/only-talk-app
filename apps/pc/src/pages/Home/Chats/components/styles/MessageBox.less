@@ -38,6 +38,30 @@
   &:active {
     transform: translateX(1px);
   }
+
+  // 选中状态样式
+  &.selected {
+    background: linear-gradient(90deg, rgba(64, 150, 255, 0.12), rgba(64, 150, 255, 0.05));
+    border-left-color: var(--color-primary);
+    box-shadow: inset 0 0 20px rgba(64, 150, 255, 0.1),
+      0 2px 8px rgba(64, 150, 255, 0.15);
+
+    &::before {
+      opacity: 1;
+      background: linear-gradient(90deg, rgba(64, 150, 255, 0.15), transparent);
+    }
+
+    .title {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .imgItem {
+      box-shadow: 0 4px 12px rgba(64, 150, 255, 0.35);
+      transform: scale(1.05);
+      border-color: var(--color-primary);
+    }
+  }
 }
 
 .left {

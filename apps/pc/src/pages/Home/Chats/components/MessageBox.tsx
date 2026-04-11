@@ -9,8 +9,8 @@ import styles from './styles/MessageBox.less';
 // 图片缓存
 const imageCache = new Map<string, string>();
 
-const MessageBox = (props: MessageQueueProps) => {
-  const { message, title, time, img, count, text_type, send_user, recv_user } = props;
+const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
+  const { message, title, time, img, count, text_type, send_user, recv_user, isSelected } = props;
 
   // 判断是否是自己给自己的会话
   const isSelfChat = send_user && recv_user && send_user === recv_user;
@@ -107,7 +107,7 @@ const MessageBox = (props: MessageQueueProps) => {
 
   const timeStr = formatMessageTime(time);
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${isSelected ? styles.selected : ''}`}>
       <div className={styles.left}>
         <Badge count={count}>
           <img

@@ -3,20 +3,37 @@ import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { history, Outlet } from '@umijs/max';
+import { history, Outlet, useLocation } from '@umijs/max';
 import { ChatSessionVo } from '@workspace/types';
 import { Splitter } from 'antd';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 
 const ChatsLayout = () => {
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
     [],
   );
+  const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
 
   const { userInfo } = useBearStore();
   const refreshFlag = useBearStore((state) => state.refreshFlag);
+  const location = useLocation();
   const { chatSessionEvent } = useChatSession(userInfo.uuid);
+  // 监听路由变化，更新选中的会话
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const currentFriend = params.get('currentFriend');
+    const selfUuid = params.get('selfUuid');
+    
+    if (currentFriend) {
+      // 普通聊天页面
+      setSelectedSessionKey(currentFriend);
+    } else if (selfUuid) {
+      // 自我聊天页面
+      setSelectedSessionKey(selfUuid);
+    }
+  }, [location.search]);
+
   const routeToChat = (item: ChatSessionVo) => {
     console.log('userInfo', userInfo, item);
     // 判断是否是自己给自己的会话
@@ -134,6 +151,15 @@ const ChatsLayout = () => {
         </div>
         <div className={styles.item} key="chat">
           {chatSessionList.map((item: ChatSessionVo) => {
+            // 生成会话的唯一标识
+            const sessionKey = item.send_user === item.recv_user 
+              ? item.send_user 
+              : item.send_user === userInfo?.uuid 
+                ? item.recv_user 
+                : item.send_user;
+            
+            const isSelected = selectedSessionKey === sessionKey;
+            
             return (
               <div key={item.nano_id} onClick={() => routeToChat(item)}>
                 <Message
@@ -146,6 +172,7 @@ const ChatsLayout = () => {
                   text_type={item.text_type}
                   send_user={item.send_user}
                   recv_user={item.recv_user}
+                  isSelected={isSelected}
                 />
               </div>
             );
