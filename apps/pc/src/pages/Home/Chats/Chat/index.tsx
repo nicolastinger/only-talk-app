@@ -278,6 +278,17 @@ const ChatPage: React.FC = () => {
           );
           if (index !== -1) {
             prevState[index].ack = true;
+            // 检查被 ack 的消息是否是图片(text_type=2)或文件(text_type=3)
+            const ackedMessage = prevState[index];
+            const ackedMessageType = ackedMessage.text_msg_raw.text_type;
+            if (ackedMessageType === 2 || ackedMessageType === 3) {
+              // 重新加载当前窗口的聊天记录
+              console.log(`检测到图片/文件消息 ${ackedMessageType === 2 ? '图片' : '文件'} 的ack，重新加载聊天记录`);
+              setCurrentPage(1);
+              setHasMore(true);
+              setIsInitialLoad(true);
+              loadChatRecordFromStore(meUuid, friendUuid, 1, true);
+            }
           }
           return [...prevState, temp];
         });
