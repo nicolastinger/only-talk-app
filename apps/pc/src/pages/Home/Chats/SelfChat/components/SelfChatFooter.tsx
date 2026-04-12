@@ -1,11 +1,16 @@
+import { PictureOutlined, SmileOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { selectFile } from '@workspace/services';
-import { ChatMessage, MessageFrom, TextMsgRaw, TextQuicMsgVo } from '@workspace/types';
+import {
+  ChatMessage,
+  MessageFrom,
+  TextMsgRaw,
+  TextQuicMsgVo,
+} from '@workspace/types';
 import { Button, Input, message } from 'antd';
 import { TextAreaRef } from 'antd/es/input/TextArea';
 import { nanoid } from 'nanoid';
 import React, { ChangeEvent, useRef, useState } from 'react';
-import { PictureOutlined, SmileOutlined } from '@ant-design/icons';
 import styles from './SelfChatFooter.less';
 
 const { TextArea } = Input;
@@ -16,13 +21,70 @@ interface SelfChatFooterProps {
 }
 
 const EMOJI_LIST = [
-  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
-  '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙',
-  '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫',
-  '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬',
-  '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '👍', '👎',
-  '👏', '🙌', '🤝', '🙏', '💪', '🤘', '❤️', '💔', '💯', '🔥',
-  '⭐', '✨', '💥', '🎉',
+  '😀',
+  '😃',
+  '😄',
+  '😁',
+  '😆',
+  '😅',
+  '🤣',
+  '😂',
+  '🙂',
+  '🙃',
+  '😉',
+  '😊',
+  '😇',
+  '🥰',
+  '😍',
+  '🤩',
+  '😘',
+  '😗',
+  '😚',
+  '😙',
+  '🥲',
+  '😋',
+  '😛',
+  '😜',
+  '🤪',
+  '😝',
+  '🤑',
+  '🤗',
+  '🤭',
+  '🤫',
+  '🤔',
+  '🤐',
+  '🤨',
+  '😐',
+  '😑',
+  '😶',
+  '😏',
+  '😒',
+  '🙄',
+  '😬',
+  '😮‍💨',
+  '🤥',
+  '😌',
+  '😔',
+  '😪',
+  '🤤',
+  '😴',
+  '😷',
+  '👍',
+  '👎',
+  '👏',
+  '🙌',
+  '🤝',
+  '🙏',
+  '💪',
+  '🤘',
+  '❤️',
+  '💔',
+  '💯',
+  '🔥',
+  '⭐',
+  '✨',
+  '💥',
+  '🎉',
 ];
 
 /**

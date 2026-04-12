@@ -240,12 +240,16 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       <div className={styles.messageWrapper}>
         {renderAck()}
         <div className={styles.chatContainerWrapper}>
-          <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isFileMessage ? styles.fileMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
+          <div
+            className={`${styles.chatContainer} ${
+              isImageMessage ? styles.imageMessage : ''
+            } ${isFileMessage ? styles.fileMessage : ''} ${
+              isSpecialMessage ? styles.specialMessage : ''
+            }`}
+          >
             {renderMessage(raw)}
           </div>
-          <div className={styles.tooltip}>
-            {formatFullTime(timestamp)}
-          </div>
+          <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
         </div>
       </div>
       <div className={styles.userIcon}>
@@ -256,7 +260,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           className={styles.imgItem}
           alt="icon"
           style={{ opacity: loading ? 0.7 : 1 }}
-          onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = DEFAULT_ICON;
+          }}
         />
       </div>
     </div>

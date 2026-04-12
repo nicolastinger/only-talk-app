@@ -1,8 +1,8 @@
 import {
-  PhoneOutlined,
-  VideoCameraOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  PhoneOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons';
 import React from 'react';
 import styles from './styles/WebRTCMessage.less';
@@ -63,13 +63,13 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine }) => {
   const messageInfo = getMessageInfo();
 
   return (
-    <div className={`${styles.container} ${styles[messageInfo.type]} ${isMine ? styles.mine : styles.friend}`}>
-      <div className={styles.iconWrapper}>
-        {messageInfo.icon}
-      </div>
-      <div className={styles.text}>
-        {messageInfo.text}
-      </div>
+    <div
+      className={`${styles.container} ${styles[messageInfo.type]} ${
+        isMine ? styles.mine : styles.friend
+      }`}
+    >
+      <div className={styles.iconWrapper}>{messageInfo.icon}</div>
+      <div className={styles.text}>{messageInfo.text}</div>
     </div>
   );
 };

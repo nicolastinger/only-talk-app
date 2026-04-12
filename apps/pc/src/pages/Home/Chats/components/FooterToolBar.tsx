@@ -261,7 +261,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
       <div className={styles.footerBtn} onClick={sendFile} title="发送文件">
         <FileOutlined />
       </div>
-      <div className={styles.footerBtn} onClick={sendRequestToP2p} title="隐私聊天">
+      <div
+        className={styles.footerBtn}
+        onClick={sendRequestToP2p}
+        title="隐私聊天"
+      >
         <LockOutlined />
       </div>
       <div

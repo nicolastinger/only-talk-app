@@ -24,7 +24,7 @@ const ChatsLayout = () => {
     const params = new URLSearchParams(location.search);
     const currentFriend = params.get('currentFriend');
     const selfUuid = params.get('selfUuid');
-    
+
     if (currentFriend) {
       // 普通聊天页面
       setSelectedSessionKey(currentFriend);
@@ -152,14 +152,15 @@ const ChatsLayout = () => {
         <div className={styles.item} key="chat">
           {chatSessionList.map((item: ChatSessionVo) => {
             // 生成会话的唯一标识
-            const sessionKey = item.send_user === item.recv_user 
-              ? item.send_user 
-              : item.send_user === userInfo?.uuid 
-                ? item.recv_user 
+            const sessionKey =
+              item.send_user === item.recv_user
+                ? item.send_user
+                : item.send_user === userInfo?.uuid
+                ? item.recv_user
                 : item.send_user;
-            
+
             const isSelected = selectedSessionKey === sessionKey;
-            
+
             return (
               <div key={item.nano_id} onClick={() => routeToChat(item)}>
                 <Message

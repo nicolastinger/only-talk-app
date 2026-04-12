@@ -182,7 +182,9 @@ const LeftAside = () => {
             src={userIcon || DEFAULT_ICON}
             className={styles.imgItem}
             alt={'icon'}
-            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_ICON;
+            }}
           />
         </div>
         {renderBtn(topBtnList)}

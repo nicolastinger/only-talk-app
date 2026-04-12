@@ -6,13 +6,17 @@
  * 2. 视频通话 - 支持发起和接收视频通话邀请
  * 3. P2P通信 - 所有消息通过P2P连接传输
  *
- * 使用方式：
- * 访问路径: /privacy/chat?friendId=对方UUID
+ * 布局说明：
+ * - 视频区域占80%宽度
+ * - 聊天消息区域占20%宽度
+ * - 所有消息都在右侧渲染
  */
 import PrivacyVideoCall from '@/components/Media/PrivacyVideoCall';
 import {
   LockOutlined,
   LogoutOutlined,
+  SendOutlined,
+  SmileOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
@@ -20,15 +24,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useLocation } from '@umijs/max';
 import { VideoCallInvite } from '@workspace/types';
-import { Button, Input, message, Modal } from 'antd';
+import { Button, Input, message, Modal, Tooltip } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
 
 const { TextArea } = Input;
 
-// ==================== 消息接口定义 ====================
-
-/** P2P文本消息接口 */
 interface P2pTextMessage {
   type: string;
   send_user: string;
@@ -36,73 +37,120 @@ interface P2pTextMessage {
   timestamp: number;
 }
 
-/** 聊天消息项接口 */
 interface ChatMessageItem {
   id: string;
   text: string;
   isMine: boolean;
   timestamp: number;
+  senderName?: string;
 }
 
-// ==================== 主组件 ====================
+const EMOJI_LIST = [
+  '😀',
+  '😃',
+  '😄',
+  '😁',
+  '😆',
+  '😅',
+  '🤣',
+  '😂',
+  '🙂',
+  '🙃',
+  '😉',
+  '😊',
+  '😇',
+  '🥰',
+  '😍',
+  '🤩',
+  '😘',
+  '😗',
+  '😚',
+  '😙',
+  '🥲',
+  '😋',
+  '😛',
+  '😜',
+  '🤪',
+  '😝',
+  '🤑',
+  '🤗',
+  '🤭',
+  '🤫',
+  '🤔',
+  '🤐',
+  '🤨',
+  '😐',
+  '😑',
+  '😶',
+  '😏',
+  '😒',
+  '🙄',
+  '😬',
+  '😮‍💨',
+  '🤥',
+  '😌',
+  '😔',
+  '😪',
+  '🤤',
+  '😴',
+  '😷',
+  '👍',
+  '👎',
+  '👏',
+  '🙌',
+  '🤝',
+  '🙏',
+  '💪',
+  '🤘',
+  '❤️',
+  '💔',
+  '💯',
+  '🔥',
+  '⭐',
+  '✨',
+  '💥',
+  '🎉',
+];
 
 const PrivacyChat: React.FC = () => {
-  // ==================== 状态定义 ====================
-
-  /** 聊天消息列表 */
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
-
-  /** 输入框文本 */
   const [inputText, setInputText] = useState('');
-
-  /** 是否处于视频通话状态 */
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
-
-  /** 是否为视频通话发起方 */
   const [isVideoCallInitiator, setIsVideoCallInitiator] = useState(false);
-
-  /** 收到的视频通话邀请 */
   const [incomingCallInvite, setIncomingCallInvite] =
     useState<VideoCallInvite | null>(null);
-
-  /** 是否显示来电弹窗 */
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [friendName, setFriendName] = useState<string>('对方');
+  const [myName, setMyName] = useState<string>('我');
 
-  // ==================== 引用定义 ====================
-
-  /** 消息容器引用 - 用于自动滚动到底部 */
   const messageContainerRef = useRef<HTMLDivElement>(null);
-
-  /** 事件监听器清理函数列表 */
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const unlistenRef = useRef<(() => void)[]>([]);
 
-  // ==================== 路由参数获取 ====================
-
-  /** 获取路由参数 */
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendId = params.get('friendId') || '';
 
-  // ==================== 自动滚动到底部 ====================
-
-  /** 当消息列表更新时，自动滚动到底部 */
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // ==================== 设置事件监听器 ====================
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  /**
-   * 设置所有事件监听器
-   *
-   * 监听的事件:
-   * - p2p_text_message: 接收P2P文本消息
-   * - video_call_invite: 接收视频通话邀请
-   * - video_call_end: 视频通话结束
-   */
   useEffect(() => {
     const setupListeners = async () => {
-      // 监听P2P文本消息
       const unlistenText = await listen<string>('p2p_text_message', (event) => {
         console.log('收到p2p文本消息:', event.payload);
         try {
@@ -112,6 +160,7 @@ const PrivacyChat: React.FC = () => {
             text: p2pMsg.text,
             isMine: false,
             timestamp: p2pMsg.timestamp || Date.now(),
+            senderName: friendName,
           };
           setMessages((prev) => [...prev, newMessage]);
         } catch (e) {
@@ -119,7 +168,6 @@ const PrivacyChat: React.FC = () => {
         }
       });
 
-      // 监听视频通话邀请
       const unlistenInvite = await listen<string>(
         'video_call_invite',
         (event) => {
@@ -134,7 +182,6 @@ const PrivacyChat: React.FC = () => {
         },
       );
 
-      // 监听视频通话结束
       const unlistenEnd = await listen<string>('video_call_end', (event) => {
         console.log('视频通话已结束:', event.payload);
         setIsVideoCallActive(false);
@@ -142,21 +189,16 @@ const PrivacyChat: React.FC = () => {
         setShowIncomingCallModal(false);
       });
 
-      // 保存清理函数
       unlistenRef.current = [unlistenText, unlistenInvite, unlistenEnd];
     };
 
     setupListeners();
 
-    // 组件卸载时清理所有监听器
     return () => {
       unlistenRef.current.forEach((unlisten) => unlisten());
     };
-  }, []);
+  }, [friendName]);
 
-  // ==================== 工具函数 ====================
-
-  /** 滚动消息容器到底部 */
   const scrollToBottom = () => {
     const container = messageContainerRef.current;
     if (container) {
@@ -164,7 +206,6 @@ const PrivacyChat: React.FC = () => {
     }
   };
 
-  /** 格式化时间戳为 HH:mm 格式 */
   const formatTime = (timestamp: number): string => {
     const date = new Date(timestamp);
     const hours = date.getHours().toString().padStart(2, '0');
@@ -172,17 +213,11 @@ const PrivacyChat: React.FC = () => {
     return `${hours}:${minutes}`;
   };
 
-  // ==================== 消息发送 ====================
+  const handleEmojiClick = (emoji: string) => {
+    setInputText((prev) => prev + emoji);
+    setShowEmojiPicker(false);
+  };
 
-  /**
-   * 发送文本消息
-   *
-   * 流程:
-   * 1. 检查消息是否为空
-   * 2. 检查好友ID是否存在
-   * 3. 通过P2P连接发送消息
-   * 4. 更新本地消息列表
-   */
   const sendMessage = async () => {
     if (!inputText.trim()) {
       return;
@@ -194,18 +229,17 @@ const PrivacyChat: React.FC = () => {
     }
 
     try {
-      // 发送P2P文本消息
       await invoke('send_p2p_text_msg', {
         text: inputText.trim(),
         targetUuid: friendId,
       });
 
-      // 更新本地消息列表
       const newMessage: ChatMessageItem = {
         id: `${Date.now()}_${Math.random()}`,
         text: inputText.trim(),
         isMine: true,
         timestamp: Date.now(),
+        senderName: myName,
       };
       setMessages((prev) => [...prev, newMessage]);
       setInputText('');
@@ -215,7 +249,6 @@ const PrivacyChat: React.FC = () => {
     }
   };
 
-  /** 处理键盘按下事件 - Enter发送消息 */
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -223,15 +256,6 @@ const PrivacyChat: React.FC = () => {
     }
   };
 
-  // ==================== 退出处理 ====================
-
-  /**
-   * 退出隐私聊天
-   *
-   * 流程:
-   * 1. 关闭P2P连接
-   * 2. 关闭当前窗口
-   */
   const handleExit = async () => {
     try {
       if (friendId) {
@@ -247,33 +271,20 @@ const PrivacyChat: React.FC = () => {
     }
   };
 
-  // ==================== 视频通话处理 ====================
-
-  /**
-   * 发起视频通话
-   *
-   * 流程:
-   * 1. 设置为发起方
-   * 2. 激活视频通话界面
-   */
   const startVideoCall = () => {
     setIsVideoCallInitiator(true);
     setIsVideoCallActive(true);
   };
 
-  /**
-   * 接受视频通话邀请
-   */
   const acceptVideoCall = async () => {
     setShowIncomingCallModal(false);
     setIsVideoCallInitiator(false);
     setIsVideoCallActive(true);
-    // 发送接受响应给对方
     try {
       await invoke('send_p2p_video_call_response', {
         targetUuid: friendId,
         accept: true,
-        mediaConfig: null, // PrivacyVideoCall 组件会发送配置
+        mediaConfig: null,
         rejectReason: null,
       });
     } catch (e) {
@@ -282,9 +293,6 @@ const PrivacyChat: React.FC = () => {
     }
   };
 
-  /**
-   * 拒绝视频通话邀请
-   */
   const rejectVideoCall = async () => {
     setShowIncomingCallModal(false);
     try {
@@ -300,114 +308,152 @@ const PrivacyChat: React.FC = () => {
     setIncomingCallInvite(null);
   };
 
-  /**
-   * 视频通话结束回调
-   */
   const handleVideoCallClose = () => {
     setIsVideoCallActive(false);
     setIncomingCallInvite(null);
     setIsVideoCallInitiator(false);
   };
 
-  /**
-   * 当 PrivacyVideoCall 组件激活时，取消 PrivacyChat 中的事件监听
-   * 避免两个组件同时监听相同事件导致重复处理
-   */
   useEffect(() => {
     if (isVideoCallActive) {
-      // 取消 PrivacyChat 的事件监听器
-      console.log('[PrivacyChat] PrivacyVideoCall 激活，取消 PrivacyChat 事件监听');
+      console.log(
+        '[PrivacyChat] PrivacyVideoCall 激活，取消 PrivacyChat 事件监听',
+      );
       unlistenRef.current.forEach((unlisten) => unlisten());
       unlistenRef.current = [];
     }
   }, [isVideoCallActive]);
 
-  // ==================== 渲染视频通话界面 ====================
+  const renderMessage = (msg: ChatMessageItem) => {
+    const displayName = msg.isMine
+      ? `${msg.senderName || '我'}(我)`
+      : msg.senderName || '对方';
 
-  /** 如果处于视频通话状态，渲染视频通话组件 */
-  if (isVideoCallActive) {
     return (
-      <div className={styles.videoCallPage}>
-        <PrivacyVideoCall
-          friendId={friendId}
-          isInitiator={isVideoCallInitiator}
-          inviteInfo={incomingCallInvite}
-          onClose={handleVideoCallClose}
-        />
+      <div key={msg.id} className={styles.messageRow}>
+        <div className={styles.messageItem}>
+          <div className={styles.messageHeader}>
+            <span className={styles.senderName}>{displayName}</span>
+            <span className={styles.messageTime}>
+              {formatTime(msg.timestamp)}
+            </span>
+          </div>
+          <div
+            className={`${styles.messageBubble} ${
+              msg.isMine ? styles.mineBubble : styles.friendBubble
+            }`}
+          >
+            {msg.text}
+          </div>
+        </div>
       </div>
     );
-  }
-
-  // ==================== 渲染聊天界面 ====================
+  };
 
   return (
     <div className={styles.container}>
-      {/* 页面头部 */}
-      <div className={styles.header}>
-        <div className={styles.titleWrapper}>
-          <LockOutlined className={styles.privacyIcon} />
-          <span className={styles.title}>隐私聊天</span>
-        </div>
-        <div className={styles.headerActions}>
-          {/* 视频通话按钮 */}
-          <Button
-            type="text"
-            icon={<VideoCameraOutlined />}
-            onClick={startVideoCall}
-            className={styles.videoCallBtn}
-          >
-            视频通话
-          </Button>
-          {/* 退出按钮 */}
+      <div className={styles.videoSection}>
+        {isVideoCallActive ? (
+          <PrivacyVideoCall
+            friendId={friendId}
+            isInitiator={isVideoCallInitiator}
+            inviteInfo={incomingCallInvite}
+            onClose={handleVideoCallClose}
+          />
+        ) : (
+          <div className={styles.videoPlaceholder}>
+            <div className={styles.placeholderContent}>
+              <VideoCameraOutlined className={styles.placeholderIcon} />
+              <p className={styles.placeholderText}>点击下方按钮发起视频通话</p>
+              <Button
+                type="primary"
+                size="large"
+                icon={<VideoCameraOutlined />}
+                onClick={startVideoCall}
+                className={styles.startVideoBtn}
+              >
+                发起视频通话
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={styles.chatSection}>
+        <div className={styles.chatHeader}>
+          <div className={styles.titleWrapper}>
+            <LockOutlined className={styles.privacyIcon} />
+            <span className={styles.title}>隐私聊天</span>
+          </div>
           <Button
             className={styles.exitBtn}
             type="text"
             danger
             icon={<LogoutOutlined />}
             onClick={handleExit}
-          >
-            退出
-          </Button>
-        </div>
-      </div>
-
-      {/* 隐私提示 */}
-      <div className={styles.hint}>
-        隐私聊天消息不会保存到本地，关闭窗口后消息将消失
-      </div>
-
-      {/* 消息列表 */}
-      <div ref={messageContainerRef} className={styles.messageContainer}>
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`${styles.messageItem} ${
-              msg.isMine ? styles.mine : styles.friend
-            }`}
-          >
-            <div className={styles.messageBubble}>{msg.text}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* 输入区域 */}
-      <div className={styles.footer}>
-        <div className={styles.inputArea}>
-          <TextArea
-            className={styles.textArea}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="输入消息..."
-            autoSize={{ minRows: 1, maxRows: 4 }}
+            size="small"
           />
-          <Button type="primary" onClick={sendMessage}>
-            发送
-          </Button>
+        </div>
+
+        <div className={styles.hint}>消息不保存，关闭后消失</div>
+
+        <div ref={messageContainerRef} className={styles.messageContainer}>
+          {messages.length === 0 ? (
+            <div className={styles.emptyMessage}>
+              <span>暂无消息</span>
+            </div>
+          ) : (
+            messages.map(renderMessage)
+          )}
+        </div>
+
+        <div className={styles.footer}>
+          <div className={styles.toolbar}>
+            <div className={styles.emojiWrapper} ref={emojiPickerRef}>
+              <Tooltip title="表情">
+                <Button
+                  type="text"
+                  icon={<SmileOutlined />}
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={styles.toolbarBtn}
+                />
+              </Tooltip>
+              {showEmojiPicker && (
+                <div className={styles.emojiPicker}>
+                  <div className={styles.emojiGrid}>
+                    {EMOJI_LIST.map((emoji, index) => (
+                      <span
+                        key={index}
+                        className={styles.emojiItem}
+                        onClick={() => handleEmojiClick(emoji)}
+                      >
+                        {emoji}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={styles.inputArea}>
+            <TextArea
+              className={styles.textArea}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="输入消息..."
+              autoSize={{ minRows: 1, maxRows: 3 }}
+            />
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={sendMessage}
+              className={styles.sendBtn}
+            />
+          </div>
         </div>
       </div>
 
-      {/* 来电弹窗 */}
       <Modal
         title="视频通话邀请"
         open={showIncomingCallModal}

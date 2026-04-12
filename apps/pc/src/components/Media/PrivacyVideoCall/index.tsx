@@ -667,7 +667,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       const unlistenMediaReady = await listen<string>(
         'media_receiver_ready',
         (event) => {
-          console.log('[PrivacyVideoCall] 对方媒体接收器已就绪:', event.payload);
+          console.log(
+            '[PrivacyVideoCall] 对方媒体接收器已就绪:',
+            event.payload,
+          );
           setIsRemoteReceiverReady(true);
           // 对方准备好后，开始发送媒体数据
           startSendingMedia();
@@ -695,7 +698,12 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     return () => {
       unlistenRef.current.forEach((unlisten) => unlisten());
     };
-  }, [processVideoBufferQueue, processAudioBufferQueue, initLocalMedia, startSendingMedia]);
+  }, [
+    processVideoBufferQueue,
+    processAudioBufferQueue,
+    initLocalMedia,
+    startSendingMedia,
+  ]);
 
   // ==================== 处理媒体控制命令 ====================
 
@@ -738,8 +746,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * @param info - 媒体信息对象
    */
   const handleMediaInfo = useCallback((info: MediaInfo) => {
-    const infoType = typeof info.info_type === 'string' ? info.info_type : (info.info_type as { Custom: string }).Custom;
-    console.log(`[MediaInfo] 收到媒体信息: type=${infoType}, data=${info.data}`);
+    const infoType =
+      typeof info.info_type === 'string'
+        ? info.info_type
+        : (info.info_type as { Custom: string }).Custom;
+    console.log(
+      `[MediaInfo] 收到媒体信息: type=${infoType}, data=${info.data}`,
+    );
 
     try {
       const data = JSON.parse(info.data);
@@ -777,17 +790,20 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * @param infoType - 媒体信息类型
    * @param data - 媒体信息数据
    */
-  const sendMediaInfo = useCallback(async (infoType: string, data: Record<string, unknown>) => {
-    try {
-      await invoke('send_p2p_media_info', {
-        infoType,
-        data: JSON.stringify(data),
-        targetUuid: friendId,
-      });
-    } catch (error) {
-      console.error('发送媒体信息失败:', error);
-    }
-  }, [friendId]);
+  const sendMediaInfo = useCallback(
+    async (infoType: string, data: Record<string, unknown>) => {
+      try {
+        await invoke('send_p2p_media_info', {
+          infoType,
+          data: JSON.stringify(data),
+          targetUuid: friendId,
+        });
+      } catch (error) {
+        console.error('发送媒体信息失败:', error);
+      }
+    },
+    [friendId],
+  );
 
   /**
    * 启动媒体信息定时发送
@@ -1011,11 +1027,17 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
     try {
       // 1. 停止当前的媒体录制器
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== 'inactive'
+      ) {
         mediaRecorderRef.current.stop();
         mediaRecorderRef.current = null;
       }
-      if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+      if (
+        audioRecorderRef.current &&
+        audioRecorderRef.current.state !== 'inactive'
+      ) {
         audioRecorderRef.current.stop();
         audioRecorderRef.current = null;
       }
@@ -1062,7 +1084,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     } finally {
       setIsRestarting(false);
     }
-  }, [isRestarting, initRemoteMediaReceiver, sendMediaReady, isRemoteReceiverReady, startSendingMedia]);
+  }, [
+    isRestarting,
+    initRemoteMediaReceiver,
+    sendMediaReady,
+    isRemoteReceiverReady,
+    startSendingMedia,
+  ]);
 
   // ==================== 发送视频通话邀请 ====================
 
@@ -1146,7 +1174,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         if (unlistenRef.current.length > 0) {
           break;
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       if (!isMountedRef.current) return;
@@ -1181,8 +1209,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       isMountedRef.current = false;
       handleEndCall();
     };
-  // 空依赖数组确保此 effect 只执行一次
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // 空依赖数组确保此 effect 只执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ==================== 渲染 ====================

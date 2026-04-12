@@ -178,7 +178,12 @@ const FriendRequestsModal = ({
     return (
       <div className={styles.requestItem} key={request.uuid}>
         <div className={styles.avatarSection}>
-          <Avatar size={48} src={DEFAULT_ICON} icon={<UserOutlined />} className={styles.avatar} />
+          <Avatar
+            size={48}
+            src={DEFAULT_ICON}
+            icon={<UserOutlined />}
+            className={styles.avatar}
+          />
         </div>
 
         <div className={styles.contentSection}>

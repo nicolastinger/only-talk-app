@@ -35,7 +35,7 @@ const SelfChatPage: React.FC = () => {
   const [loadedMessageIds, setLoadedMessageIds] = useState<Set<string>>(
     new Set(),
   );
-  
+
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const params = new URLSearchParams(location.search);

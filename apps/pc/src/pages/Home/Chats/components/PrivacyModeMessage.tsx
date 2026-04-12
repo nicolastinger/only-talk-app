@@ -8,7 +8,9 @@ interface PrivacyModeMessageProps {
 
 const PrivacyModeMessage: React.FC<PrivacyModeMessageProps> = ({ isMine }) => {
   return (
-    <div className={`${styles.container} ${isMine ? styles.mine : styles.friend}`}>
+    <div
+      className={`${styles.container} ${isMine ? styles.mine : styles.friend}`}
+    >
       <div className={styles.iconWrapper}>
         <LockOutlined className={styles.icon} />
       </div>
