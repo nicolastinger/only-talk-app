@@ -130,9 +130,17 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             }
             
             // 视频通话结束
-            // 当对方挂断时，通知前端关闭视频界面
+            // 当对方挂断时，通知前端关闭视频界面，并停止MediaData通道接收循环
             MSG_TYPE_P2P_VIDEO_CALL_END => {
                 info!("对方结束了视频通话 {:?}", msg);
+                // 停止MediaData通道的接收循环，释放资源
+                {
+                    let guard = crate::MEDIA_DATA_CANCEL_TOKEN.read().await;
+                    if let Some(token) = guard.as_ref() {
+                        info!("触发MediaData通道取消令牌");
+                        token.cancel();
+                    }
+                }
                 if let Some(handle) = APP_HANDLE.get() {
                     handle.emit("video_call_end", msg.send_user)?;
                 }
@@ -371,19 +379,34 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
 pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
     info!("MediaData通道接收循环启动（轻量级帧格式）");
     
+    // 创建取消令牌并注册到全局，允许外部停止此接收循环
+    let cancel_token = tokio_util::sync::CancellationToken::new();
+    {
+        let mut guard = crate::MEDIA_DATA_CANCEL_TOKEN.write().await;
+        *guard = Some(cancel_token.clone());
+    }
+    
     // 读取头部用的固定缓冲区
     let mut header_buf = [0u8; MEDIA_FRAME_HEADER_SIZE];
     
     loop {
-        // 1. 读取帧头部（固定5字节）
-        match recv_stream.read_exact(&mut header_buf).await {
-            Ok(()) => {}
-            Err(quinn::ReadExactError::FinishedEarly) => {
-                info!("MediaData通道流提前关闭");
-                break;
+        // 使用 tokio::select 同时监听数据到达和取消信号
+        tokio::select! {
+            result = recv_stream.read_exact(&mut header_buf) => {
+                match result {
+                    Ok(()) => {}
+                    Err(quinn::ReadExactError::FinishedEarly) => {
+                        info!("MediaData通道流提前关闭");
+                        break;
+                    }
+                    Err(quinn::ReadExactError::ReadError(e)) => {
+                        error!("MediaData通道读取头部失败: {}", e);
+                        break;
+                    }
+                }
             }
-            Err(quinn::ReadExactError::ReadError(e)) => {
-                error!("MediaData通道读取头部失败: {}", e);
+            _ = cancel_token.cancelled() => {
+                info!("MediaData通道收到取消信号，停止接收循环");
                 break;
             }
         }
@@ -425,6 +448,12 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
                 }
             }
         }
+    }
+    
+    // 清理全局取消令牌
+    {
+        let mut guard = crate::MEDIA_DATA_CANCEL_TOKEN.write().await;
+        *guard = None;
     }
     
     info!("MediaData通道接收循环结束");

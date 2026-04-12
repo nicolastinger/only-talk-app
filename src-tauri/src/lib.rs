@@ -74,6 +74,9 @@ lazy_static! {
     pub static ref GLOBAL_CONFIG: Arc<DashMap<String, String>> = Arc::new(DashMap::new());
     // 消息发送，全局mutex锁
     pub static ref GLOBAL_MSG_SEND_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+    // MediaData通道取消令牌，用于视频通话结束时停止媒体帧接收循环
+    pub static ref MEDIA_DATA_CANCEL_TOKEN: Arc<RwLock<Option<tokio_util::sync::CancellationToken>>> =
+        Arc::new(RwLock::new(None));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

@@ -175,6 +175,15 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 跟踪组件是否真正挂载（用于避免 useEffect cleanup 在依赖变化时误触发） */
   const isMountedRef = useRef<boolean>(false);
 
+  /** 跟踪通话是否已结束，防止 handleEndCall 重复执行 */
+  const isCallEndedRef = useRef<boolean>(false);
+
+  /** 使用 ref 保存最新的 initLocalMedia，避免事件监听 useEffect 因依赖变化而重新注册 */
+  const initLocalMediaRef = useRef<() => void>(() => {});
+
+  /** 使用 ref 保存最新的 startSendingMedia，避免事件监听 useEffect 因依赖变化而重新注册 */
+  const startSendingMediaRef = useRef<() => void>(() => {});
+
   // ==================== 默认媒体配置 ====================
 
   /**
@@ -263,6 +272,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         },
       });
 
+      // 关键：如果组件已卸载或通话已结束，立即释放媒体流，防止摄像头/麦克风泄漏
+      if (!isMountedRef.current || isCallEndedRef.current) {
+        console.warn('[PrivacyVideoCall] 组件已卸载或通话已结束，释放刚获取的媒体流');
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       // 保存媒体流引用
       localStreamRef.current = stream;
 
@@ -302,6 +318,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     }
   }, [friendId, isRemoteReceiverReady, sendMediaReady]);
 
+  // 同步 ref，确保事件监听器始终调用最新版本
+  initLocalMediaRef.current = initLocalMedia;
+
   /**
    * 开始发送媒体数据
    * 只有在对方媒体接收器准备好后才能调用
@@ -313,6 +332,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       startMediaInfoReporting();
     }
   }, []);
+
+  // 同步 ref
+  startSendingMediaRef.current = startSendingMedia;
 
   // ==================== 开始媒体录制 ====================
 
@@ -627,8 +649,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
           console.log('对方接受了视频通话:', event.payload);
           setIsWaitingResponse(false);
           message.success('对方已接受视频通话');
-          // 开始初始化本地媒体
-          initLocalMedia();
+          // 通过 ref 调用最新版本的 initLocalMedia，避免闭包陷阱
+          initLocalMediaRef.current();
         },
       );
 
@@ -639,8 +661,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
           console.log('对方拒绝了视频通话:', event.payload);
           setIsWaitingResponse(false);
           message.info('对方拒绝了视频通话');
-          // 关闭视频通话
-          handleEndCall();
+          // 关闭视频通话（本方主动结束，通知对方）
+          handleEndCall(true);
         },
       );
 
@@ -648,8 +670,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       const unlistenEnd = await listen<string>('video_call_end', (event) => {
         console.log('对方结束了视频通话:', event.payload);
         message.info('对方已结束视频通话');
-        // 关闭视频通话
-        handleEndCall();
+        // 对方已结束，本方不需要再发送结束通知，仅做本地清理
+        handleEndCall(false);
       });
 
       // 监听媒体信息（通过MediaInfo通道传输）
@@ -669,8 +691,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         (event) => {
           console.log('[PrivacyVideoCall] 对方媒体接收器已就绪:', event.payload);
           setIsRemoteReceiverReady(true);
-          // 对方准备好后，开始发送媒体数据
-          startSendingMedia();
+          // 通过 ref 调用最新版本的 startSendingMedia
+          startSendingMediaRef.current();
         },
       );
 
@@ -695,7 +717,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     return () => {
       unlistenRef.current.forEach((unlisten) => unlisten());
     };
-  }, [processVideoBufferQueue, processAudioBufferQueue, initLocalMedia, startSendingMedia]);
+  // 关键修复：移除 initLocalMedia 和 startSendingMedia 依赖
+  // 改用 ref 调用（见上方 initLocalMediaRef / startSendingMediaRef），
+  // 避免因 isRemoteReceiverReady 变化导致 initLocalMedia 引用变化，
+  // 从而触发此 useEffect 重新执行 → 注销再注册所有监听器 → 丢失事件
+  }, [processVideoBufferQueue, processAudioBufferQueue]);
 
   // ==================== 处理媒体控制命令 ====================
 
@@ -723,8 +749,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         setMediaState((prev) => ({ ...prev, isPaused: false }));
         break;
       case 'EndCall':
-        // 对方结束了通话
-        handleEndCall();
+        // 对方结束了通话，本方不需要再发送结束通知
+        handleEndCall(false);
         break;
     }
   };
@@ -893,7 +919,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 4. 发送结束通知给对方
    * 5. 调用关闭回调
    */
-  const handleEndCall = useCallback(async () => {
+  const handleEndCall = useCallback(async (notifyOtherParty: boolean = true) => {
+    // 防止重复执行
+    if (isCallEndedRef.current) {
+      return;
+    }
+    isCallEndedRef.current = true;
+
     // 停止媒体信息定时发送
     stopMediaInfoReporting();
 
@@ -904,6 +936,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     ) {
       mediaRecorderRef.current.stop();
     }
+    mediaRecorderRef.current = null;
 
     // 停止音频录制器
     if (
@@ -912,10 +945,12 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     ) {
       audioRecorderRef.current.stop();
     }
+    audioRecorderRef.current = null;
 
-    // 停止所有媒体轨道
+    // 停止所有媒体轨道并释放硬件设备（摄像头/麦克风）
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
     }
 
     // 关闭视频 MediaSource 并清理引用
@@ -940,13 +975,16 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     audioBufferQueueRef.current = [];
     isAudioSourceBufferUpdatingRef.current = false;
 
-    // 发送结束通知给对方
-    try {
-      await invoke('send_p2p_video_call_end', {
-        targetUuid: friendId,
-      });
-    } catch (error) {
-      console.error('发送结束通知失败:', error);
+    // 仅当本方主动结束时才发送结束通知给对方
+    // 收到对方结束消息时不需要再回复，避免互相发送结束消息
+    if (notifyOtherParty) {
+      try {
+        await invoke('send_p2p_video_call_end', {
+          targetUuid: friendId,
+        });
+      } catch (error) {
+        console.error('发送结束通知失败:', error);
+      }
     }
 
     // 更新状态
@@ -968,7 +1006,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    */
   const handleExit = useCallback(async () => {
     // 先结束视频通话
-    await handleEndCall();
+    await handleEndCall(true);
 
     try {
       // 关闭P2P连接
@@ -1080,7 +1118,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     } catch (error) {
       console.error('发送视频通话邀请失败:', error);
       message.error('发送视频通话邀请失败');
-      handleEndCall();
+      handleEndCall(true);
     }
   }, [friendId, handleEndCall]);
 
@@ -1103,19 +1141,19 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         });
 
         if (accept) {
-          // 接受邀请，开始初始化本地媒体
-          await initLocalMedia();
+          // 接受邀请，开始初始化本地媒体（通过 ref 调用最新版本）
+          await initLocalMediaRef.current();
         } else {
-          // 拒绝邀请，关闭视频通话
-          handleEndCall();
+          // 拒绝邀请，关闭视频通话（本方主动拒绝，通知对方）
+          handleEndCall(true);
         }
       } catch (error) {
         console.error('发送视频通话响应失败:', error);
         message.error('发送视频通话响应失败');
-        handleEndCall();
+        handleEndCall(true);
       }
     },
-    [friendId, initLocalMedia, handleEndCall],
+    [friendId, initLocalMediaRef, handleEndCall],
   );
 
   // ==================== 组件初始化 ====================
@@ -1169,17 +1207,18 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         // 被邀请方：PrivacyChat 已发送接受响应，直接初始化本地媒体
         // 不需要再次发送 video_call_response
         console.log('[PrivacyVideoCall] 被邀请方，直接初始化本地媒体');
-        await initLocalMedia();
+        await initLocalMediaRef.current();
       }
     };
 
     init();
 
-    // 组件真正卸载时清理资源并发送结束消息
+    // 组件真正卸载时清理资源
+    // isCallEndedRef 防止重复调用：如果通话已通过事件处理器结束，则不再发送结束消息
     return () => {
-      console.log('[PrivacyVideoCall] 组件卸载，发送结束消息');
+      console.log('[PrivacyVideoCall] 组件卸载');
       isMountedRef.current = false;
-      handleEndCall();
+      handleEndCall(true);
     };
   // 空依赖数组确保此 effect 只执行一次
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1292,7 +1331,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
             shape="circle"
             size="large"
             icon={<PhoneOutlined />}
-            onClick={handleEndCall}
+            onClick={() => handleEndCall(true)}
             className={styles.endCallButton}
           />
         </Tooltip>

@@ -368,6 +368,15 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
         guard.remove("p2p_port_v6");
     }
     
+    // 停止MediaData通道的接收循环
+    {
+        let guard = crate::MEDIA_DATA_CANCEL_TOKEN.read().await;
+        if let Some(token) = guard.as_ref() {
+            info!("触发MediaData通道取消令牌（关闭P2P连接）");
+            token.cancel();
+        }
+    }
+    
     info!("p2p连接资源清理完成");
     Ok(())
 }
@@ -748,6 +757,16 @@ pub async fn send_p2p_video_call_end_service(
     }
     
     info!("视频通话结束通知发送完成");
+    
+    // 停止MediaData通道的接收循环，释放资源
+    {
+        let guard = crate::MEDIA_DATA_CANCEL_TOKEN.read().await;
+        if let Some(token) = guard.as_ref() {
+            info!("触发MediaData通道取消令牌（本方结束通话）");
+            token.cancel();
+        }
+    }
+    
     Ok(())
 }
 

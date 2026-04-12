@@ -115,6 +115,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-opener",
  "tokio",
+ "tokio-util",
  "uuid",
  "webp",
  "webpki-roots 1.0.5",
