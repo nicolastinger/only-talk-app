@@ -85,7 +85,7 @@
     cursor: not-allowed;
     background: linear-gradient(135deg, #f0f7ff 0%, #e6f4ff 100%);
     animation: pulse 1.5s ease-in-out infinite;
-    
+
     &::before {
       content: '';
       position: absolute;
@@ -99,7 +99,7 @@
       border-right-color: #1890ff;
       animation: spin 1s linear infinite;
     }
-    
+
     &::after {
       content: '';
       position: absolute;
@@ -126,7 +126,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4);
   }
   50% {

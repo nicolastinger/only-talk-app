@@ -66,7 +66,10 @@ const getWebRTCWindowCount = async (): Promise<number> => {
     const windowInfoStr = await invoke<string>('get_user_map', {
       key: 'webrtc_windows',
     }).catch(() => '{}');
-    const windowInfo = JSON.parse(windowInfoStr || '{}') as Record<string, string>;
+    const windowInfo = JSON.parse(windowInfoStr || '{}') as Record<
+      string,
+      string
+    >;
     // 过滤掉已关闭的窗口
     let count = 0;
     for (const friendId of Object.keys(windowInfo)) {
@@ -98,7 +101,10 @@ const updateWebRTCWindowState = async (
     const windowInfoStr = await invoke<string>('get_user_map', {
       key: 'webrtc_windows',
     }).catch(() => '{}');
-    const windowInfo = JSON.parse(windowInfoStr || '{}') as Record<string, string>;
+    const windowInfo = JSON.parse(windowInfoStr || '{}') as Record<
+      string,
+      string
+    >;
 
     if (action === 'open') {
       windowInfo[friendId] = Date.now().toString();
@@ -139,7 +145,9 @@ const openWebRTCChatHandler = async (
   // 检查WebRTC窗口总数是否超过限制
   const windowCount = await getWebRTCWindowCount();
   if (windowCount >= MAX_WEBRTC_WINDOWS) {
-    console.warn(`[WebRTC] 已达到最大WebRTC窗口数(${MAX_WEBRTC_WINDOWS})，无法打开新窗口`);
+    console.warn(
+      `[WebRTC] 已达到最大WebRTC窗口数(${MAX_WEBRTC_WINDOWS})，无法打开新窗口`,
+    );
     return;
   }
 
@@ -164,7 +172,9 @@ const openWebRTCChatHandler = async (
     await openNewWindowWithoutClose(label, webviewOptions, config);
     // 记录窗口状态到后端
     await updateWebRTCWindowState(friendId, 'open');
-    console.log(`[WebRTC] ✅ WebRTC窗口已打开 - friendId: ${friendId}, label: ${label}`);
+    console.log(
+      `[WebRTC] ✅ WebRTC窗口已打开 - friendId: ${friendId}, label: ${label}`,
+    );
   } catch (e) {
     console.error(`[WebRTC] 打开窗口失败:`, e);
   }
@@ -207,7 +217,12 @@ const useWebRTCSignalApi = () => {
                 return;
               }
               console.log('收到 offer，打开 WebRTC 聊天窗口');
-              await openWebRTCChatHandler(signalMsg.sender, localUserId, false, msgVo.raw);
+              await openWebRTCChatHandler(
+                signalMsg.sender,
+                localUserId,
+                false,
+                msgVo.raw,
+              );
             }
           } catch (e) {
             console.error('处理 WebRTC 信令失败:', e);
@@ -233,7 +248,7 @@ const useWebRTCSignalApi = () => {
 export {
   getWebRTCWindowLabel,
   isWebRTCWindowOpen,
-  updateWebRTCWindowState,
   openWebRTCChatHandler,
+  updateWebRTCWindowState,
   useWebRTCSignalApi,
 };

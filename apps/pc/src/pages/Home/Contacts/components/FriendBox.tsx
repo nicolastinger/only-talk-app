@@ -33,7 +33,14 @@ const FriendBox = (props: { friend: FriendVo }) => {
     <div className={styles.container} onClick={routeToFriendInfo}>
       <div className={styles.left}>
         <Badge>
-          <img src={userIcon || DEFAULT_ICON} className={styles.imgItem} alt="avatar" onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }} />
+          <img
+            src={userIcon || DEFAULT_ICON}
+            className={styles.imgItem}
+            alt="avatar"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_ICON;
+            }}
+          />
         </Badge>
       </div>
       <div className={styles.center}>

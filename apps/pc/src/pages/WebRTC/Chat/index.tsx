@@ -15,6 +15,7 @@
  * - signalData: 初始信令数据(仅响应方需要，包含对端的offer)
  */
 
+import { updateWebRTCWindowState } from '@/hooks/useWebRTCSignalApi';
 import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
 import {
   ApiOutlined,
@@ -25,7 +26,6 @@ import {
   VideoCameraAddOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
-import { updateWebRTCWindowState } from '@/hooks/useWebRTCSignalApi';
 import { window } from '@tauri-apps/api';
 import { listen } from '@tauri-apps/api/event';
 import { useLocation } from '@umijs/max';
@@ -391,7 +391,10 @@ const WebRTCChat: React.FC = () => {
                 `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的offer（可能是ICE重启），正在处理...`,
               );
               try {
-                const restartAnswer = await service.handleOffer(friendId, signalMsg.data);
+                const restartAnswer = await service.handleOffer(
+                  friendId,
+                  signalMsg.data,
+                );
                 console.log(`[WebRTCChat.onWebRTCSignal] ICE重启answer已创建`);
 
                 // 发送answer给对端
@@ -404,9 +407,14 @@ const WebRTCChat: React.FC = () => {
                   timestamp: Date.now(),
                 };
                 await service.sendSignal(responseSignal);
-                console.log(`[WebRTCChat.onWebRTCSignal] ✅ ICE重启answer已发送`);
+                console.log(
+                  `[WebRTCChat.onWebRTCSignal] ✅ ICE重启answer已发送`,
+                );
               } catch (e) {
-                console.error(`[WebRTCChat.onWebRTCSignal] ❌ 处理ICE重启offer失败:`, e);
+                console.error(
+                  `[WebRTCChat.onWebRTCSignal] ❌ 处理ICE重启offer失败:`,
+                  e,
+                );
               }
             } else if (signalMsg.type === 'candidate') {
               /**
@@ -581,23 +589,29 @@ const WebRTCChat: React.FC = () => {
    * 1. \u5173\u95ed\u73b0\u6709\u8fde\u63a5\n   * 2. \u91cd\u65b0\u521b\u5efaoffer\u5e76\u53d1\u9001\n   * 3. \u4e0d\u5f00\u65b0\u7a97\u53e3\uff0c\u5728\u540c\u4e00\u7a97\u53e3\u5185\u5b8c\u6210\u91cd\u8bd5
    */
   const handleRetry = async () => {
-    console.log(`[WebRTCChat.handleRetry] \u7528\u6237\u70b9\u51fb\u91cd\u8bd5\u6309\u94ae\uff0c\u5f00\u59cb\u91cd\u8bd5...`);
+    console.log(
+      `[WebRTCChat.handleRetry] \u7528\u6237\u70b9\u51fb\u91cd\u8bd5\u6309\u94ae\uff0c\u5f00\u59cb\u91cd\u8bd5...`,
+    );
     setIsRetrying(true);
     setConnectionStatus('connecting');
-  
+
     try {
       const service = getWebRTCService();
       if (!service) {
-        console.error(`[WebRTCChat.handleRetry] WebRTCService\u4e0d\u5b58\u5728`);
+        console.error(
+          `[WebRTCChat.handleRetry] WebRTCService\u4e0d\u5b58\u5728`,
+        );
         return;
       }
-  
+
       // \u5173\u95ed\u65e7\u8fde\u63a5\n      console.log(`[WebRTCChat.handleRetry] \u5173\u95ed\u65e7\u8fde\u63a5...`);
       await service.closeConnection(friendId);
-  
+
       if (isInitiator) {
         // \u53d1\u8d77\u65b9\u91cd\u8bd5\uff1a\u91cd\u65b0\u521b\u5efaoffer
-        console.log(`[WebRTCChat.handleRetry] \u53d1\u8d77\u65b9\u91cd\u8bd5\uff0c\u91cd\u65b0\u521b\u5efaoffer...`);
+        console.log(
+          `[WebRTCChat.handleRetry] \u53d1\u8d77\u65b9\u91cd\u8bd5\uff0c\u91cd\u65b0\u521b\u5efaoffer...`,
+        );
         const offer = await service.createOffer(friendId);
         const signalMessage: WebRTCSignalMessage = {
           type: 'offer',
@@ -608,20 +622,27 @@ const WebRTCChat: React.FC = () => {
           timestamp: Date.now(),
         };
         await service.sendSignal(signalMessage);
-        console.log(`[WebRTCChat.handleRetry] \u2705 \u91cd\u8bd5offer\u5df2\u53d1\u9001`);
+        console.log(
+          `[WebRTCChat.handleRetry] \u2705 \u91cd\u8bd5offer\u5df2\u53d1\u9001`,
+        );
       } else {
         // \u54cd\u5e94\u65b9\u91cd\u8bd5\uff1a\u7b49\u5f85\u5bf9\u7aef\u7684\u65b0offer
-        console.log(`[WebRTCChat.handleRetry] \u54cd\u5e94\u65b9\u7b49\u5f85\u5bf9\u7aef\u7684\u65b0offer...`);
+        console.log(
+          `[WebRTCChat.handleRetry] \u54cd\u5e94\u65b9\u7b49\u5f85\u5bf9\u7aef\u7684\u65b0offer...`,
+        );
         // \u54cd\u5e94\u65b9\u4e0d\u9700\u8981\u4e3b\u52a8\u53d1\u8d77\uff0c\u7b49\u5f85\u53d1\u8d77\u65b9\u7684ICE\u91cd\u542foffer\u5373\u53ef
       }
     } catch (e) {
-      console.error(`[WebRTCChat.handleRetry] \u274c \u91cd\u8bd5\u5931\u8d25:`, e);
+      console.error(
+        `[WebRTCChat.handleRetry] \u274c \u91cd\u8bd5\u5931\u8d25:`,
+        e,
+      );
       setConnectionStatus('failed');
     } finally {
       setIsRetrying(false);
     }
   };
-  
+
   /**
    * \u9000\u51fa\u804a\u5929
    *
@@ -647,11 +668,15 @@ const WebRTCChat: React.FC = () => {
       }
 
       // \u6e05\u7406\u540e\u7aef\u7a97\u53e3\u72b6\u6001
-      console.log(`[WebRTCChat.handleExit] \u6e05\u7406\u540e\u7aef\u7a97\u53e3\u72b6\u6001...`);
+      console.log(
+        `[WebRTCChat.handleExit] \u6e05\u7406\u540e\u7aef\u7a97\u53e3\u72b6\u6001...`,
+      );
       await updateWebRTCWindowState(friendId, 'close');
-      
+
       // \u5173\u95ed\u5f53\u524d\u7a97\u53e3
-      console.log(`[WebRTCChat.handleExit] \u5173\u95ed\u5f53\u524d\u7a97\u53e3...`);
+      console.log(
+        `[WebRTCChat.handleExit] \u5173\u95ed\u5f53\u524d\u7a97\u53e3...`,
+      );
       const currentWindow = window.getCurrentWindow();
       await currentWindow.close();
       console.log(`[WebRTCChat.handleExit] ✅ 窗口已关闭`);
@@ -773,7 +798,9 @@ const WebRTCChat: React.FC = () => {
           <div ref={messageContainerRef} className={styles.messageContainer}>
             {connectionStatus === 'failed' && (
               <div style={{ textAlign: 'center', padding: '20px' }}>
-                <div style={{ color: '#ff4d4f', marginBottom: '12px' }}>\u8fde\u63a5\u5931\u8d25</div>
+                <div style={{ color: '#ff4d4f', marginBottom: '12px' }}>
+                  \u8fde\u63a5\u5931\u8d25
+                </div>
                 <Button
                   type="primary"
                   icon={<ReloadOutlined />}

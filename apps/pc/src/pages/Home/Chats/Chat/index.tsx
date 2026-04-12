@@ -83,7 +83,7 @@ const ChatPage: React.FC = () => {
     // 监听全局上传事件
     const handleUploadStartEvent = () => setIsUploading(true);
     const handleUploadEndEvent = () => setIsUploading(false);
-    
+
     window.addEventListener('uploadStart', handleUploadStartEvent);
     window.addEventListener('uploadEnd', handleUploadEndEvent);
 
@@ -283,7 +283,11 @@ const ChatPage: React.FC = () => {
             const ackedMessageType = ackedMessage.text_msg_raw.text_type;
             if (ackedMessageType === 2 || ackedMessageType === 3) {
               // 重新加载当前窗口的聊天记录
-              console.log(`检测到图片/文件消息 ${ackedMessageType === 2 ? '图片' : '文件'} 的ack，重新加载聊天记录`);
+              console.log(
+                `检测到图片/文件消息 ${
+                  ackedMessageType === 2 ? '图片' : '文件'
+                } 的ack，重新加载聊天记录`,
+              );
               setCurrentPage(1);
               setHasMore(true);
               setIsInitialLoad(true);

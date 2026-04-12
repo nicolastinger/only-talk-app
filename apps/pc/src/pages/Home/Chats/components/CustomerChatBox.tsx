@@ -178,16 +178,22 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
           className={styles.imgItem}
           alt="avatar"
           style={{ opacity: loading ? 0.7 : 1 }}
-          onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = DEFAULT_ICON;
+          }}
         />
       </div>
       <div className={styles.chatContainerWrapper}>
-        <div className={`${styles.chatContainer} ${isImageMessage ? styles.imageMessage : ''} ${isFileMessage ? styles.fileMessage : ''} ${isSpecialMessage ? styles.specialMessage : ''}`}>
+        <div
+          className={`${styles.chatContainer} ${
+            isImageMessage ? styles.imageMessage : ''
+          } ${isFileMessage ? styles.fileMessage : ''} ${
+            isSpecialMessage ? styles.specialMessage : ''
+          }`}
+        >
           {renderMessage(raw)}
         </div>
-        <div className={styles.tooltip}>
-          {formatFullTime(timestamp)}
-        </div>
+        <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
       </div>
     </div>
   );

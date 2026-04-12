@@ -1,8 +1,13 @@
-import { FileOutlined, DownloadOutlined, FolderOpenOutlined, LoadingOutlined } from '@ant-design/icons';
-import { getChatFileByBizId } from '@workspace/services';
-import React, { useState } from 'react';
-import { message, Dropdown } from 'antd';
+import {
+  DownloadOutlined,
+  FileOutlined,
+  FolderOpenOutlined,
+  LoadingOutlined,
+} from '@ant-design/icons';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
+import { getChatFileByBizId } from '@workspace/services';
+import { Dropdown, message } from 'antd';
+import React, { useState } from 'react';
 import styles from './styles/ChatFile.less';
 
 interface ChatFileProps {
@@ -28,7 +33,9 @@ const getFileTypeColor = (fileType: string | undefined): string => {
   if (!fileType) return '#8c8c8c';
   const type = fileType.toLowerCase();
   // 文档类型
-  if (['doc', 'docx', 'pdf', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(type)) {
+  if (
+    ['doc', 'docx', 'pdf', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(type)
+  ) {
     return '#1890ff';
   }
   // 压缩文件
@@ -36,7 +43,21 @@ const getFileTypeColor = (fileType: string | undefined): string => {
     return '#fa8c16';
   }
   // 代码文件
-  if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'py', 'java', 'rs', 'go'].includes(type)) {
+  if (
+    [
+      'js',
+      'ts',
+      'jsx',
+      'tsx',
+      'html',
+      'css',
+      'json',
+      'py',
+      'java',
+      'rs',
+      'go',
+    ].includes(type)
+  ) {
     return '#52c41a';
   }
   // 默认颜色
@@ -60,19 +81,19 @@ const ChatFile: React.FC<ChatFileProps> = ({
       const encodedPath = tauriFilePath.replace('http://asset.localhost/', '');
       localPath = decodeURIComponent(encodedPath);
     }
-    
+
     // 统一 Windows 路径分隔符
     if (localPath.includes(':\\') && localPath.includes('/')) {
       localPath = localPath.replace(/\//g, '\\');
     }
-    
+
     return localPath;
   };
 
   // 直接打开文件
   const handleOpenFile = async () => {
     if (downloading) return;
-    
+
     setDownloading(true);
     try {
       const files = await getChatFileByBizId(bizId, nanoId);
@@ -99,7 +120,7 @@ const ChatFile: React.FC<ChatFileProps> = ({
   // 在文件资源管理器中显示
   const handleShowInFolder = async () => {
     if (downloading) return;
-    
+
     setDownloading(true);
     try {
       const files = await getChatFileByBizId(bizId, nanoId);
@@ -143,7 +164,10 @@ const ChatFile: React.FC<ChatFileProps> = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.fileIcon} style={{ color: getFileTypeColor(fileType) }}>
+      <div
+        className={styles.fileIcon}
+        style={{ color: getFileTypeColor(fileType) }}
+      >
         <FileOutlined />
       </div>
       <div className={styles.fileInfo}>
@@ -156,9 +180,11 @@ const ChatFile: React.FC<ChatFileProps> = ({
         </div>
       </div>
       <Dropdown menu={menuItems} trigger={['click']}>
-        <div 
-          className={`${styles.downloadBtn} ${downloading ? styles.downloading : ''}`}
-          title={downloading ? "下载中..." : "点击选择操作"}
+        <div
+          className={`${styles.downloadBtn} ${
+            downloading ? styles.downloading : ''
+          }`}
+          title={downloading ? '下载中...' : '点击选择操作'}
         >
           {downloading ? (
             <div className={styles.loadingIcon}>

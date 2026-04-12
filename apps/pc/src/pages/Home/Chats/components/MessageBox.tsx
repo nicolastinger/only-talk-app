@@ -10,7 +10,17 @@ import styles from './styles/MessageBox.less';
 const imageCache = new Map<string, string>();
 
 const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
-  const { message, title, time, img, count, text_type, send_user, recv_user, isSelected } = props;
+  const {
+    message,
+    title,
+    time,
+    img,
+    count,
+    text_type,
+    send_user,
+    recv_user,
+    isSelected,
+  } = props;
 
   // 判断是否是自己给自己的会话
   const isSelfChat = send_user && recv_user && send_user === recv_user;
@@ -119,7 +129,9 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
             className={styles.imgItem}
             alt="avatar"
             style={{ opacity: loading ? 0.7 : 1 }}
-            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_ICON; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_ICON;
+            }}
           />
         </Badge>
       </div>
@@ -127,12 +139,14 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
         <div className={styles.centerTitle}>
           <div className={styles.titleText}>
             <div className={styles.title}>
-            {title}
-            {isSelfChat && <span className={styles.selfChatBadge}>📝 笔记</span>}
+              {title}
+              {isSelfChat && (
+                <span className={styles.selfChatBadge}>📝 笔记</span>
+              )}
             </div>
             <div className={styles.end}>
-            <div className={styles.endTime}>{timeStr}</div>
-          </div>
+              <div className={styles.endTime}>{timeStr}</div>
+            </div>
           </div>
         </div>
         <div className={styles.centerText}>
