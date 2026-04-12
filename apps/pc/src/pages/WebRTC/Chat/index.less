@@ -55,19 +55,15 @@
 .videoPanel {
   display: flex;
   flex-direction: column;
-  width: 50%;
-  min-width: 300px;
-  max-width: 600px;
-  background-color: var(--ant-color-bg-layout);
-  border-right: 1px solid var(--ant-color-border);
+  width: 80%;
+  background-color: #1a1a2e;
+  position: relative;
 }
 
 .videoWrapper {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
+  position: relative;
   overflow: hidden;
 }
 
@@ -75,9 +71,7 @@
   flex: 1;
   position: relative;
   background-color: #000;
-  border-radius: 8px;
   overflow: hidden;
-  min-height: 200px;
 }
 
 .remoteVideo {
@@ -87,17 +81,23 @@
 }
 
 .localVideoContainer {
-  position: relative;
-  height: 180px;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 200px;
+  height: 150px;
   background-color: #000;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  z-index: 10;
 }
 
 .localVideo {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .videoLabel {
@@ -112,19 +112,27 @@
 }
 
 .mediaControls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   justify-content: center;
   gap: 16px;
-  padding: 12px;
-  background-color: var(--ant-color-bg-elevated);
-  border-top: 1px solid var(--ant-color-border);
+  padding: 12px 24px;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 30px;
+  z-index: 20;
 }
 
 .chatPanel {
-  flex: 1;
+  width: 20%;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
-  min-width: 300px;
+  background-color: var(--ant-color-bg-container);
+  border-left: 1px solid var(--ant-color-border);
 }
 
 .hint {
@@ -133,47 +141,87 @@
   color: var(--ant-color-info);
   font-size: 12px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .messageContainer {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 12px;
   background-color: var(--ant-color-bg-layout);
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+  }
+}
+
+.messageRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .messageItem {
-  margin-bottom: 12px;
+  max-width: 95%;
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
-.mine {
-  justify-content: flex-end;
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 0 4px;
 }
 
-.friend {
-  justify-content: flex-start;
+.senderName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ant-color-text);
 }
 
 .messageBubble {
-  max-width: 80%;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 12px 4px 12px 12px;
+  word-wrap: break-word;
   word-break: break-word;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
+  max-width: 100%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.mine .messageBubble {
-  background-color: var(--ant-color-primary);
-  color: #fff;
-  border-bottom-right-radius: 4px;
+.mineBubble {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  color: #ffffff;
 }
 
-.friend .messageBubble {
+.friendBubble {
   background-color: var(--ant-color-bg-elevated);
   color: var(--ant-color-text);
-  border-bottom-left-radius: 4px;
   border: 1px solid var(--ant-color-border);
 }
 
@@ -182,20 +230,139 @@
   color: var(--ant-color-text-tertiary);
   margin-top: 4px;
   text-align: right;
+  padding-right: 4px;
 }
 
 .footer {
-  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
   background-color: var(--ant-color-bg-elevated);
   border-top: 1px solid var(--ant-color-border);
+  flex-shrink: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--ant-color-border);
+  background-color: var(--ant-color-bg-layout);
+}
+
+.toolbarBtn {
+  color: var(--ant-color-text-tertiary);
+  font-size: 18px;
+  padding: 4px 8px;
+
+  &:hover {
+    color: var(--ant-color-primary);
+    background-color: var(--ant-color-bg-text-hover);
+    border-radius: 4px;
+  }
+}
+
+.emojiWrapper {
+  position: relative;
+}
+
+.emojiPicker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 260px;
+  max-height: 240px;
+  background: var(--ant-color-bg-elevated);
+  border: 1px solid var(--ant-color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+
+.emojiItem {
+  font-size: 18px;
+  cursor: pointer;
+  text-align: center;
+  padding: 6px 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(24, 144, 255, 0.1);
+    transform: scale(1.15);
+  }
 }
 
 .inputArea {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  padding: 10px 12px;
 }
 
 .textArea {
   flex: 1;
+  border-radius: 8px;
+  font-size: 13px;
+  resize: none;
+
+  &:focus {
+    border-color: var(--ant-color-primary);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+  }
+}
+
+.sendBtn {
+  flex-shrink: 0;
+}
+
+.retryContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 12px;
+}
+
+.retryText {
+  color: var(--ant-color-error);
+}
+
+.connectingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
