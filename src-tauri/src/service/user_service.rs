@@ -4,8 +4,9 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use log::{error, info, warn};
+use tauri::Emitter;
 use tokio::time::timeout;
-
+use uuid::Uuid;
 use crate::cmd::api_controller::post_request;
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::init_db::init_sqlite;
@@ -22,7 +23,7 @@ use crate::service::friend_service::update_friend_list;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -151,30 +152,36 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
     tokio::spawn(async move {
         send_read_message(read_task_key).await.expect("消息已读任务失败");
     });
-    let mut count = 0;
-    while count < 1000000 {
+    let mut count = 0u64;
+    while count < 1000000000 {
         // 校验定时任务key
-        check_schedule_key(&schedule_key).await?;
+        let result = check_schedule_key(&schedule_key).await;
+        if result.is_err() {
+            error!("定时任务key不匹配");
+            break;
+        }
         count += 1;
-
-        // 处理未发送消息
-        tokio::spawn(async move {
+        // 10秒触发一次
+        if count % 10 == 0 {
             // 处理未发送消息
-            timeout(Duration::from_secs(10), async {
-                let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
-                process_no_send_success_msg().await.expect("处理未发送消息失败");
-            })
-            .await
-            .expect("定时任务，处理未发送消息超时");
-        });
+            tokio::spawn(async move {
+                // 处理未发送消息
+                timeout(Duration::from_secs(10), async {
+                    let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+                    process_no_send_success_msg().await.expect("处理未发送消息失败");
+                })
+                .await
+                .expect("定时任务，处理未发送消息超时");
+            });
+        }
 
         // 20秒触发一次
-        if count % 2 == 0 {}
+        if count % 20 == 0 {}
 
         // 30秒触发一次
-        if count % 3 == 0 {}
+        if count % 30 == 0 {}
 
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
     }
     info!("定时任务结束");
     Ok(())
@@ -286,21 +293,32 @@ pub async fn add_user_map(key: &str, value: &str) -> Result<(), String> {
 /// 清理所有QUIC连接资源，包括文本连接和P2P连接
 pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始断开QUIC连接");
-    
+
     // 清除服务器连接列表
     {
         let mut server_list = GLOBAL_QUIC_SERVER_LIST.write().await;
         server_list.clear();
         info!("已清理QUIC服务器连接列表");
     }
-    
+
     // 标记用户离线状态
     {
-        let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
-        user_info.insert("quic_disconnected".to_string(), "true".to_string());
+        insert_user_info("quic_disconnected", "true").await?;
+        insert_user_info("ping_lost_count", "0").await?;
+        let ping_uuid = Uuid::new_v4();
+        let ping_uuid = ping_uuid.to_string();
+        insert_user_info("ping_uuid", &ping_uuid).await?;
         info!("已标记QUIC断开状态");
     }
-    
+
+    // 向前端发送断开连接通知
+    if let Some(handle) = APP_HANDLE.get() {
+        if let Err(e) = handle.emit("quic_disconnected", "QUIC连接已断开，请检查网络环境")
+        {
+            error!("发送QUIC断开通知失败: {}", e);
+        }
+    }
+
     info!("QUIC连接已断开");
     Ok(())
 }
@@ -309,16 +327,16 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
 /// 重新建立与服务器的QUIC连接
 pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始重新连接QUIC服务");
-    
+
     // 先断开现有连接
     disconnect_quic().await?;
-    
+
     // 清除断开状态标记
     {
         let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
         user_info.insert("quic_disconnected".to_string(), "false".to_string());
     }
-    
+
     // 重新启动QUIC客户端
     let addr = resolve_ipv4(DOMAIN_NAME, 4433).await?;
     tokio::spawn(async move {
@@ -327,7 +345,7 @@ pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
             Err(e) => error!("QUIC重连失败: {}", e),
         }
     });
-    
+
     info!("QUIC重连请求已发送");
     Ok(())
 }

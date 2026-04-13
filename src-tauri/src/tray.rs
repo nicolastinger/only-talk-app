@@ -1,12 +1,12 @@
 use log::{error, info};
-use tauri::{
-    image::Image,
-    menu::{Menu, MenuItem},
-    tray::{TrayIcon, TrayIconBuilder},
-    AppHandle, Manager, Runtime,
-};
+use tauri::image::Image;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{TrayIcon, TrayIconBuilder};
+use tauri::{AppHandle, Manager, Runtime};
 
-pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> Result<TrayIcon<R>, Box<dyn std::error::Error>> {
+pub fn setup_tray<R: Runtime>(
+    app: &AppHandle<R>,
+) -> Result<TrayIcon<R>, Box<dyn std::error::Error>> {
     let show_window = MenuItem::with_id(app, "show_window", "显示主界面", true, None::<&str>)?;
     let quit_app = MenuItem::with_id(app, "quit_app", "退出应用", true, None::<&str>)?;
 

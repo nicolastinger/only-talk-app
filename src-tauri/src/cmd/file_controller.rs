@@ -154,7 +154,10 @@ fn read_file_from_path(resource_path: &Path) -> Result<FileVo, String> {
 
 /// 通过业务id获取公开文件
 #[tauri::command]
-pub async fn get_file_by_biz_id(biz_id: String, nano_id: Option<String>) -> Result<Vec<FileVo>, String> {
+pub async fn get_file_by_biz_id(
+    biz_id: String,
+    nano_id: Option<String>,
+) -> Result<Vec<FileVo>, String> {
     info!("通过业务id获取文件 {}, nano_id: {:?}", biz_id, nano_id);
     if biz_id.is_empty() {
         warn!("业务id不能为空");
@@ -173,7 +176,10 @@ pub async fn get_file_by_biz_id(biz_id: String, nano_id: Option<String>) -> Resu
 
 /// 通过业务id获取聊天文件
 #[tauri::command]
-pub async fn get_chat_file_by_biz_id(biz_id: String, nano_id: Option<String>) -> Result<Vec<FileVo>, String> {
+pub async fn get_chat_file_by_biz_id(
+    biz_id: String,
+    nano_id: Option<String>,
+) -> Result<Vec<FileVo>, String> {
     info!("通过业务id获取文件 {}, nano_id: {:?}", biz_id, nano_id);
     if biz_id.is_empty() {
         warn!("业务id不能为空");

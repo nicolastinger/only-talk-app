@@ -39,12 +39,12 @@ pub async fn process_friend_notify_message(
 /// 删除好友（软删除）
 pub async fn delete_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
-    
+
     let url = format!("{}/friend/delete_friend/{}", TALK_API, friend_uuid);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
-    
+
     info!("删除好友结果 {:?}", result.body);
-    
+
     if result.status == 200 {
         soft_delete_friend_db(&uuid, friend_uuid).await?;
         hide_chat_session_db(&uuid, friend_uuid).await?;
@@ -52,7 +52,7 @@ pub async fn delete_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     } else {
         return Err(anyhow!("删除好友失败: {}", result.body));
     }
-    
+
     Ok(())
 }
 

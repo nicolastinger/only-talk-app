@@ -11,7 +11,9 @@ use crate::entity::p2p_models::{P2pChannelType, UserAddressInfo};
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::dangerous_configuration::configure_server;
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::p2p_service::p2p_quic_service::{process_media_data_channel, process_rec_msg, send_ping_msg};
+use crate::quic_service::p2p_service::p2p_quic_service::{
+    process_media_data_channel, process_rec_msg, send_ping_msg,
+};
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
 pub async fn udp_port_forward(
@@ -163,7 +165,7 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
         let head_length = 9;
         let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
         let recv_channel_key = channel_key.clone();
-        
+
         // MediaData通道使用轻量级帧格式，不走通用的TextQuicMsg反序列化
         if channel_type == P2pChannelType::MediaData {
             tokio::spawn(async move {
@@ -182,7 +184,9 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
                                 &ConnectionType::Video,
                                 buffer_msg.clone(),
                                 head_length,
-                            ).await {
+                            )
+                            .await
+                            {
                                 error!("处理{}通道消息失败: {}", recv_channel_key, e);
                             }
                         }
@@ -191,7 +195,10 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
                             break;
                         }
                         Err(e) => {
-                            error!("Failed to read from stream on channel {}: {}", recv_channel_key, e);
+                            error!(
+                                "Failed to read from stream on channel {}: {}",
+                                recv_channel_key, e
+                            );
                             break;
                         }
                     }

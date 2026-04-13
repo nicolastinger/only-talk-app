@@ -13,6 +13,7 @@ pub mod quic_connection;
 pub mod system_notification;
 pub mod text_msg;
 pub mod user;
+pub mod user_info;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {

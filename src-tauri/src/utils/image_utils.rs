@@ -93,18 +93,13 @@ pub fn compress_image_to_webp(input_path: &std::path::Path) -> Result<PathBuf> {
 }
 
 fn get_output_path(input_path: &std::path::Path) -> Result<PathBuf> {
-    let monthly_resource_path = get_config(MONTHLY_RESOURCE_PATH)
-        .ok_or_else(|| anyhow!("获取当月资源路径失败"))?;
+    let monthly_resource_path =
+        get_config(MONTHLY_RESOURCE_PATH).ok_or_else(|| anyhow!("获取当月资源路径失败"))?;
 
-    let file_stem = input_path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("image");
+    let file_stem = input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("image");
 
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
+    let timestamp =
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
 
     let output_filename = format!("{}_{}.webp", file_stem, timestamp);
     let output_path = Path::new(&monthly_resource_path).join(output_filename);

@@ -24,6 +24,7 @@
   display: flex;
   flex-direction: row;
   background-color: var(--sidebar-bg);
+  position: relative;
 
   .tools {
     padding: 4px;
@@ -40,6 +41,64 @@
 .rightSideBarToolDraggable {
   flex: 8;
   height: 100%;
+}
+
+.quicReconnectTip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  background: linear-gradient(90deg, rgba(255, 77, 79, 0.15) 0%, rgba(255, 77, 79, 0.08) 100%);
+  border: 1px solid rgba(255, 77, 79, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.2);
+  animation: tipPulse 2s ease-in-out infinite;
+  z-index: 10;
+  
+  .tipIcon {
+    font-size: 14px;
+    animation: tipIconBounce 1.5s ease-in-out infinite;
+  }
+  
+  .tipText {
+    color: var(--acai-danger);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  
+  .tipReconnectButton {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(245, 87, 108, 0.4);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+    
+    span {
+      line-height: 1;
+    }
+  }
 }
 
 .rightSideBarToolButton {
@@ -80,4 +139,22 @@
 
 .rightSideBarContent {
   height: calc(100% - 40px);
+}
+
+@keyframes tipPulse {
+  0%, 100% {
+    background: linear-gradient(90deg, rgba(255, 77, 79, 0.1) 0%, rgba(255, 77, 79, 0.05) 100%);
+  }
+  50% {
+    background: linear-gradient(90deg, rgba(255, 77, 79, 0.15) 0%, rgba(255, 77, 79, 0.08) 100%);
+  }
+}
+
+@keyframes tipIconBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
 }

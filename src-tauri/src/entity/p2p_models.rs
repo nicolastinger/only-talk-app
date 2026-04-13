@@ -26,7 +26,7 @@ impl TryFrom<u8> for MediaFrameType {
 /// 媒体帧头部 - MediaData通道专用
 /// 固定5字节头部: frame_type(1字节) + data_len(4字节)
 /// 替代通用的 HeadMsg(9字节) + TextQuicMsg(bincode序列化) 方案
-/// 
+///
 /// # 性能优势
 /// - 头部仅5字节（vs 原方案9字节HeadMsg + bincode序列化的TextQuicMsg开销）
 /// - 帧体直接写入原始二进制数据，无需bincode序列化
@@ -433,11 +433,11 @@ pub struct P2pMsg {
 impl Default for P2pVideoConfig {
     fn default() -> Self {
         Self {
-            width: 640,           // 低画质: 640x480
+            width: 640, // 低画质: 640x480
             height: 480,
-            fps: 15,              // 较低帧率
+            fps: 15, // 较低帧率
             encode: "video/webm;codecs=vp8".to_string(),
-            bitrate: 500_000,     // 500kbps
+            bitrate: 500_000, // 500kbps
             video: true,
             audio: true,
         }
@@ -449,9 +449,9 @@ impl Default for P2pAudioConfig {
     fn default() -> Self {
         Self {
             sample_rate: 48000,
-            channels: 1,          // 单声道节省带宽
+            channels: 1, // 单声道节省带宽
             encode: "audio/opus".to_string(),
-            bitrate: 32000,       // 32kbps
+            bitrate: 32000, // 32kbps
             echo_cancellation: true,
             noise_suppression: true,
             auto_gain_control: true,
@@ -466,7 +466,7 @@ impl Default for P2pBufferConfig {
             video_buffer_size: 5,  // 缓冲5帧
             audio_buffer_size: 10, // 缓冲10帧
             adaptive_buffer: true,
-            max_latency_ms: 200,   // 最大200ms延迟
+            max_latency_ms: 200, // 最大200ms延迟
         }
     }
 }

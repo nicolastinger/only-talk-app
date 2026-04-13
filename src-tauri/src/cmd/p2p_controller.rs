@@ -1,14 +1,18 @@
 use log::info;
 
-use crate::entity::p2p_models::{MediaFrameType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg};
+use crate::entity::p2p_models::{
+    MediaFrameType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg,
+};
 use crate::quic_service::p2p_service::p2p_quic_service::send_media_frame;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
     access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
-    send_p2p_audio_frame_service, send_p2p_media_config_service, send_p2p_media_control_service,
-    send_p2p_media_info_service, send_p2p_media_ready_service, send_p2p_text_msg_service, send_p2p_video_call_end_service, send_p2p_video_call_invite_service,
-    send_p2p_video_call_response_service, send_p2p_video_config_service, send_p2p_video_frame_service,
-    send_p2p_file_data_service, send_p2p_file_transfer_request_service, send_p2p_file_transfer_response_service,
+    send_p2p_audio_frame_service, send_p2p_file_data_service,
+    send_p2p_file_transfer_request_service, send_p2p_file_transfer_response_service,
+    send_p2p_media_config_service, send_p2p_media_control_service, send_p2p_media_info_service,
+    send_p2p_media_ready_service, send_p2p_text_msg_service, send_p2p_video_call_end_service,
+    send_p2p_video_call_invite_service, send_p2p_video_call_response_service,
+    send_p2p_video_config_service, send_p2p_video_frame_service,
 };
 use crate::utils::global_static_str::UDP_SOCKET;
 
@@ -109,9 +113,7 @@ pub async fn send_p2p_media_control(
 pub async fn send_video_frame(frame_data: Vec<u8>, uuid: String) -> Result<(), String> {
     info!("帧大小 {}", frame_data.len());
     // 直接使用轻量级帧格式发送，不走LOG_SENDER队列
-    send_media_frame(MediaFrameType::Video, frame_data, uuid)
-        .await
-        .map_err(|e| e.to_string())
+    send_media_frame(MediaFrameType::Video, frame_data, uuid).await.map_err(|e| e.to_string())
 }
 
 /// 发送p2p文本消息
@@ -138,9 +140,7 @@ pub async fn send_p2p_video_call_invite(
     target_uuid: String,
     from_name: Option<String>,
 ) -> Result<(), String> {
-    send_p2p_video_call_invite_service(target_uuid, from_name)
-        .await
-        .map_err(|e| e.to_string())
+    send_p2p_video_call_invite_service(target_uuid, from_name).await.map_err(|e| e.to_string())
 }
 
 /// 发送视频通话响应
@@ -163,9 +163,7 @@ pub async fn send_p2p_video_call_response(
 /// 当用户主动结束视频通话时发送
 #[tauri::command]
 pub async fn send_p2p_video_call_end(target_uuid: String) -> Result<(), String> {
-    send_p2p_video_call_end_service(target_uuid)
-        .await
-        .map_err(|e| e.to_string())
+    send_p2p_video_call_end_service(target_uuid).await.map_err(|e| e.to_string())
 }
 
 /// 发送p2p媒体信息
@@ -177,9 +175,7 @@ pub async fn send_p2p_media_info(
     data: String,
     target_uuid: String,
 ) -> Result<(), String> {
-    send_p2p_media_info_service(info_type, data, target_uuid)
-        .await
-        .map_err(|e| e.to_string())
+    send_p2p_media_info_service(info_type, data, target_uuid).await.map_err(|e| e.to_string())
 }
 
 // ==================== 文件传输相关命令 ====================
@@ -188,14 +184,9 @@ pub async fn send_p2p_media_info(
 /// 通过File通道发送文件分片数据
 /// 文件会被切分为多个分片，每个分片独立发送
 #[tauri::command]
-pub async fn send_p2p_file_data(
-    file_data: String,
-    target_uuid: String,
-) -> Result<(), String> {
+pub async fn send_p2p_file_data(file_data: String, target_uuid: String) -> Result<(), String> {
     let file_data = serde_json::from_str::<P2pFileData>(&file_data).map_err(|e| e.to_string())?;
-    send_p2p_file_data_service(file_data, target_uuid)
-        .await
-        .map_err(|e| e.to_string())
+    send_p2p_file_data_service(file_data, target_uuid).await.map_err(|e| e.to_string())
 }
 
 /// 发送p2p文件传输请求
@@ -205,7 +196,8 @@ pub async fn send_p2p_file_transfer_request(
     transfer_request: String,
     target_uuid: String,
 ) -> Result<(), String> {
-    let transfer_request = serde_json::from_str::<P2pFileTransferRequest>(&transfer_request).map_err(|e| e.to_string())?;
+    let transfer_request = serde_json::from_str::<P2pFileTransferRequest>(&transfer_request)
+        .map_err(|e| e.to_string())?;
     send_p2p_file_transfer_request_service(transfer_request, target_uuid)
         .await
         .map_err(|e| e.to_string())
@@ -218,7 +210,8 @@ pub async fn send_p2p_file_transfer_response(
     transfer_response: String,
     target_uuid: String,
 ) -> Result<(), String> {
-    let transfer_response = serde_json::from_str::<P2pFileTransferResponse>(&transfer_response).map_err(|e| e.to_string())?;
+    let transfer_response = serde_json::from_str::<P2pFileTransferResponse>(&transfer_response)
+        .map_err(|e| e.to_string())?;
     send_p2p_file_transfer_response_service(transfer_response, target_uuid)
         .await
         .map_err(|e| e.to_string())
@@ -229,7 +222,5 @@ pub async fn send_p2p_file_transfer_response(
 /// 这是解决视频黑屏问题的关键：确保双方都准备好后再开始传输
 #[tauri::command]
 pub async fn send_p2p_media_ready(target_uuid: String) -> Result<(), String> {
-    send_p2p_media_ready_service(target_uuid)
-        .await
-        .map_err(|e| e.to_string())
+    send_p2p_media_ready_service(target_uuid).await.map_err(|e| e.to_string())
 }

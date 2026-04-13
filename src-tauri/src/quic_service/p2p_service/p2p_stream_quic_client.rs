@@ -13,7 +13,9 @@ use crate::entity::p2p_models::P2pChannelType;
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::models::TargetSendStream;
-use crate::quic_service::p2p_service::p2p_quic_service::{process_media_data_channel, process_rec_msg, send_ping_msg};
+use crate::quic_service::p2p_service::p2p_quic_service::{
+    process_media_data_channel, process_rec_msg, send_ping_msg,
+};
 use crate::utils::message_types::MSG_TYPE_TEXT;
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
@@ -158,7 +160,9 @@ pub async fn run_client(
                         &ConnectionType::Video,
                         buffer_msg_default.clone(),
                         head_length,
-                    ).await {
+                    )
+                    .await
+                    {
                         error!("处理default通道消息失败: {}", e);
                     }
                 }
@@ -188,7 +192,9 @@ pub async fn run_client(
                         &ConnectionType::Video,
                         buffer_msg_media.clone(),
                         head_length,
-                    ).await {
+                    )
+                    .await
+                    {
                         error!("处理media_info通道消息失败: {}", e);
                     }
                 }
@@ -224,7 +230,9 @@ pub async fn run_client(
                         &ConnectionType::Video,
                         buffer_msg_file.clone(),
                         head_length,
-                    ).await {
+                    )
+                    .await
+                    {
                         error!("处理file通道消息失败: {}", e);
                     }
                 }

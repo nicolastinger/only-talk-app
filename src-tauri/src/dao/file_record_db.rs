@@ -53,7 +53,10 @@ pub async fn delete_file_record_by_id(biz_id: &str, uuid: &str) -> Result<(), an
 /// 更新下载失败重试次数
 /// 递增 download_retry_count，如果超过最大重试次数则将 status 设为 3（下载失败超过重试上限）
 /// 返回更新后的重试次数
-pub async fn increment_download_retry_count(biz_id: &str, uuid: &str) -> Result<i32, anyhow::Error> {
+pub async fn increment_download_retry_count(
+    biz_id: &str,
+    uuid: &str,
+) -> Result<i32, anyhow::Error> {
     let pool = get_common_db_client().await?;
     let now = Local::now().timestamp();
 

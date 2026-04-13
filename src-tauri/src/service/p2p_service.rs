@@ -7,7 +7,10 @@ use log::{info, warn};
 use nanoid::nanoid;
 use tauri::Emitter;
 
-use crate::entity::p2p_models::{MediaFrameType, P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMsg, P2pVideoConfig, UserAddressInfo};
+use crate::entity::p2p_models::{
+    MediaFrameType, P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse,
+    P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMsg, P2pVideoConfig, UserAddressInfo,
+};
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::p2p_service::p2p_quic_service::{get_sender, send_media_frame};
@@ -16,16 +19,13 @@ use crate::quic_service::p2p_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward, udp_port_forward_ipv6,
 };
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::{
-    UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2,
-};
+use crate::utils::global_static_str::{UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2};
 use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA,
-    MSG_TYPE_P2P_FILE_TRANSFER_REQUEST, MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE,
-    MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
-    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_MEDIA_READY, MSG_TYPE_P2P_TEXT, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
-    MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
-    MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
+    MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
+    MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
+    MSG_TYPE_P2P_MEDIA_INFO, MSG_TYPE_P2P_MEDIA_READY, MSG_TYPE_P2P_TEXT,
+    MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_P2P_VIDEO_CONFIG, P2P_ACCEPT_REQUEST,
 };
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -319,19 +319,15 @@ pub async fn send_p2p_text_msg_service(
         guard.get("uuid").ok_or(anyhow!("no sender"))?.clone()
     };
 
-    let text_data = generate_text_msg(
-        MSG_TYPE_P2P_TEXT,
-        text.into_bytes(),
-        target_uuid.clone(),
-        sender,
-    )?;
+    let text_data =
+        generate_text_msg(MSG_TYPE_P2P_TEXT, text.into_bytes(), target_uuid.clone(), sender)?;
 
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
         let mut guard = send_stream.lock().await;
         guard.write_all(&text_data).await?;
     }
-    
+
     info!("p2p文本消息发送完成");
     Ok(())
 }
@@ -339,13 +335,13 @@ pub async fn send_p2p_text_msg_service(
 /// 关闭p2p连接，清理资源
 pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), anyhow::Error> {
     info!("关闭p2p连接: {}", target_uuid);
-    
+
     // 设置p2p连接状态为非活跃，停止ping消息
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
         guard.insert("p2p_active".to_string(), "false".to_string());
     }
-    
+
     // 从P2P_STREAM_SENDER中移除该用户的所有channel
     {
         if let Some((_, user_channels)) = crate::P2P_STREAM_SENDER.remove(&target_uuid) {
@@ -357,7 +353,7 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
             info!("已移除用户 {} 的所有p2p发送流", target_uuid);
         }
     }
-    
+
     // 清理GLOBAL_QUIC_USER_INFO中的相关数据
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
@@ -367,7 +363,7 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
         guard.remove("p2p_port_v4");
         guard.remove("p2p_port_v6");
     }
-    
+
     // 停止MediaData通道的接收循环
     {
         let guard = crate::MEDIA_DATA_CANCEL_TOKEN.read().await;
@@ -376,7 +372,7 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
             token.cancel();
         }
     }
-    
+
     info!("p2p连接资源清理完成");
     Ok(())
 }
@@ -384,11 +380,11 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
 /// 发送p2p音频数据
 /// 使用轻量级MediaFrameHeader格式，替代通用的TextQuicMsg序列化
 /// 减少bincode序列化开销和内存拷贝
-/// 
+///
 /// # 参数
 /// - `audio_data`: 音频帧数据 (Opus编码)
 /// - `target_uuid`: 目标用户UUID
-/// 
+///
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
@@ -403,11 +399,11 @@ pub async fn send_p2p_audio_frame_service(
 
 /// 发送p2p媒体配置信息
 /// 用于视频聊天初始化时的参数协商
-/// 
+///
 /// # 参数
 /// - `media_config`: 媒体配置JSON字符串
 /// - `uuid`: 目标用户UUID
-/// 
+///
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
@@ -421,7 +417,7 @@ pub async fn send_p2p_media_config_service(
     let me = get_user_info("uuid").await?;
     let p2p_data =
         generate_text_msg(MSG_TYPE_P2P_MEDIA_CONFIG, media_config_vec, String::new(), me)?;
-    
+
     for _ in 0..10 {
         info!("等待p2p连接 {}", uuid);
         {
@@ -444,12 +440,12 @@ pub async fn send_p2p_media_config_service(
 
 /// 发送p2p媒体控制命令
 /// 用于控制视频/音频的开关等操作
-/// 
+///
 /// # 参数
 /// - `control_type`: 控制类型 (VideoToggle/AudioToggle/Pause/Resume/EndCall)
 /// - `enabled`: 是否启用
 /// - `target_uuid`: 目标用户UUID
-/// 
+///
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
@@ -459,9 +455,9 @@ pub async fn send_p2p_media_control_service(
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
     info!("发送媒体控制命令: {} = {}", control_type, enabled);
-    
+
     use crate::entity::p2p_models::P2pMediaControlType;
-    
+
     let control_type_enum = match control_type.as_str() {
         "VideoToggle" => P2pMediaControlType::VideoToggle,
         "AudioToggle" => P2pMediaControlType::AudioToggle,
@@ -470,7 +466,7 @@ pub async fn send_p2p_media_control_service(
         "EndCall" => P2pMediaControlType::EndCall,
         _ => return Err(anyhow!("未知的控制类型: {}", control_type)),
     };
-    
+
     let control = crate::entity::p2p_models::P2pMediaControl {
         control_type: control_type_enum,
         enabled,
@@ -479,26 +475,22 @@ pub async fn send_p2p_media_control_service(
             .unwrap()
             .as_millis() as u64,
     };
-    
+
     let control_vec = serde_json::to_vec(&control)?;
     let sender = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         guard.get("uuid").ok_or(anyhow!("no sender"))?.clone()
     };
-    
-    let control_msg = generate_text_msg(
-        MSG_TYPE_P2P_MEDIA_CONTROL,
-        control_vec,
-        target_uuid.clone(),
-        sender,
-    )?;
-    
+
+    let control_msg =
+        generate_text_msg(MSG_TYPE_P2P_MEDIA_CONTROL, control_vec, target_uuid.clone(), sender)?;
+
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
         let mut guard = send_stream.lock().await;
         guard.write_all(&control_msg).await?;
     }
-    
+
     info!("媒体控制命令发送完成");
     Ok(())
 }
@@ -510,12 +502,12 @@ pub async fn send_p2p_media_control_service(
 /// 发送p2p媒体信息
 /// 通过MediaInfo通道发送媒体状态信息
 /// 如分辨率变化、码率调整、帧率统计等
-/// 
+///
 /// # 参数
 /// - `info_type`: 媒体信息类型 (ResolutionChange/BitrateChange/FrameRateStats/NetworkQuality/EncoderInfo/Custom)
 /// - `data`: 媒体信息数据 (JSON字符串)
 /// - `target_uuid`: 目标用户UUID
-/// 
+///
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
@@ -525,9 +517,9 @@ pub async fn send_p2p_media_info_service(
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
     info!("发送媒体信息: type={}, target={}", info_type, target_uuid);
-    
+
     use crate::entity::p2p_models::P2pMediaInfoType;
-    
+
     let info_type_enum = match info_type.as_str() {
         "ResolutionChange" => P2pMediaInfoType::ResolutionChange,
         "BitrateChange" => P2pMediaInfoType::BitrateChange,
@@ -536,7 +528,7 @@ pub async fn send_p2p_media_info_service(
         "EncoderInfo" => P2pMediaInfoType::EncoderInfo,
         other => P2pMediaInfoType::Custom(other.to_string()),
     };
-    
+
     let media_info = P2pMediaInfo {
         info_type: info_type_enum,
         data,
@@ -545,27 +537,23 @@ pub async fn send_p2p_media_info_service(
             .unwrap()
             .as_millis() as u64,
     };
-    
+
     let info_vec = serde_json::to_vec(&media_info)?;
     let sender = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         guard.get("uuid").ok_or(anyhow!("no sender"))?.clone()
     };
-    
-    let info_msg = generate_text_msg(
-        MSG_TYPE_P2P_MEDIA_INFO,
-        info_vec,
-        target_uuid.clone(),
-        sender,
-    )?;
-    
+
+    let info_msg =
+        generate_text_msg(MSG_TYPE_P2P_MEDIA_INFO, info_vec, target_uuid.clone(), sender)?;
+
     // 使用MediaInfo通道发送
     let send_stream = get_sender(&target_uuid, &P2pChannelType::MediaInfo).await?;
     {
         let mut guard = send_stream.lock().await;
         guard.write_all(&info_msg).await?;
     }
-    
+
     info!("媒体信息发送完成");
     Ok(())
 }
@@ -573,15 +561,15 @@ pub async fn send_p2p_media_info_service(
 /// 发送视频通话邀请
 /// 当用户发起视频通话时，先发送邀请消息通知对方
 /// 对方收到邀请后会弹出视频通话界面
-/// 
+///
 /// # 参数
 /// - `target_uuid`: 目标用户UUID
 /// - `from_name`: 邀请者昵称 (可选)
-/// 
+///
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
-/// 
+///
 /// # 流程
 /// 1. 构造邀请消息结构体
 /// 2. 序列化为JSON
@@ -592,13 +580,13 @@ pub async fn send_p2p_video_call_invite_service(
     from_name: Option<String>,
 ) -> Result<(), anyhow::Error> {
     info!("发送视频通话邀请给: {}", target_uuid);
-    
+
     // 获取当前用户UUID
     let from_uuid = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
     };
-    
+
     // 构造邀请消息
     let invite = crate::entity::p2p_models::P2pVideoCallInvite {
         from_uuid: from_uuid.clone(),
@@ -610,10 +598,10 @@ pub async fn send_p2p_video_call_invite_service(
         media_config: Some(crate::entity::p2p_models::P2pMediaConfig::default()),
         from_name,
     };
-    
+
     // 序列化邀请消息
     let invite_vec = serde_json::to_vec(&invite)?;
-    
+
     // 生成P2P消息
     let invite_msg = generate_text_msg(
         MSG_TYPE_P2P_VIDEO_CALL_INVITE,
@@ -621,14 +609,14 @@ pub async fn send_p2p_video_call_invite_service(
         target_uuid.clone(),
         from_uuid,
     )?;
-    
+
     // 发送邀请消息
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
         let mut guard = send_stream.lock().await;
         guard.write_all(&invite_msg).await?;
     }
-    
+
     info!("视频通话邀请发送完成");
     Ok(())
 }
@@ -636,13 +624,13 @@ pub async fn send_p2p_video_call_invite_service(
 /// 发送视频通话响应
 /// 当用户接受或拒绝视频通话邀请时发送
 /// 添加重试逻辑等待P2P连接就绪，解决首次通话时连接未建立导致响应丢失的问题
-/// 
+///
 /// # 参数
 /// - `target_uuid`: 目标用户UUID (邀请者)
 /// - `accept`: 是否接受邀请
 /// - `media_config`: 媒体配置 (接受时需要)
 /// - `reject_reason`: 拒绝原因 (拒绝时可选)
-/// 
+///
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
@@ -653,13 +641,13 @@ pub async fn send_p2p_video_call_response_service(
     reject_reason: Option<String>,
 ) -> Result<(), anyhow::Error> {
     info!("发送视频通话响应给: {}, 接受: {}", target_uuid, accept);
-    
+
     // 获取当前用户UUID
     let from_uuid = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
     };
-    
+
     // 解析媒体配置
     let media_config = if let Some(config_str) = media_config {
         Some(serde_json::from_str::<crate::entity::p2p_models::P2pMediaConfig>(&config_str)?)
@@ -669,7 +657,7 @@ pub async fn send_p2p_video_call_response_service(
     } else {
         None
     };
-    
+
     // 构造响应消息
     let response = crate::entity::p2p_models::P2pVideoCallResponse {
         from_uuid: from_uuid.clone(),
@@ -682,25 +670,17 @@ pub async fn send_p2p_video_call_response_service(
         media_config,
         reject_reason,
     };
-    
+
     // 序列化响应消息
     let response_vec = serde_json::to_vec(&response)?;
-    
+
     // 选择消息类型
-    let msg_type = if accept {
-        MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
-    } else {
-        MSG_TYPE_P2P_VIDEO_CALL_REJECT
-    };
-    
+    let msg_type =
+        if accept { MSG_TYPE_P2P_VIDEO_CALL_ACCEPT } else { MSG_TYPE_P2P_VIDEO_CALL_REJECT };
+
     // 生成P2P消息
-    let response_msg = generate_text_msg(
-        msg_type,
-        response_vec,
-        target_uuid.clone(),
-        from_uuid,
-    )?;
-    
+    let response_msg = generate_text_msg(msg_type, response_vec, target_uuid.clone(), from_uuid)?;
+
     // 重试逻辑：等待P2P连接就绪（最多10秒）
     // 解决首次通话时P2P连接尚未建立导致响应丢失的问题
     for attempt in 0..10 {
@@ -717,30 +697,28 @@ pub async fn send_p2p_video_call_response_service(
         };
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
-    
+
     Err(anyhow!("发送视频通话响应失败: P2P连接在10秒内未就绪"))
 }
 
 /// 发送视频通话结束通知
 /// 当用户主动结束视频通话时发送
-/// 
+///
 /// # 参数
 /// - `target_uuid`: 目标用户UUID
-/// 
+///
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
-pub async fn send_p2p_video_call_end_service(
-    target_uuid: String,
-) -> Result<(), anyhow::Error> {
+pub async fn send_p2p_video_call_end_service(target_uuid: String) -> Result<(), anyhow::Error> {
     info!("发送视频通话结束通知给: {}", target_uuid);
-    
+
     // 获取当前用户UUID
     let from_uuid = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
     };
-    
+
     // 生成结束消息
     let end_msg = generate_text_msg(
         MSG_TYPE_P2P_VIDEO_CALL_END,
@@ -748,16 +726,16 @@ pub async fn send_p2p_video_call_end_service(
         target_uuid.clone(),
         from_uuid,
     )?;
-    
+
     // 发送结束消息
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
         let mut guard = send_stream.lock().await;
         guard.write_all(&end_msg).await?;
     }
-    
+
     info!("视频通话结束通知发送完成");
-    
+
     // 停止MediaData通道的接收循环，释放资源
     {
         let guard = crate::MEDIA_DATA_CANCEL_TOKEN.read().await;
@@ -766,7 +744,7 @@ pub async fn send_p2p_video_call_end_service(
             token.cancel();
         }
     }
-    
+
     Ok(())
 }
 
@@ -783,17 +761,15 @@ pub async fn send_p2p_video_call_end_service(
 /// # 返回
 /// - 成功返回Ok(())
 /// - 失败返回错误信息
-pub async fn send_p2p_media_ready_service(
-    target_uuid: String,
-) -> Result<(), anyhow::Error> {
+pub async fn send_p2p_media_ready_service(target_uuid: String) -> Result<(), anyhow::Error> {
     info!("发送媒体接收就绪信号给: {}", target_uuid);
-    
+
     // 获取当前用户UUID
     let from_uuid = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         guard.get("uuid").ok_or(anyhow!("无法获取当前用户UUID"))?.clone()
     };
-    
+
     // 生成就绪消息
     let ready_msg = generate_text_msg(
         MSG_TYPE_P2P_MEDIA_READY,
@@ -801,14 +777,14 @@ pub async fn send_p2p_media_ready_service(
         target_uuid.clone(),
         from_uuid,
     )?;
-    
+
     // 发送就绪消息
     let send_stream = get_sender(&target_uuid, &P2pChannelType::Default).await?;
     {
         let mut guard = send_stream.lock().await;
         guard.write_all(&ready_msg).await?;
     }
-    
+
     info!("媒体接收就绪信号发送完成");
     Ok(())
 }
@@ -844,12 +820,8 @@ pub async fn send_p2p_file_data_service(
     };
 
     let file_data_vec = serde_json::to_vec(&file_data)?;
-    let file_msg = generate_text_msg(
-        MSG_TYPE_P2P_FILE_DATA,
-        file_data_vec,
-        target_uuid.clone(),
-        sender,
-    )?;
+    let file_msg =
+        generate_text_msg(MSG_TYPE_P2P_FILE_DATA, file_data_vec, target_uuid.clone(), sender)?;
 
     // 使用File通道发送
     let send_stream = get_sender(&target_uuid, &P2pChannelType::File).await?;
@@ -879,9 +851,7 @@ pub async fn send_p2p_file_transfer_request_service(
 ) -> Result<(), anyhow::Error> {
     info!(
         "发送文件传输请求: file={}, size={}, transfer_id={}",
-        transfer_request.file_name,
-        transfer_request.total_size,
-        transfer_request.transfer_id
+        transfer_request.file_name, transfer_request.total_size, transfer_request.transfer_id
     );
 
     let sender = {
@@ -925,8 +895,7 @@ pub async fn send_p2p_file_transfer_response_service(
 ) -> Result<(), anyhow::Error> {
     info!(
         "发送文件传输响应: transfer_id={}, accept={}",
-        transfer_response.transfer_id,
-        transfer_response.accept
+        transfer_response.transfer_id, transfer_response.accept
     );
 
     let sender = {

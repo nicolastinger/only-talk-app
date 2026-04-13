@@ -10,6 +10,7 @@ import {
   ThemeButton,
 } from '@/components/ToolButtons';
 import { TALK_API } from '@/constants';
+import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
 import { useSystemNotify } from '@/hooks/useSystemNotify';
 import { useBearStore } from '@/store/store';
 import {
@@ -17,6 +18,7 @@ import {
   CompressOutlined,
   ExpandOutlined,
   MinusOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Window } from '@tauri-apps/api/window';
@@ -30,11 +32,29 @@ const HomeLayout = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [closeModalVisible, setCloseModalVisible] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
+  const { isConnected, resetConnection } = useQuicDisconnect();
 
   // 使用系统通知hook
   useSystemNotify(userInfo.uuid);
+
+  // 处理重新连接
+  const handleReconnect = async () => {
+    if (isReconnecting) return;
+    
+    try {
+      setIsReconnecting(true);
+      await invoke('reconnect_quic_command');
+      // 重连请求已发送，重置状态
+      resetConnection();
+    } catch (error) {
+      console.error('重新连接失败:', error);
+    } finally {
+      setIsReconnecting(false);
+    }
+  };
 
   // 最小化
   const minimizeWindow = async (e: React.MouseEvent) => {
@@ -143,6 +163,16 @@ const HomeLayout = () => {
           <div className={styles.rightSideBarToolDraggable}>
             <DraggableHeader />
           </div>
+          {!isConnected && (
+            <div className={styles.quicReconnectTip}>
+              <span className={styles.tipIcon}>⚠️</span>
+              <span className={styles.tipText}>连接已断开，可点击重连按钮重新连接</span>
+              <div className={styles.tipReconnectButton} onClick={handleReconnect}>
+                <ReloadOutlined spin={isReconnecting} />
+                <span>{isReconnecting ? '重连中...' : '重连'}</span>
+              </div>
+            </div>
+          )}
           <div className={styles.rightSideBarToolButton}>
             <div className={styles.rightSideBarToolButtonList}>
               <div

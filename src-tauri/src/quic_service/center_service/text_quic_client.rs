@@ -2,19 +2,21 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use log::{error, info, warn};
 use quinn::{Endpoint, SendStream};
 use tokio::sync::{Mutex, RwLock};
-
+use uuid::Uuid;
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::quic_service::safe_configuration::configure_client;
+use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::MSG_TYPE_PING;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+
 // 客户端异步函数，尝试与服务器建立QUIC连接，文字信息连接
 pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     // 创建客户端端点
@@ -111,40 +113,55 @@ async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error>
     }
 
     let send_stream_ping = send_stream.clone();
-    send_ping_msg(send_stream_ping);
+    tokio::spawn(async move {
+        let ping_result = send_ping_msg(send_stream_ping).await;
+        if ping_result.is_err() {
+            error!("发送心跳失败 {}", ping_result.unwrap_err());
+        }
+    });
     Ok(())
 }
 
 /// 发送心跳信息
-fn send_ping_msg(send_stream_ping: Arc<RwLock<SendStream>>) {
-    tokio::spawn(async move {
-        loop {
-            //一分钟发送心跳
-            tokio::time::sleep(Duration::from_secs(60)).await;
-            info!("发送心跳");
-            let me = GLOBAL_QUIC_USER_INFO.read().await;
-            let me = me.get("uuid");
-            let sender = match me {
-                None => "".to_string(),
-                Some(v) => v.clone(),
-            };
-            let ping_msg = generate_text_msg(
-                MSG_TYPE_PING,
-                PING.as_bytes().to_vec(),
-                SYSTEM.to_string(),
-                sender,
-            )
-            .expect("");
-            match send_stream_ping.write().await.write_all(&ping_msg).await {
-                Ok(_) => {
-                    info!("发送成功");
-                }
-                Err(e) => {
-                    error!("发送心跳失败 {}", e);
-                }
-            };
+async fn send_ping_msg(send_stream_ping: Arc<RwLock<SendStream>>) -> Result<(), anyhow::Error> {
+    let ping_uuid = Uuid::new_v4();
+    let ping_uuid = ping_uuid.to_string();
+    insert_user_info("ping_uuid", &ping_uuid).await?;
+
+    let sender = get_user_info("uuid").await.context("获取uuid失败")?;
+    loop {
+        //一分钟发送心跳
+        tokio::time::sleep(Duration::from_secs(60)).await;
+        info!("发送quic客户端心跳");
+        let ping_uuid = get_user_info("ping_uuid").await.context("获取ping实例id失败")?;
+        let ping_lost_count = get_user_info("ping_lost_count").await.unwrap_or("0".to_string());
+        let mut ping_lost_count = ping_lost_count.parse::<u64>().unwrap_or(0);
+        if ping_lost_count > 3 {
+            error!("ping_lost_count > 3, 停止维持心跳");
+            // 清理连接资源
+            disconnect_quic().await?;
+            break;
         }
-    });
+
+        if ping_uuid != ping_uuid {
+            warn!("终止发送心跳，心跳实例id不一致，前: {}, 后: {}", ping_uuid, ping_uuid);
+            break;
+        }
+        ping_lost_count += 1;
+        insert_user_info("ping_lost_count", &ping_lost_count.to_string()).await?;
+        let ping_msg =
+            generate_text_msg(MSG_TYPE_PING, PING.as_bytes().to_vec(), SYSTEM.to_string(), sender.clone())
+                .expect("");
+        match send_stream_ping.write().await.write_all(&ping_msg).await {
+            Ok(_) => {
+                info!("发送成功");
+            }
+            Err(e) => {
+                error!("发送心跳失败 {}", e);
+            }
+        };
+    }
+    Ok(())
 }
 
 async fn process_rec_msg(

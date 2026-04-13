@@ -14,7 +14,9 @@ use tokio::time::timeout;
 use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
 };
-use crate::dao::chat_record_db::{query_chat_record_from_db, query_chat_record_by_type_from_db, query_last_chat_record};
+use crate::dao::chat_record_db::{
+    query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
+};
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
@@ -25,7 +27,9 @@ use crate::dao::session_db::{
 };
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::entity::chat_record_raw::{ChatRecordRaw, ImageRecord, TextRecord, WebRTCSignalRecord, FileRecord};
+use crate::entity::chat_record_raw::{
+    ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
+};
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
@@ -597,17 +601,10 @@ pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), a
     let path = Path::new(&file_path);
 
     // 1、获取文件名和文件扩展名
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("unknown")
-        .to_string();
-    
-    let file_type = path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("")
-        .to_string();
+    let file_name =
+        path.file_name().and_then(|name| name.to_str()).unwrap_or("unknown").to_string();
+
+    let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
 
     // 2、获取文件大小
     let metadata = std::fs::metadata(&file_path)?;

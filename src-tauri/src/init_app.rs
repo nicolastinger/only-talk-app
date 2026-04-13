@@ -13,7 +13,8 @@ use crate::config::set_config;
 use crate::dao::init_common_db::init_common_sqlite;
 use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
 use crate::utils::global_static_str::{
-    APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH, RESOURCE_PATH, SQLITE_PATH, UDP_SOCKET_V6
+    APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH, RESOURCE_PATH,
+    SQLITE_PATH, UDP_SOCKET_V6,
 };
 
 pub async fn init_app(

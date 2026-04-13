@@ -5,7 +5,7 @@ use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::time::timeout;
-
+use uuid::Uuid;
 use crate::dao::chat_record_ack::update_chat_record_ack;
 use crate::dao::chat_record_db::insert_chat_record;
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
@@ -18,7 +18,7 @@ use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{clear_chat_session, process_no_send_success_msg};
 use crate::service::friend_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
-use crate::service::user_service::get_user_info;
+use crate::service::user_service::{get_user_info, insert_user_info};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P,
@@ -27,7 +27,7 @@ use crate::utils::message_types::{
 };
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
+use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WebRTCSignalMessage {
@@ -78,7 +78,8 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 }
             }
             MSG_TYPE_PING => {
-                info!("接收到服务器发送的ping");
+                // 处理ping消息
+                process_ping_msg(msg).await?;
             }
             MSG_TYPE_WEBRTC_SIGNAL => {
                 info!("接收到 WebRTC 信令消息 {:?}", msg);
@@ -212,13 +213,13 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         return Ok(());
     }
     let ack_record = ack_record?;
-    
+
     // 检查是否已经处理过该ACK（防止重复处理）
     if ack_record.send_status == 3 {
         info!("消息已经确认过，跳过重复处理: send_id={}", msg.raw);
         return Ok(());
     }
-    
+
     let text_quic_msg_vo = TextQuicMsgVo {
         nano_id: msg.nano_id,
         text_type: ack_record.text_type,
@@ -227,15 +228,15 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         send_user: ack_record.send_user,
         timestamp: msg.timestamp,
     };
-    
+
     // 2.聊天插入数据库（使用INSERT OR IGNORE避免重复插入）
     insert_chat_record(&text_quic_msg_vo).await?;
-    
+
     // 3. 标记ack表中该条消息为已确认
     update_chat_record_ack(&ack_record.send_id, 1, &text_quic_msg_vo.nano_id).await?;
     // 4. 标记发送列表中某条消息为已确认
     update_chat_record_send_success(&ack_record.send_id, &text_quic_msg_vo.nano_id).await?;
-    
+
     tokio::spawn(async move {
         // 处理未发送的消息，ack返回
         timeout(Duration::from_secs(10), async {
@@ -245,12 +246,12 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         .await
         .expect("ack返回，处理未发送消息超时");
     });
-    
+
     // 发送消息给前端
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
     }
-    
+
     // 清除未读计数
     let chat_session = ChatSession {
         id: 0,
@@ -329,69 +330,68 @@ async fn process_local_notify_message(
 async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let signal: WebRTCSignalMessage = serde_json::from_str(&msg.raw)?;
-    
+
     info!(
         "收到 WebRTC 信令消息 - type: {}, sender: {}, receiver: {}",
         signal.msg_type, signal.sender, signal.receiver
     );
-    
+
     if signal.msg_type == "candidate" {
         info!("开始解析 ICE candidate, data: {:?}", signal.data);
-        
+
         match serde_json::from_value::<IceCandidateData>(signal.data.clone()) {
-            Ok(candidate_data) => {
-                match &candidate_data.candidate {
-                    Some(candidate_str) => {
-                        info!("ICE candidate 数据解析成功, candidate 字符串: {}", candidate_str);
-                        
-                        if let Some(parsed) = parse_ice_candidate(candidate_str) {
-                            info!(
-                                "解析 ICE candidate - type: {}, ip: {}, port: {}",
-                                parsed.candidate_type, parsed.ip, parsed.port
-                            );
-                            
-                        } else {
-                            warn!("parse_ice_candidate 返回 None, 无法解析 candidate 字符串: {}", candidate_str);
-                        }
-                    }
-                    None => {
-                        warn!("ICE candidate 字段为空，可能是候选收集完成信号");
+            Ok(candidate_data) => match &candidate_data.candidate {
+                Some(candidate_str) => {
+                    info!("ICE candidate 数据解析成功, candidate 字符串: {}", candidate_str);
+
+                    if let Some(parsed) = parse_ice_candidate(candidate_str) {
+                        info!(
+                            "解析 ICE candidate - type: {}, ip: {}, port: {}",
+                            parsed.candidate_type, parsed.ip, parsed.port
+                        );
+                    } else {
+                        warn!(
+                            "parse_ice_candidate 返回 None, 无法解析 candidate 字符串: {}",
+                            candidate_str
+                        );
                     }
                 }
-            }
+                None => {
+                    warn!("ICE candidate 字段为空，可能是候选收集完成信号");
+                }
+            },
             Err(e) => {
                 warn!("解析 IceCandidateData 失败: {}", e);
             }
         }
     }
-    
+
     let payload = serde_json::to_string(&msg)?;
-    APP_HANDLE
-        .get()
-        .ok_or(anyhow!("获取app失败"))?
-        .emit("webrtc_signal", payload)?;
-    
+    APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("webrtc_signal", payload)?;
+
     Ok(())
 }
 
 fn parse_ice_candidate(candidate_str: &str) -> Option<ParsedCandidate> {
     let parts: Vec<&str> = candidate_str.split_whitespace().collect();
-    
+
     if parts.is_empty() || !parts[0].starts_with("candidate:") {
         return None;
     }
-    
+
     if parts.len() < 8 {
         return None;
     }
-    
+
     let ip = parts[4].to_string();
     let port: u16 = parts[5].parse().ok()?;
     let candidate_type = parts[7].to_string();
-    
-    Some(ParsedCandidate {
-        ip,
-        port,
-        candidate_type,
-    })
+
+    Some(ParsedCandidate { ip, port, candidate_type })
+}
+
+async fn process_ping_msg(msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    info!("{:?} 收到quic服务器的ping消息", msg.recv_user);
+    insert_user_info("ping_lost_count", "0").await?;
+    Ok(())
 }

@@ -62,12 +62,10 @@ impl SqliteStore for FileRecord {
     async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
         info!("更新文件记录表...");
         // 迁移：为已有表添加 download_retry_count 列
-        sqlx::query(
-            r#"ALTER TABLE file_record ADD COLUMN download_retry_count INTEGER DEFAULT 0"#,
-        )
-        .execute(pool_sqlite)
-        .await
-        .ok(); // 忽略列已存在的错误
+        sqlx::query(r#"ALTER TABLE file_record ADD COLUMN download_retry_count INTEGER DEFAULT 0"#)
+            .execute(pool_sqlite)
+            .await
+            .ok(); // 忽略列已存在的错误
         Ok(())
     }
 

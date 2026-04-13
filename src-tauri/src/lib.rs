@@ -30,8 +30,8 @@ use crate::cmd::api_controller::{
 };
 use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
 use crate::cmd::chat_record_controller::{
-    get_chat_record_by_type, get_chat_record_from_store, mark_read, send_image_msg, send_text_msg,
-    send_file_msg,
+    get_chat_record_by_type, get_chat_record_from_store, mark_read, send_file_msg, send_image_msg,
+    send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
     create_chat_session, get_chat_session_from_store, mark_read_chat_session,
@@ -39,18 +39,22 @@ use crate::cmd::chat_session_controller::{
 use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
 };
-use crate::cmd::friend_controller::{delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list};
+use crate::cmd::friend_controller::{
+    delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list,
+};
 use crate::cmd::notification_controller::{
     batch_read_system_notification, get_system_notification,
 };
 use crate::cmd::p2p_controller::{
     close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
+    send_p2p_file_data, send_p2p_file_transfer_request, send_p2p_file_transfer_response,
     send_p2p_init_msg, send_p2p_media_config, send_p2p_media_control, send_p2p_media_info,
     send_p2p_media_ready, send_p2p_text_msg, send_p2p_video_call_end, send_p2p_video_call_invite,
     send_p2p_video_call_response, send_p2p_video_config, send_p2p_video_frame, send_video_frame,
-    send_p2p_file_data, send_p2p_file_transfer_request, send_p2p_file_transfer_response,
 };
-use crate::cmd::user_controller::{add_user_map, get_user_map, disconnect_quic_command, reconnect_quic_command};
+use crate::cmd::user_controller::{
+    add_user_map, disconnect_quic_command, get_user_map, reconnect_quic_command,
+};
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
 use crate::tray::setup_tray;
@@ -106,11 +110,11 @@ pub fn run() {
                 .unwrap_or_else(|_| {
                     std::env::current_dir().expect("无法获取当前目录").join(APP_NAME)
                 });
-            
+
             if let Err(e) = setup_tray(app.handle()) {
                 eprintln!("初始化托盘失败: {}", e);
             }
-            
+
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = init_app(root_path, Some(handle)).await {
                     eprintln!("初始化失败: {}", e);

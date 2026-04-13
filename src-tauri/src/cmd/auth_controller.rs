@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 
 use log::info;
-use reqwest::header::HeaderMap;
-use reqwest::{Client, Response, Url};
-use serde::{Deserialize, Serialize};
+use reqwest::{Client, Url};
 use serde_json::Value;
 use tauri::command;
 
 use crate::cmd::api_controller::{post_request, ApiResponse};
-use crate::entity::user::SignInResult;
-use crate::service::user_service::{add_user_map, user_login};
+use crate::dto::http_result::HttpResult;
+use crate::service::user_service::{add_user_map, get_user_info, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
 
@@ -24,7 +22,7 @@ pub async fn sign_in(
     let status = response.status().as_u16();
     let response_body = response.text().await.map_err(|e| e.to_string())?;
 
-    let sign_in_result: serde_json::Result<SignInResult> = serde_json::from_str(&response_body);
+    let sign_in_result: serde_json::Result<HttpResult> = serde_json::from_str(&response_body);
     let sign_in_result = match sign_in_result {
         Ok(t) => t,
         Err(_) => {
@@ -41,8 +39,13 @@ pub async fn sign_in(
     let port = parsed.port_or_known_default().unwrap_or(8443);
     let me_url = format!("https://{}:{}/user/me", &domain, &port);
 
+    let token = sign_in_result.data.as_str().ok_or("token is not a string")?;
+
     {
-        GLOBAL_QUIC_USER_INFO.write().await.insert("token".to_string(), sign_in_result.data);
+        GLOBAL_QUIC_USER_INFO
+            .write()
+            .await
+            .insert("token".to_string(), token.to_string());
         GLOBAL_QUIC_USER_INFO
             .write()
             .await
