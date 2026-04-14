@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import {
   add_friend,
+  cache_user_info,
   getFiles,
   search_user_by_account,
 } from '@workspace/services';
@@ -33,6 +34,9 @@ const SearchFriend = () => {
         const data = JSON.parse(result.res.body);
         const users: UserInfo = data.data;
         setResults([users]);
+        cache_user_info(users).catch((err) => {
+          console.error('缓存用户信息失败:', err);
+        });
       }
     } catch (error) {
       message.error('搜索用户时出现错误');

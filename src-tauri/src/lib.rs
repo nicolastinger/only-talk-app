@@ -53,7 +53,8 @@ use crate::cmd::p2p_controller::{
     send_p2p_video_call_response, send_p2p_video_config, send_p2p_video_frame, send_video_frame,
 };
 use crate::cmd::user_controller::{
-    add_user_map, disconnect_quic_command, get_user_map, reconnect_quic_command,
+    add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
+    get_cached_user_info_by_account, get_user_map, reconnect_quic_command,
 };
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
@@ -176,7 +177,10 @@ pub fn run() {
             send_image_msg,
             send_file_msg,
             disconnect_quic_command,
-            reconnect_quic_command
+            reconnect_quic_command,
+            cache_user_info,
+            get_cached_user_info,
+            get_cached_user_info_by_account
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

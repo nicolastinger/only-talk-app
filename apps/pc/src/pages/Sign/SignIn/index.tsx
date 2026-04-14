@@ -2,15 +2,16 @@ import LanguageSwitcher from '@/components/LanguageSwitch';
 import LocalImage from '@/components/LocalImage';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
-import { TALK_API } from '@/constants';
+import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { FormattedMessage } from '@@/exports';
 import { CloseOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
 import { history, useIntl } from '@umijs/max';
+import { get_cached_user_info_by_account, getFiles } from '@workspace/services';
 import { HttpResponse, ResponseData } from '@workspace/types';
-import { Button, Checkbox, message, Modal } from 'antd';
+import { Avatar, Button, Checkbox, message, Modal } from 'antd';
 import React, { useState } from 'react';
 import styles from './index.less';
 
@@ -24,6 +25,7 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [userCodeError, setUserCodeError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
   const intl = useIntl();
 
   const closeWindow = async () => {
@@ -86,6 +88,30 @@ const LoginPage: React.FC = () => {
     setUserCode(value);
     if (userCodeError) {
       validateUserCode(value);
+    }
+  };
+
+  const handleUserCodeBlur = async () => {
+    validateUserCode(userCode);
+    if (userCode && userCode.length >= 5) {
+      try {
+        const cachedUser = await get_cached_user_info_by_account(userCode);
+        if (cachedUser && cachedUser.icon) {
+          const fileVos = await getFiles(cachedUser.icon);
+          if (fileVos && fileVos.length > 0 && fileVos[0].tauri_file_path) {
+            setAvatarUrl(fileVos[0].tauri_file_path);
+          } else {
+            setAvatarUrl('');
+          }
+        } else {
+          setAvatarUrl('');
+        }
+      } catch (error) {
+        console.error('获取缓存用户信息失败:', error);
+        setAvatarUrl('');
+      }
+    } else {
+      setAvatarUrl('');
     }
   };
 
@@ -207,7 +233,6 @@ const LoginPage: React.FC = () => {
       {contextHolder}
       <div className={styles.titleBar}>
         <div className={styles.logo}>
-          <LocalImage width={20} height={20} />
           <span className={styles.appName}>Only Talk</span>
         </div>
         <div className={styles.windowControls}>
@@ -221,7 +246,11 @@ const LoginPage: React.FC = () => {
       <div className={styles.content} onKeyDown={handleKeyDown}>
         <div className={styles.avatarSection}>
           <div className={styles.avatarWrapper}>
-            <LocalImage width={80} height={80} />
+            {avatarUrl ? (
+              <Avatar src={avatarUrl} size={80} />
+            ) : (
+              <LocalImage width={80} height={80} />
+            )}
           </div>
           <div className={styles.welcomeText}>
             <FormattedMessage id="signIn.welcome" defaultMessage="欢迎登录" />
@@ -242,7 +271,7 @@ const LoginPage: React.FC = () => {
                 placeholder={intl.formatMessage({ id: 'signIn.username' })}
                 value={userCode}
                 onChange={handleUserCodeChange}
-                onBlur={() => validateUserCode(userCode)}
+                onBlur={handleUserCodeBlur}
               />
             </div>
             {userCodeError && (

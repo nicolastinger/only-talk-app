@@ -24,7 +24,6 @@ const SignUpPage: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.titleBar}>
         <div className={styles.logo}>
-          <LocalImage width={20} height={20} />
           <span className={styles.appName}>Only Talk</span>
         </div>
         <div className={styles.windowControls}>

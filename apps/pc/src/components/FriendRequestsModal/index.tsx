@@ -9,14 +9,21 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import {
   get_accept_friend_request_list,
+  get_cached_user_info,
   get_friend_request_list,
+  getFiles,
   process_friend_request,
   readContactsNotification,
 } from '@workspace/services';
-import { FriendRequestInfo, FriendRequestInfoDTO } from '@workspace/types';
+import { FriendRequestInfo, FriendRequestInfoDTO, UserInfo } from '@workspace/types';
 import { Avatar, Button, Modal, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
+
+interface RequestWithUserInfo extends FriendRequestInfo {
+  userInfo?: UserInfo | null;
+  avatarUrl?: string;
+}
 
 const FriendRequestsModal = ({
   visible,
@@ -25,8 +32,8 @@ const FriendRequestsModal = ({
   visible: boolean;
   onClose: () => void;
 }) => {
-  const [acceptRequests, setAcceptRequests] = useState<FriendRequestInfo[]>([]);
-  const [sentRequests, setSentRequests] = useState<FriendRequestInfo[]>([]);
+  const [acceptRequests, setAcceptRequests] = useState<RequestWithUserInfo[]>([]);
+  const [sentRequests, setSentRequests] = useState<RequestWithUserInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const setAddContacts = useBearStore((state) => state.setAddContacts);
 
@@ -45,13 +52,46 @@ const FriendRequestsModal = ({
     }
   };
 
+  const enrichRequestWithUserInfo = async (
+    request: FriendRequestInfo,
+    isReceived: boolean,
+  ): Promise<RequestWithUserInfo> => {
+    // 收到的请求显示请求人信息，发起的请求显示接收人信息
+    const userUuid = isReceived ? request.request_user : request.accept_user;
+    if (!userUuid) {
+      return { ...request };
+    }
+
+    try {
+      const cachedUserInfo = await get_cached_user_info(userUuid);
+      let avatarUrl = '';
+      
+      if (cachedUserInfo?.icon) {
+        const fileVos = await getFiles(cachedUserInfo.icon);
+        avatarUrl = fileVos?.[0]?.tauri_file_path || '';
+      }
+
+      return {
+        ...request,
+        userInfo: cachedUserInfo,
+        avatarUrl,
+      };
+    } catch (error) {
+      console.log('获取用户缓存信息失败', error);
+      return { ...request };
+    }
+  };
+
   const getFriendRequestList = async () => {
     let friendRequestInfoDTO: FriendRequestInfoDTO = {};
     try {
       const res = await get_friend_request_list(friendRequestInfoDTO);
       if (res.netSuccess && res.res.status === 200) {
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
-        setSentRequests(data);
+        const enrichedData = await Promise.all(
+          data.map((item) => enrichRequestWithUserInfo(item, false)),
+        );
+        setSentRequests(enrichedData);
         const ids = data
           .map((item) => item.uuid)
           .filter((item) => item !== undefined);
@@ -70,7 +110,10 @@ const FriendRequestsModal = ({
       const res = await get_accept_friend_request_list(friendRequestInfoDTO);
       if (res.netSuccess && res.res.status === 200) {
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
-        setAcceptRequests(data);
+        const enrichedData = await Promise.all(
+          data.map((item) => enrichRequestWithUserInfo(item, true)),
+        );
+        setAcceptRequests(enrichedData);
         const ids = data
           .map((item) => item.uuid)
           .filter((item) => item !== undefined);
@@ -170,17 +213,20 @@ const FriendRequestsModal = ({
   };
 
   const renderRequestItem = (
-    request: FriendRequestInfo,
+    request: RequestWithUserInfo,
     isReceived: boolean,
   ) => {
     const statusConfig = getStatusConfig(request.accept_status);
+    const displayName = request.userInfo?.username || request.request_user || '未知用户';
+    const displayAccount = request.userInfo?.account || '';
+    const displayInfo = request.userInfo?.info || '';
 
     return (
       <div className={styles.requestItem} key={request.uuid}>
         <div className={styles.avatarSection}>
           <Avatar
-            size={48}
-            src={DEFAULT_ICON}
+            size={52}
+            src={request.avatarUrl || DEFAULT_ICON}
             icon={<UserOutlined />}
             className={styles.avatar}
           />
@@ -188,14 +234,21 @@ const FriendRequestsModal = ({
 
         <div className={styles.contentSection}>
           <div className={styles.header}>
-            <span className={styles.username}>
-              {request.request_user || '未知用户'}
-            </span>
+            <div className={styles.userInfo}>
+              <span className={styles.username}>{displayName}</span>
+              {displayAccount && (
+                <span className={styles.account}>@{displayAccount}</span>
+              )}
+            </div>
             <span className={`${styles.status} ${statusConfig.className}`}>
               {statusConfig.icon}
               <span>{statusConfig.text}</span>
             </span>
           </div>
+
+          {displayInfo && (
+            <div className={styles.bio}>{displayInfo}</div>
+          )}
 
           <div className={styles.message}>
             {request.request_message || '请求添加你为好友'}
@@ -285,7 +338,7 @@ const FriendRequestsModal = ({
       open={visible}
       onCancel={onClose}
       footer={null}
-      width={480}
+      width={560}
       className={styles.friendRequestsModal}
       centered
     >

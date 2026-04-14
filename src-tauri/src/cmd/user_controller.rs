@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::entity::user_info::UserInfo;
 use crate::service::user_service::{disconnect_quic, reconnect_quic};
 use crate::GLOBAL_QUIC_USER_INFO;
 
@@ -30,4 +31,23 @@ pub async fn disconnect_quic_command() -> Result<String, String> {
 pub async fn reconnect_quic_command() -> Result<String, String> {
     reconnect_quic().await.map_err(|e| e.to_string())?;
     Ok("QUIC重连请求已发送".to_string())
+}
+
+/// 缓存用户信息到本地数据库
+#[tauri::command]
+pub async fn cache_user_info(user_info: UserInfo) -> Result<(), String> {
+    user_info.upsert().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// 根据UUID获取缓存的用户信息
+#[tauri::command]
+pub async fn get_cached_user_info(uuid: String) -> Result<Option<UserInfo>, String> {
+    UserInfo::query_by_uuid(&uuid).await.map_err(|e| e.to_string())
+}
+
+/// 根据账号获取缓存的用户信息
+#[tauri::command]
+pub async fn get_cached_user_info_by_account(account: String) -> Result<Option<UserInfo>, String> {
+    UserInfo::query_by_account(&account).await.map_err(|e| e.to_string())
 }

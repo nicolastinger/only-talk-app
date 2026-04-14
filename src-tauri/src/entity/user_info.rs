@@ -10,6 +10,7 @@ use crate::dao::store::SqliteStore;
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct UserInfo {
     /// 自增主键
+    #[serde(default)]
     pub id: i64,
     /// 用户唯一标识符 (UUID)
     pub uuid: String,
@@ -36,8 +37,10 @@ pub struct UserInfo {
     /// 用户状态 (0: 正常, 1: 禁用, 2: 注销等)
     pub status: Option<u8>,
     /// 创建时间 (Unix 时间戳，单位：秒)
+    #[serde(default)]
     pub created_at: i64,
     /// 更新时间 (Unix 时间戳，单位：秒)
+    #[serde(default)]
     pub updated_at: i64,
 }
 

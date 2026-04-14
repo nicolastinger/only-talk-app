@@ -66,8 +66,8 @@ interface UserInfo {
   age?: number;
   birthday?: number;
   info?: string;
-  create_at?: number;
-  update_at?: number;
+  created_at?: number;
+  updated_at?: number;
   last_login_at?: number;
   last_login_equipment?: string;
   last_login_ipv4?: string;

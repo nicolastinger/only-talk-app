@@ -3,6 +3,7 @@ import {
   TALK_API,
   FriendRequestInfoDTO,
   BasicUser,
+  UserInfo,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -53,6 +54,14 @@ export const search_user_by_account = async (account: string) => {
   );
 };
 
+export const get_user_info_by_uuid = async (uuid: string) => {
+  return await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/user/get_user_by_uuid/" + uuid,
+    ""
+  );
+};
+
 export const process_friend_request = async (
   friendRequestInfoDTO: FriendRequestInfoDTO
 ) => {
@@ -86,5 +95,23 @@ export const get_accept_friend_request_list = async (
 export const delete_friend = async (friendUuid: string) => {
   return await invoke("delete_friend_command", {
     friendUuid,
+  });
+};
+
+export const cache_user_info = async (userInfo: UserInfo) => {
+  return await invoke("cache_user_info", {
+    userInfo,
+  });
+};
+
+export const get_cached_user_info = async (uuid: string) => {
+  return await invoke<UserInfo | null>("get_cached_user_info", {
+    uuid,
+  });
+};
+
+export const get_cached_user_info_by_account = async (account: string) => {
+  return await invoke<UserInfo | null>("get_cached_user_info_by_account", {
+    account,
   });
 };
