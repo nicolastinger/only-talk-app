@@ -7,7 +7,7 @@ import {
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { history } from '@umijs/max';
+import { history, useIntl } from '@umijs/max';
 import { getFiles } from '@workspace/services';
 import { LayoutBtnProps } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
@@ -15,6 +15,7 @@ import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
 
 const LeftAside = () => {
+  const intl = useIntl();
   const [topBtnList, setTopBtnList] = React.useState<LayoutBtnProps[]>([]);
   const [bottomBtnList, setBottomBtnList] = React.useState<LayoutBtnProps[]>(
     [],
@@ -65,14 +66,14 @@ const LeftAside = () => {
   useEffect(() => {
     setTopBtnList([
       {
-        text: '会话列表',
+        text: intl.formatMessage({ id: 'leftAside.chatList' }),
         url: '/home/chats',
         active: true,
         icon: <MessageOutlined style={{ fontSize: '18px' }} />,
         unreadCount: totalUnreadCount,
       },
       {
-        text: '朋友列表',
+        text: intl.formatMessage({ id: 'leftAside.friendList' }),
         url: '/home/contacts',
         active: false,
         icon: <UserOutlined style={{ fontSize: '18px' }} />,
@@ -82,14 +83,14 @@ const LeftAside = () => {
 
     setBottomBtnList([
       {
-        text: '设置',
+        text: intl.formatMessage({ id: 'leftAside.settings' }),
         url: '/home/settings',
         active: false,
         icon: <SettingOutlined style={{ fontSize: '18px' }} />,
         unreadCount: menuUnread.settings,
       },
     ]);
-  }, [menuUnread, totalUnreadCount]);
+  }, [menuUnread, totalUnreadCount, intl]);
 
   // 监听路由变化，更新按钮激活状态
   useEffect(() => {

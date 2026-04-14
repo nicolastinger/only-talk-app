@@ -1,6 +1,6 @@
 import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
-import { history } from '@umijs/max';
+import { history, useIntl } from '@umijs/max';
 import {
   cache_user_info,
   get_cached_user_info,
@@ -13,20 +13,21 @@ import { useEffect, useState } from 'react';
 import styles from './styles/FriendInfo.less';
 import { invoke_rust } from '@workspace/services';
 
-const genderMap: { [key: number]: string } = {
-  0: '未知',
-  1: '保密',
-  2: '男',
-  3: '女',
-  4: '机器人',
-  5: '其他',
-};
-
 const FriendInfo = (props: { uuid: string }) => {
   const { uuid } = props;
+  const intl = useIntl();
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [friendIcon, setFriendIcon] = useState<string>('');
+
+  const genderMap: { [key: number]: string } = {
+    0: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }),
+    1: intl.formatMessage({ id: 'userInfo.genderTypes.secret' }),
+    2: intl.formatMessage({ id: 'userInfo.genderTypes.male' }),
+    3: intl.formatMessage({ id: 'userInfo.genderTypes.female' }),
+    4: intl.formatMessage({ id: 'userInfo.genderTypes.robot' }),
+    5: intl.formatMessage({ id: 'userInfo.genderTypes.other' }),
+  };
 
   useEffect(() => {
     console.log('uuid', uuid);
@@ -34,7 +35,6 @@ const FriendInfo = (props: { uuid: string }) => {
   }, [uuid]);
 
   const initUserData = async (uuid: string) => {
-    // 先从 common_db 缓存获取用户信息
     try {
       const cachedUserInfo = await get_cached_user_info(uuid);
       if (cachedUserInfo) {
@@ -60,7 +60,6 @@ const FriendInfo = (props: { uuid: string }) => {
       console.log('从缓存获取用户信息失败', err);
     }
 
-    // 从本地好友数据库获取好友信息
     try {
       const res = (await get_friend_info(uuid)) as FriendVo;
       console.log('res', res);
@@ -71,7 +70,6 @@ const FriendInfo = (props: { uuid: string }) => {
       console.log('从本地好友数据库获取失败', err);
     }
 
-    // 从远程 API 获取用户信息并更新缓存（参考搜索好友组件）
     try {
       const result = await invoke_rust(
         'post_request',
@@ -84,7 +82,6 @@ const FriendInfo = (props: { uuid: string }) => {
         
         setUserInfo(remoteUserInfo);
         
-        // 从缓存获取对比
         const cachedUserInfo = await get_cached_user_info(uuid);
         const isDifferent = !cachedUserInfo || 
           JSON.stringify(cachedUserInfo) !== JSON.stringify(remoteUserInfo);
@@ -93,7 +90,6 @@ const FriendInfo = (props: { uuid: string }) => {
           await cache_user_info(remoteUserInfo);
         }
         
-        // 更新界面显示
         const friendVo: FriendVo = {
           timestamp: 0,
           friend_id: remoteUserInfo.uuid,
@@ -121,7 +117,7 @@ const FriendInfo = (props: { uuid: string }) => {
       const FileVos = await getFiles(icon);
       return FileVos?.[0]?.tauri_file_path || '';
     } catch (error) {
-      message.error('获取用户头像时出现错误');
+      message.error(intl.formatMessage({ id: 'friendInfo.avatarError' }));
       console.log(error);
       return '';
     }
@@ -146,7 +142,7 @@ const FriendInfo = (props: { uuid: string }) => {
   const renderBtn = () => {
     return (
       <Button color="default" variant="solid" onClick={routeToChat}>
-        发送消息
+        {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
       </Button>
     );
   };
@@ -169,17 +165,17 @@ const FriendInfo = (props: { uuid: string }) => {
         
         <div className={styles.infoSection}>
           <div className={styles.infoItem}>
-            <span className={styles.label}>账号</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.account' })}</span>
             <span className={styles.value}>{userInfo?.account || currentFriend?.friend_account || '-'}</span>
           </div>
           
           <div className={styles.infoItem}>
-            <span className={styles.label}>性别</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.gender' })}</span>
             <span className={styles.value}>{userInfo?.gender !== undefined ? genderMap[userInfo.gender] : '-'}</span>
           </div>
           
           <div className={styles.infoItem}>
-            <span className={styles.label}>年龄</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.age' })}</span>
             <span className={styles.value}>{userInfo?.age || '-'}</span>
           </div>
           
@@ -189,26 +185,26 @@ const FriendInfo = (props: { uuid: string }) => {
             items={[
               {
                 key: '1',
-                label: '更多信息',
+                label: intl.formatMessage({ id: 'friendInfo.moreInfo' }),
                 children: (
                   <>
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>生日</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.birthday' })}</span>
                       <span className={styles.value}>{formatBirthday(userInfo?.birthday)}</span>
                     </div>
                     
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>手机</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.phone' })}</span>
                       <span className={styles.value}>{userInfo?.phone || '-'}</span>
                     </div>
                     
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>邮箱</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.email' })}</span>
                       <span className={styles.value}>{userInfo?.email || '-'}</span>
                     </div>
                     
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>地址</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.address' })}</span>
                       <span className={styles.value}>{userInfo?.address || '-'}</span>
                     </div>
                   </>

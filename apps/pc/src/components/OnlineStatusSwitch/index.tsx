@@ -5,6 +5,7 @@ import {
   MinusCircleOutlined,
 } from '@ant-design/icons';
 import { Dropdown, Tooltip } from 'antd';
+import { useIntl } from '@umijs/max';
 import { useState } from 'react';
 import styles from './index.less';
 
@@ -15,43 +16,45 @@ interface OnlineStatus {
   color: string;
 }
 
-const ONLINE_STATUSES: OnlineStatus[] = [
-  {
-    key: 'online',
-    label: '在线',
-    icon: <CheckCircleOutlined />,
-    color: '#52c41a',
-  },
-  {
-    key: 'busy',
-    label: '忙碌',
-    icon: <MinusCircleOutlined />,
-    color: '#ff4d4f',
-  },
-  {
-    key: 'away',
-    label: '离开',
-    icon: <ClockCircleOutlined />,
-    color: '#faad14',
-  },
-  {
-    key: 'invisible',
-    label: '隐身',
-    icon: <EyeInvisibleOutlined />,
-    color: '#8c8c8c',
-  },
-];
-
 const OnlineStatusSwitch = () => {
+  const intl = useIntl();
+
+  const getOnlineStatuses = (): OnlineStatus[] => [
+    {
+      key: 'online',
+      label: intl.formatMessage({ id: 'onlineStatus.online' }),
+      icon: <CheckCircleOutlined />,
+      color: '#52c41a',
+    },
+    {
+      key: 'busy',
+      label: intl.formatMessage({ id: 'onlineStatus.busy' }),
+      icon: <MinusCircleOutlined />,
+      color: '#ff4d4f',
+    },
+    {
+      key: 'away',
+      label: intl.formatMessage({ id: 'onlineStatus.away' }),
+      icon: <ClockCircleOutlined />,
+      color: '#faad14',
+    },
+    {
+      key: 'invisible',
+      label: intl.formatMessage({ id: 'onlineStatus.invisible' }),
+      icon: <EyeInvisibleOutlined />,
+      color: '#8c8c8c',
+    },
+  ];
+
   const [currentStatus, setCurrentStatus] = useState<OnlineStatus>(
-    ONLINE_STATUSES[0],
+    getOnlineStatuses()[0],
   );
 
   const handleStatusChange = (status: OnlineStatus) => {
     setCurrentStatus(status);
   };
 
-  const items = ONLINE_STATUSES.map((status) => ({
+  const items = getOnlineStatuses().map((status) => ({
     key: status.key,
     label: (
       <div
@@ -68,7 +71,7 @@ const OnlineStatusSwitch = () => {
 
   return (
     <Dropdown menu={{ items }} placement="bottomLeft" trigger={['click']}>
-      <Tooltip title="在线状态" placement="bottom">
+      <Tooltip title={intl.formatMessage({ id: 'onlineStatus.title' })} placement="bottom">
         <div className={styles.statusSwitch}>
           <span
             className={styles.statusIcon}

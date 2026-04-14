@@ -39,21 +39,11 @@ const LoginPage: React.FC = () => {
 
   const validateUserCode = (value: string): boolean => {
     if (!value) {
-      setUserCodeError(
-        intl.formatMessage({
-          id: 'signIn.errors.usernameRequired',
-          defaultMessage: '请输入用户名',
-        }),
-      );
+      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameRequired' }));
       return false;
     }
     if (value.length < 5) {
-      setUserCodeError(
-        intl.formatMessage({
-          id: 'signIn.errors.usernameTooShort',
-          defaultMessage: '用户名至少需要5个字符',
-        }),
-      );
+      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameTooShort' }));
       return false;
     }
     setUserCodeError('');
@@ -62,21 +52,11 @@ const LoginPage: React.FC = () => {
 
   const validatePassword = (value: string): boolean => {
     if (!value) {
-      setPasswordError(
-        intl.formatMessage({
-          id: 'signIn.errors.passwordRequired',
-          defaultMessage: '请输入密码',
-        }),
-      );
+      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordRequired' }));
       return false;
     }
     if (value.length < 8) {
-      setPasswordError(
-        intl.formatMessage({
-          id: 'signIn.errors.passwordTooShort',
-          defaultMessage: '密码至少需要8个字符',
-        }),
-      );
+      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordTooShort' }));
       return false;
     }
     setPasswordError('');
@@ -153,26 +133,20 @@ const LoginPage: React.FC = () => {
           'home',
           webviewOptions,
           Window.getCurrent(),
-          '恭喜发财',
+          'Only Talk',
         );
       } else {
-        messageApi.error(
-          <FormattedMessage id="signIn.errors.invalidCredentials" />,
-        );
+        messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
       }
     } catch (error: unknown) {
       if (error != null && typeof error === 'string') {
         try {
           const result = JSON.parse(error);
           if (result.code === 500) {
-            messageApi.error(
-              <FormattedMessage id="signIn.errors.invalidCredentials" />,
-            );
+            messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
           }
         } catch (e) {
-          messageApi.error(
-            <FormattedMessage id="signIn.errors.networkError" />,
-          );
+          messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
         }
       } else {
         messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
@@ -193,12 +167,7 @@ const LoginPage: React.FC = () => {
     }
 
     if (!agreed) {
-      messageApi.warning(
-        intl.formatMessage({
-          id: 'signIn.errors.pleaseAgree',
-          defaultMessage: '请阅读并同意隐私政策',
-        }),
-      );
+      messageApi.warning(intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }));
       return;
     }
 
@@ -253,7 +222,7 @@ const LoginPage: React.FC = () => {
             )}
           </div>
           <div className={styles.welcomeText}>
-            <FormattedMessage id="signIn.welcome" defaultMessage="欢迎登录" />
+            <FormattedMessage id="signIn.welcome" />
           </div>
         </div>
 

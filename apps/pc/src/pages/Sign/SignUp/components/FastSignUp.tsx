@@ -25,30 +25,15 @@ const FastSignUp: React.FC = () => {
 
   const validateAccount = (value: string): boolean => {
     if (!value) {
-      setAccountError(
-        intl.formatMessage({
-          id: 'signUp.accountRequired',
-          defaultMessage: '请输入账号',
-        }),
-      );
+      setAccountError(intl.formatMessage({ id: 'signUp.accountRequired' }));
       return false;
     }
     if (!/^[a-zA-Z0-9]+$/.test(value)) {
-      setAccountError(
-        intl.formatMessage({
-          id: 'signUp.accountPattern',
-          defaultMessage: '账号只能包含字母和数字',
-        }),
-      );
+      setAccountError(intl.formatMessage({ id: 'signUp.accountPattern' }));
       return false;
     }
     if (value.length < 8) {
-      setAccountError(
-        intl.formatMessage({
-          id: 'signUp.accountMinLength',
-          defaultMessage: '账号至少需要8个字符',
-        }),
-      );
+      setAccountError(intl.formatMessage({ id: 'signUp.accountMinLength' }));
       return false;
     }
     setAccountError('');
@@ -57,30 +42,15 @@ const FastSignUp: React.FC = () => {
 
   const validateNickname = (value: string): boolean => {
     if (!value) {
-      setNicknameError(
-        intl.formatMessage({
-          id: 'signUp.nicknameRequired',
-          defaultMessage: '请输入昵称',
-        }),
-      );
+      setNicknameError(intl.formatMessage({ id: 'signUp.nicknameRequired' }));
       return false;
     }
     if (value.length > 8) {
-      setNicknameError(
-        intl.formatMessage({
-          id: 'signUp.nicknameMaxLength',
-          defaultMessage: '昵称最多8个字符',
-        }),
-      );
+      setNicknameError(intl.formatMessage({ id: 'signUp.nicknameMaxLength' }));
       return false;
     }
     if (!/^[a-zA-Z0-9\u4e00-\u9fa5#_@!]*$/.test(value)) {
-      setNicknameError(
-        intl.formatMessage({
-          id: 'signUp.nicknamePattern',
-          defaultMessage: '昵称包含非法字符',
-        }),
-      );
+      setNicknameError(intl.formatMessage({ id: 'signUp.nicknamePattern' }));
       return false;
     }
     setNicknameError('');
@@ -89,30 +59,15 @@ const FastSignUp: React.FC = () => {
 
   const validatePassword = (value: string): boolean => {
     if (!value) {
-      setPasswordError(
-        intl.formatMessage({
-          id: 'signUp.passwordRequired',
-          defaultMessage: '请输入密码',
-        }),
-      );
+      setPasswordError(intl.formatMessage({ id: 'signUp.passwordRequired' }));
       return false;
     }
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]+$/.test(value)) {
-      setPasswordError(
-        intl.formatMessage({
-          id: 'signUp.passwordPattern',
-          defaultMessage: '密码必须包含大小写字母和数字',
-        }),
-      );
+      setPasswordError(intl.formatMessage({ id: 'signUp.passwordPattern' }));
       return false;
     }
     if (value.length < 13) {
-      setPasswordError(
-        intl.formatMessage({
-          id: 'signUp.passwordMinLength',
-          defaultMessage: '密码至少需要13个字符',
-        }),
-      );
+      setPasswordError(intl.formatMessage({ id: 'signUp.passwordMinLength' }));
       return false;
     }
     setPasswordError('');
@@ -162,24 +117,12 @@ const FastSignUp: React.FC = () => {
       };
       const res = await sign_up(userInfo);
       if (res.netSuccess && res.res.status === 200) {
-        message.success(
-          intl.formatMessage({
-            id: 'signUp.success',
-            defaultMessage: '注册成功',
-          }),
-        );
+        message.success(intl.formatMessage({ id: 'signUp.success' }, { username: nickname }));
       } else {
-        message.error(
-          intl.formatMessage({
-            id: 'signUp.failed',
-            defaultMessage: '注册失败',
-          }),
-        );
+        message.error(intl.formatMessage({ id: 'signUp.failed' }));
       }
     } catch (error) {
-      message.error(
-        intl.formatMessage({ id: 'signUp.failed', defaultMessage: '注册失败' }),
-      );
+      message.error(intl.formatMessage({ id: 'signUp.failed' }));
     } finally {
       setLoading(false);
     }
@@ -203,10 +146,7 @@ const FastSignUp: React.FC = () => {
           <input
             type="text"
             className={styles.input}
-            placeholder={intl.formatMessage({
-              id: 'signUp.accountPlaceholder',
-              defaultMessage: '请输入账号',
-            })}
+            placeholder={intl.formatMessage({ id: 'signUp.accountPlaceholder' })}
             value={account}
             onChange={handleAccountChange}
             onBlur={() => validateAccount(account)}
@@ -227,10 +167,7 @@ const FastSignUp: React.FC = () => {
           <input
             type="text"
             className={styles.input}
-            placeholder={intl.formatMessage({
-              id: 'signUp.nicknamePlaceholder',
-              defaultMessage: '请输入昵称',
-            })}
+            placeholder={intl.formatMessage({ id: 'signUp.nicknamePlaceholder' })}
             value={nickname}
             onChange={handleNicknameChange}
             onBlur={() => validateNickname(nickname)}
@@ -251,10 +188,7 @@ const FastSignUp: React.FC = () => {
           <input
             type={showPassword ? 'text' : 'password'}
             className={styles.input}
-            placeholder={intl.formatMessage({
-              id: 'signUp.passwordPlaceholder',
-              defaultMessage: '请输入密码',
-            })}
+            placeholder={intl.formatMessage({ id: 'signUp.passwordPlaceholder' })}
             value={password}
             onChange={handlePasswordChange}
             onBlur={() => validatePassword(password)}
@@ -279,7 +213,7 @@ const FastSignUp: React.FC = () => {
         {loading ? (
           <span className={styles.loadingDot}>...</span>
         ) : (
-          intl.formatMessage({ id: 'signUp.submit', defaultMessage: '注册' })
+          intl.formatMessage({ id: 'signUp.submit' })
         )}
       </button>
     </div>

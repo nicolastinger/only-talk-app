@@ -17,6 +17,7 @@ import {
 } from '@workspace/services';
 import { FriendRequestInfo, FriendRequestInfoDTO, UserInfo } from '@workspace/types';
 import { Avatar, Button, Modal, Tabs } from 'antd';
+import { useIntl } from '@umijs/max';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 
@@ -32,6 +33,7 @@ const FriendRequestsModal = ({
   visible: boolean;
   onClose: () => void;
 }) => {
+  const intl = useIntl();
   const [acceptRequests, setAcceptRequests] = useState<RequestWithUserInfo[]>([]);
   const [sentRequests, setSentRequests] = useState<RequestWithUserInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,6 @@ const FriendRequestsModal = ({
     request: FriendRequestInfo,
     isReceived: boolean,
   ): Promise<RequestWithUserInfo> => {
-    // 收到的请求显示请求人信息，发起的请求显示接收人信息
     const userUuid = isReceived ? request.request_user : request.accept_user;
     if (!userUuid) {
       return { ...request };
@@ -130,31 +131,31 @@ const FriendRequestsModal = ({
     switch (status) {
       case 0:
         return {
-          text: '等待验证',
+          text: intl.formatMessage({ id: 'friendRequest.waiting' }),
           className: styles.pendingStatus,
           icon: <ClockCircleOutlined />,
         };
       case 1:
         return {
-          text: '已接受',
+          text: intl.formatMessage({ id: 'friendRequest.accepted' }),
           className: styles.acceptedStatus,
           icon: <CheckOutlined />,
         };
       case 2:
         return {
-          text: '已拒绝',
+          text: intl.formatMessage({ id: 'friendRequest.rejected' }),
           className: styles.rejectedStatus,
           icon: <CloseOutlined />,
         };
       default:
-        return { text: '未知', className: styles.unknownStatus, icon: null };
+        return { text: intl.formatMessage({ id: 'friendRequest.unknown' }), className: styles.unknownStatus, icon: null };
     }
   };
 
   const handleAccept = async (uuid: string | undefined) => {
     if (!uuid) return;
     let friendRequestInfoDTO: FriendRequestInfoDTO = {
-      accept_message: '我同意',
+      accept_message: '',
       request_user: uuid,
       add_type: 'card',
       version: 0,
@@ -178,7 +179,7 @@ const FriendRequestsModal = ({
   const handleReject = async (uuid: string | undefined) => {
     if (!uuid) return;
     let friendRequestInfoDTO: FriendRequestInfoDTO = {
-      accept_message: '我拒绝',
+      accept_message: '',
       request_user: uuid,
       add_type: 'card',
       version: 0,
@@ -191,7 +192,7 @@ const FriendRequestsModal = ({
   };
 
   const formatTime = (timestamp?: number) => {
-    if (!timestamp) return '未知时间';
+    if (!timestamp) return intl.formatMessage({ id: 'friendRequest.unknownTime' });
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -201,13 +202,15 @@ const FriendRequestsModal = ({
       const hours = Math.floor(diff / (1000 * 60 * 60));
       if (hours === 0) {
         const minutes = Math.floor(diff / (1000 * 60));
-        return minutes <= 1 ? '刚刚' : `${minutes}分钟前`;
+        return minutes <= 1 
+          ? intl.formatMessage({ id: 'friendRequest.justNow' }) 
+          : intl.formatMessage({ id: 'friendRequest.minutesAgo' }, { minutes });
       }
-      return `${hours}小时前`;
+      return intl.formatMessage({ id: 'friendRequest.hoursAgo' }, { hours });
     } else if (days === 1) {
-      return '昨天';
+      return intl.formatMessage({ id: 'friendRequest.yesterday' });
     } else if (days < 7) {
-      return `${days}天前`;
+      return intl.formatMessage({ id: 'friendRequest.daysAgo' }, { days });
     }
     return date.toLocaleDateString();
   };
@@ -217,7 +220,7 @@ const FriendRequestsModal = ({
     isReceived: boolean,
   ) => {
     const statusConfig = getStatusConfig(request.accept_status);
-    const displayName = request.userInfo?.username || request.request_user || '未知用户';
+    const displayName = request.userInfo?.username || request.request_user || intl.formatMessage({ id: 'userInfo.unknown' });
     const displayAccount = request.userInfo?.account || '';
     const displayInfo = request.userInfo?.info || '';
 
@@ -251,7 +254,7 @@ const FriendRequestsModal = ({
           )}
 
           <div className={styles.message}>
-            {request.request_message || '请求添加你为好友'}
+            {request.request_message || intl.formatMessage({ id: 'friendRequest.defaultRequestMessage' })}
           </div>
 
           <div className={styles.time}>{formatTime(request.created_at)}</div>
@@ -266,14 +269,14 @@ const FriendRequestsModal = ({
                 onClick={() => handleAccept(request.request_user)}
                 className={styles.acceptBtn}
               >
-                接受
+                {intl.formatMessage({ id: 'friendRequest.accept' })}
               </Button>
               <Button
                 icon={<CloseOutlined />}
                 onClick={() => handleReject(request.request_user)}
                 className={styles.rejectBtn}
               >
-                拒绝
+                {intl.formatMessage({ id: 'friendRequest.reject' })}
               </Button>
             </div>
           ) : null}
@@ -286,7 +289,9 @@ const FriendRequestsModal = ({
     <div className={styles.emptyState}>
       <div className={styles.emptyIcon}>{type === 'sent' ? '📤' : '📥'}</div>
       <div className={styles.emptyText}>
-        {type === 'sent' ? '暂无发起的好友请求' : '暂无收到的好友请求'}
+        {type === 'sent' 
+          ? intl.formatMessage({ id: 'friendRequest.noSentRequests' }) 
+          : intl.formatMessage({ id: 'friendRequest.noReceivedRequests' })}
       </div>
     </div>
   );
@@ -296,7 +301,7 @@ const FriendRequestsModal = ({
       key: '1',
       label: (
         <span className={styles.tabLabel}>
-          <span>我发起的</span>
+          <span>{intl.formatMessage({ id: 'friendRequest.sent' })}</span>
           {sentRequests.length > 0 && (
             <span className={styles.badge}>{sentRequests.length}</span>
           )}
@@ -314,7 +319,7 @@ const FriendRequestsModal = ({
       key: '2',
       label: (
         <span className={styles.tabLabel}>
-          <span>收到的</span>
+          <span>{intl.formatMessage({ id: 'friendRequest.received' })}</span>
           {acceptRequests.filter((r) => r.accept_status === 0).length > 0 && (
             <span className={styles.badge}>
               {acceptRequests.filter((r) => r.accept_status === 0).length}
@@ -334,7 +339,7 @@ const FriendRequestsModal = ({
 
   return (
     <Modal
-      title={<span className={styles.modalTitle}>好友请求</span>}
+      title={<span className={styles.modalTitle}>{intl.formatMessage({ id: 'friendRequest.title' })}</span>}
       open={visible}
       onCancel={onClose}
       footer={null}

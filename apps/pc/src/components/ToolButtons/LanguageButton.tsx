@@ -1,32 +1,54 @@
-import { setLocale } from '@umijs/max';
-import { Tooltip } from 'antd';
-import { useState } from 'react';
+import { setLocale, getLocale, useIntl } from '@umijs/max';
+import { Tooltip, Dropdown } from 'antd';
+import React from 'react';
 import styles from './LanguageButton.less';
 
 const LanguageButton = () => {
-  const [isEnglish, setIsEnglish] = useState(
-    localStorage.getItem('language') === 'en-US',
-  );
+  const intl = useIntl();
+  const currentLang = getLocale();
 
-  const toggleLanguage = () => {
-    const currentLanguage = localStorage.getItem('language') || 'zh-CN';
-    if (currentLanguage === 'zh-CN') {
-      setLocale('en-US', false);
-      localStorage.setItem('language', 'en-US');
-      setIsEnglish(true);
-    } else {
-      setLocale('zh-CN', false);
-      localStorage.setItem('language', 'zh-CN');
-      setIsEnglish(false);
+  const getLangLabel = () => {
+    switch (currentLang) {
+      case 'zh-CN':
+        return intl.formatMessage({ id: 'language.chinese' });
+      case 'zh-TW':
+        return intl.formatMessage({ id: 'language.traditional' });
+      case 'en-US':
+        return intl.formatMessage({ id: 'language.english' });
+      default:
+        return intl.formatMessage({ id: 'language.chinese' });
     }
   };
 
+  const changeLanguage = (lang: string) => {
+    setLocale(lang, false);
+    localStorage.setItem('language', lang);
+  };
+
+  const items = [
+    {
+      key: 'zh-CN',
+      label: intl.formatMessage({ id: 'language.chinese' }),
+      onClick: () => changeLanguage('zh-CN'),
+    },
+    {
+      key: 'zh-TW',
+      label: intl.formatMessage({ id: 'language.traditional' }),
+      onClick: () => changeLanguage('zh-TW'),
+    },
+    {
+      key: 'en-US',
+      label: 'English',
+      onClick: () => changeLanguage('en-US'),
+    },
+  ];
+
   return (
-    <Tooltip title={isEnglish ? '切换中文' : '切换英文'} placement="bottom">
-      <div className={styles.languageButton} onClick={toggleLanguage}>
-        {isEnglish ? 'EN' : '中文'}
+    <Dropdown menu={{ items, selectedKeys: [currentLang] }} trigger={['click']}>
+      <div className={styles.languageButton}>
+        {getLangLabel()}
       </div>
-    </Tooltip>
+    </Dropdown>
   );
 };
 

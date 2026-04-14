@@ -8,6 +8,7 @@ import {
 import { Button, Input } from 'antd';
 import { TextAreaRef } from 'antd/es/input/TextArea';
 import { nanoid } from 'nanoid';
+import { useIntl } from '@umijs/max';
 import React, { ChangeEvent, useRef, useState } from 'react';
 import FooterToolBar from './FooterToolBar';
 import styles from './styles/Footer.less';
@@ -27,8 +28,9 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
   onUploadStart,
   onUploadEnd,
 }) => {
+  const intl = useIntl();
   const [message, setMessage] = useState('');
-  const textareaRef = useRef<TextAreaRef>(null); // 需要获取ref
+  const textareaRef = useRef<TextAreaRef>(null);
 
   const sendMessage = async () => {
     const currentMessage =
@@ -59,7 +61,7 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
       onMessageSent(JSON.stringify(temp));
       setMessage('');
     } catch (e) {
-      console.log('发送失败', e);
+      console.log(intl.formatMessage({ id: 'chat.footer.sendFailed' }), e);
     }
   };
 
@@ -84,11 +86,11 @@ const ChatFooter: React.FC<ChatFooterProps> = ({
             setMessage(e.target.value)
           }
           className={styles.footerTextArea}
-          placeholder="请输入"
+          placeholder={intl.formatMessage({ id: 'chat.inputPlaceholder' })}
         />
         <div className={styles.footerSendBtn}>
           <Button type="primary" variant="outlined" onClick={sendMessage}>
-            发送(S)
+            {intl.formatMessage({ id: 'chat.send' })}(S)
           </Button>
         </div>
       </div>

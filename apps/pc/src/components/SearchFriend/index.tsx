@@ -14,6 +14,7 @@ import styles from './index.less';
 
 const SearchFriend = () => {
   const [form] = Form.useForm();
+  const intl = useIntl();
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UserInfo[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -23,7 +24,6 @@ const SearchFriend = () => {
   } | null>(null);
   const [requestMessage, setRequestMessage] = useState('');
   const [avatarUrls, setAvatarUrls] = useState<{ [key: string]: string }>({});
-  const intl = useIntl();
 
   const handleSearch = async (values: { searchKey: string }) => {
     setLoading(true);
@@ -39,14 +39,14 @@ const SearchFriend = () => {
         });
       }
     } catch (error) {
-      message.error('搜索用户时出现错误');
+      message.error(intl.formatMessage({ id: 'friendRequest.searchError' }));
     }
     setLoading(false);
   };
 
   const showModal = (userId: string, username: string) => {
     setCurrentUser({ userId, username });
-    setRequestMessage(`我是`);
+    setRequestMessage('');
     setIsModalVisible(true);
   };
 
@@ -75,13 +75,13 @@ const SearchFriend = () => {
       const result = await add_friend(friendData);
       console.log('请求结果', result);
       if (result.netSuccess && result.res.status === 200) {
-        message.success(`已发送好友请求给 ${currentUser.username}`);
+        message.success(intl.formatMessage({ id: 'friendRequest.requestSent' }, { username: currentUser.username }));
         handleCancel();
       } else {
-        message.error('发送好友请求失败');
+        message.error(intl.formatMessage({ id: 'friendRequest.sendFailed' }));
       }
     } catch (error) {
-      message.error('发送好友请求时出现错误');
+      message.error(intl.formatMessage({ id: 'friendRequest.sendError' }));
     }
   };
 
@@ -90,21 +90,19 @@ const SearchFriend = () => {
     setResults([]);
   };
 
-  // 获取用户头像
   const getUserIcon = async (icon: string): Promise<string> => {
     try {
       const FileVos = await getFiles(icon);
 
       return FileVos?.[0]?.tauri_file_path || '';
     } catch (error) {
-      message.error('获取用户头像时出现错误');
+      message.error(intl.formatMessage({ id: 'friendRequest.avatarError' }));
 
       console.log(error);
       return '';
     }
   };
 
-  // 当results更新时，预加载所有用户的头像
   useEffect(() => {
     const loadAvatars = async () => {
       const newAvatarUrls: { [key: string]: string } = {};
@@ -168,7 +166,7 @@ const SearchFriend = () => {
                       showModal(item.uuid || '', item.username || '')
                     }
                   >
-                    添加好友
+                    <FormattedMessage id="friendRequest.addFriend" />
                   </Button>,
                 ]}
               >
@@ -193,26 +191,26 @@ const SearchFriend = () => {
       <div className={styles.footer}></div>
 
       <Modal
-        title="添加好友申请"
+        title={intl.formatMessage({ id: 'friendRequest.addFriendRequest' })}
         open={isModalVisible}
         onOk={handleAddFriend}
         onCancel={handleCancel}
-        okText="发送申请"
-        cancelText="取消"
+        okText={intl.formatMessage({ id: 'friendRequest.sendRequest' })}
+        cancelText={intl.formatMessage({ id: 'friendRequest.cancel' })}
       >
         {currentUser && (
           <div style={{ marginBottom: 16 }}>
             <p>
-              发送好友申请给: <strong>{currentUser.username}</strong>
+              {intl.formatMessage({ id: 'friendRequest.sendTo' })}: <strong>{currentUser.username}</strong>
             </p>
           </div>
         )}
-        <Form.Item label="申请说明" required>
+        <Form.Item label={intl.formatMessage({ id: 'friendRequest.requestMessage' })} required>
           <Input.TextArea
             value={requestMessage}
             onChange={(e) => setRequestMessage(e.target.value)}
             rows={4}
-            placeholder="请输入好友申请说明"
+            placeholder={intl.formatMessage({ id: 'friendRequest.requestPlaceholder' })}
           />
         </Form.Item>
       </Modal>

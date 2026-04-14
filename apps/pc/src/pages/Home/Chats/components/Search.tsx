@@ -1,4 +1,5 @@
 import { CloseOutlined, SearchOutlined } from '@ant-design/icons';
+import { useIntl } from '@umijs/max';
 import React, { useMemo, useState } from 'react';
 import styles from './styles/Search.less';
 
@@ -107,6 +108,7 @@ interface SearchProps {
 }
 
 const Search: React.FC<SearchProps> = ({ onSelect }) => {
+  const intl = useIntl();
   const [value, setValue] = useState('');
   const [isFocus, setIsFocus] = useState(false);
 
@@ -139,7 +141,7 @@ const Search: React.FC<SearchProps> = ({ onSelect }) => {
         <SearchOutlined className={styles.searchIcon} />
         <input
           className={styles.searchInput}
-          placeholder="搜索"
+          placeholder={intl.formatMessage({ id: 'search.placeholder' })}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onFocus={() => setIsFocus(true)}
@@ -176,7 +178,7 @@ const Search: React.FC<SearchProps> = ({ onSelect }) => {
               </div>
             ))
           ) : (
-            <div className={styles.emptyTip}>未找到相关结果</div>
+            <div className={styles.emptyTip}>{intl.formatMessage({ id: 'search.noResults' })}</div>
           )}
         </div>
       )}

@@ -8,11 +8,13 @@ import {
 } from '@ant-design/icons';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import type { WindowOptions } from '@tauri-apps/api/window';
+import { useIntl } from '@umijs/max';
 import { Badge } from 'antd';
 import { useState } from 'react';
 import styles from './index.less';
 
 const SearchBar = () => {
+  const intl = useIntl();
   const menuUnread = useBearStore((state) => state.menuUnread);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [value, setValue] = useState('');
@@ -36,7 +38,7 @@ const SearchBar = () => {
     const config: WindowOptions = {
       center: true,
     };
-    await openNewWindowWithoutClose('新增好友', webviewOptions, config);
+    await openNewWindowWithoutClose(intl.formatMessage({ id: 'searchBar.addFriend' }), webviewOptions, config);
   };
 
   const totalUnread = Object.values(menuUnread).reduce(
@@ -50,7 +52,7 @@ const SearchBar = () => {
         <SearchOutlined className={styles.searchIcon} />
         <input
           className={styles.searchInput}
-          placeholder="搜索"
+          placeholder={intl.formatMessage({ id: 'searchBar.search' })}
           value={value}
           onChange={(e) => setValue(e.target.value)}
         />
@@ -58,7 +60,7 @@ const SearchBar = () => {
       <div className={styles.actionBar}>
         <div className={styles.actionBtn} onClick={handleAdd}>
           <UserAddOutlined className={styles.actionIcon} />
-          <span>添加好友</span>
+          <span>{intl.formatMessage({ id: 'searchBar.addFriend' })}</span>
         </div>
         <div className={styles.divider} />
         <div className={styles.actionBtn} onClick={handleNotificationClick}>
@@ -69,7 +71,7 @@ const SearchBar = () => {
           >
             <BellOutlined className={styles.actionIcon} />
           </Badge>
-          <span>好友通知</span>
+          <span>{intl.formatMessage({ id: 'searchBar.friendNotification' })}</span>
         </div>
       </div>
       <FriendRequestsModal

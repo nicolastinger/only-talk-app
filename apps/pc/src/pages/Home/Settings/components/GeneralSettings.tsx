@@ -4,76 +4,85 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import { Card, Checkbox, Divider, Select, Typography } from 'antd';
+import { useIntl, setLocale, getLocale } from '@umijs/max';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const GeneralSettings = () => {
+  const intl = useIntl();
+  const currentLocale = getLocale();
+
+  const handleLanguageChange = (value: string) => {
+    setLocale(value, false);
+  };
+
   return (
     <div className={styles.settingSection}>
       <Title level={3} className={styles.sectionTitle}>
-        通用设置
+        {intl.formatMessage({ id: 'settings.generalSettings.title' })}
       </Title>
 
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <GlobalOutlined className={styles.cardIcon} />
-          <Text strong>语言</Text>
+          <Text strong>{intl.formatMessage({ id: 'settings.generalSettings.language' })}</Text>
         </div>
         <Divider className={styles.divider} />
-        <Select defaultValue="简体中文" className={styles.select}>
-          <Option value="简体中文">简体中文</Option>
-          <Option value="English">English</Option>
+        <Select value={currentLocale} onChange={handleLanguageChange} className={styles.select}>
+          <Option value="zh-CN">{intl.formatMessage({ id: 'language.chinese' })}</Option>
+          <Option value="zh-TW">{intl.formatMessage({ id: 'language.traditional' })}</Option>
+          <Option value="en-US">English</Option>
         </Select>
         <Text type="secondary" className={styles.description}>
-          选择应用显示语言
+          {intl.formatMessage({ id: 'settings.generalSettings.languageDesc' })}
         </Text>
       </Card>
 
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <FontSizeOutlined className={styles.cardIcon} />
-          <Text strong>主题</Text>
+          <Text strong>{intl.formatMessage({ id: 'settings.generalSettings.theme' })}</Text>
         </div>
         <Divider className={styles.divider} />
-        <Select defaultValue="浅色模式" className={styles.select}>
-          <Option value="浅色模式">浅色模式</Option>
-          <Option value="深色模式">深色模式</Option>
-          <Option value="跟随系统">跟随系统</Option>
+        <Select defaultValue="light" className={styles.select}>
+          <Option value="light">{intl.formatMessage({ id: 'settings.generalSettings.themeModes.light' })}</Option>
+          <Option value="dark">{intl.formatMessage({ id: 'settings.generalSettings.themeModes.dark' })}</Option>
+          <Option value="system">{intl.formatMessage({ id: 'settings.generalSettings.themeModes.system' })}</Option>
         </Select>
         <Text type="secondary" className={styles.description}>
-          选择应用界面主题
+          {intl.formatMessage({ id: 'settings.generalSettings.themeDesc' })}
         </Text>
       </Card>
 
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <FontSizeOutlined className={styles.cardIcon} />
-          <Text strong>字体大小</Text>
+          <Text strong>{intl.formatMessage({ id: 'settings.generalSettings.fontSize' })}</Text>
         </div>
         <Divider className={styles.divider} />
-        <Select defaultValue="中" className={styles.select}>
-          <Option value="小">小</Option>
-          <Option value="中">中</Option>
-          <Option value="大">大</Option>
+        <Select defaultValue="medium" className={styles.select}>
+          <Option value="small">{intl.formatMessage({ id: 'settings.generalSettings.fontSizes.small' })}</Option>
+          <Option value="medium">{intl.formatMessage({ id: 'settings.generalSettings.fontSizes.medium' })}</Option>
+          <Option value="large">{intl.formatMessage({ id: 'settings.generalSettings.fontSizes.large' })}</Option>
         </Select>
         <Text type="secondary" className={styles.description}>
-          调整聊天文字大小
+          {intl.formatMessage({ id: 'settings.generalSettings.fontSizeDesc' })}
         </Text>
       </Card>
 
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <DownloadOutlined className={styles.cardIcon} />
-          <Text strong>自动下载</Text>
+          <Text strong>{intl.formatMessage({ id: 'settings.generalSettings.autoDownload' })}</Text>
         </div>
         <Divider className={styles.divider} />
         <Checkbox defaultChecked className={styles.settingCheckbox}>
-          WiFi环境下自动下载图片和视频
+          {intl.formatMessage({ id: 'settings.generalSettings.autoDownloadWifi' })}
         </Checkbox>
         <Text type="secondary" className={styles.description}>
-          节省流量设置
+          {intl.formatMessage({ id: 'settings.generalSettings.autoDownloadDesc' })}
         </Text>
       </Card>
     </div>

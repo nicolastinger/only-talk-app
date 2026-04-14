@@ -6,7 +6,7 @@ import {
   StopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { history } from '@umijs/max';
+import { history, useIntl } from '@umijs/max';
 import { delete_friend } from '@workspace/services';
 import { FriendVo } from '@workspace/types';
 import { Dropdown, Modal, message } from 'antd';
@@ -20,6 +20,7 @@ interface ChatTopBarProps {
 
 const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   const { title, friendInfo } = props;
+  const intl = useIntl();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const triggerRefresh = useBearStore((state) => state.triggerRefresh);
 
@@ -38,40 +39,40 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
 
     try {
       await delete_friend(friendInfo.friend_id);
-      message.success('好友已删除');
+      message.success(intl.formatMessage({ id: 'chat.topBar.friendDeleted' }));
       setDeleteModalVisible(false);
       triggerRefresh();
       history.push('/home/chats');
     } catch (error) {
-      message.error('删除好友失败');
+      message.error(intl.formatMessage({ id: 'chat.topBar.deleteFailed' }));
       console.error('删除好友失败:', error);
     }
   };
 
   const handleMute = () => {
-    message.info('消息免打扰功能开发中');
+    message.info(intl.formatMessage({ id: 'chat.topBar.muteDeveloping' }));
   };
 
   const handleBlock = () => {
-    message.info('屏蔽好友功能开发中');
+    message.info(intl.formatMessage({ id: 'chat.topBar.blockDeveloping' }));
   };
 
   const menuItems = [
     {
       key: 'profile',
-      label: '查看资料',
+      label: intl.formatMessage({ id: 'chat.topBar.viewProfile' }),
       icon: <UserOutlined />,
       onClick: handleViewProfile,
     },
     {
       key: 'mute',
-      label: '消息免打扰',
+      label: intl.formatMessage({ id: 'chat.topBar.muteNotifications' }),
       icon: <BellOutlined />,
       onClick: handleMute,
     },
     {
       key: 'block',
-      label: '屏蔽好友',
+      label: intl.formatMessage({ id: 'chat.topBar.blockFriend' }),
       icon: <StopOutlined />,
       onClick: handleBlock,
     },
@@ -80,7 +81,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
     },
     {
       key: 'delete',
-      label: '删除好友',
+      label: intl.formatMessage({ id: 'chat.topBar.deleteFriend' }),
       icon: <DeleteOutlined />,
       danger: true,
       onClick: handleDeleteFriend,
@@ -100,17 +101,17 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
         </Dropdown>
       </div>
       <Modal
-        title="确认删除好友"
+        title={intl.formatMessage({ id: 'chat.topBar.confirmDelete' })}
         open={deleteModalVisible}
         onOk={confirmDeleteFriend}
         onCancel={() => setDeleteModalVisible(false)}
-        okText="确认"
-        cancelText="取消"
+        okText={intl.formatMessage({ id: 'chat.topBar.confirm' })}
+        cancelText={intl.formatMessage({ id: 'chat.topBar.cancel' })}
         okButtonProps={{ danger: true }}
       >
-        <p>确定要删除好友「{friendInfo?.friend_name || title}」吗？</p>
+        <p>{intl.formatMessage({ id: 'chat.topBar.confirmDeleteMsg' }, { name: friendInfo?.friend_name || title })}</p>
         <p style={{ color: '#999', fontSize: '12px' }}>
-          删除后聊天记录将保留，但对方将从好友列表中移除。
+          {intl.formatMessage({ id: 'chat.topBar.deleteWarning' })}
         </p>
       </Modal>
     </div>

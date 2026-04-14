@@ -16,20 +16,12 @@ import {
   selectFile,
 } from '@workspace/services';
 import { Avatar, Collapse, message, Modal, Spin, Typography } from 'antd';
+import { useIntl } from '@umijs/max';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 
 const { Text, Title } = Typography;
 const TIMEOUT_MS = 30000;
-
-const genderMap: { [key: number]: { label: string; icon: React.ReactNode } } = {
-  0: { label: '未知', icon: <UserOutlined /> },
-  1: { label: '保密', icon: <UserOutlined /> },
-  2: { label: '男', icon: <ManOutlined style={{ color: '#1890ff' }} /> },
-  3: { label: '女', icon: <WomanOutlined style={{ color: '#eb2f96' }} /> },
-  4: { label: '机器人', icon: <UserOutlined /> },
-  5: { label: '其他', icon: <UserOutlined /> },
-};
 
 interface UserInfoModalProps {
   visible: boolean;
@@ -37,11 +29,21 @@ interface UserInfoModalProps {
 }
 
 const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
+  const intl = useIntl();
   const userInfo = useBearStore((state) => state.userInfo);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const [loading, setLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const genderMap: { [key: number]: { label: string; icon: React.ReactNode } } = {
+    0: { label: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }), icon: <UserOutlined /> },
+    1: { label: intl.formatMessage({ id: 'userInfo.genderTypes.secret' }), icon: <UserOutlined /> },
+    2: { label: intl.formatMessage({ id: 'userInfo.genderTypes.male' }), icon: <ManOutlined style={{ color: '#1890ff' }} /> },
+    3: { label: intl.formatMessage({ id: 'userInfo.genderTypes.female' }), icon: <WomanOutlined style={{ color: '#eb2f96' }} /> },
+    4: { label: intl.formatMessage({ id: 'userInfo.genderTypes.robot' }), icon: <UserOutlined /> },
+    5: { label: intl.formatMessage({ id: 'userInfo.genderTypes.other' }), icon: <UserOutlined /> },
+  };
 
   const getUserIcon = async (icon: string) => {
     try {
@@ -75,7 +77,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           inputPath: filePath,
         }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('压缩超时（30秒）')), TIMEOUT_MS),
+          setTimeout(() => reject(new Error(intl.formatMessage({ id: 'userInfo.avatar.compressTimeout' }))), TIMEOUT_MS),
         ),
       ]);
 
@@ -93,7 +95,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           fieldName: 'file',
         }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('上传超时（30秒）')), TIMEOUT_MS),
+          setTimeout(() => reject(new Error(intl.formatMessage({ id: 'userInfo.avatar.uploadTimeout' }))), TIMEOUT_MS),
         ),
       ]);
 
@@ -111,19 +113,19 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             const updatedUserInfo = { ...userInfo, icon: bizId };
             setUserInfo(updatedUserInfo);
             getUserIcon(bizId);
-            message.success('头像更新成功');
+            message.success(intl.formatMessage({ id: 'userInfo.avatar.updateSuccess' }));
           } else {
-            message.error('获取头像文件失败');
+            message.error(intl.formatMessage({ id: 'userInfo.avatar.getFileFailed' }));
           }
         } else {
-          message.error(responseBody.msg || '头像上传失败');
+          message.error(responseBody.msg || intl.formatMessage({ id: 'userInfo.avatar.uploadFailed' }));
         }
       } else {
-        message.error('头像上传失败');
+        message.error(intl.formatMessage({ id: 'userInfo.avatar.uploadFailed' }));
       }
     } catch (error: any) {
       console.error('头像更新失败:', error);
-      message.error(error.message || '头像更新失败');
+      message.error(error.message || intl.formatMessage({ id: 'userInfo.avatar.updateFailed' }));
       window.dispatchEvent(new CustomEvent('uploadEnd'));
     } finally {
       setLoading(false);
@@ -132,14 +134,14 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
   };
 
   const formatBirthday = (timestamp?: number) => {
-    if (!timestamp) return '未设置';
+    if (!timestamp) return intl.formatMessage({ id: 'userInfo.notSet' });
     const date = new Date(timestamp * 1000);
     return date.toLocaleDateString('zh-CN');
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    message.success('已复制到剪贴板');
+    message.success(intl.formatMessage({ id: 'userInfo.copied' }));
   };
 
   return (
@@ -175,7 +177,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             )}
           </div>
           <Title level={4} className={styles.username}>
-            {userInfo?.username || '未知用户'}
+            {userInfo?.username || intl.formatMessage({ id: 'userInfo.unknown' })}
           </Title>
           {userInfo?.info && (
             <Text type="secondary" className={styles.bio}>
@@ -186,7 +188,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
         <div className={styles.infoSection}>
           <div className={styles.infoItem}>
-            <span className={styles.label}>账号</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'userInfo.account' })}</span>
             <span className={styles.value}>{userInfo?.account || '-'}</span>
           </div>
 
@@ -195,14 +197,14 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             <span
               className={`${styles.value} ${styles.uuidValue}`}
               onClick={() => userInfo?.uuid && copyToClipboard(userInfo.uuid)}
-              title="点击复制"
+              title={intl.formatMessage({ id: 'userInfo.clickToCopy' })}
             >
               {userInfo?.uuid || '-'}
             </span>
           </div>
 
           <div className={styles.infoItem}>
-            <span className={styles.label}>性别</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'userInfo.gender' })}</span>
             <span className={styles.value}>
               {userInfo?.gender !== undefined
                 ? genderMap[userInfo.gender]?.label
@@ -211,7 +213,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           </div>
 
           <div className={styles.infoItem}>
-            <span className={styles.label}>年龄</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'userInfo.age' })}</span>
             <span className={styles.value}>{userInfo?.age || '-'}</span>
           </div>
 
@@ -221,32 +223,32 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             items={[
               {
                 key: '1',
-                label: '更多信息',
+                label: intl.formatMessage({ id: 'userInfo.moreInfo' }),
                 children: (
                   <>
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>生日</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'userInfo.birthday' })}</span>
                       <span className={styles.value}>
                         {formatBirthday(userInfo?.birthday)}
                       </span>
                     </div>
 
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>手机</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'userInfo.phone' })}</span>
                       <span className={styles.value}>
                         {userInfo?.phone || '-'}
                       </span>
                     </div>
 
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>邮箱</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'userInfo.email' })}</span>
                       <span className={styles.value}>
                         {userInfo?.email || '-'}
                       </span>
                     </div>
 
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>地址</span>
+                      <span className={styles.label}>{intl.formatMessage({ id: 'userInfo.address' })}</span>
                       <span className={styles.value}>
                         {userInfo?.address || '-'}
                       </span>
