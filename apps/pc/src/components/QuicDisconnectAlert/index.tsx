@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
 import { CloseOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
+import React, { useState } from 'react';
 import './QuicDisconnectAlert.less';
 
 /**
@@ -21,7 +21,7 @@ const QuicDisconnectAlert: React.FC = () => {
   // 处理重新连接
   const handleReconnect = async () => {
     if (isReconnecting) return;
-    
+
     try {
       setIsReconnecting(true);
       await invoke('reconnect_quic_command');
@@ -48,7 +48,7 @@ const QuicDisconnectAlert: React.FC = () => {
         <button className="quic-disconnect-alert-close" onClick={handleClose}>
           <CloseOutlined />
         </button>
-        
+
         <div className="quic-disconnect-alert-icon">
           <svg viewBox="0 0 1024 1024" width="64" height="64">
             <path
@@ -61,13 +61,13 @@ const QuicDisconnectAlert: React.FC = () => {
             />
           </svg>
         </div>
-        
+
         <h2 className="quic-disconnect-alert-title">连接已断开</h2>
-        
+
         <p className="quic-disconnect-alert-message">
           {message || 'QUIC连接已断开，请检查您的网络环境'}
         </p>
-        
+
         <div className="quic-disconnect-alert-tips">
           <p>💡 建议操作：</p>
           <ul>
@@ -76,9 +76,11 @@ const QuicDisconnectAlert: React.FC = () => {
             <li>点击下方按钮重新连接</li>
           </ul>
         </div>
-        
+
         <button
-          className={`quic-disconnect-alert-button ${isReconnecting ? 'loading' : ''}`}
+          className={`quic-disconnect-alert-button ${
+            isReconnecting ? 'loading' : ''
+          }`}
           onClick={handleReconnect}
           disabled={isReconnecting}
         >

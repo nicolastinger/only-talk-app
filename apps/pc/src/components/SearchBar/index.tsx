@@ -38,7 +38,11 @@ const SearchBar = () => {
     const config: WindowOptions = {
       center: true,
     };
-    await openNewWindowWithoutClose(intl.formatMessage({ id: 'searchBar.addFriend' }), webviewOptions, config);
+    await openNewWindowWithoutClose(
+      intl.formatMessage({ id: 'searchBar.addFriend' }),
+      webviewOptions,
+      config,
+    );
   };
 
   const totalUnread = Object.values(menuUnread).reduce(
@@ -71,7 +75,9 @@ const SearchBar = () => {
           >
             <BellOutlined className={styles.actionIcon} />
           </Badge>
-          <span>{intl.formatMessage({ id: 'searchBar.friendNotification' })}</span>
+          <span>
+            {intl.formatMessage({ id: 'searchBar.friendNotification' })}
+          </span>
         </div>
       </div>
       <FriendRequestsModal

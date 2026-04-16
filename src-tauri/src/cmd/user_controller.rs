@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
+use crate::dto::update_user_dto::UpdateUserDTO;
+use crate::dto::http_result::HttpResult;
 use crate::entity::user_info::UserInfo;
+use crate::service::api_service::post_json;
 use crate::service::user_service::{disconnect_quic, reconnect_quic};
+use crate::utils::global_static_str::TALK_API;
 use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 增加持久化数据
@@ -50,4 +54,55 @@ pub async fn get_cached_user_info(uuid: String) -> Result<Option<UserInfo>, Stri
 #[tauri::command]
 pub async fn get_cached_user_info_by_account(account: String) -> Result<Option<UserInfo>, String> {
     UserInfo::query_by_account(&account).await.map_err(|e| e.to_string())
+}
+
+/// 更新用户信息
+#[tauri::command]
+pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<String, String> {
+    let url = format!("{}/user/update", TALK_API);
+    
+    let response = post_json(url, &update_dto).await.map_err(|e| e.to_string())?;
+    
+    let status = response.status();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+    
+    if status.is_success() {
+        let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+        if http_result.code == 200 {
+            if let Some(uuid) = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned() {
+                if let Ok(Some(mut cached_user)) = UserInfo::query_by_uuid(&uuid).await {
+                    if let Some(ref username) = update_dto.username {
+                        cached_user.username = Some(username.clone());
+                    }
+                    if let Some(ref info) = update_dto.info {
+                        cached_user.info = Some(info.clone());
+                    }
+                    if update_dto.gender.is_some() {
+                        cached_user.gender = update_dto.gender;
+                    }
+                    if update_dto.age.is_some() {
+                        cached_user.age = update_dto.age;
+                    }
+                    if update_dto.birthday.is_some() {
+                        cached_user.birthday = update_dto.birthday;
+                    }
+                    if let Some(ref phone) = update_dto.phone {
+                        cached_user.phone = Some(phone.clone());
+                    }
+                    if let Some(ref email) = update_dto.email {
+                        cached_user.email = Some(email.clone());
+                    }
+                    if let Some(ref address) = update_dto.address {
+                        cached_user.address = Some(address.clone());
+                    }
+                    let _ = cached_user.update_by_uuid().await;
+                }
+            }
+            Ok(body)
+        } else {
+            Err(http_result.message)
+        }
+    } else {
+        Err(format!("HTTP错误: {}", status))
+    }
 }

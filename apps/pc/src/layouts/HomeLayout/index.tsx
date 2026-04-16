@@ -44,7 +44,7 @@ const HomeLayout = () => {
   // 处理重新连接
   const handleReconnect = async () => {
     if (isReconnecting) return;
-    
+
     try {
       setIsReconnecting(true);
       await invoke('reconnect_quic_command');
@@ -125,19 +125,22 @@ const HomeLayout = () => {
       });
       const data: ResponseData = JSON.parse(res.body);
       const remoteUserInfo: UserInfo = data.data;
-      
+
       // 从 common_db 获取缓存的用户信息
       const cachedUserInfo = await get_cached_user_info(remoteUserInfo.uuid);
-      
+
       // 对比本地缓存和远程数据，如果不一样再更新
-      const isDifferent = !cachedUserInfo || 
+      const isDifferent =
+        !cachedUserInfo ||
         JSON.stringify(cachedUserInfo) !== JSON.stringify(remoteUserInfo);
-      
+
       if (isDifferent) {
         await cache_user_info(remoteUserInfo);
       }
-      
-      await invoke('add_user_map', { map: { me: JSON.stringify(remoteUserInfo) } });
+
+      await invoke('add_user_map', {
+        map: { me: JSON.stringify(remoteUserInfo) },
+      });
       setUserInfo(remoteUserInfo);
     } catch (error) {
       console.log(error);
@@ -179,8 +182,13 @@ const HomeLayout = () => {
           {!isConnected && (
             <div className={styles.quicReconnectTip}>
               <span className={styles.tipIcon}>⚠️</span>
-              <span className={styles.tipText}>连接已断开，可点击重连按钮重新连接</span>
-              <div className={styles.tipReconnectButton} onClick={handleReconnect}>
+              <span className={styles.tipText}>
+                连接已断开，可点击重连按钮重新连接
+              </span>
+              <div
+                className={styles.tipReconnectButton}
+                onClick={handleReconnect}
+              >
                 <ReloadOutlined spin={isReconnecting} />
                 <span>{isReconnecting ? '重连中...' : '重连'}</span>
               </div>

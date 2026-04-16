@@ -6,12 +6,12 @@ import {
   get_cached_user_info,
   get_friend_info,
   getFiles,
+  invoke_rust,
 } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
 import { Button, Collapse, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/FriendInfo.less';
-import { invoke_rust } from '@workspace/services';
 
 const FriendInfo = (props: { uuid: string }) => {
   const { uuid } = props;
@@ -74,22 +74,23 @@ const FriendInfo = (props: { uuid: string }) => {
       const result = await invoke_rust(
         'post_request',
         TALK_API + '/user/get_user_by_uuid/' + uuid,
-        ''
+        '',
       );
       if (result.netSuccess && result.res.status === 200) {
         const data = JSON.parse(result.res.body);
         const remoteUserInfo: UserInfo = data.data;
-        
+
         setUserInfo(remoteUserInfo);
-        
+
         const cachedUserInfo = await get_cached_user_info(uuid);
-        const isDifferent = !cachedUserInfo || 
+        const isDifferent =
+          !cachedUserInfo ||
           JSON.stringify(cachedUserInfo) !== JSON.stringify(remoteUserInfo);
-        
+
         if (isDifferent) {
           await cache_user_info(remoteUserInfo);
         }
-        
+
         const friendVo: FriendVo = {
           timestamp: 0,
           friend_id: remoteUserInfo.uuid,
@@ -159,26 +160,40 @@ const FriendInfo = (props: { uuid: string }) => {
               (e.target as HTMLImageElement).src = DEFAULT_ICON;
             }}
           />
-          <div className={styles.name}>{userInfo?.username || currentFriend?.friend_name}</div>
+          <div className={styles.name}>
+            {userInfo?.username || currentFriend?.friend_name}
+          </div>
           {userInfo?.info && <div className={styles.bio}>{userInfo.info}</div>}
         </div>
-        
+
         <div className={styles.infoSection}>
           <div className={styles.infoItem}>
-            <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.account' })}</span>
-            <span className={styles.value}>{userInfo?.account || currentFriend?.friend_account || '-'}</span>
+            <span className={styles.label}>
+              {intl.formatMessage({ id: 'friendInfo.account' })}
+            </span>
+            <span className={styles.value}>
+              {userInfo?.account || currentFriend?.friend_account || '-'}
+            </span>
           </div>
-          
+
           <div className={styles.infoItem}>
-            <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.gender' })}</span>
-            <span className={styles.value}>{userInfo?.gender !== undefined ? genderMap[userInfo.gender] : '-'}</span>
+            <span className={styles.label}>
+              {intl.formatMessage({ id: 'friendInfo.gender' })}
+            </span>
+            <span className={styles.value}>
+              {userInfo?.gender !== undefined
+                ? genderMap[userInfo.gender]
+                : '-'}
+            </span>
           </div>
-          
+
           <div className={styles.infoItem}>
-            <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.age' })}</span>
+            <span className={styles.label}>
+              {intl.formatMessage({ id: 'friendInfo.age' })}
+            </span>
             <span className={styles.value}>{userInfo?.age || '-'}</span>
           </div>
-          
+
           <Collapse
             className={styles.collapse}
             ghost
@@ -189,23 +204,39 @@ const FriendInfo = (props: { uuid: string }) => {
                 children: (
                   <>
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.birthday' })}</span>
-                      <span className={styles.value}>{formatBirthday(userInfo?.birthday)}</span>
+                      <span className={styles.label}>
+                        {intl.formatMessage({ id: 'friendInfo.birthday' })}
+                      </span>
+                      <span className={styles.value}>
+                        {formatBirthday(userInfo?.birthday)}
+                      </span>
                     </div>
-                    
+
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.phone' })}</span>
-                      <span className={styles.value}>{userInfo?.phone || '-'}</span>
+                      <span className={styles.label}>
+                        {intl.formatMessage({ id: 'friendInfo.phone' })}
+                      </span>
+                      <span className={styles.value}>
+                        {userInfo?.phone || '-'}
+                      </span>
                     </div>
-                    
+
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.email' })}</span>
-                      <span className={styles.value}>{userInfo?.email || '-'}</span>
+                      <span className={styles.label}>
+                        {intl.formatMessage({ id: 'friendInfo.email' })}
+                      </span>
+                      <span className={styles.value}>
+                        {userInfo?.email || '-'}
+                      </span>
                     </div>
-                    
+
                     <div className={styles.infoItem}>
-                      <span className={styles.label}>{intl.formatMessage({ id: 'friendInfo.address' })}</span>
-                      <span className={styles.value}>{userInfo?.address || '-'}</span>
+                      <span className={styles.label}>
+                        {intl.formatMessage({ id: 'friendInfo.address' })}
+                      </span>
+                      <span className={styles.value}>
+                        {userInfo?.address || '-'}
+                      </span>
                     </div>
                   </>
                 ),
@@ -213,7 +244,7 @@ const FriendInfo = (props: { uuid: string }) => {
             ]}
           />
         </div>
-        
+
         <div className={styles.footer}>
           <div className={styles.button}>{renderBtn()}</div>
         </div>

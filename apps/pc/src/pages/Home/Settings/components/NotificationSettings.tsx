@@ -1,13 +1,13 @@
 import { EyeOutlined, MessageOutlined, MoonOutlined } from '@ant-design/icons';
-import { Card, Checkbox, Divider, Typography } from 'antd';
 import { useIntl } from '@umijs/max';
+import { Card, Checkbox, Divider, Typography } from 'antd';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
 
 const NotificationSettings = () => {
   const intl = useIntl();
-  
+
   return (
     <div className={styles.settingSection}>
       <Title level={3} className={styles.sectionTitle}>
@@ -17,44 +17,76 @@ const NotificationSettings = () => {
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <MessageOutlined className={styles.cardIcon} />
-          <Text strong>{intl.formatMessage({ id: 'settings.notificationSettings.messageNotification' })}</Text>
+          <Text strong>
+            {intl.formatMessage({
+              id: 'settings.notificationSettings.messageNotification',
+            })}
+          </Text>
         </div>
         <Divider className={styles.divider} />
         <Checkbox defaultChecked className={styles.settingCheckbox}>
-          {intl.formatMessage({ id: 'settings.notificationSettings.receiveNewMessage' })}
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.receiveNewMessage',
+          })}
         </Checkbox>
         <Checkbox defaultChecked className={styles.settingCheckbox}>
-          {intl.formatMessage({ id: 'settings.notificationSettings.soundReminder' })}
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.soundReminder',
+          })}
         </Checkbox>
-        <Checkbox className={styles.settingCheckbox}>{intl.formatMessage({ id: 'settings.notificationSettings.vibrationReminder' })}</Checkbox>
+        <Checkbox className={styles.settingCheckbox}>
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.vibrationReminder',
+          })}
+        </Checkbox>
         <Text type="secondary" className={styles.description}>
-          {intl.formatMessage({ id: 'settings.notificationSettings.messageNotificationDesc' })}
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.messageNotificationDesc',
+          })}
         </Text>
       </Card>
 
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <EyeOutlined className={styles.cardIcon} />
-          <Text strong>{intl.formatMessage({ id: 'settings.notificationSettings.notificationDetails' })}</Text>
+          <Text strong>
+            {intl.formatMessage({
+              id: 'settings.notificationSettings.notificationDetails',
+            })}
+          </Text>
         </div>
         <Divider className={styles.divider} />
         <Checkbox defaultChecked className={styles.settingCheckbox}>
-          {intl.formatMessage({ id: 'settings.notificationSettings.showMessagePreview' })}
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.showMessagePreview',
+          })}
         </Checkbox>
         <Text type="secondary" className={styles.description}>
-          {intl.formatMessage({ id: 'settings.notificationSettings.notificationDetailsDesc' })}
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.notificationDetailsDesc',
+          })}
         </Text>
       </Card>
 
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <MoonOutlined className={styles.cardIcon} />
-          <Text strong>{intl.formatMessage({ id: 'settings.notificationSettings.doNotDisturb' })}</Text>
+          <Text strong>
+            {intl.formatMessage({
+              id: 'settings.notificationSettings.doNotDisturb',
+            })}
+          </Text>
         </div>
         <Divider className={styles.divider} />
-        <Checkbox className={styles.settingCheckbox}>{intl.formatMessage({ id: 'settings.notificationSettings.nightDoNotDisturb' })}</Checkbox>
+        <Checkbox className={styles.settingCheckbox}>
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.nightDoNotDisturb',
+          })}
+        </Checkbox>
         <Text type="secondary" className={styles.description}>
-          {intl.formatMessage({ id: 'settings.notificationSettings.doNotDisturbDesc' })}
+          {intl.formatMessage({
+            id: 'settings.notificationSettings.doNotDisturbDesc',
+          })}
         </Text>
       </Card>
     </div>

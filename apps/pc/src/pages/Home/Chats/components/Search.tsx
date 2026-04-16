@@ -178,7 +178,9 @@ const Search: React.FC<SearchProps> = ({ onSelect }) => {
               </div>
             ))
           ) : (
-            <div className={styles.emptyTip}>{intl.formatMessage({ id: 'search.noResults' })}</div>
+            <div className={styles.emptyTip}>
+              {intl.formatMessage({ id: 'search.noResults' })}
+            </div>
           )}
         </div>
       )}

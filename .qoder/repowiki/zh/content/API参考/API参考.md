@@ -1,4 +1,4 @@
-# API参考
+# API 参考
 
 <cite>
 **本文引用的文件**
@@ -26,20 +26,23 @@
 </cite>
 
 ## 更新摘要
+
 **变更内容**
-- 新增文件传输相关API接口章节
-- 添加send_p2p_file_data、send_p2p_file_transfer_request、send_p2p_file_transfer_response三个Tauri命令
-- 新增FileData、FileTransferRequest、FileTransferResponse等TypeScript接口定义
-- 扩展P2P通信协议，支持文件分片传输和握手确认机制
-- 更新P2P通道类型，增加File通道专用传输通道
+
+- 新增文件传输相关 API 接口章节
+- 添加 send_p2p_file_data、send_p2p_file_transfer_request、send_p2p_file_transfer_response 三个 Tauri 命令
+- 新增 FileData、FileTransferRequest、FileTransferResponse 等 TypeScript 接口定义
+- 扩展 P2P 通信协议，支持文件分片传输和握手确认机制
+- 更新 P2P 通道类型，增加 File 通道专用传输通道
 
 ## 目录
+
 1. [简介](#简介)
 2. [项目结构](#项目结构)
 3. [核心组件](#核心组件)
 4. [架构总览](#架构总览)
 5. [详细组件分析](#详细组件分析)
-6. [文件传输API](#文件传输api)
+6. [文件传输 API](#文件传输api)
 7. [依赖关系分析](#依赖关系分析)
 8. [性能与并发特性](#性能与并发特性)
 9. [故障排查与错误码](#故障排查与错误码)
@@ -47,17 +50,20 @@
 11. [附录](#附录)
 
 ## 简介
-本文件为即时通讯应用的API参考文档，覆盖后端REST API与前端Tauri命令接口两大部分。内容包括：
-- 后端REST API：HTTP方法、URL模式、请求/响应格式、认证机制
-- 前端命令接口：通过Tauri暴露的命令（invoke）能力，统一的调用方式与参数规范
-- 即时通信协议：文本消息、图片消息、P2P点对点通信、WebRTC信号与媒体流
-- **新增文件传输API：支持大文件分片传输、握手确认机制、文件通道专用传输**
-- 数据模型与事件：消息VO、系统通知、错误与状态码
+
+本文件为即时通讯应用的 API 参考文档，覆盖后端 REST API 与前端 Tauri 命令接口两大部分。内容包括：
+
+- 后端 REST API：HTTP 方法、URL 模式、请求/响应格式、认证机制
+- 前端命令接口：通过 Tauri 暴露的命令（invoke）能力，统一的调用方式与参数规范
+- 即时通信协议：文本消息、图片消息、P2P 点对点通信、WebRTC 信号与媒体流
+- **新增文件传输 API：支持大文件分片传输、握手确认机制、文件通道专用传输**
+- 数据模型与事件：消息 VO、系统通知、错误与状态码
 - 版本管理与兼容性：版本号、迁移建议与注意事项
 - 集成示例与最佳实践：参数、返回值、异常处理策略
 
 ## 项目结构
-后端采用Rust + Tauri，前端使用Vue3 + TypeScript。Tauri在运行时将Rust命令注册为前端可调用的invoke接口；同时内置HTTP客户端封装常用网络请求。
+
+后端采用 Rust + Tauri，前端使用 Vue3 + TypeScript。Tauri 在运行时将 Rust 命令注册为前端可调用的 invoke 接口；同时内置 HTTP 客户端封装常用网络请求。
 
 ```mermaid
 graph TB
@@ -110,6 +116,7 @@ FILE --> DTO
 ```
 
 **图表来源**
+
 - [main.rs:1-8](file://src-tauri/src/main.rs#L1-L8)
 - [lib.rs:1-167](file://src-tauri/src/lib.rs#L1-L167)
 - [cmd/mod.rs:1-10](file://src-tauri/src/cmd/mod.rs#L1-L10)
@@ -128,19 +135,22 @@ FILE --> DTO
 - [message_types.rs:1-124](file://src-tauri/src/utils/message_types.rs#L1-L124)
 
 **章节来源**
+
 - [main.rs:1-8](file://src-tauri/src/main.rs#L1-L8)
 - [lib.rs:1-167](file://src-tauri/src/lib.rs#L1-L167)
 - [cmd/mod.rs:1-10](file://src-tauri/src/cmd/mod.rs#L1-L10)
 
 ## 核心组件
-- Tauri命令注册器：在应用启动时将所有命令注册为前端可调用的invoke接口
-- 控制器模块：按功能划分的命令实现，如API、认证、聊天、会话、好友、通知、P2P、文件
-- DTO与VO：统一的HTTP响应结构与消息数据载体
+
+- Tauri 命令注册器：在应用启动时将所有命令注册为前端可调用的 invoke 接口
+- 控制器模块：按功能划分的命令实现，如 API、认证、聊天、会话、好友、通知、P2P、文件
+- DTO 与 VO：统一的 HTTP 响应结构与消息数据载体
 - **文件传输模型：P2pFileData、P2pFileTransferRequest、P2pFileTransferResponse**
-- **P2P通道系统：Default、MediaInfo、MediaData、File四种通道类型**
-- 全局状态：用户信息、QUIC连接、SQL连接池、P2P发送通道等
+- **P2P 通道系统：Default、MediaInfo、MediaData、File 四种通道类型**
+- 全局状态：用户信息、QUIC 连接、SQL 连接池、P2P 发送通道等
 
 **章节来源**
+
 - [lib.rs:117-163](file://src-tauri/src/lib.rs#L117-L163)
 - [http_result.rs:1-10](file://src-tauri/src/dto/http_result.rs#L1-L10)
 - [text_quic_msg.rs:1-47](file://src-tauri/src/vo/text_quic_msg.rs#L1-L47)
@@ -148,7 +158,8 @@ FILE --> DTO
 - [p2p_models.rs:121-171](file://src-tauri/src/entity/p2p_models.rs#L121-L171)
 
 ## 架构总览
-后端以Tauri为桥接，前端通过invoke调用Rust命令；命令内部可进行HTTP请求、数据库操作、P2P通信等。
+
+后端以 Tauri 为桥接，前端通过 invoke 调用 Rust 命令；命令内部可进行 HTTP 请求、数据库操作、P2P 通信等。
 
 ```mermaid
 sequenceDiagram
@@ -171,6 +182,7 @@ TAURI-->>FE : 返回结果
 ```
 
 **图表来源**
+
 - [lib.rs:117-163](file://src-tauri/src/lib.rs#L117-L163)
 - [p2p_controller.rs:192-200](file://src-tauri/src/cmd/p2p_controller.rs#L192-L200)
 - [p2p_service.rs:788-822](file://src-tauri/src/service/p2p_service.rs#L788-L822)
@@ -178,12 +190,13 @@ TAURI-->>FE : 返回结果
 ## 详细组件分析
 
 ### 认证与用户管理
+
 - 登录(sign_in)
   - 方法：POST
   - URL：自定义后端登录地址
   - 请求体：账户凭据键值对
-  - 成功后自动设置Authorization头并拉取用户信息
-  - 返回：统一HTTP响应结构
+  - 成功后自动设置 Authorization 头并拉取用户信息
+  - 返回：统一 HTTP 响应结构
 - 登出(logout)
   - 清空用户信息、服务器列表、数据库连接
 - 清除用户信息(clear_user_info)
@@ -206,20 +219,23 @@ AUTH-->>FE : 返回登录结果(HttpResult)
 ```
 
 **图表来源**
+
 - [auth_controller.rs:16-64](file://src-tauri/src/cmd/auth_controller.rs#L16-L64)
 - [api_controller.rs:35-58](file://src-tauri/src/cmd/api_controller.rs#L35-L58)
 
 **章节来源**
+
 - [auth_controller.rs:16-113](file://src-tauri/src/cmd/auth_controller.rs#L16-L113)
 
-### HTTP请求封装
+### HTTP 请求封装
+
 - get_request(url)
   - 方法：GET
   - 参数：url
   - 返回：ApiResponse(status, body)
 - post_request(url, body)
   - 方法：POST
-  - 自动注入Authorization头（来自全局token）
+  - 自动注入 Authorization 头（来自全局 token）
   - 返回：ApiResponse(status, body)
 - 文件上传
   - upload_file_request / upload_file_with_extra_fields_request
@@ -238,19 +254,22 @@ BuildResp --> Return["返回 ApiResponse"]
 ```
 
 **图表来源**
+
 - [api_controller.rs:24-33](file://src-tauri/src/cmd/api_controller.rs#L24-L33)
 
 **章节来源**
+
 - [api_controller.rs:1-151](file://src-tauri/src/cmd/api_controller.rs#L1-L151)
 
 ### 聊天记录与会话
+
 - 发送文本消息(send_text_msg)
   - 参数：TextQuicMsgVo
   - 行为：带超时的全局互斥锁保护，避免并发写冲突
 - 发送图片消息(send_image_msg)
   - 参数：TextQuicMsgVo
 - 标记已读(mark_read)
-  - 参数：消息ID数组
+  - 参数：消息 ID 数组
 - 从本地存储查询聊天记录
   - get_chat_record_from_store
   - get_chat_record_by_type
@@ -280,14 +299,17 @@ end
 ```
 
 **图表来源**
+
 - [chat_record_controller.rs:16-37](file://src-tauri/src/cmd/chat_record_controller.rs#L16-L37)
 
 **章节来源**
+
 - [chat_record_controller.rs:1-80](file://src-tauri/src/cmd/chat_record_controller.rs#L1-L80)
 - [chat_session_controller.rs:1-24](file://src-tauri/src/cmd/chat_session_controller.rs#L1-L24)
 - [text_quic_msg.rs:1-47](file://src-tauri/src/vo/text_quic_msg.rs#L1-L47)
 
 ### 好友与系统通知
+
 - 获取好友列表(get_friend_list)
 - 获取好友信息(get_friend_info)
 - 更新本地好友列表(update_local_friend_list)
@@ -296,11 +318,13 @@ end
 - 批量已读系统通知(batch_read_system_notification)
 
 **章节来源**
+
 - [friend_controller.rs:1-41](file://src-tauri/src/cmd/friend_controller.rs#L1-L41)
 - [notification_controller.rs:1-22](file://src-tauri/src/cmd/notification_controller.rs#L1-L22)
 
-### P2P与视频通话
-- P2P初始化与UDP打洞
+### P2P 与视频通话
+
+- P2P 初始化与 UDP 打洞
   - send_p2p_init_msg
   - send_init_p2p_udp
   - process_init_p2p_request
@@ -337,15 +361,18 @@ SVC-->>FE : "success"
 ```
 
 **图表来源**
+
 - [p2p_controller.rs:16-55](file://src-tauri/src/cmd/p2p_controller.rs#L16-L55)
 
 **章节来源**
+
 - [p2p_controller.rs:1-170](file://src-tauri/src/cmd/p2p_controller.rs#L1-L170)
 
-## 文件传输API
+## 文件传输 API
 
 ### 文件传输通道架构
-系统为文件传输专门设计了独立的File通道，与音视频通道分离，确保大文件传输不影响实时通话质量。
+
+系统为文件传输专门设计了独立的 File 通道，与音视频通道分离，确保大文件传输不影响实时通话质量。
 
 ```mermaid
 graph LR
@@ -366,87 +393,96 @@ FILE -.-> MERGE
 ```
 
 **图表来源**
+
 - [p2p_models.rs:52-79](file://src-tauri/src/entity/p2p_models.rs#L52-L79)
 - [message_types.rs:75-86](file://src-tauri/src/utils/message_types.rs#L75-L86)
 
-### Tauri命令接口
+### Tauri 命令接口
 
 #### 发送文件数据
+
 - 命令名称：send_p2p_file_data
-- 功能：通过File通道发送文件分片数据
+- 功能：通过 File 通道发送文件分片数据
 - 参数：
-  - file_data: String (P2pFileData结构的JSON字符串)
-  - target_uuid: String (目标用户UUID)
+  - file_data: String (P2pFileData 结构的 JSON 字符串)
+  - target_uuid: String (目标用户 UUID)
 - 返回：Result<(), String>
 - 行为：文件被切分为多个分片，每个分片独立发送
 
 #### 发送文件传输请求
+
 - 命令名称：send_p2p_file_transfer_request
 - 功能：在发送文件数据前，先发送请求等待对方确认
 - 参数：
-  - transfer_request: String (P2pFileTransferRequest结构的JSON字符串)
-  - target_uuid: String (目标用户UUID)
+  - transfer_request: String (P2pFileTransferRequest 结构的 JSON 字符串)
+  - target_uuid: String (目标用户 UUID)
 - 返回：Result<(), String>
 - 行为：发送握手消息等待接收方确认
 
 #### 发送文件传输响应
+
 - 命令名称：send_p2p_file_transfer_response
 - 功能：对方收到文件传输请求后，通过此命令回复接受或拒绝
 - 参数：
-  - transfer_response: String (P2pFileTransferResponse结构的JSON字符串)
-  - target_uuid: String (目标用户UUID)
+  - transfer_response: String (P2pFileTransferResponse 结构的 JSON 字符串)
+  - target_uuid: String (目标用户 UUID)
 - 返回：Result<(), String>
 - 行为：对文件传输请求进行确认或拒绝
 
 **章节来源**
+
 - [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
 - [p2p_service.rs:775-913](file://src-tauri/src/service/p2p_service.rs#L775-L913)
 
-### TypeScript接口定义
+### TypeScript 接口定义
 
-#### FileData接口
-用于P2P文件传输中的单个分片数据：
+#### FileData 接口
 
-| 字段名 | 类型 | 描述 | 示例 |
-|--------|------|------|------|
-| uuid | string | 文件唯一标识 | "123e4567-e89b-12d3-a456-426614174000" |
-| file_name | string | 文件名 | "document.pdf" |
-| mime_type | string | MIME类型 | "application/pdf" |
-| total_size | number | 文件总大小 (字节) | 1048576 |
-| chunk_index | number | 当前分片索引 (从0开始) | 5 |
-| total_chunks | number | 总分片数 | 10 |
-| chunk_data | string | Base64编码的分片数据 | "JVBERi0..." |
-| transfer_id | string | 传输ID - 用于关联同一次文件传输的所有分片 | "transfer-123" |
+用于 P2P 文件传输中的单个分片数据：
 
-#### FileTransferRequest接口
+| 字段名       | 类型   | 描述                                       | 示例                                   |
+| ------------ | ------ | ------------------------------------------ | -------------------------------------- |
+| uuid         | string | 文件唯一标识                               | "123e4567-e89b-12d3-a456-426614174000" |
+| file_name    | string | 文件名                                     | "document.pdf"                         |
+| mime_type    | string | MIME 类型                                  | "application/pdf"                      |
+| total_size   | number | 文件总大小 (字节)                          | 1048576                                |
+| chunk_index  | number | 当前分片索引 (从 0 开始)                   | 5                                      |
+| total_chunks | number | 总分片数                                   | 10                                     |
+| chunk_data   | string | Base64 编码的分片数据                      | "JVBERi0..."                           |
+| transfer_id  | string | 传输 ID - 用于关联同一次文件传输的所有分片 | "transfer-123"                         |
+
+#### FileTransferRequest 接口
+
 文件传输请求握手消息：
 
-| 字段名 | 类型 | 描述 | 示例 |
-|--------|------|------|------|
-| transfer_id | string | 传输ID - 唯一标识一次文件传输 | "transfer-123" |
-| file_name | string | 文件名 | "document.pdf" |
-| total_size | number | 文件总大小 (字节) | 1048576 |
-| mime_type | string | MIME类型 | "application/pdf" |
-| chunk_size | number | 分片大小 (字节) | 104857 |
-| total_chunks | number | 总分片数 | 10 |
-| from_uuid | string | 请求者UUID | "sender-uuid" |
-| to_uuid | string | 目标UUID | "receiver-uuid" |
-| timestamp | number | 请求时间戳 | 1700000000000 |
+| 字段名       | 类型   | 描述                           | 示例              |
+| ------------ | ------ | ------------------------------ | ----------------- |
+| transfer_id  | string | 传输 ID - 唯一标识一次文件传输 | "transfer-123"    |
+| file_name    | string | 文件名                         | "document.pdf"    |
+| total_size   | number | 文件总大小 (字节)              | 1048576           |
+| mime_type    | string | MIME 类型                      | "application/pdf" |
+| chunk_size   | number | 分片大小 (字节)                | 104857            |
+| total_chunks | number | 总分片数                       | 10                |
+| from_uuid    | string | 请求者 UUID                    | "sender-uuid"     |
+| to_uuid      | string | 目标 UUID                      | "receiver-uuid"   |
+| timestamp    | number | 请求时间戳                     | 1700000000000     |
 
-#### FileTransferResponse接口
+#### FileTransferResponse 接口
+
 文件传输响应消息：
 
-| 字段名 | 类型 | 描述 | 示例 |
-|--------|------|------|------|
-| transfer_id | string | 传输ID - 对应请求中的transfer_id | "transfer-123" |
-| accept | boolean | 是否接受传输 | true |
-| from_uuid | string | 响应者UUID | "receiver-uuid" |
-| to_uuid | string | 目标UUID | "sender-uuid" |
-| reject_reason | string | 拒绝原因 (拒绝时可选) | "文件过大" |
-| timestamp | number | 响应时间戳 | 1700000000000 |
+| 字段名        | 类型    | 描述                               | 示例            |
+| ------------- | ------- | ---------------------------------- | --------------- |
+| transfer_id   | string  | 传输 ID - 对应请求中的 transfer_id | "transfer-123"  |
+| accept        | boolean | 是否接受传输                       | true            |
+| from_uuid     | string  | 响应者 UUID                        | "receiver-uuid" |
+| to_uuid       | string  | 目标 UUID                          | "sender-uuid"   |
+| reject_reason | string  | 拒绝原因 (拒绝时可选)              | "文件过大"      |
+| timestamp     | number  | 响应时间戳                         | 1700000000000   |
 
 **章节来源**
-- [index.ts (P2P类型):190-276](file://packages/types/src/p2p/index.ts#L190-L276)
+
+- [index.ts (P2P 类型):190-276](file://packages/types/src/p2p/index.ts#L190-L276)
 - [p2p_models.rs:121-171](file://src-tauri/src/entity/p2p_models.rs#L121-L171)
 
 ### 文件传输工作流程
@@ -475,33 +511,37 @@ end
 ```
 
 **图表来源**
+
 - [p2p_service.rs:835-868](file://src-tauri/src/service/p2p_service.rs#L835-L868)
 - [p2p_service.rs:881-913](file://src-tauri/src/service/p2p_service.rs#L881-L913)
 - [p2p_service.rs:788-822](file://src-tauri/src/service/p2p_service.rs#L788-L822)
 
-### P2P通道类型扩展
-新增File通道类型，专门用于文件传输：
+### P2P 通道类型扩展
 
-| 通道类型 | 用途 | 特点 |
-|----------|------|------|
-| Default | 信令、文本消息、控制命令 | 通用通道，承载各种控制消息 |
-| MediaInfo | 媒体状态信息 | 传输分辨率变化、码率调整等控制信令 |
-| MediaData | 音视频数据 | 专门传输视频帧和音频帧数据 |
-| **File** | **文件传输** | **独立于音视频通道，避免大文件传输影响实时通话质量** |
+新增 File 通道类型，专门用于文件传输：
+
+| 通道类型  | 用途                     | 特点                                                 |
+| --------- | ------------------------ | ---------------------------------------------------- |
+| Default   | 信令、文本消息、控制命令 | 通用通道，承载各种控制消息                           |
+| MediaInfo | 媒体状态信息             | 传输分辨率变化、码率调整等控制信令                   |
+| MediaData | 音视频数据               | 专门传输视频帧和音频帧数据                           |
+| **File**  | **文件传输**             | **独立于音视频通道，避免大文件传输影响实时通话质量** |
 
 **章节来源**
+
 - [p2p_models.rs:52-79](file://src-tauri/src/entity/p2p_models.rs#L52-L79)
 - [message_types.rs:75-86](file://src-tauri/src/utils/message_types.rs#L75-L86)
 
 ## 依赖关系分析
+
 - 前端依赖
   - @tauri-apps/api：调用后端命令
   - 业务包：@workspace/services、@workspace/types
-  - **新增：文件传输Hook接口**
+  - **新增：文件传输 Hook 接口**
 - 后端依赖
-  - reqwest：HTTP客户端
+  - reqwest：HTTP 客户端
   - tokio/sqlx：异步运行时与数据库访问
-  - quinn/rustls：QUIC/TLS加密通信
+  - quinn/rustls：QUIC/TLS 加密通信
   - dashmap/lazy_static：全局共享状态
   - serde/serde_json：序列化/反序列化
 
@@ -515,60 +555,69 @@ TYPES --> P2P_TYPES["p2p/index.ts"]
 ```
 
 **图表来源**
+
 - [package.json (PC):18-32](file://apps/pc/package.json#L18-L32)
 - [package.json (移动端):16-24](file://apps/mobile/package.json#L16-L24)
 - [Cargo.toml:24-62](file://src-tauri/Cargo.toml#L24-L62)
 - [useP2pMessageApi.ts:1-114](file://apps/pc/src/hooks/useP2pMessageApi.ts#L1-L114)
 
 **章节来源**
+
 - [Cargo.toml:1-62](file://src-tauri/Cargo.toml#L1-L62)
 - [package.json (PC):1-45](file://apps/pc/package.json#L1-L45)
 - [package.json (移动端):1-37](file://apps/mobile/package.json#L1-L37)
 
 ## 性能与并发特性
-- 全局互斥锁：消息发送加锁，避免数据库写入竞争，超时10秒
-- 异步运行时：Tokio全栈异步，提升I/O密集型任务吞吐
-- 全局连接池：SQLite连接池按环境分离（通用/私有），减少连接开销
-- QUIC通道：低延迟、高可靠，适合音视频与消息传输
-- **文件传输优化：File通道独立，分片传输避免大块数据阻塞**
+
+- 全局互斥锁：消息发送加锁，避免数据库写入竞争，超时 10 秒
+- 异步运行时：Tokio 全栈异步，提升 I/O 密集型任务吞吐
+- 全局连接池：SQLite 连接池按环境分离（通用/私有），减少连接开销
+- QUIC 通道：低延迟、高可靠，适合音视频与消息传输
+- **文件传输优化：File 通道独立，分片传输避免大块数据阻塞**
 - 图片压缩：阻塞任务放入线程池，避免阻塞事件循环
 
 **章节来源**
+
 - [lib.rs:74-75](file://src-tauri/src/lib.rs#L74-L75)
 - [chat_record_controller.rs:18-37](file://src-tauri/src/cmd/chat_record_controller.rs#L18-L37)
 - [p2p_service.rs:788-822](file://src-tauri/src/service/p2p_service.rs#L788-L822)
 
 ## 故障排查与错误码
+
 - 统一响应结构
   - code：整数状态码
-  - data：任意JSON对象或字符串
+  - data：任意 JSON 对象或字符串
   - message：描述信息
 - 常见错误来源
-  - HTTP请求失败：检查URL、网络、证书
-  - 认证失败：确认token是否注入、是否过期
+  - HTTP 请求失败：检查 URL、网络、证书
+  - 认证失败：确认 token 是否注入、是否过期
   - 数据库写入失败：检查连接池状态与表结构
-  - P2P连接失败：检查UDP可达性、防火墙/NAT
-  - **文件传输失败：检查File通道状态、分片完整性、传输ID一致性**
+  - P2P 连接失败：检查 UDP 可达性、防火墙/NAT
+  - **文件传输失败：检查 File 通道状态、分片完整性、传输 ID 一致性**
 - 建议排查步骤
   - 查看后端日志（RUST_BACKTRACE=full）
   - 校验全局状态（token、服务器列表、连接池）
   - 分阶段测试：HTTP -> 数据库 -> P2P -> 文件传输
 
 **章节来源**
+
 - [http_result.rs:1-10](file://src-tauri/src/dto/http_result.rs#L1-L10)
 - [lib.rs:86-89](file://src-tauri/src/lib.rs#L86-L89)
 
 ## 结论
-本API参考文档梳理了后端REST API与前端Tauri命令接口，明确了认证、消息、好友、通知与P2P通信的调用方式与数据模型。**新增的文件传输API为应用提供了完整的文件分享能力，支持大文件分片传输、握手确认机制和独立的File通道，确保了实时通信与文件传输的性能平衡。**建议在生产环境中：
+
+本 API 参考文档梳理了后端 REST API 与前端 Tauri 命令接口，明确了认证、消息、好友、通知与 P2P 通信的调用方式与数据模型。**新增的文件传输 API 为应用提供了完整的文件分享能力，支持大文件分片传输、握手确认机制和独立的 File 通道，确保了实时通信与文件传输的性能平衡。**建议在生产环境中：
+
 - 明确版本号与迁移策略
-- 使用HTTPS与安全证书
+- 使用 HTTPS 与安全证书
 - 实施重试与降级策略
 - 加强日志与监控
 - **合理设置分片大小，优化传输性能**
 
 ## 附录
 
-### API版本管理与兼容性
+### API 版本管理与兼容性
+
 - 版本号：后端包版本字段
 - 建议
   - 语义化版本：主版本号变更表示不兼容升级
@@ -576,23 +625,28 @@ TYPES --> P2P_TYPES["p2p/index.ts"]
   - 兼容性：保持请求/响应字段向后兼容，新增字段默认可选
 
 **章节来源**
+
 - [Cargo.toml:1-10](file://src-tauri/Cargo.toml#L1-L10)
 
 ### 前端调用约定
-- 统一通过Tauri invoke调用后端命令
+
+- 统一通过 Tauri invoke 调用后端命令
 - 参数与返回值遵循各命令定义
 - 错误处理：捕获字符串错误并提示用户
 - **文件传输调用流程：先发送请求 -> 等待确认 -> 循环发送分片 -> 监听完成**
 
 **章节来源**
+
 - [lib.rs:117-163](file://src-tauri/src/lib.rs#L117-L163)
 - [p2p_controller.rs:186-226](file://src-tauri/src/cmd/p2p_controller.rs#L186-L226)
 
-### P2P事件监听
-- 使用useP2pMessageApi Hook监听P2P相关事件
+### P2P 事件监听
+
+- 使用 useP2pMessageApi Hook 监听 P2P 相关事件
 - 支持视频通话邀请、同意、拒绝等事件处理
-- **文件传输事件：通过FileData、FileTransferRequest、FileTransferResponse接口处理**
+- **文件传输事件：通过 FileData、FileTransferRequest、FileTransferResponse 接口处理**
 
 **章节来源**
+
 - [useP2pMessageApi.ts:1-114](file://apps/pc/src/hooks/useP2pMessageApi.ts#L1-L114)
-- [index.ts (P2P类型):190-276](file://packages/types/src/p2p/index.ts#L190-L276)
+- [index.ts (P2P 类型):190-276](file://packages/types/src/p2p/index.ts#L190-L276)

@@ -1,6 +1,5 @@
-import { setLocale, getLocale, useIntl } from '@umijs/max';
-import { Tooltip, Dropdown } from 'antd';
-import React from 'react';
+import { getLocale, setLocale, useIntl } from '@umijs/max';
+import { Dropdown } from 'antd';
 import styles from './LanguageButton.less';
 
 const LanguageButton = () => {
@@ -45,9 +44,7 @@ const LanguageButton = () => {
 
   return (
     <Dropdown menu={{ items, selectedKeys: [currentLang] }} trigger={['click']}>
-      <div className={styles.languageButton}>
-        {getLangLabel()}
-      </div>
+      <div className={styles.languageButton}>{getLangLabel()}</div>
     </Dropdown>
   );
 };

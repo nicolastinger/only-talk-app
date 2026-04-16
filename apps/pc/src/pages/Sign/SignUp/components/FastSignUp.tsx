@@ -32,7 +32,7 @@ const FastSignUp: React.FC = () => {
       setAccountError(intl.formatMessage({ id: 'signUp.accountPattern' }));
       return false;
     }
-    if (value.length < 8) {
+    if (value.length < 6) {
       setAccountError(intl.formatMessage({ id: 'signUp.accountMinLength' }));
       return false;
     }
@@ -45,7 +45,11 @@ const FastSignUp: React.FC = () => {
       setNicknameError(intl.formatMessage({ id: 'signUp.nicknameRequired' }));
       return false;
     }
-    if (value.length > 8) {
+    if (value.length < 6) {
+      setNicknameError(intl.formatMessage({ id: 'signUp.nicknameMinLength' }));
+      return false;
+    }
+    if (value.length > 50) {
       setNicknameError(intl.formatMessage({ id: 'signUp.nicknameMaxLength' }));
       return false;
     }
@@ -66,7 +70,7 @@ const FastSignUp: React.FC = () => {
       setPasswordError(intl.formatMessage({ id: 'signUp.passwordPattern' }));
       return false;
     }
-    if (value.length < 13) {
+    if (value.length < 14) {
       setPasswordError(intl.formatMessage({ id: 'signUp.passwordMinLength' }));
       return false;
     }
@@ -117,7 +121,9 @@ const FastSignUp: React.FC = () => {
       };
       const res = await sign_up(userInfo);
       if (res.netSuccess && res.res.status === 200) {
-        message.success(intl.formatMessage({ id: 'signUp.success' }, { username: nickname }));
+        message.success(
+          intl.formatMessage({ id: 'signUp.success' }, { username: nickname }),
+        );
       } else {
         message.error(intl.formatMessage({ id: 'signUp.failed' }));
       }
@@ -146,12 +152,19 @@ const FastSignUp: React.FC = () => {
           <input
             type="text"
             className={styles.input}
-            placeholder={intl.formatMessage({ id: 'signUp.accountPlaceholder' })}
+            placeholder={intl.formatMessage({
+              id: 'signUp.accountPlaceholder',
+            })}
             value={account}
             onChange={handleAccountChange}
             onBlur={() => validateAccount(account)}
           />
         </div>
+        {!accountError && (
+          <span className={styles.hintText}>
+            {intl.formatMessage({ id: 'signUp.accountHint' })}
+          </span>
+        )}
         {accountError && (
           <span className={styles.errorText}>{accountError}</span>
         )}
@@ -167,12 +180,19 @@ const FastSignUp: React.FC = () => {
           <input
             type="text"
             className={styles.input}
-            placeholder={intl.formatMessage({ id: 'signUp.nicknamePlaceholder' })}
+            placeholder={intl.formatMessage({
+              id: 'signUp.nicknamePlaceholder',
+            })}
             value={nickname}
             onChange={handleNicknameChange}
             onBlur={() => validateNickname(nickname)}
           />
         </div>
+        {!nicknameError && (
+          <span className={styles.hintText}>
+            {intl.formatMessage({ id: 'signUp.nicknameHint' })}
+          </span>
+        )}
         {nicknameError && (
           <span className={styles.errorText}>{nicknameError}</span>
         )}
@@ -188,7 +208,9 @@ const FastSignUp: React.FC = () => {
           <input
             type={showPassword ? 'text' : 'password'}
             className={styles.input}
-            placeholder={intl.formatMessage({ id: 'signUp.passwordPlaceholder' })}
+            placeholder={intl.formatMessage({
+              id: 'signUp.passwordPlaceholder',
+            })}
             value={password}
             onChange={handlePasswordChange}
             onBlur={() => validatePassword(password)}
@@ -200,6 +222,11 @@ const FastSignUp: React.FC = () => {
             {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
           </span>
         </div>
+        {!passwordError && (
+          <span className={styles.hintText}>
+            {intl.formatMessage({ id: 'signUp.passwordHint' })}
+          </span>
+        )}
         {passwordError && (
           <span className={styles.errorText}>{passwordError}</span>
         )}

@@ -53,25 +53,29 @@
   align-items: center;
   gap: 10px;
   padding: 0 16px;
-  background: linear-gradient(90deg, rgba(255, 77, 79, 0.15) 0%, rgba(255, 77, 79, 0.08) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 77, 79, 0.15) 0%,
+    rgba(255, 77, 79, 0.08) 100%
+  );
   border: 1px solid rgba(255, 77, 79, 0.3);
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(255, 77, 79, 0.2);
   animation: tipPulse 2s ease-in-out infinite;
   z-index: 10;
-  
+
   .tipIcon {
     font-size: 14px;
     animation: tipIconBounce 1.5s ease-in-out infinite;
   }
-  
+
   .tipText {
     color: var(--acai-danger);
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
   }
-  
+
   .tipReconnectButton {
     display: flex;
     align-items: center;
@@ -85,16 +89,16 @@
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
-    
+
     &:hover {
       transform: translateY(-1px);
       box-shadow: 0 2px 8px rgba(245, 87, 108, 0.4);
     }
-    
+
     &:active {
       transform: translateY(0);
     }
-    
+
     span {
       line-height: 1;
     }
@@ -142,16 +146,26 @@
 }
 
 @keyframes tipPulse {
-  0%, 100% {
-    background: linear-gradient(90deg, rgba(255, 77, 79, 0.1) 0%, rgba(255, 77, 79, 0.05) 100%);
+  0%,
+  100% {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 77, 79, 0.1) 0%,
+      rgba(255, 77, 79, 0.05) 100%
+    );
   }
   50% {
-    background: linear-gradient(90deg, rgba(255, 77, 79, 0.15) 0%, rgba(255, 77, 79, 0.08) 100%);
+    background: linear-gradient(
+      90deg,
+      rgba(255, 77, 79, 0.15) 0%,
+      rgba(255, 77, 79, 0.08) 100%
+    );
   }
 }
 
 @keyframes tipIconBounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {

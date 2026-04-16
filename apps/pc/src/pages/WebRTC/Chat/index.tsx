@@ -524,18 +524,14 @@ const WebRTCChat: React.FC = () => {
   };
 
   const handleRetry = async () => {
-    console.log(
-      `[WebRTCChat.handleRetry] 用户点击重试按钮，开始重试...`,
-    );
+    console.log(`[WebRTCChat.handleRetry] 用户点击重试按钮，开始重试...`);
     setIsRetrying(true);
     setConnectionStatus('connecting');
 
     try {
       const service = getWebRTCService();
       if (!service) {
-        console.error(
-          `[WebRTCChat.handleRetry] WebRTCService不存在`,
-        );
+        console.error(`[WebRTCChat.handleRetry] WebRTCService不存在`);
         return;
       }
 
@@ -543,9 +539,7 @@ const WebRTCChat: React.FC = () => {
       await service.closeConnection(friendId);
 
       if (isInitiator) {
-        console.log(
-          `[WebRTCChat.handleRetry] 发起方重试，重新创建offer...`,
-        );
+        console.log(`[WebRTCChat.handleRetry] 发起方重试，重新创建offer...`);
         const offer = await service.createOffer(friendId);
         const signalMessage: WebRTCSignalMessage = {
           type: 'offer',
@@ -556,19 +550,12 @@ const WebRTCChat: React.FC = () => {
           timestamp: Date.now(),
         };
         await service.sendSignal(signalMessage);
-        console.log(
-          `[WebRTCChat.handleRetry] ✅ 重试offer已发送`,
-        );
+        console.log(`[WebRTCChat.handleRetry] ✅ 重试offer已发送`);
       } else {
-        console.log(
-          `[WebRTCChat.handleRetry] 响应方等待对端的新offer...`,
-        );
+        console.log(`[WebRTCChat.handleRetry] 响应方等待对端的新offer...`);
       }
     } catch (e) {
-      console.error(
-        `[WebRTCChat.handleRetry] ❌ 重试失败:`,
-        e,
-      );
+      console.error(`[WebRTCChat.handleRetry] ❌ 重试失败:`, e);
       setConnectionStatus('failed');
     } finally {
       setIsRetrying(false);
@@ -590,14 +577,10 @@ const WebRTCChat: React.FC = () => {
         console.log(`[WebRTCChat.handleExit] ⚠️  WebRTCService不存在`);
       }
 
-      console.log(
-        `[WebRTCChat.handleExit] 清理后端窗口状态...`,
-      );
+      console.log(`[WebRTCChat.handleExit] 清理后端窗口状态...`);
       await updateWebRTCWindowState(friendId, 'close');
 
-      console.log(
-        `[WebRTCChat.handleExit] 关闭当前窗口...`,
-      );
+      console.log(`[WebRTCChat.handleExit] 关闭当前窗口...`);
       const currentWindow = window.getCurrentWindow();
       await currentWindow.close();
       console.log(`[WebRTCChat.handleExit] ✅ 窗口已关闭`);

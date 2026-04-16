@@ -1,4 +1,4 @@
-# API服务
+# API 服务
 
 <cite>
 **本文引用的文件**
@@ -19,6 +19,7 @@
 </cite>
 
 ## 目录
+
 1. [简介](#简介)
 2. [项目结构](#项目结构)
 3. [核心组件](#核心组件)
@@ -31,7 +32,9 @@
 10. [附录](#附录)
 
 ## 简介
+
 本文件面向 Rust + Tauri + Umi 的即时通讯应用，聚焦于“API 服务”的设计与实现，系统阐述以下主题：
+
 - RESTful API 的调用封装与统一返回格式
 - HTTP 请求处理流程、响应标准化与错误处理机制
 - 中间件设计思路（基于 Tauri 命令层）、请求验证与安全防护
@@ -40,7 +43,9 @@
 - 提供具体代码示例路径，帮助开发者快速掌握接口实现模式与最佳实践
 
 ## 项目结构
+
 该 API 服务位于 Tauri 应用的后端 Rust 侧，通过 Tauri 的命令系统暴露给前端调用。整体采用模块化分层：
+
 - cmd 层：对外暴露的命令函数，作为 API 的入口
 - service 层：业务逻辑与网络请求封装
 - dto/vo：数据传输对象与视图对象，统一返回格式
@@ -107,6 +112,7 @@ LIB --> UTILS
 ```
 
 图表来源
+
 - [main.rs:1-8](file://src-tauri/src/main.rs#L1-L8)
 - [lib.rs:117-166](file://src-tauri/src/lib.rs#L117-L166)
 - [cmd/mod.rs:1-10](file://src-tauri/src/cmd/mod.rs#L1-L10)
@@ -120,11 +126,13 @@ LIB --> UTILS
 - [utils/global_static_str.rs:1-59](file://src-tauri/src/utils/global_static_str.rs#L1-L59)
 
 章节来源
+
 - [main.rs:1-8](file://src-tauri/src/main.rs#L1-L8)
 - [lib.rs:117-166](file://src-tauri/src/lib.rs#L117-L166)
 - [cmd/mod.rs:1-10](file://src-tauri/src/cmd/mod.rs#L1-L10)
 
 ## 核心组件
+
 - 命令注册与入口
   - 进程入口在 main.rs，调用 lib.rs 的 run 函数
   - lib.rs 使用 Tauri Builder 注册大量命令，形成统一的 API 暴露面
@@ -142,6 +150,7 @@ LIB --> UTILS
   - utils/global_static_str.rs 提供域名、端口、路径等常量
 
 章节来源
+
 - [lib.rs:117-166](file://src-tauri/src/lib.rs#L117-L166)
 - [cmd/api_controller.rs:24-58](file://src-tauri/src/cmd/api_controller.rs#L24-L58)
 - [service/api_service.rs:12-37](file://src-tauri/src/service/api_service.rs#L12-L37)
@@ -152,7 +161,9 @@ LIB --> UTILS
 - [utils/global_static_str.rs:10-18](file://src-tauri/src/utils/global_static_str.rs#L10-L18)
 
 ## 架构总览
+
 API 服务采用“命令驱动 + 服务封装”的分层架构：
+
 - 前端通过 Tauri 命令调用后端 API
 - 命令层负责参数校验与错误透传
 - 服务层负责网络请求、鉴权头注入、超时与重试策略
@@ -175,6 +186,7 @@ Note over CMD,DTO : 统一返回体规范
 ```
 
 图表来源
+
 - [cmd/api_controller.rs:24-58](file://src-tauri/src/cmd/api_controller.rs#L24-L58)
 - [service/api_service.rs:12-37](file://src-tauri/src/service/api_service.rs#L12-L37)
 - [dto/http_result.rs:4-9](file://src-tauri/src/dto/http_result.rs#L4-L9)
@@ -183,9 +195,10 @@ Note over CMD,DTO : 统一返回体规范
 ## 详细组件分析
 
 ### 命令层：HTTP 请求封装
+
 - GET/POST/上传/表单提交
   - get_request/post_request：基础 HTTP 请求，post_request 自动从全局用户信息中读取 token 并注入 Authorization 头
-  - upload_file_* / post_form_data_*：封装 multipart 上传与表单提交，支持额外字段与多文件上传
+  - upload*file*_ / post*form_data*_：封装 multipart 上传与表单提交，支持额外字段与多文件上传
 - 返回体
   - 命令层返回 ApiResponse 结构，包含 status 与 body；部分业务使用统一的 Response 结构
 
@@ -203,14 +216,17 @@ Wrap --> End(["返回给前端"])
 ```
 
 图表来源
+
 - [cmd/api_controller.rs:24-58](file://src-tauri/src/cmd/api_controller.rs#L24-L58)
 - [service/api_service.rs:12-37](file://src-tauri/src/service/api_service.rs#L12-L37)
 
 章节来源
+
 - [cmd/api_controller.rs:24-151](file://src-tauri/src/cmd/api_controller.rs#L24-L151)
 - [service/api_service.rs:39-186](file://src-tauri/src/service/api_service.rs#L39-L186)
 
 ### 服务层：网络与业务编排
+
 - 超时与鉴权
   - 服务层统一设置请求超时，按需注入 Authorization 头
 - 上传与表单
@@ -232,16 +248,19 @@ USVC->>USVC : 启动QUIC客户端/定时任务
 ```
 
 图表来源
+
 - [cmd/auth_controller.rs:16-64](file://src-tauri/src/cmd/auth_controller.rs#L16-L64)
 - [service/user_service.rs:28-53](file://src-tauri/src/service/user_service.rs#L28-L53)
 - [service/api_service.rs:12-37](file://src-tauri/src/service/api_service.rs#L12-L37)
 - [dao/init_db.rs:17-41](file://src-tauri/src/dao/init_db.rs#L17-L41)
 
 章节来源
+
 - [service/user_service.rs:28-284](file://src-tauri/src/service/user_service.rs#L28-L284)
 - [dao/init_db.rs:17-75](file://src-tauri/src/dao/init_db.rs#L17-L75)
 
 ### 数据模型与返回体规范
+
 - 通用返回体
   - dto/http_result.rs：code/data/message，用于服务层内部解析与传递
   - vo/http_response.rs：code/message/data?，用于对外统一响应
@@ -264,14 +283,17 @@ HttpResult --> Response : "转换/映射"
 ```
 
 图表来源
+
 - [dto/http_result.rs:4-9](file://src-tauri/src/dto/http_result.rs#L4-L9)
 - [vo/http_response.rs:4-9](file://src-tauri/src/vo/http_response.rs#L4-L9)
 
 章节来源
+
 - [dto/http_result.rs:1-10](file://src-tauri/src/dto/http_result.rs#L1-L10)
 - [vo/http_response.rs:1-10](file://src-tauri/src/vo/http_response.rs#L1-L10)
 
 ### 认证与会话
+
 - 登录流程
   - sign_in：向认证接口发起登录，成功后写入全局用户信息(token/account)，并调用用户信息接口完善本地映射
   - logout/clear_user_info：清理全局用户信息、服务器列表与数据库连接
@@ -295,13 +317,16 @@ AUTH-->>FE : 登录成功
 ```
 
 图表来源
+
 - [cmd/auth_controller.rs:16-64](file://src-tauri/src/cmd/auth_controller.rs#L16-L64)
 - [service/api_service.rs:12-37](file://src-tauri/src/service/api_service.rs#L12-L37)
 
 章节来源
+
 - [cmd/auth_controller.rs:16-113](file://src-tauri/src/cmd/auth_controller.rs#L16-L113)
 
 ### 初始化与配置
+
 - 初始化流程
   - init_app：设置日志、资源目录、SQLite 目录，复制默认资源，检测 IPv6 支持
 - 配置中心
@@ -319,16 +344,19 @@ E --> F["完成初始化"]
 ```
 
 图表来源
+
 - [init_app.rs:19-91](file://src-tauri/src/init_app.rs#L19-L91)
 - [config.rs:7-81](file://src-tauri/src/config.rs#L7-L81)
 - [utils/global_static_str.rs:10-59](file://src-tauri/src/utils/global_static_str.rs#L10-L59)
 
 章节来源
+
 - [init_app.rs:19-186](file://src-tauri/src/init_app.rs#L19-L186)
 - [config.rs:7-155](file://src-tauri/src/config.rs#L7-L155)
 - [utils/global_static_str.rs:1-59](file://src-tauri/src/utils/global_static_str.rs#L1-59)
 
 ## 依赖关系分析
+
 - 关键依赖
   - reqwest：HTTP 客户端，支持 JSON、multipart、rustls TLS
   - tokio：异步运行时
@@ -351,6 +379,7 @@ UTILS["utils/global_static_str.rs"] --> LIB
 ```
 
 图表来源
+
 - [Cargo.toml:24-62](file://src-tauri/Cargo.toml#L24-L62)
 - [service/api_service.rs:12-37](file://src-tauri/src/service/api_service.rs#L12-L37)
 - [dao/init_db.rs:17-41](file://src-tauri/src/dao/init_db.rs#L17-L41)
@@ -360,9 +389,11 @@ UTILS["utils/global_static_str.rs"] --> LIB
 - [utils/global_static_str.rs:10-18](file://src-tauri/src/utils/global_static_str.rs#L10-L18)
 
 章节来源
+
 - [Cargo.toml:1-62](file://src-tauri/Cargo.toml#L1-L62)
 
 ## 性能考量
+
 - 异步与并发
   - 使用 tokio::main 与 async/await，提升 I/O 密集型请求吞吐
 - 连接与超时
@@ -375,6 +406,7 @@ UTILS["utils/global_static_str.rs"] --> LIB
   - 提供压缩到 webp 的命令，降低传输体积
 
 章节来源
+
 - [lib.rs:4-75](file://src-tauri/src/lib.rs#L4-L75)
 - [service/api_service.rs:16,115,166](file://src-tauri/src/service/api_service.rs#L16,L115,L166)
 - [dao/init_db.rs:23-32](file://src-tauri/src/dao/init_db.rs#L23-L32)
@@ -382,6 +414,7 @@ UTILS["utils/global_static_str.rs"] --> LIB
 - [cmd/api_controller.rs:141-150](file://src-tauri/src/cmd/api_controller.rs#L141-L150)
 
 ## 故障排查指南
+
 - 常见问题定位
   - 网络请求失败：检查域名与端口常量、IPv6 支持、超时设置
   - 鉴权失败：确认全局用户信息中 token 是否正确写入与读取
@@ -392,6 +425,7 @@ UTILS["utils/global_static_str.rs"] --> LIB
   - fast_log 输出到按日滚动的日志文件
 
 章节来源
+
 - [cmd/auth_controller.rs:44-58](file://src-tauri/src/cmd/auth_controller.rs#L44-L58)
 - [service/api_service.rs:54-113](file://src-tauri/src/service/api_service.rs#L54-L113)
 - [dao/init_db.rs:44-74](file://src-tauri/src/dao/init_db.rs#L44-L74)
@@ -399,13 +433,16 @@ UTILS["utils/global_static_str.rs"] --> LIB
 - [lib.rs:87-89](file://src-tauri/src/lib.rs#L87-L89)
 
 ## 结论
+
 本 API 服务通过命令层与服务层的清晰分层，实现了：
+
 - 统一的 HTTP 请求封装与鉴权头注入
 - 标准化的返回体与错误传播
 - 初步的认证、会话与定时任务编排
 - 可扩展的配置中心与初始化流程
 
 建议后续增强：
+
 - 明确 API 版本号与路由前缀，逐步引入中间件（如速率限制、CORS）
 - 增加请求参数校验与统一错误码体系
 - 完善文档生成与自动化测试策略
@@ -414,6 +451,7 @@ UTILS["utils/global_static_str.rs"] --> LIB
 ## 附录
 
 ### API 设计与实现最佳实践
+
 - 命令命名规范
   - 使用语义化动词+名词组合，如 upload_file_request、post_form_data_request
 - 参数校验
@@ -428,6 +466,7 @@ UTILS["utils/global_static_str.rs"] --> LIB
   - 记录关键路径与错误堆栈，便于问题定位
 
 章节来源
+
 - [cmd/api_controller.rs:24-151](file://src-tauri/src/cmd/api_controller.rs#L24-L151)
 - [service/api_service.rs:12-186](file://src-tauri/src/service/api_service.rs#L12-L186)
 - [vo/http_response.rs:4-9](file://src-tauri/src/vo/http_response.rs#L4-L9)

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
 import {
   ChatMessage,
   MessageFrom,
@@ -8,7 +9,6 @@ import {
 import { Button, Input } from 'antd';
 import { TextAreaRef } from 'antd/es/input/TextArea';
 import { nanoid } from 'nanoid';
-import { useIntl } from '@umijs/max';
 import React, { ChangeEvent, useRef, useState } from 'react';
 import FooterToolBar from './FooterToolBar';
 import styles from './styles/Footer.less';

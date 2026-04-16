@@ -4,8 +4,8 @@ import {
   EyeInvisibleOutlined,
   MinusCircleOutlined,
 } from '@ant-design/icons';
-import { Dropdown, Tooltip } from 'antd';
 import { useIntl } from '@umijs/max';
+import { Dropdown, Tooltip } from 'antd';
 import { useState } from 'react';
 import styles from './index.less';
 
@@ -71,7 +71,10 @@ const OnlineStatusSwitch = () => {
 
   return (
     <Dropdown menu={{ items }} placement="bottomLeft" trigger={['click']}>
-      <Tooltip title={intl.formatMessage({ id: 'onlineStatus.title' })} placement="bottom">
+      <Tooltip
+        title={intl.formatMessage({ id: 'onlineStatus.title' })}
+        placement="bottom"
+      >
         <div className={styles.statusSwitch}>
           <span
             className={styles.statusIcon}

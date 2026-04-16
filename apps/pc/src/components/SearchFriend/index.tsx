@@ -75,7 +75,12 @@ const SearchFriend = () => {
       const result = await add_friend(friendData);
       console.log('请求结果', result);
       if (result.netSuccess && result.res.status === 200) {
-        message.success(intl.formatMessage({ id: 'friendRequest.requestSent' }, { username: currentUser.username }));
+        message.success(
+          intl.formatMessage(
+            { id: 'friendRequest.requestSent' },
+            { username: currentUser.username },
+          ),
+        );
         handleCancel();
       } else {
         message.error(intl.formatMessage({ id: 'friendRequest.sendFailed' }));
@@ -201,16 +206,22 @@ const SearchFriend = () => {
         {currentUser && (
           <div style={{ marginBottom: 16 }}>
             <p>
-              {intl.formatMessage({ id: 'friendRequest.sendTo' })}: <strong>{currentUser.username}</strong>
+              {intl.formatMessage({ id: 'friendRequest.sendTo' })}:{' '}
+              <strong>{currentUser.username}</strong>
             </p>
           </div>
         )}
-        <Form.Item label={intl.formatMessage({ id: 'friendRequest.requestMessage' })} required>
+        <Form.Item
+          label={intl.formatMessage({ id: 'friendRequest.requestMessage' })}
+          required
+        >
           <Input.TextArea
             value={requestMessage}
             onChange={(e) => setRequestMessage(e.target.value)}
             rows={4}
-            placeholder={intl.formatMessage({ id: 'friendRequest.requestPlaceholder' })}
+            placeholder={intl.formatMessage({
+              id: 'friendRequest.requestPlaceholder',
+            })}
           />
         </Form.Item>
       </Modal>

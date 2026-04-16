@@ -14,13 +14,14 @@
 
 ```typescript
 // ❌ 错误代码
-if (candidateType === 'host') {
+if (candidateType === "host") {
   console.log(`跳过本地host候选(host candidate)`);
   return; // 直接跳过，不发送给对端
 }
 ```
 
-**问题**: 
+**问题**:
+
 - NAT3 环境下，host 候选也可能成功连接
 - 如果双方在同一个 NAT 后面（同局域网），host 候选可以直接连通
 - 某些路由器支持 hairpinning（环回），host 候选也能工作
@@ -32,13 +33,14 @@ if (candidateType === 'host') {
 
 ```typescript
 // ❌ 错误代码
-if (iceCandidate.type === 'relay' || iceCandidate.type === 'host') {
+if (iceCandidate.type === "relay" || iceCandidate.type === "host") {
   console.log(`跳过中继候选(relay candidate)`);
   return; // 也跳过了 host 候选！
 }
 ```
 
-**问题**: 
+**问题**:
+
 - 即使发送端发送了 host 候选，接收端也会过滤掉
 - 导致双方都无法使用 host 候选进行连接尝试
 
@@ -48,17 +50,19 @@ if (iceCandidate.type === 'relay' || iceCandidate.type === 'host') {
 
 ```typescript
 // ✅ 修复后的代码
-if (candidateType === 'relay') {
+if (candidateType === "relay") {
   console.log(`⏭️ 跳过中继候选(relay candidate) - 因为禁用了TURN服务器`);
   return;
 }
 
 // 【关键】不要跳过host候选！
-if (candidateType === 'host') {
-  console.log(`✅ 保留host候选 - NAT3环境下也可能有用（同局域网或hairpinning支持）`);
+if (candidateType === "host") {
+  console.log(
+    `✅ 保留host候选 - NAT3环境下也可能有用（同局域网或hairpinning支持）`
+  );
 }
 
-if (candidateType === 'srflx') {
+if (candidateType === "srflx") {
   console.log(`✅ 保留srflx候选 - 这是NAT3穿透的关键（公网映射地址）`);
 }
 
@@ -70,15 +74,15 @@ await this.sendSignal(signalMessage);
 
 ```typescript
 // ✅ 修复后的代码
-if (iceCandidate.type === 'relay') {
+if (iceCandidate.type === "relay") {
   console.log(`⏭️ 跳过中继候选(relay candidate) - 因为禁用了TURN服务器`);
   return;
 }
 
 // 记录添加的候选类型
-if (iceCandidate.type === 'host') {
+if (iceCandidate.type === "host") {
   console.log(`✅ 添加host候选 - 同局域网或hairpinning可能成功`);
-} else if (iceCandidate.type === 'srflx') {
+} else if (iceCandidate.type === "srflx") {
   console.log(`✅ 添加srflx候选 - NAT3穿透的关键（公网映射）`);
 }
 
@@ -105,17 +109,18 @@ await connection.addIceCandidate(iceCandidate);
 
 ### 候选类型说明
 
-| 候选类型 | 说明 | NAT3 环境作用 |
-|---------|------|--------------|
-| **host** | 本地局域网地址（如 192.168.1.100:5000） | 同局域网直连、hairpinning 支持时可成功 |
+| 候选类型  | 说明                                                  | NAT3 环境作用                            |
+| --------- | ----------------------------------------------------- | ---------------------------------------- |
+| **host**  | 本地局域网地址（如 192.168.1.100:5000）               | 同局域网直连、hairpinning 支持时可成功   |
 | **srflx** | STUN 服务器反射地址（公网映射，如 123.45.67.89:6000） | NAT 穿透的关键，通过 STUN 获取的公网地址 |
-| **relay** | TURN 中继服务器地址 | 我们禁用了 TURN，所以不会有此类型 |
+| **relay** | TURN 中继服务器地址                                   | 我们禁用了 TURN，所以不会有此类型        |
 
 ## 🔧 添加的调试功能
 
 ### 1. 详细的候选日志
 
 每次收集或处理候选时，都会打印：
+
 - 候选类型（host/srflx/relay）
 - 候选地址和端口
 - 传输协议（UDP/TCP）
@@ -124,6 +129,7 @@ await connection.addIceCandidate(iceCandidate);
 ### 2. SDP 候选分析
 
 在创建/处理 offer 和 answer 时，自动分析 SDP 中的候选信息：
+
 ```
 📊 SDP中包含 6 个ICE候选:
   1. 类型: host, 地址: 192.168.1.100:5000
@@ -136,6 +142,7 @@ await connection.addIceCandidate(iceCandidate);
 ### 3. 连接状态监控
 
 连接状态变化时打印详细信息：
+
 - 连接状态（connectionState）
 - ICE 状态（iceConnectionState）
 - 收集状态（iceGatheringState）
@@ -145,6 +152,7 @@ await connection.addIceCandidate(iceCandidate);
 ### 4. 候选对统计
 
 通过 `getStats()` API 获取：
+
 - 总候选对数
 - 成功连接数
 - 失败连接数
@@ -153,6 +161,7 @@ await connection.addIceCandidate(iceCandidate);
 ### 5. ICE 诊断工具
 
 新增 `logIceDiagnostics()` 公共方法，可手动调用查看完整诊断信息：
+
 ```typescript
 const connection = webrtcService.getConnection(friendId);
 if (connection) {

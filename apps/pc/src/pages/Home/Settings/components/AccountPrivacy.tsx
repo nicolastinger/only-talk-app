@@ -50,7 +50,9 @@ const AccountPrivacy = () => {
       await openNewWindow('main', configs, currentWindow);
     } catch (error) {
       console.error('登出失败:', error);
-      message.error(intl.formatMessage({ id: 'settings.accountPrivacy.logoutFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'settings.accountPrivacy.logoutFailed' }),
+      );
     }
   };
 
@@ -63,15 +65,21 @@ const AccountPrivacy = () => {
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <UserOutlined className={styles.cardIcon} />
-          <Text strong>{intl.formatMessage({ id: 'settings.accountPrivacy.accountInfo' })}</Text>
+          <Text strong>
+            {intl.formatMessage({ id: 'settings.accountPrivacy.accountInfo' })}
+          </Text>
         </div>
         <Divider className={styles.divider} />
         <div className={styles.accountInfo}>
-          <Text type="secondary">{intl.formatMessage({ id: 'settings.accountPrivacy.loginAccount' })}</Text>
+          <Text type="secondary">
+            {intl.formatMessage({ id: 'settings.accountPrivacy.loginAccount' })}
+          </Text>
           <Text className={styles.accountValue}>user@example.com</Text>
         </div>
         <div className={styles.accountInfo}>
-          <Text type="secondary">{intl.formatMessage({ id: 'settings.accountPrivacy.phoneNumber' })}</Text>
+          <Text type="secondary">
+            {intl.formatMessage({ id: 'settings.accountPrivacy.phoneNumber' })}
+          </Text>
           <Text className={styles.accountValue}>138****1234</Text>
         </div>
       </Card>
@@ -79,11 +87,17 @@ const AccountPrivacy = () => {
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <UserOutlined className={styles.cardIcon} />
-          <Text strong>{intl.formatMessage({ id: 'settings.accountPrivacy.privacySettings' })}</Text>
+          <Text strong>
+            {intl.formatMessage({
+              id: 'settings.accountPrivacy.privacySettings',
+            })}
+          </Text>
         </div>
         <Divider className={styles.divider} />
         <Checkbox defaultChecked className={styles.settingCheckbox}>
-          {intl.formatMessage({ id: 'settings.accountPrivacy.allowSearchByPhone' })}
+          {intl.formatMessage({
+            id: 'settings.accountPrivacy.allowSearchByPhone',
+          })}
         </Checkbox>
         <Checkbox defaultChecked className={styles.settingCheckbox}>
           {intl.formatMessage({ id: 'settings.accountPrivacy.allowRecommend' })}
@@ -96,10 +110,16 @@ const AccountPrivacy = () => {
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
           <LockOutlined className={styles.cardIcon} />
-          <Text strong>{intl.formatMessage({ id: 'settings.accountPrivacy.securitySettings' })}</Text>
+          <Text strong>
+            {intl.formatMessage({
+              id: 'settings.accountPrivacy.securitySettings',
+            })}
+          </Text>
         </div>
         <Divider className={styles.divider} />
-        <Button type="primary">{intl.formatMessage({ id: 'settings.accountPrivacy.changePassword' })}</Button>
+        <Button type="primary">
+          {intl.formatMessage({ id: 'settings.accountPrivacy.changePassword' })}
+        </Button>
         <Button
           type="primary"
           danger

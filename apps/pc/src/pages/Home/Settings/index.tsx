@@ -4,8 +4,8 @@ import {
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Layout, Menu } from 'antd';
 import { useIntl } from '@umijs/max';
+import { Layout, Menu } from 'antd';
 import { useState } from 'react';
 import styles from './Settings.less';
 import AboutApp from './components/AboutApp';
@@ -60,7 +60,9 @@ const SettingsPage = () => {
   return (
     <Layout className={styles.settingsContainer}>
       <Sider width={250} className={styles.settingsSidebar}>
-        <div className={styles.sidebarTitle}>{intl.formatMessage({ id: 'settings.title' })}</div>
+        <div className={styles.sidebarTitle}>
+          {intl.formatMessage({ id: 'settings.title' })}
+        </div>
         <Menu
           mode="inline"
           selectedKeys={[activeTab]}

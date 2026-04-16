@@ -109,7 +109,12 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
         cancelText={intl.formatMessage({ id: 'chat.topBar.cancel' })}
         okButtonProps={{ danger: true }}
       >
-        <p>{intl.formatMessage({ id: 'chat.topBar.confirmDeleteMsg' }, { name: friendInfo?.friend_name || title })}</p>
+        <p>
+          {intl.formatMessage(
+            { id: 'chat.topBar.confirmDeleteMsg' },
+            { name: friendInfo?.friend_name || title },
+          )}
+        </p>
         <p style={{ color: '#999', fontSize: '12px' }}>
           {intl.formatMessage({ id: 'chat.topBar.deleteWarning' })}
         </p>

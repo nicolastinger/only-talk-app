@@ -7,6 +7,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
 import {
   get_accept_friend_request_list,
   get_cached_user_info,
@@ -15,9 +16,12 @@ import {
   process_friend_request,
   readContactsNotification,
 } from '@workspace/services';
-import { FriendRequestInfo, FriendRequestInfoDTO, UserInfo } from '@workspace/types';
+import {
+  FriendRequestInfo,
+  FriendRequestInfoDTO,
+  UserInfo,
+} from '@workspace/types';
 import { Avatar, Button, Modal, Tabs } from 'antd';
-import { useIntl } from '@umijs/max';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 
@@ -34,7 +38,9 @@ const FriendRequestsModal = ({
   onClose: () => void;
 }) => {
   const intl = useIntl();
-  const [acceptRequests, setAcceptRequests] = useState<RequestWithUserInfo[]>([]);
+  const [acceptRequests, setAcceptRequests] = useState<RequestWithUserInfo[]>(
+    [],
+  );
   const [sentRequests, setSentRequests] = useState<RequestWithUserInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const setAddContacts = useBearStore((state) => state.setAddContacts);
@@ -66,7 +72,7 @@ const FriendRequestsModal = ({
     try {
       const cachedUserInfo = await get_cached_user_info(userUuid);
       let avatarUrl = '';
-      
+
       if (cachedUserInfo?.icon) {
         const fileVos = await getFiles(cachedUserInfo.icon);
         avatarUrl = fileVos?.[0]?.tauri_file_path || '';
@@ -148,7 +154,11 @@ const FriendRequestsModal = ({
           icon: <CloseOutlined />,
         };
       default:
-        return { text: intl.formatMessage({ id: 'friendRequest.unknown' }), className: styles.unknownStatus, icon: null };
+        return {
+          text: intl.formatMessage({ id: 'friendRequest.unknown' }),
+          className: styles.unknownStatus,
+          icon: null,
+        };
     }
   };
 
@@ -192,7 +202,8 @@ const FriendRequestsModal = ({
   };
 
   const formatTime = (timestamp?: number) => {
-    if (!timestamp) return intl.formatMessage({ id: 'friendRequest.unknownTime' });
+    if (!timestamp)
+      return intl.formatMessage({ id: 'friendRequest.unknownTime' });
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -202,8 +213,8 @@ const FriendRequestsModal = ({
       const hours = Math.floor(diff / (1000 * 60 * 60));
       if (hours === 0) {
         const minutes = Math.floor(diff / (1000 * 60));
-        return minutes <= 1 
-          ? intl.formatMessage({ id: 'friendRequest.justNow' }) 
+        return minutes <= 1
+          ? intl.formatMessage({ id: 'friendRequest.justNow' })
           : intl.formatMessage({ id: 'friendRequest.minutesAgo' }, { minutes });
       }
       return intl.formatMessage({ id: 'friendRequest.hoursAgo' }, { hours });
@@ -220,7 +231,10 @@ const FriendRequestsModal = ({
     isReceived: boolean,
   ) => {
     const statusConfig = getStatusConfig(request.accept_status);
-    const displayName = request.userInfo?.username || request.request_user || intl.formatMessage({ id: 'userInfo.unknown' });
+    const displayName =
+      request.userInfo?.username ||
+      request.request_user ||
+      intl.formatMessage({ id: 'userInfo.unknown' });
     const displayAccount = request.userInfo?.account || '';
     const displayInfo = request.userInfo?.info || '';
 
@@ -249,12 +263,11 @@ const FriendRequestsModal = ({
             </span>
           </div>
 
-          {displayInfo && (
-            <div className={styles.bio}>{displayInfo}</div>
-          )}
+          {displayInfo && <div className={styles.bio}>{displayInfo}</div>}
 
           <div className={styles.message}>
-            {request.request_message || intl.formatMessage({ id: 'friendRequest.defaultRequestMessage' })}
+            {request.request_message ||
+              intl.formatMessage({ id: 'friendRequest.defaultRequestMessage' })}
           </div>
 
           <div className={styles.time}>{formatTime(request.created_at)}</div>
@@ -289,8 +302,8 @@ const FriendRequestsModal = ({
     <div className={styles.emptyState}>
       <div className={styles.emptyIcon}>{type === 'sent' ? '📤' : '📥'}</div>
       <div className={styles.emptyText}>
-        {type === 'sent' 
-          ? intl.formatMessage({ id: 'friendRequest.noSentRequests' }) 
+        {type === 'sent'
+          ? intl.formatMessage({ id: 'friendRequest.noSentRequests' })
           : intl.formatMessage({ id: 'friendRequest.noReceivedRequests' })}
       </div>
     </div>
@@ -339,7 +352,11 @@ const FriendRequestsModal = ({
 
   return (
     <Modal
-      title={<span className={styles.modalTitle}>{intl.formatMessage({ id: 'friendRequest.title' })}</span>}
+      title={
+        <span className={styles.modalTitle}>
+          {intl.formatMessage({ id: 'friendRequest.title' })}
+        </span>
+      }
       open={visible}
       onCancel={onClose}
       footer={null}

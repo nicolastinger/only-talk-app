@@ -1,4 +1,4 @@
-import { setLocale, getLocale, useIntl } from '@umijs/max';
+import { getLocale, setLocale, useIntl } from '@umijs/max';
 import { Dropdown } from 'antd';
 import React from 'react';
 import styles from './index.less';

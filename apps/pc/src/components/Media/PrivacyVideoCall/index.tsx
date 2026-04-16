@@ -274,7 +274,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
       // 关键：如果组件已卸载或通话已结束，立即释放媒体流，防止摄像头/麦克风泄漏
       if (!isMountedRef.current || isCallEndedRef.current) {
-        console.warn('[PrivacyVideoCall] 组件已卸载或通话已结束，释放刚获取的媒体流');
+        console.warn(
+          '[PrivacyVideoCall] 组件已卸载或通话已结束，释放刚获取的媒体流',
+        );
         stream.getTracks().forEach((track) => track.stop());
         return;
       }
@@ -720,10 +722,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     return () => {
       unlistenRef.current.forEach((unlisten) => unlisten());
     };
-  // 关键修复：移除 initLocalMedia 和 startSendingMedia 依赖
-  // 改用 ref 调用（见上方 initLocalMediaRef / startSendingMediaRef），
-  // 避免因 isRemoteReceiverReady 变化导致 initLocalMedia 引用变化，
-  // 从而触发此 useEffect 重新执行 → 注销再注册所有监听器 → 丢失事件
+    // 关键修复：移除 initLocalMedia 和 startSendingMedia 依赖
+    // 改用 ref 调用（见上方 initLocalMediaRef / startSendingMediaRef），
+    // 避免因 isRemoteReceiverReady 变化导致 initLocalMedia 引用变化，
+    // 从而触发此 useEffect 重新执行 → 注销再注册所有监听器 → 丢失事件
   }, [processVideoBufferQueue, processAudioBufferQueue]);
 
   // ==================== 处理媒体控制命令 ====================
@@ -930,80 +932,83 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 4. 发送结束通知给对方
    * 5. 调用关闭回调
    */
-  const handleEndCall = useCallback(async (notifyOtherParty: boolean = true) => {
-    // 防止重复执行
-    if (isCallEndedRef.current) {
-      return;
-    }
-    isCallEndedRef.current = true;
-
-    // 停止媒体信息定时发送
-    stopMediaInfoReporting();
-
-    // 停止视频录制器
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== 'inactive'
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-    mediaRecorderRef.current = null;
-
-    // 停止音频录制器
-    if (
-      audioRecorderRef.current &&
-      audioRecorderRef.current.state !== 'inactive'
-    ) {
-      audioRecorderRef.current.stop();
-    }
-    audioRecorderRef.current = null;
-
-    // 停止所有媒体轨道并释放硬件设备（摄像头/麦克风）
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => track.stop());
-      localStreamRef.current = null;
-    }
-
-    // 关闭视频 MediaSource 并清理引用
-    if (mediaSourceRef.current) {
-      if (mediaSourceRef.current.readyState === 'open') {
-        mediaSourceRef.current.endOfStream();
+  const handleEndCall = useCallback(
+    async (notifyOtherParty: boolean = true) => {
+      // 防止重复执行
+      if (isCallEndedRef.current) {
+        return;
       }
-      mediaSourceRef.current = null;
-    }
-    sourceBufferRef.current = null;
-    videoBufferQueueRef.current = [];
-    isVideoSourceBufferUpdatingRef.current = false;
+      isCallEndedRef.current = true;
 
-    // 关闭音频 MediaSource 并清理引用
-    if (audioMediaSourceRef.current) {
-      if (audioMediaSourceRef.current.readyState === 'open') {
-        audioMediaSourceRef.current.endOfStream();
+      // 停止媒体信息定时发送
+      stopMediaInfoReporting();
+
+      // 停止视频录制器
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== 'inactive'
+      ) {
+        mediaRecorderRef.current.stop();
       }
-      audioMediaSourceRef.current = null;
-    }
-    audioSourceBufferRef.current = null;
-    audioBufferQueueRef.current = [];
-    isAudioSourceBufferUpdatingRef.current = false;
+      mediaRecorderRef.current = null;
 
-    // 仅当本方主动结束时才发送结束通知给对方
-    // 收到对方结束消息时不需要再回复，避免互相发送结束消息
-    if (notifyOtherParty) {
-      try {
-        await invoke('send_p2p_video_call_end', {
-          targetUuid: friendId,
-        });
-      } catch (error) {
-        console.error('发送结束通知失败:', error);
+      // 停止音频录制器
+      if (
+        audioRecorderRef.current &&
+        audioRecorderRef.current.state !== 'inactive'
+      ) {
+        audioRecorderRef.current.stop();
       }
-    }
+      audioRecorderRef.current = null;
 
-    // 更新状态
-    setMediaState((prev) => ({ ...prev, isInCall: false }));
+      // 停止所有媒体轨道并释放硬件设备（摄像头/麦克风）
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = null;
+      }
 
-    // 调用关闭回调
-    onClose?.();
-  }, [friendId, onClose, stopMediaInfoReporting]);
+      // 关闭视频 MediaSource 并清理引用
+      if (mediaSourceRef.current) {
+        if (mediaSourceRef.current.readyState === 'open') {
+          mediaSourceRef.current.endOfStream();
+        }
+        mediaSourceRef.current = null;
+      }
+      sourceBufferRef.current = null;
+      videoBufferQueueRef.current = [];
+      isVideoSourceBufferUpdatingRef.current = false;
+
+      // 关闭音频 MediaSource 并清理引用
+      if (audioMediaSourceRef.current) {
+        if (audioMediaSourceRef.current.readyState === 'open') {
+          audioMediaSourceRef.current.endOfStream();
+        }
+        audioMediaSourceRef.current = null;
+      }
+      audioSourceBufferRef.current = null;
+      audioBufferQueueRef.current = [];
+      isAudioSourceBufferUpdatingRef.current = false;
+
+      // 仅当本方主动结束时才发送结束通知给对方
+      // 收到对方结束消息时不需要再回复，避免互相发送结束消息
+      if (notifyOtherParty) {
+        try {
+          await invoke('send_p2p_video_call_end', {
+            targetUuid: friendId,
+          });
+        } catch (error) {
+          console.error('发送结束通知失败:', error);
+        }
+      }
+
+      // 更新状态
+      setMediaState((prev) => ({ ...prev, isInCall: false }));
+
+      // 调用关闭回调
+      onClose?.();
+    },
+    [friendId, onClose, stopMediaInfoReporting],
+  );
 
   // ==================== 退出隐私聊天 ====================
 

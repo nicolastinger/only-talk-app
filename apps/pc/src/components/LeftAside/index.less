@@ -85,7 +85,7 @@
       border-radius: 16px;
       overflow: hidden;
     }
-    
+
     .ant-modal-body {
       padding: 0;
     }
@@ -234,7 +234,7 @@
       font-size: 13px;
       color: var(--color-primary) !important;
       border: none !important;
-      
+
       &:hover {
         color: var(--color-primary-hover) !important;
       }
@@ -253,4 +253,61 @@
       color: var(--color-primary) !important;
     }
   }
+}
+
+.editForm {
+  width: 100%;
+  margin-top: 16px;
+
+  :global {
+    .ant-form-item {
+      margin-bottom: 12px;
+    }
+
+    .ant-form-item-label > label {
+      font-size: 13px;
+      color: var(--text-color-secondary);
+    }
+
+    .ant-input,
+    .ant-input-number,
+    .ant-select-selector,
+    .ant-picker {
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .ant-input-textarea textarea {
+      border-radius: 6px;
+      font-size: 13px;
+    }
+  }
+}
+
+.buttonSection {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  justify-content: center;
+}
+
+.editButton {
+  width: 100%;
+  border-radius: 8px;
+  font-size: 13px;
+  height: 36px;
+}
+
+.saveButton {
+  flex: 1;
+  border-radius: 8px;
+  font-size: 13px;
+  height: 36px;
+}
+
+.cancelButton {
+  flex: 1;
+  border-radius: 8px;
+  font-size: 13px;
+  height: 36px;
 }

@@ -6,6 +6,7 @@ use std::path::Path;
 use anyhow::anyhow;
 use reqwest::header::HeaderMap;
 use reqwest::{Client, Response};
+use serde::Serialize;
 
 use crate::GLOBAL_QUIC_USER_INFO;
 
@@ -21,6 +22,18 @@ pub async fn post_with_body(
     headers.insert("Authorization", token.parse()?);
 
     let response = client.post(&url).json(&body).headers(headers).send().await?;
+    Ok(response)
+}
+
+pub async fn post_json<T: Serialize>(url: String, body: &T) -> Result<Response, anyhow::Error> {
+    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+
+    let empty_token = String::new();
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let mut headers = HeaderMap::new();
+    headers.insert("Authorization", token.parse()?);
+
+    let response = client.post(&url).json(body).headers(headers).send().await?;
     Ok(response)
 }
 

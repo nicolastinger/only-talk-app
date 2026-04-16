@@ -2,7 +2,7 @@ import LanguageSwitcher from '@/components/LanguageSwitch';
 import LocalImage from '@/components/LocalImage';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { TALK_API } from '@/constants';
 import { FormattedMessage } from '@@/exports';
 import { CloseOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -39,11 +39,15 @@ const LoginPage: React.FC = () => {
 
   const validateUserCode = (value: string): boolean => {
     if (!value) {
-      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameRequired' }));
+      setUserCodeError(
+        intl.formatMessage({ id: 'signIn.errors.usernameRequired' }),
+      );
       return false;
     }
     if (value.length < 5) {
-      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameTooShort' }));
+      setUserCodeError(
+        intl.formatMessage({ id: 'signIn.errors.usernameTooShort' }),
+      );
       return false;
     }
     setUserCodeError('');
@@ -52,11 +56,15 @@ const LoginPage: React.FC = () => {
 
   const validatePassword = (value: string): boolean => {
     if (!value) {
-      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordRequired' }));
+      setPasswordError(
+        intl.formatMessage({ id: 'signIn.errors.passwordRequired' }),
+      );
       return false;
     }
     if (value.length < 8) {
-      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordTooShort' }));
+      setPasswordError(
+        intl.formatMessage({ id: 'signIn.errors.passwordTooShort' }),
+      );
       return false;
     }
     setPasswordError('');
@@ -136,17 +144,23 @@ const LoginPage: React.FC = () => {
           'Only Talk',
         );
       } else {
-        messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+        messageApi.error(
+          <FormattedMessage id="signIn.errors.invalidCredentials" />,
+        );
       }
     } catch (error: unknown) {
       if (error != null && typeof error === 'string') {
         try {
           const result = JSON.parse(error);
           if (result.code === 500) {
-            messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+            messageApi.error(
+              <FormattedMessage id="signIn.errors.invalidCredentials" />,
+            );
           }
         } catch (e) {
-          messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
+          messageApi.error(
+            <FormattedMessage id="signIn.errors.networkError" />,
+          );
         }
       } else {
         messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
@@ -167,7 +181,9 @@ const LoginPage: React.FC = () => {
     }
 
     if (!agreed) {
-      messageApi.warning(intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }));
+      messageApi.warning(
+        intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }),
+      );
       return;
     }
 

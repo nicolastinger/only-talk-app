@@ -49,7 +49,10 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
  * @param nanoId 可选的消息nano_id，如果提供且raw中有文件名，则优先使用raw中的文件名
  * @returns 文件列表
  */
-export const getFiles = async (bizId: string, nanoId?: string): Promise<FileVo[] | null> => {
+export const getFiles = async (
+  bizId: string,
+  nanoId?: string
+): Promise<FileVo[] | null> => {
   try {
     let files = [] as FileVo[];
     const FileVos: FileVo[] = await invoke("get_file_by_biz_id", {
