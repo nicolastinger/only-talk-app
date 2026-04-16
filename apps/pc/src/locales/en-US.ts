@@ -1,6 +1,5 @@
 export default {
   back: 'Back',
-  language: 'en-US',
   'menu.home': 'Home',
   'menu.access': 'Access',
   'menu.table': 'CRUD Example',

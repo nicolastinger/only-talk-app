@@ -1,6 +1,5 @@
 export default {
   back: '返回',
-  language: '繁體中文',
   'menu.home': '首頁',
   'menu.access': '權限演示',
   'menu.testComponent': '組件測試',
