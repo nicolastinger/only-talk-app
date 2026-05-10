@@ -1,37 +1,53 @@
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
 
+type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected';
+
 interface QuicDisconnectState {
   isConnected: boolean;
+  connectionState: ConnectionState;
   message: string;
 }
 
 /**
- * 监听QUIC连接断开事件的Hook
- * 当QUIC连接断开时，会触发状态更新并显示提示
+ * 监听QUIC连接状态变更的Hook
+ * - quic_disconnected: 连接断开，持续收到事件直到恢复
+ * - quic_connected: 连接恢复
  */
 const useQuicDisconnect = () => {
   const [disconnectState, setDisconnectState] = useState<QuicDisconnectState>({
     isConnected: true,
+    connectionState: 'idle',
     message: '',
   });
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    let unlistenDisconnected: (() => void) | undefined;
+    let unlistenConnected: (() => void) | undefined;
 
-    const setupListener = async () => {
-      unlisten = await listen<string>('quic_disconnected', (event) => {
+    const setupListeners = async () => {
+      unlistenDisconnected = await listen<string>('quic_disconnected', (event) => {
         setDisconnectState({
           isConnected: false,
+          connectionState: 'disconnected',
           message: event.payload || 'QUIC连接已断开',
+        });
+      });
+
+      unlistenConnected = await listen<string>('quic_connected', (_event) => {
+        setDisconnectState({
+          isConnected: true,
+          connectionState: 'connected',
+          message: '',
         });
       });
     };
 
-    setupListener().catch(console.error);
+    setupListeners().catch(console.error);
 
     return () => {
-      if (unlisten) unlisten();
+      if (unlistenDisconnected) unlistenDisconnected();
+      if (unlistenConnected) unlistenConnected();
     };
   }, []);
 
@@ -39,6 +55,7 @@ const useQuicDisconnect = () => {
   const resetConnection = () => {
     setDisconnectState({
       isConnected: true,
+      connectionState: 'connected',
       message: '',
     });
   };

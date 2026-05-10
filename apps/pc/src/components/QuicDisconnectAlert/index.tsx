@@ -1,22 +1,16 @@
 import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
-import { CloseOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import React, { useState } from 'react';
 import './QuicDisconnectAlert.less';
 
 /**
  * QUIC连接断开提示组件
- * 当QUIC连接断开时显示显眼的提示信息，引导用户检查网络并重启连接
+ * 当QUIC连接断开时持续显示遮罩，直到连接恢复或用户手动重连
  */
 const QuicDisconnectAlert: React.FC = () => {
-  const { isConnected, message, resetConnection } = useQuicDisconnect();
+  const { isConnected, connectionState, message, resetConnection } =
+    useQuicDisconnect();
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-
-  // 处理关闭弹窗
-  const handleClose = () => {
-    setIsVisible(false);
-  };
 
   // 处理重新连接
   const handleReconnect = async () => {
@@ -25,10 +19,8 @@ const QuicDisconnectAlert: React.FC = () => {
     try {
       setIsReconnecting(true);
       await invoke('reconnect_quic_command');
-      // 重连请求已发送，重置状态
+      // 重连请求已发送，重置前端状态
       resetConnection();
-      // 重连后显示弹窗
-      setIsVisible(true);
     } catch (error) {
       console.error('重新连接失败:', error);
     } finally {
@@ -36,19 +28,20 @@ const QuicDisconnectAlert: React.FC = () => {
     }
   };
 
-  // 如果连接正常或用户已关闭弹窗，不显示任何内容
-  if (isConnected || !isVisible) {
+  // 连接正常时不显示
+  if (isConnected) {
     return null;
   }
+
+  const statusText =
+    connectionState === 'disconnected'
+      ? '连接已断开'
+      : '正在重连...';
 
   return (
     <div className="quic-disconnect-alert">
       <div className="quic-disconnect-alert-overlay" />
       <div className="quic-disconnect-alert-content">
-        <button className="quic-disconnect-alert-close" onClick={handleClose}>
-          <CloseOutlined />
-        </button>
-
         <div className="quic-disconnect-alert-icon">
           <svg viewBox="0 0 1024 1024" width="64" height="64">
             <path
@@ -62,7 +55,7 @@ const QuicDisconnectAlert: React.FC = () => {
           </svg>
         </div>
 
-        <h2 className="quic-disconnect-alert-title">连接已断开</h2>
+        <h2 className="quic-disconnect-alert-title">{statusText}</h2>
 
         <p className="quic-disconnect-alert-message">
           {message || 'QUIC连接已断开，请检查您的网络环境'}

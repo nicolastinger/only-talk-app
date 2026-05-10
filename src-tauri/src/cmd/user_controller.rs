@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::dto::update_user_dto::UpdateUserDTO;
 use crate::dto::http_result::HttpResult;
 use crate::entity::user_info::UserInfo;
+use crate::quic_service::connection_state::GLOBAL_QUIC_STATE;
 use crate::service::api_service::post_json;
 use crate::service::user_service::{disconnect_quic, reconnect_quic};
 use crate::utils::global_static_str::TALK_API;
@@ -35,6 +36,13 @@ pub async fn disconnect_quic_command() -> Result<String, String> {
 pub async fn reconnect_quic_command() -> Result<String, String> {
     reconnect_quic().await.map_err(|e| e.to_string())?;
     Ok("QUIC重连请求已发送".to_string())
+}
+
+/// 获取当前 QUIC 连接状态
+#[tauri::command]
+pub async fn get_quic_connection_state() -> Result<String, String> {
+    let state = *GLOBAL_QUIC_STATE.read().await;
+    Ok(state.as_str().to_string())
 }
 
 /// 缓存用户信息到本地数据库

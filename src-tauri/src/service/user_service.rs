@@ -18,6 +18,7 @@ use crate::entity::chat_session::ChatSession;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_quic_client::run_client;
+use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
 use crate::utils::dns::resolve_ipv4;
@@ -40,11 +41,15 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
     get_unread_message().await.unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
     //3、获取未读通知
     get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
-    //启动quic服务
-    tokio::spawn(async move {
-        let addr = resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败");
-        run_client(SocketAddr::from(addr)).await.expect("quic服务启动失败");
-    });
+    //启动quic服务（带状态机和自动重连）
+    {
+        // 从 Idle 切换到 Disconnected，让 run_client 循环开始连接
+        *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
+        tokio::spawn(async move {
+            let addr = resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败");
+            run_client(SocketAddr::from(addr)).await.expect("quic服务启动失败");
+        });
+    }
     //启动定时任务
     tokio::spawn(async move {
         start_read_task().await.unwrap_or_else(|e| error!("启动定时任务失败 {:?}", e));
@@ -290,9 +295,12 @@ pub async fn add_user_map(key: &str, value: &str) -> Result<(), String> {
 }
 
 /// 断开QUIC连接
-/// 清理所有QUIC连接资源，包括文本连接和P2P连接
+/// 设置状态为 Idle 停止重连循环，清理连接资源
 pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始断开QUIC连接");
+
+    // 设置状态为 Idle，停止 run_client 重连循环
+    *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Idle;
 
     // 清除服务器连接列表
     {
@@ -311,24 +319,16 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
         info!("已标记QUIC断开状态");
     }
 
-    // 向前端发送断开连接通知
-    if let Some(handle) = APP_HANDLE.get() {
-        if let Err(e) = handle.emit("quic_disconnected", "QUIC连接已断开，请检查网络环境")
-        {
-            error!("发送QUIC断开通知失败: {}", e);
-        }
-    }
-
-    info!("QUIC连接已断开");
+    info!("QUIC连接已断开（状态: Idle）");
     Ok(())
 }
 
 /// 重新连接QUIC服务
-/// 重新建立与服务器的QUIC连接
+/// 如果 run_client 循环仍在运行，先停止再重启
 pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始重新连接QUIC服务");
 
-    // 先断开现有连接
+    // 先断开现有连接（设 Idle 会停止当前循环）
     disconnect_quic().await?;
 
     // 清除断开状态标记
@@ -337,12 +337,13 @@ pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
         user_info.insert("quic_disconnected".to_string(), "false".to_string());
     }
 
-    // 重新启动QUIC客户端
+    // 重新启动连接循环
+    *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
     let addr = resolve_ipv4(DOMAIN_NAME, 4433).await?;
     tokio::spawn(async move {
         match run_client(SocketAddr::from(addr)).await {
-            Ok(_) => info!("QUIC重连成功"),
-            Err(e) => error!("QUIC重连失败: {}", e),
+            Ok(_) => info!("QUIC连接循环正常退出"),
+            Err(e) => error!("QUIC连接循环异常退出: {}", e),
         }
     });
 
