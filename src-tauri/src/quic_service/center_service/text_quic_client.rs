@@ -30,7 +30,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     info!("[client] connected: addr={}", connection.remote_address()); // 打印连接成功的服务器地址
 
     // 开启一个双向流用于初始化和接收
-    let (send_stream, mut _recv_stream) = connection.open_bi().await?;
+    let (mut send_stream, mut _recv_stream) = connection.open_bi().await?;
     send_stream.set_priority(0)?; // 设置优先级
     let head_length = 9;
     let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
@@ -102,7 +102,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
         });
     }
 
-    match init_send_msg(send_stream, connection).await {
+    match init_send_msg(&mut send_stream, connection).await {
         Ok(_) => {
             info!("客户端初始化连接成功");
         }
@@ -110,10 +110,17 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             error!("客户端初始化连接失败")
         }
     }
+
+    // 保持 bidi send half 存活，防止服务端看到流关闭而下线
+    tokio::spawn(async move {
+        let _keep = send_stream;
+        std::future::pending::<()>().await;
+    });
+
     Ok(())
 }
 
-async fn init_send_msg(mut send_stream: SendStream, conn: Connection) -> Result<(), anyhow::Error> {
+async fn init_send_msg(send_stream: &mut SendStream, conn: Connection) -> Result<(), anyhow::Error> {
     // 发送消息给服务器
     let mut first_quic_msg = FirstQuicMsg::new();
     let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").ok_or(anyhow!("uuid为空"))?.clone();
