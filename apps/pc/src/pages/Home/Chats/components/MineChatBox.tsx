@@ -239,16 +239,41 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     <div className={styles.container}>
       <div className={styles.messageWrapper}>
         {renderAck()}
-        <div className={styles.chatContainerWrapper}>
+        <div
+          className={`${styles.chatContainerWrapper} ${
+            ackFlag === 101 ? styles.hasSent : ''
+          }`}
+        >
           <div
             className={`${styles.chatContainer} ${
               isImageMessage ? styles.imageMessage : ''
             } ${isFileMessage ? styles.fileMessage : ''} ${
               isSpecialMessage ? styles.specialMessage : ''
-            }`}
+            } ${ackFlag === 101 ? styles.hasSentBubble : ''}`}
           >
             {renderMessage(raw)}
+            {ackFlag === 101 && (
+              <span className={styles.sentBadge}>
+                <svg
+                  width="10"
+                  height="8"
+                  viewBox="0 0 10 8"
+                  fill="none"
+                >
+                  <path
+                    d="M1 4L3.5 6.5L9 1"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            )}
           </div>
+          {ackFlag === 101 && (
+            <span className={styles.sentLabel}>已发送</span>
+          )}
           <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
         </div>
       </div>

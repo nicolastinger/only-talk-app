@@ -106,6 +106,40 @@
   line-height: 1;
 }
 
+// --- 已发送小标记 ---
+.sentBadge {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+
+.sentLabel {
+  position: absolute;
+  bottom: -18px;
+  right: 4px;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.hasSent:hover .sentLabel {
+  opacity: 1;
+}
+
+.hasSentBubble {
+  // 给小对勾留一点右下空间，避免遮挡文字
+}
+
 @keyframes shake {
   0%,
   100% {
