@@ -4,10 +4,9 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use log::{error, info, warn};
-use tauri::Emitter;
 use tokio::time::timeout;
 use uuid::Uuid;
-use crate::cmd::api_controller::post_request;
+use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
@@ -24,7 +23,7 @@ use crate::service::friend_service::update_friend_list;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -43,11 +42,10 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
     get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
     //启动quic服务（带状态机和自动重连）
     {
-        // 从 Idle 切换到 Disconnected，让 run_client 循环开始连接
         *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
         tokio::spawn(async move {
-            let addr = resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败");
-            run_client(SocketAddr::from(addr)).await.expect("quic服务启动失败");
+            let addr = discover_quic_server_addr().await;
+            run_client(addr).await.expect("quic服务启动失败");
         });
     }
     //启动定时任务
@@ -339,9 +337,9 @@ pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
 
     // 重新启动连接循环
     *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
-    let addr = resolve_ipv4(DOMAIN_NAME, 4433).await?;
     tokio::spawn(async move {
-        match run_client(SocketAddr::from(addr)).await {
+        let addr = discover_quic_server_addr().await;
+        match run_client(addr).await {
             Ok(_) => info!("QUIC连接循环正常退出"),
             Err(e) => error!("QUIC连接循环异常退出: {}", e),
         }
@@ -349,4 +347,51 @@ pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
 
     info!("QUIC重连请求已发送");
     Ok(())
+}
+
+/// 通过 HTTP API 发现可用的外网 QUIC 服务器地址
+/// 优先从 Redis 获取，失败时回退到 DNS 解析
+async fn discover_quic_server_addr() -> SocketAddr {
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct QuicServerInfo {
+        #[allow(dead_code)]
+        name: String,
+        address: String,
+    }
+
+    #[derive(Deserialize)]
+    struct ApiResult {
+        #[allow(dead_code)]
+        code: u16,
+        data: Vec<QuicServerInfo>,
+    }
+
+    // 尝试通过 API 获取 QUIC 服务器列表
+    let url = format!("{}/integrated/quic_servers", TALK_API);
+    match get_request(url).await {
+        Ok(response) => {
+            match serde_json::from_str::<ApiResult>(&response.body) {
+                Ok(result) => {
+                    if let Some(server) = result.data.first() {
+                        info!("通过API发现QUIC服务器: {} -> {}", server.name, server.address);
+                        if let Ok(addr) = server.address.parse::<SocketAddr>() {
+                            return addr;
+                        }
+                    }
+                    warn!("API返回的QUIC服务器列表为空，回退到DNS解析");
+                }
+                Err(e) => {
+                    warn!("解析QUIC服务器列表失败: {}，回退到DNS解析", e);
+                }
+            }
+        }
+        Err(e) => {
+            warn!("获取QUIC服务器列表失败: {}，回退到DNS解析", e);
+        }
+    }
+
+    // 回退：DNS 解析默认域名
+    SocketAddr::V4(resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败"))
 }
