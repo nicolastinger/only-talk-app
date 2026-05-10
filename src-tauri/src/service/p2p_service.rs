@@ -86,11 +86,13 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
     let p2p_msg =
         generate_text_msg(MSG_TYPE_P2P, serde_json::to_vec(&p2p_init_msg)?, accept_user, sender)?;
 
-    let send_stream = {
+    let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.send_stream.clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.conn.clone()
     };
-    send_stream.write().await.write_all(&p2p_msg).await?;
+    let mut send = conn.open_uni().await?;
+    send.write_all(&p2p_msg).await?;
+    send.finish().await?;
     Ok(())
 }
 
@@ -107,11 +109,13 @@ pub async fn reject_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
         p2p_init_msg.request_uuid,
         me,
     )?;
-    let send_stream = {
+    let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.send_stream.clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.conn.clone()
     };
-    send_stream.write().await.write_all(&p2p_msg).await?;
+    let mut send = conn.open_uni().await?;
+    send.write_all(&p2p_msg).await?;
+    send.finish().await?;
 
     Ok(())
 }
@@ -138,11 +142,13 @@ pub async fn access_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
         uuid,
     )?;
     // 发送确认接收信息给服务器
-    let send_stream = {
+    let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.send_stream.clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("找不到连接"))?.conn.clone()
     };
-    send_stream.write().await.write_all(&p2p_msg).await?;
+    let mut send = conn.open_uni().await?;
+    send.write_all(&p2p_msg).await?;
+    send.finish().await?;
     info!("发送接收信息");
     Ok(())
 }

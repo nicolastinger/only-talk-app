@@ -1,14 +1,12 @@
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::anyhow;
 use image::ImageReader;
 use log::{error, info};
-use quinn::SendStream;
+use quinn::Connection;
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
-use tokio::sync::RwLock;
 use tokio::time::timeout;
 
 use crate::dao::chat_record_ack::{
@@ -118,12 +116,14 @@ pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow:
     Ok(())
 }
 
-/// 发送文本信息,最小作用范围
+/// 按需开流发送文本信息
 pub async fn send_msg(
     text_msg: Vec<u8>,
-    send_stream: Arc<RwLock<SendStream>>,
+    conn: &Connection,
 ) -> Result<String, anyhow::Error> {
-    send_stream.write().await.write_all(&text_msg).await?;
+    let mut send = conn.open_uni().await?;
+    send.write_all(&text_msg).await?;
+    send.finish().await?;
     Ok("success".to_string())
 }
 
@@ -369,12 +369,12 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
         chat_record_ack.send_user,
         chat_record_ack.send_id,
     )?;
-    let send_stream = {
+    let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").send_stream.clone()
+        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
     };
 
-    send_msg(test_msg, send_stream).await
+    send_msg(test_msg, &conn).await
 }
 
 // 设置消息prev_id
@@ -487,12 +487,12 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
                 item.send_user,
                 item.send_id,
             )?;
-            let send_stream = {
+            let conn = {
                 let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-                server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").send_stream.clone()
+                server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
             };
 
-            send_msg(test_msg, send_stream).await?;
+            send_msg(test_msg, &conn).await?;
         }
     }
 

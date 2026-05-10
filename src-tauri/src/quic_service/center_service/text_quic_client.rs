@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Context};
 use log::{error, info, warn};
-use quinn::{Endpoint, SendStream};
-use tokio::sync::{Mutex, RwLock};
+use quinn::{Connection, Endpoint, SendStream};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
@@ -29,12 +29,12 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     let connection = endpoint.connect(server_addr, "onlytalk.local")?.await?;
     info!("[client] connected: addr={}", connection.remote_address()); // 打印连接成功的服务器地址
 
-    // 开启一个双向流
+    // 开启一个双向流用于初始化和接收
     let (send_stream, mut _recv_stream) = connection.open_bi().await?;
     send_stream.set_priority(0)?; // 设置优先级
     let head_length = 9;
     let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
-    // 异步处理流中的数据
+    // 异步处理流中的数据（recv loop）
     tokio::spawn(async move {
         let mut buffer = vec![0u8; 1024 * 8];
         loop {
@@ -67,7 +67,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
         }
     });
 
-    match init_send_msg(send_stream).await {
+    match init_send_msg(send_stream, connection).await {
         Ok(_) => {
             info!("客户端初始化连接成功");
         }
@@ -78,7 +78,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error> {
+async fn init_send_msg(mut send_stream: SendStream, conn: Connection) -> Result<(), anyhow::Error> {
     // 发送消息给服务器
     let mut first_quic_msg = FirstQuicMsg::new();
     let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").ok_or(anyhow!("uuid为空"))?.clone();
@@ -92,15 +92,13 @@ async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error>
 
     tokio::time::sleep(Duration::from_secs(1)).await; //初始化一秒，防止连发元数据
 
-    let send_stream = Arc::new(RwLock::new(send_stream));
-
     let now = get_now_time_stamp_as_millis().unwrap_or(0);
 
     let new_connection = QuicConnection {
         is_online: true,
         uuid: first_quic_msg.uuid,
         connection_type: ConnectionType::Text,
-        send_stream: send_stream.clone(),
+        conn: conn.clone(),
         create_time: now as u64,
         update_time: now as u64,
         ipv4addr: "".to_string(),
@@ -112,9 +110,8 @@ async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error>
         server_book.insert("SERVER_TEXT".to_string(), new_connection);
     }
 
-    let send_stream_ping = send_stream.clone();
     tokio::spawn(async move {
-        let ping_result = send_ping_msg(send_stream_ping).await;
+        let ping_result = send_ping_msg(conn).await;
         if ping_result.is_err() {
             error!("发送心跳失败 {}", ping_result.unwrap_err());
         }
@@ -122,8 +119,8 @@ async fn init_send_msg(mut send_stream: SendStream) -> Result<(), anyhow::Error>
     Ok(())
 }
 
-/// 发送心跳信息
-async fn send_ping_msg(send_stream_ping: Arc<RwLock<SendStream>>) -> Result<(), anyhow::Error> {
+/// 发送心跳信息（按需开流）
+async fn send_ping_msg(conn: Connection) -> Result<(), anyhow::Error> {
     let ping_uuid = Uuid::new_v4();
     let ping_uuid = ping_uuid.to_string();
     insert_user_info("ping_uuid", &ping_uuid).await?;
@@ -152,7 +149,7 @@ async fn send_ping_msg(send_stream_ping: Arc<RwLock<SendStream>>) -> Result<(), 
         let ping_msg =
             generate_text_msg(MSG_TYPE_PING, PING.as_bytes().to_vec(), SYSTEM.to_string(), sender.clone())
                 .expect("");
-        match send_stream_ping.write().await.write_all(&ping_msg).await {
+        match send_via_new_stream(&conn, &ping_msg).await {
             Ok(_) => {
                 info!("发送成功");
             }
@@ -161,6 +158,14 @@ async fn send_ping_msg(send_stream_ping: Arc<RwLock<SendStream>>) -> Result<(), 
             }
         };
     }
+    Ok(())
+}
+
+/// 按需开流发送数据
+async fn send_via_new_stream(conn: &Connection, data: &[u8]) -> Result<(), anyhow::Error> {
+    let mut send = conn.open_uni().await?;
+    send.write_all(data).await?;
+    send.finish().await?;
     Ok(())
 }
 
