@@ -8,4 +8,4 @@ resource/
 .umi-production/
 logs/
 dbData/
-resource/
+src-tauri/openssl-android/
