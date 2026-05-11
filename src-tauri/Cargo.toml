@@ -30,7 +30,7 @@ windows = { version = "0.58.0", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 tauri-plugin-opener = "2"
-tauri = { version = "2.5.1", features = [ "protocol-asset", "tray-icon", "unstable", "image-ico"] }
+tauri = { version = "2.5.1", features = [ "protocol-asset", "unstable", "image-ico"] }
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "multipart"] }
 quinn = {version = "0.10.2"}
 rustls = { version = "0.21", features = ["dangerous_configuration"] }
@@ -45,8 +45,6 @@ nanoid = "0.4.0"
 crc = { version = "3.0" }  # 当前最新稳定版（2025年5月）
 crc-catalog = "2.0"  # 可选，用于预置标准CRC算法
 sqlx = { version = "=0.8.1", features = ["sqlite", "runtime-tokio", "macros"] }
-# 开启 bundled-sqlcipher 特性
-rusqlite = { version = "0.32.1", features = ["bundled-sqlcipher"] }
 rcgen = "0.11.3"
 webpki-roots = "1.0.2"
 uuid = { version = "1.11.0", features = ["v4", "v7"] }
@@ -60,3 +58,7 @@ webp = "0.3"
 zune-image = "0.4"
 zune-jpeg = "0.4"
 kamadak-exif = "0.5"
+rusqlite = { version = "0.32.1", features = ["bundled-sqlcipher"] }
+
+[target.'cfg(desktop)'.dependencies]
+tauri = { version = "2.5.1", features = ["tray-icon"] }

@@ -1,195 +1,180 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
+import { showDialog, showToast, showLoadingToast, closeToast } from "vant";
+import { invoke } from "@tauri-apps/api/core";
+import { selectFile, convertPathToTauriUrl, getFiles } from "@workspace/services";
+import { TALK_API } from "@workspace/types";
+import type { UserInfo } from "@workspace/types";
+import { useAuthStore } from "@/stores/auth";
+import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
+import { getMyAccount } from "@/utils/api";
 
-interface Post {
-  id: number;
-  image: string;
-  likes: number;
-}
+const router = useRouter();
+const { clearAuth } = useAuthStore();
+const { userInfo, avatarUrl, loadUserInfo, setUserInfo, setAvatarUrl } = useUserStore();
 
-const activeTab = ref(0);
-const tabs = ["瞬间", "相册", "收藏"];
+const previewUrl = ref<string | null>(null);
+const uploading = ref(false);
+const account = ref("");
 
-const userInfo = ref({
-  name: "星空漫步",
-  age: 24,
-  gender: "♂",
-  bio: "热爱生活，喜欢记录美好瞬间 📸",
-  location: "北京市",
-  joinedTime: "2023年6月加入",
-  posts: 128,
-  followers: 2345,
-  following: 189,
-  likes: 8976,
-  soulAge: "186天",
-  level: 5,
-  badges: ["🔥活跃达人", "📷摄影大师", "🌟优质创作者"],
+onMounted(async () => {
+  try {
+    const acc = await getMyAccount();
+    account.value = acc;
+  } catch { /* ignore */ }
+  loadUserInfo();
 });
 
-const myPosts = ref<Post[]>([
-  { id: 1, image: "https://picsum.photos/300/300?random=30", likes: 234 },
-  { id: 2, image: "https://picsum.photos/300/300?random=31", likes: 189 },
-  { id: 3, image: "https://picsum.photos/300/300?random=32", likes: 456 },
-  { id: 4, image: "https://picsum.photos/300/300?random=33", likes: 123 },
-  { id: 5, image: "https://picsum.photos/300/300?random=34", likes: 567 },
-  { id: 6, image: "https://picsum.photos/300/300?random=35", likes: 89 },
-]);
+watch(userInfo, async (info) => {
+  if (info?.icon) {
+    try {
+      const files = await getFiles(info.icon);
+      setAvatarUrl(files?.[0]?.tauri_file_path || null);
+    } catch {
+      setAvatarUrl(null);
+    }
+  } else {
+    setAvatarUrl(null);
+  }
+}, { immediate: true });
+
+const onAvatarClick = () => {
+  pickAndUploadAvatar();
+};
+
+const pickAndUploadAvatar = async () => {
+  try {
+    const files = await selectFile(false);
+    if (!files || files.length === 0) return;
+
+    const filePath = files[0];
+    uploading.value = true;
+    showLoadingToast({ message: "压缩中...", forbidClick: true, duration: 0 });
+
+    const compressedResult = await invoke<string>("compress_image_to_webp_command", {
+      inputPath: filePath,
+    });
+
+    const preview = convertPathToTauriUrl(compressedResult);
+    if (preview) {
+      previewUrl.value = preview;
+    }
+
+    closeToast();
+    showLoadingToast({ message: "上传中...", forbidClick: true, duration: 0 });
+
+    const uploadResult = await invoke<{ status: number; body: string }>("upload_file_request", {
+      url: `${TALK_API}/file_integrated/upload/user_avatar`,
+      filePath: compressedResult,
+      fieldName: "file",
+    });
+
+    closeToast();
+
+    if (uploadResult.status === 200) {
+      const responseBody = JSON.parse(uploadResult.body);
+      if (responseBody.code === 200 && responseBody.data) {
+        const bizId = responseBody.data;
+
+        const fileVos = await getFiles(bizId);
+        const tauriFilePath = fileVos?.[0]?.tauri_file_path || null;
+
+        if (tauriFilePath) {
+          const updatedInfo = { ...(userInfo.value || {}), icon: bizId } as UserInfo;
+          setUserInfo(updatedInfo);
+          setAvatarUrl(tauriFilePath);
+          showToast({ message: "头像更新成功", icon: "success" });
+        } else {
+          showToast({ message: "头像更新成功，刷新后生效", icon: "success" });
+          setUserInfo({ icon: bizId } as UserInfo);
+        }
+      } else {
+        showToast({ message: responseBody.msg || "头像更新失败", icon: "fail" });
+      }
+    } else {
+      showToast({ message: "头像更新失败", icon: "fail" });
+    }
+  } catch (error: any) {
+    closeToast();
+    console.error("头像更新失败:", error);
+    showToast({ message: error.message || "头像更新失败", icon: "fail" });
+  } finally {
+    uploading.value = false;
+    previewUrl.value = null;
+  }
+};
 
 const menuItems = [
-  { id: 1, icon: "💬", name: "消息", badge: 5 },
-  { id: 2, icon: "👥", name: "好友", badge: 0 },
-  { id: 3, icon: "🔔", name: "通知", badge: 12 },
-  { id: 4, icon: "🎁", name: "钱包", badge: 0 },
-  { id: 5, icon: "📊", name: "数据", badge: 0 },
-  { id: 6, icon: "🎨", name: "个性设置", badge: 0 },
-  { id: 7, icon: "🔒", name: "隐私与安全", badge: 0 },
-  { id: 8, icon: "❓", name: "帮助与反馈", badge: 0 },
+  { icon: "setting", name: "设置" },
+  { icon: "notify", name: "消息通知" },
+  { icon: "privacy", name: "隐私与安全" },
+  { icon: "about", name: "关于 Only Talk" },
 ];
 
-const settings = [
-  { id: 1, name: "夜间模式", icon: "🌙", enabled: false },
-  { id: 2, name: "勿扰模式", icon: "🔕", enabled: false },
-  { id: 3, name: "省流模式", icon: "📶", enabled: true },
-];
+const onMenuClick = () => {
+  showDialog({ title: "提示", message: "该功能开发中", confirmButtonText: "知道了", confirmButtonColor: "#4a90ff" });
+};
+
+const onLogout = () => {
+  showDialog({
+    title: "退出登录", message: "确定要退出登录吗？",
+    confirmButtonText: "退出", confirmButtonColor: "#ef4444", cancelButtonText: "取消",
+  }).then(() => {
+    clearAuth();
+    showToast({ message: "已退出登录", icon: "success" });
+    router.replace("/login");
+  }).catch(() => {});
+};
 </script>
 
 <template>
   <div class="profile-page">
-    <div class="profile-header">
-      <div class="header-top">
-        <div class="settings-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
-            />
-          </svg>
-        </div>
-        <div class="qrcode-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v2h2v-2zm0 6h2v-2h-2v2zm-4-6h2v4h-2v-4zm2 4h2v2h-2v-2zm-2 2h-2v2h2v-2zm0-6h2v2h-2v-2z"
-            />
-          </svg>
-        </div>
-      </div>
+    <div class="header"><h1 class="title">我的</h1></div>
 
-      <div class="user-info">
-        <div class="avatar-wrapper">
+    <div class="user-card">
+      <div class="user-bg"></div>
+      <div class="user-content" @click="onAvatarClick">
+        <div class="avatar-wrapper" :class="{ uploading }">
           <img
-            src="https://api.dicebear.com/7.x/avataaars/svg?seed=1"
+            :src="previewUrl || avatarUrl || DEFAULT_AVATAR"
             alt="avatar"
-            class="avatar"
+            class="user-avatar"
+            @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
           />
-          <div class="level-badge">Lv.{{ userInfo.level }}</div>
-        </div>
-
-        <div class="user-details">
-          <h1 class="user-name">
-            {{ userInfo.name }}
-            <span class="user-age">{{ userInfo.age }}岁</span>
-          </h1>
-          <p class="user-bio">{{ userInfo.bio }}</p>
-          <div class="user-meta">
-            <span class="meta-item">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
-                />
-              </svg>
-              {{ userInfo.location }}
-            </span>
-            <span class="meta-item">{{ userInfo.joinedTime }}</span>
+          <div v-if="uploading" class="upload-overlay">
+            <svg class="spin-icon" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4 31.4" />
+            </svg>
+          </div>
+          <div v-else class="avatar-badge">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2c1.98 0 3.6-1.62 3.6-3.6s-1.62-3.6-3.6-3.6-3.6 1.62-3.6 3.6 1.62 3.6 3.6 3.6zM9 2l1.83 2H9c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-1.83L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" /></svg>
           </div>
         </div>
-      </div>
-
-      <div class="stats-bar">
-        <div class="stat-item">
-          <span class="stat-value">{{ userInfo.posts }}</span>
-          <span class="stat-label">发布</span>
+        <div class="user-info">
+          <h2 class="user-name">{{ userInfo?.username || account || "用户" }}</h2>
+          <p class="user-account">账号: {{ userInfo?.account || account }}</p>
+          <p v-if="userInfo?.info" class="user-bio">{{ userInfo.info }}</p>
         </div>
-        <div class="stat-item">
-          <span class="stat-value">{{ userInfo.followers }}</span>
-          <span class="stat-label">粉丝</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">{{ userInfo.following }}</span>
-          <span class="stat-label">关注</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">{{ userInfo.likes }}</span>
-          <span class="stat-label">获赞</span>
-        </div>
-      </div>
-
-      <div class="badges">
-        <span v-for="badge in userInfo.badges" :key="badge" class="badge-item">
-          {{ badge }}
-        </span>
-      </div>
-
-      <div class="profile-actions">
-        <button class="action-btn edit">编辑资料</button>
-        <button class="action-btn share">分享主页</button>
-      </div>
-    </div>
-
-    <div class="quick-settings">
-      <div v-for="setting in settings" :key="setting.id" class="setting-item">
-        <span class="setting-icon">{{ setting.icon }}</span>
-        <span class="setting-name">{{ setting.name }}</span>
-        <label class="switch">
-          <input type="checkbox" :checked="setting.enabled" />
-          <span class="slider"></span>
-        </label>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" /></svg>
       </div>
     </div>
 
     <div class="menu-section">
-      <div v-for="item in menuItems" :key="item.id" class="menu-item">
+      <div v-for="item in menuItems" :key="item.name" class="menu-item" @click="onMenuClick">
         <div class="menu-left">
-          <span class="menu-icon">{{ item.icon }}</span>
+          <svg v-if="item.icon==='setting'" viewBox="0 0 24 24" fill="currentColor" class="menu-icon"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" /></svg>
+          <svg v-else-if="item.icon==='notify'" viewBox="0 0 24 24" fill="currentColor" class="menu-icon"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" /></svg>
+          <svg v-else-if="item.icon==='privacy'" viewBox="0 0 24 24" fill="currentColor" class="menu-icon"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" /></svg>
+          <svg v-else-if="item.icon==='about'" viewBox="0 0 24 24" fill="currentColor" class="menu-icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
           <span class="menu-name">{{ item.name }}</span>
         </div>
-        <div class="menu-right">
-          <span v-if="item.badge > 0" class="menu-badge">{{ item.badge }}</span>
-          <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-          </svg>
-        </div>
-      </div>
-    </div>
-
-    <div class="content-section">
-      <div class="tabs">
-        <button
-          v-for="(tab, index) in tabs"
-          :key="tab"
-          class="tab-btn"
-          :class="{ active: activeTab === index }"
-          @click="activeTab = index"
-        >
-          {{ tab }}
-        </button>
-      </div>
-
-      <div class="content-grid">
-        <div v-for="post in myPosts" :key="post.id" class="content-item">
-          <img :src="post.image" alt="post" class="content-image" />
-          <div class="content-overlay">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-              />
-            </svg>
-            <span>{{ post.likes }}</span>
-          </div>
-        </div>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" /></svg>
       </div>
     </div>
 
     <div class="logout-section">
-      <button class="logout-btn">退出登录</button>
+      <button class="logout-btn" @click="onLogout">退出登录</button>
     </div>
   </div>
 </template>
@@ -197,45 +182,39 @@ const settings = [
 <style scoped lang="less">
 .profile-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
+  background: var(--page-bg);
   padding-bottom: 80px;
 }
 
-.profile-header {
-  padding: 16px;
-  background: linear-gradient(
-    180deg,
-    rgba(99, 102, 241, 0.15) 0%,
-    transparent 100%
-  );
+.header {
+  padding: 16px 20px;
+  background: var(--header-bg);
+  backdrop-filter: blur(20px);
+  position: sticky; top: 0; z-index: 50;
+  border-bottom: 1px solid var(--border-light);
 }
 
-.header-top {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-  margin-bottom: 16px;
+.title { font-size: 28px; font-weight: 700; color: var(--text-primary); margin: 0; }
+
+.user-card {
+  margin: 16px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--shadow-sm);
 }
 
-.settings-icon,
-.qrcode-icon {
-  width: 24px;
-  height: 24px;
-  color: #e2e8f0;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
+.user-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--blue-100), var(--blue-50));
 }
 
-.user-info {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
+.user-content {
+  position: relative;
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px; cursor: pointer;
+  &:active { background: rgba(74, 144, 255, 0.04); }
 }
 
 .avatar-wrapper {
@@ -243,383 +222,83 @@ const settings = [
   flex-shrink: 0;
 }
 
-.avatar {
-  width: 80px;
-  height: 80px;
+.user-avatar {
+  width: 64px; height: 64px;
   border-radius: 50%;
-  border: 3px solid rgba(99, 102, 241, 0.5);
+  border: 3px solid var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  object-fit: cover;
+  display: block;
 }
 
-.level-badge {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
+.avatar-badge {
+  position: absolute; bottom: -2px; right: -2px;
+  width: 24px; height: 24px;
+  background: var(--brand-blue);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--border-strong);
+  svg { width: 14px; height: 14px; color: #fff; }
 }
 
-.user-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
+.upload-overlay {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
 }
 
-.user-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.spin-icon {
+  width: 28px; height: 28px;
+  color: #fff;
+  animation: spin 1s linear infinite;
 }
 
-.user-age {
-  font-size: 14px;
-  font-weight: 400;
-  color: #64748b;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.user-bio {
-  font-size: 13px;
-  color: #94a3b8;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.user-meta {
-  display: flex;
-  gap: 12px;
-  margin-top: 4px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #64748b;
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-}
-
-.stats-bar {
-  display: flex;
-  justify-content: space-around;
-  padding: 16px 0;
-  margin-bottom: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.stat-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #f1f5f9;
-}
-
-.stat-label {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.badge-item {
-  font-size: 11px;
-  padding: 4px 10px;
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
-  border-radius: 10px;
-}
-
-.profile-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 20px;
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &.edit {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
-  }
-
-  &.share {
-    background: rgba(255, 255, 255, 0.05);
-    color: #e2e8f0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  &:hover {
-    transform: scale(1.02);
-  }
-}
-
-.quick-settings {
-  margin: 16px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.setting-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-}
-
-.setting-icon {
-  font-size: 18px;
-}
-
-.setting-name {
-  flex: 1;
-  font-size: 14px;
-  color: #e2e8f0;
-}
-
-.switch {
-  position: relative;
-  width: 44px;
-  height: 24px;
-
-  input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
-    transition: all 0.3s ease;
-
-    &::before {
-      position: absolute;
-      content: "";
-      height: 20px;
-      width: 20px;
-      left: 2px;
-      bottom: 2px;
-      background: white;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-    }
-  }
-
-  input:checked + .slider {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  }
-
-  input:checked + .slider::before {
-    transform: translateX(20px);
-  }
-}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+.user-account { font-size: 13px; color: var(--text-tertiary); margin: 0; }
+.user-bio { font-size: 12px; color: var(--text-secondary); margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arrow { width: 20px; height: 20px; color: var(--text-placeholder); flex-shrink: 0; }
 
 .menu-section {
-  margin: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 0 16px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
   overflow: hidden;
+  box-shadow: var(--shadow-xs);
 }
 
 .menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
   cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:active {
-    background: rgba(255, 255, 255, 0.03);
-  }
+  transition: background var(--transition-fast);
+  &:last-child { border-bottom: none; }
+  &:active { background: var(--surface-hover); }
 }
 
-.menu-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.menu-left { display: flex; align-items: center; gap: 14px; }
+.menu-icon { width: 22px; height: 22px; color: var(--brand-blue); flex-shrink: 0; }
+.menu-name { font-size: 15px; color: var(--text-primary); }
 
-.menu-icon {
-  font-size: 20px;
-}
-
-.menu-name {
-  font-size: 14px;
-  color: #e2e8f0;
-}
-
-.menu-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.menu-badge {
-  background: #ef4444;
-  color: white;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 10px;
-}
-
-.arrow {
-  width: 20px;
-  height: 20px;
-  color: #64748b;
-}
-
-.content-section {
-  margin: 16px;
-  margin-top: 0;
-}
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: none;
-  border-radius: 12px;
-  color: #64748b;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &.active {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
-  }
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-}
-
-.content-item {
-  position: relative;
-  aspect-ratio: 1;
-  overflow: hidden;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.content-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: scale(1.05);
-  }
-}
-
-.content-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  opacity: 0;
-  transition: all 0.3s ease;
-
-  svg {
-    width: 14px;
-    height: 14px;
-    fill: #ef4444;
-  }
-
-  span {
-    font-size: 12px;
-    color: white;
-  }
-}
-
-.content-item:hover .content-overlay {
-  opacity: 1;
-}
-
-.logout-section {
-  padding: 24px 16px;
-  text-align: center;
-}
+.logout-section { padding: 24px 16px; text-align: center; }
 
 .logout-btn {
-  padding: 12px 48px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  color: #ef4444;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
-  }
+  width: 100%; max-width: 300px; height: 48px;
+  background: var(--surface);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+  &:active { background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.4); }
 }
 </style>

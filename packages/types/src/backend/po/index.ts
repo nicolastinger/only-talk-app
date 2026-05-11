@@ -17,4 +17,4 @@ interface Friend {
   version: number;
 }
 
-export { Friend };
+export type { Friend };

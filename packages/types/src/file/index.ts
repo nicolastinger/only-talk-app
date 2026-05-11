@@ -19,4 +19,4 @@ interface ImagePreview {
   title?: string;
 }
 
-export { BizFileInfo, BizChatFile, ImagePreview };
+export type { BizFileInfo, BizChatFile, ImagePreview };

@@ -55,4 +55,4 @@ interface FileVo {
   tauri_file_path?: string;
 }
 
-export { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo };
+export type { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo };

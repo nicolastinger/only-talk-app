@@ -21,4 +21,4 @@ interface FriendRequestInfo {
   updated_at: number;
 }
 
-export { FriendRequestInfoDTO, FriendRequestInfo };
+export type { FriendRequestInfoDTO, FriendRequestInfo };

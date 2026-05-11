@@ -1,0 +1,113 @@
+:root {
+  /* ===== Brand Colors ===== */
+  --brand-blue: #4a90ff;
+  --brand-blue-dark: #1a5cff;
+  --brand-blue-light: #7eb8ff;
+  --brand-blue-pale: #a8d4ff;
+  --brand-blue-bg: #e8f4fd;
+
+  /* ===== Primary Blue Scale ===== */
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-300: #93c5fd;
+  --blue-400: #60a5fa;
+  --blue-500: #4a90ff;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+  --blue-800: #1e40af;
+  --blue-900: #1e3a8a;
+
+  /* ===== Page Backgrounds ===== */
+  --page-bg: linear-gradient(180deg, #e8f4fd 0%, #f0f6ff 30%, #ffffff 100%);
+  --page-bg-alt: #f5f8fc;
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-bg-hover: rgba(255, 255, 255, 0.95);
+
+  /* ===== Surfaces & Cards ===== */
+  --surface: #ffffff;
+  --surface-alt: #f8fafd;
+  --surface-hover: #f0f5fa;
+  --surface-active: #e8f0f8;
+
+  /* ===== Text Colors ===== */
+  --text-primary: #1a2a3a;
+  --text-secondary: #4a5a6a;
+  --text-tertiary: #7a8a9a;
+  --text-placeholder: #aab5c0;
+  --text-inverse: #ffffff;
+
+  /* ===== Glassmorphism ===== */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-bg-light: rgba(255, 255, 255, 0.6);
+  --glass-bg-dark: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(74, 144, 255, 0.12);
+  --glass-border-active: rgba(74, 144, 255, 0.35);
+  --glass-blur: blur(20px);
+
+  /* ===== Gradients ===== */
+  --gradient-primary: linear-gradient(135deg, #4a90ff 0%, #1a5cff 100%);
+  --gradient-primary-light: linear-gradient(135deg, #7eb8ff 0%, #4a90ff 100%);
+  --gradient-accent: linear-gradient(135deg, #6366f1 0%, #4a90ff 100%);
+  --gradient-hero: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 50%, #ffffff 100%);
+
+  /* ===== Shadows ===== */
+  --shadow-xs: 0 1px 3px rgba(26, 92, 255, 0.06);
+  --shadow-sm: 0 2px 8px rgba(26, 92, 255, 0.08);
+  --shadow-md: 0 4px 16px rgba(26, 92, 255, 0.1);
+  --shadow-lg: 0 8px 32px rgba(26, 92, 255, 0.12);
+  --shadow-xl: 0 12px 48px rgba(26, 92, 255, 0.15);
+  --shadow-glow: 0 0 20px rgba(74, 144, 255, 0.4);
+  --shadow-glow-sm: 0 0 8px rgba(74, 144, 255, 0.3);
+
+  /* ===== Borders ===== */
+  --border-light: rgba(74, 144, 255, 0.06);
+  --border-medium: rgba(74, 144, 255, 0.1);
+  --border-strong: rgba(74, 144, 255, 0.2);
+
+  /* ===== Nav Bar ===== */
+  --nav-bg: rgba(255, 255, 255, 0.92);
+  --nav-border: rgba(74, 144, 255, 0.08);
+  --nav-icon-size: 28px;
+  --nav-active-color: #4a90ff;
+  --nav-inactive-color: #b0c4de;
+  --nav-active-glow: 0 0 16px rgba(74, 144, 255, 0.5);
+
+  /* ===== Input Fields ===== */
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --input-border: rgba(74, 144, 255, 0.15);
+  --input-border-focus: rgba(74, 144, 255, 0.4);
+  --input-shadow-focus: 0 0 0 3px rgba(74, 144, 255, 0.1);
+
+  /* ===== Status Colors ===== */
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #4a90ff;
+
+  /* ===== Online Indicator ===== */
+  --online-color: #22c55e;
+  --online-glow: 0 0 8px rgba(34, 197, 94, 0.4);
+
+  /* ===== Badge ===== */
+  --badge-bg: #ef4444;
+  --badge-text: #ffffff;
+
+  /* ===== FAB ===== */
+  --fab-bg: var(--gradient-primary);
+  --fab-shadow: 0 4px 20px rgba(74, 144, 255, 0.4);
+
+  /* ===== Radius ===== */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ===== Transitions ===== */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}

@@ -7,7 +7,7 @@ use fast_log::plugin::file_split::{DateType, KeepType, Rolling, RollingType};
 use fast_log::plugin::packer::LogPacker;
 use fast_log::Config;
 use log::{error, info, warn, LevelFilter};
-use tauri::Manager;
+use tauri::{Manager, Wry};
 
 use crate::config::set_config;
 use crate::dao::init_common_db::init_common_sqlite;
@@ -19,7 +19,7 @@ use crate::utils::global_static_str::{
 
 pub async fn init_app(
     root_path: PathBuf,
-    app_handle: Option<tauri::AppHandle>,
+    app_handle: Option<tauri::AppHandle<Wry>>,
 ) -> Result<(), anyhow::Error> {
     // 获取应用的路径
     let app_path = root_path.to_str().expect("获取应用路径失败");
@@ -92,7 +92,7 @@ pub async fn init_app(
 }
 
 /// 复制打包的资源文件到应用可访问的目录
-async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle, target_dir: &Path) {
+async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle<Wry>, target_dir: &Path) {
     use tauri::path::BaseDirectory;
 
     info!("开始复制资源文件...");

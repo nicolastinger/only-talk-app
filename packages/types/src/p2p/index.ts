@@ -255,7 +255,7 @@ interface FileTransferResponse {
   timestamp: number;
 }
 
-export {
+export type {
   P2pChannelType,
   MediaInfoType,
   MediaInfo,

@@ -6,7 +6,10 @@ import BottomNav from "@/components/BottomNav/index.vue";
 const route = useRoute();
 
 const showNav = computed(() => {
-  return ["/", "/recommend", "/discover", "/profile"].includes(route.path);
+  const path = route.path;
+  if (path.startsWith("/chats/chat/")) return false;
+  if (path === "/friends/search" || path.startsWith("/friends/detail/")) return false;
+  return ["/chats", "/friends", "/moments", "/profile"].includes(path);
 });
 </script>
 
@@ -34,8 +37,8 @@ body {
     "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0f0f23;
-  color: #f1f5f9;
+  background: #e8f4fd;
+  color: var(--text-primary, #1a2a3a);
 }
 
 #app {
@@ -46,7 +49,7 @@ body {
 <style scoped lang="less">
 .app-container {
   min-height: 100vh;
-  background: #0f0f23;
+  background: var(--page-bg, linear-gradient(180deg, #e8f4fd 0%, #f0f6ff 30%, #ffffff 100%));
 }
 
 .fade-enter-active,

@@ -1,4 +1,4 @@
-use tauri::{generate_handler, AppHandle, Manager};
+use tauri::{generate_handler, AppHandle, Manager, Wry};
 mod quic_service;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -17,6 +17,7 @@ mod emit_app;
 mod entity;
 mod init_app;
 pub mod service;
+#[cfg(desktop)]
 mod tray;
 pub mod utils;
 mod vo;
@@ -59,10 +60,11 @@ use crate::cmd::user_controller::{
 };
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
+#[cfg(desktop)]
 use crate::tray::setup_tray;
 use crate::utils::global_static_str::APP_NAME;
 
-static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();
 // 创建CRC-16/X25计算器
 const X25: Crc<u16> = Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
 
@@ -113,8 +115,11 @@ pub fn run() {
                     std::env::current_dir().expect("无法获取当前目录").join(APP_NAME)
                 });
 
-            if let Err(e) = setup_tray(app.handle()) {
-                eprintln!("初始化托盘失败: {}", e);
+            #[cfg(desktop)]
+            {
+                if let Err(e) = setup_tray(app.handle()) {
+                    eprintln!("初始化托盘失败: {}", e);
+                }
             }
 
             tauri::async_runtime::spawn(async move {

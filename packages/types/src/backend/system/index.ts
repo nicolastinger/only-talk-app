@@ -14,4 +14,4 @@ interface SystemNotification {
   priority?: number;
 }
 
-export { SystemNotification };
+export type { SystemNotification };

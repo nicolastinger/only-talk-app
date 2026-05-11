@@ -2,8 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use log::{error, info, warn};
-use tauri::path::BaseDirectory;
-use tauri::Manager;
+use tauri::{path::BaseDirectory, Manager, Runtime};
 
 use crate::config::get_config;
 use crate::service::file_service::get_file_by_biz_id_service;
@@ -12,7 +11,7 @@ use crate::vo::file_vo::FileVo;
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件
 #[tauri::command]
-pub async fn get_local_file(app_handle: tauri::AppHandle) -> Result<FileVo, String> {
+pub async fn get_local_file<R: Runtime>(app_handle: tauri::AppHandle<R>) -> Result<FileVo, String> {
     info!("========== 开始获取本地文件 ==========");
 
     // 优先从应用目录读取（移动平台已复制资源到此处）
@@ -198,7 +197,7 @@ pub async fn get_chat_file_by_biz_id(
 
 /// 调试命令：列出所有资源路径和文件
 #[tauri::command]
-pub async fn debug_resource_paths(app_handle: tauri::AppHandle) -> Result<String, String> {
+pub async fn debug_resource_paths<R: Runtime>(app_handle: tauri::AppHandle<R>) -> Result<String, String> {
     use tauri::path::BaseDirectory;
 
     let mut output = String::new();

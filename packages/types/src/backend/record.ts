@@ -6,4 +6,4 @@ interface Record {
   page: Page;
 }
 
-export { Record };
+export type { Record };
