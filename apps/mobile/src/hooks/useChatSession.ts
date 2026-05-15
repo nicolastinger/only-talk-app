@@ -15,7 +15,9 @@ export function useChatSessions() {
     try {
       const res: ChatSessionVo[] = await invoke("get_chat_session_from_store");
       sessions.value = (res || []).sort((a, b) => b.timestamp - a.timestamp);
-    } catch (e) { console.error("加载会话列表失败:", e); }
+    } catch (e) {
+      console.error("加载会话列表失败:", e);
+    }
   };
 
   const setupListener = async () => {
@@ -28,7 +30,9 @@ export function useChatSessions() {
         if (evt.data.recv_user !== uuid) return;
 
         const index = sessions.value.findIndex(
-          (item) => item.send_user === evt.data.send_user && item.recv_user === evt.data.recv_user
+          (item) =>
+            item.send_user === evt.data.send_user &&
+            item.recv_user === evt.data.recv_user
         );
 
         if (index === -1) {
@@ -38,18 +42,28 @@ export function useChatSessions() {
         } else if (evt.type === 1) {
           sessions.value[index] = {
             ...evt.data,
-            unread_count: sessions.value[index].unread_count + evt.data.unread_count,
+            unread_count:
+              sessions.value[index].unread_count + evt.data.unread_count,
           };
         }
-        sessions.value = [...sessions.value].sort((a, b) => b.timestamp - a.timestamp);
-      } catch (e) { console.error("处理chat_session事件失败:", e); }
+        sessions.value = [...sessions.value].sort(
+          (a, b) => b.timestamp - a.timestamp
+        );
+      } catch (e) {
+        console.error("处理chat_session事件失败:", e);
+      }
     });
 
     pollTimer = setInterval(fetchSessions, 30000);
   };
 
-  onMounted(() => { setupListener().catch(console.error); });
-  onUnmounted(() => { if (unlisten) unlisten(); if (pollTimer) clearInterval(pollTimer); });
+  onMounted(() => {
+    setupListener().catch(console.error);
+  });
+  onUnmounted(() => {
+    if (unlisten) unlisten();
+    if (pollTimer) clearInterval(pollTimer);
+  });
 
   return { sessions, loading, refresh: fetchSessions };
 }

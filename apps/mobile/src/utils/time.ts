@@ -20,20 +20,30 @@ export function formatMessageTime(timestamp: number): string {
     msgMonth === yesterday.getMonth() &&
     msgDay === yesterday.getDate();
 
-  const timeStr = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const timeStr = `${String(date.getHours()).padStart(2, "0")}:${String(
+    date.getMinutes()
+  ).padStart(2, "0")}`;
 
   if (isToday) return timeStr;
 
   if (isYesterday) return "昨天";
 
   if (nowYear === msgYear) {
-    return `${String(msgMonth + 1).padStart(2, "0")}/${String(msgDay).padStart(2, "0")}`;
+    return `${String(msgMonth + 1).padStart(2, "0")}/${String(msgDay).padStart(
+      2,
+      "0"
+    )}`;
   }
 
-  return `${msgYear}/${String(msgMonth + 1).padStart(2, "0")}/${String(msgDay).padStart(2, "0")}`;
+  return `${msgYear}/${String(msgMonth + 1).padStart(2, "0")}/${String(
+    msgDay
+  ).padStart(2, "0")}`;
 }
 
-export function getMessagePreview(text_type: number, lastMessage: string): string {
+export function getMessagePreview(
+  text_type: number,
+  lastMessage: string
+): string {
   switch (text_type) {
     case 1:
       try {

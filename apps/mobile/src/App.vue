@@ -8,7 +8,8 @@ const route = useRoute();
 const showNav = computed(() => {
   const path = route.path;
   if (path.startsWith("/chats/chat/")) return false;
-  if (path === "/friends/search" || path.startsWith("/friends/detail/")) return false;
+  if (path === "/friends/search" || path.startsWith("/friends/detail/"))
+    return false;
   return ["/chats", "/friends", "/moments", "/profile"].includes(path);
 });
 </script>
@@ -16,7 +17,7 @@ const showNav = computed(() => {
 <template>
   <div class="app-container">
     <router-view v-slot="{ Component }">
-      <transition name="fade" mode="out-in">
+      <transition name="page-slide" mode="default">
         <component :is="Component" />
       </transition>
     </router-view>
@@ -49,16 +50,22 @@ body {
 <style scoped lang="less">
 .app-container {
   min-height: 100vh;
-  background: var(--page-bg, linear-gradient(180deg, #e8f4fd 0%, #f0f6ff 30%, #ffffff 100%));
+  background: var(
+    --page-bg,
+    linear-gradient(180deg, #e8f4fd 0%, #f0f6ff 30%, #ffffff 100%)
+  );
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
+.page-slide-enter-active {
+  transition: opacity 0.1s ease;
 }
-
-.fade-enter-from,
-.fade-leave-to {
+.page-slide-leave-active {
+  transition: opacity 0.08s ease;
+}
+.page-slide-enter-from {
+  opacity: 0;
+}
+.page-slide-leave-to {
   opacity: 0;
 }
 </style>

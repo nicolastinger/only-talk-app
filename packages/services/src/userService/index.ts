@@ -4,6 +4,8 @@ import {
   FriendRequestInfoDTO,
   BasicUser,
   UserInfo,
+  QuicServerInfo,
+  HttpResponse,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -54,6 +56,7 @@ export const search_user_by_account = async (account: string) => {
   );
 };
 
+/** @deprecated 后端没有此接口，请使用 POST /user/me 获取当前用户，或 get_cached_user_info 查本地缓存 */
 export const get_user_info_by_uuid = async (uuid: string) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
@@ -114,4 +117,16 @@ export const get_cached_user_info_by_account = async (account: string) => {
   return await invoke<UserInfo | null>("get_cached_user_info_by_account", {
     account,
   });
+};
+
+export const get_quic_servers = async (): Promise<QuicServerInfo[]> => {
+  const response: HttpResponse = await invoke("get_request", {
+    url: TALK_API + "/integrated/quic_servers",
+  });
+  const data = JSON.parse(response.body);
+  if (data.code !== 200) {
+    console.error("获取QUIC节点信息失败:", data.message);
+    return [];
+  }
+  return data.data as QuicServerInfo[];
 };

@@ -17,13 +17,13 @@ let _cachedUuid: string | null = null;
 
 export async function getMyUuid(): Promise<string> {
   if (_cachedUuid) return _cachedUuid;
-  const uuid = await invoke("get_user_map", { key: "uuid" }) as string;
+  const uuid = (await invoke("get_user_map", { key: "uuid" })) as string;
   _cachedUuid = uuid;
   return uuid;
 }
 
 export async function getMyAccount(): Promise<string> {
-  return await invoke("get_user_map", { key: "account" }) as string;
+  return (await invoke("get_user_map", { key: "account" })) as string;
 }
 
 export function clearUuidCache() {

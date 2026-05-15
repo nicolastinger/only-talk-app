@@ -50,6 +50,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/profile/edit",
+    name: "EditProfile",
+    component: () => import("@/pages/Profile/EditProfile.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/",
     redirect: "/chats",
   },

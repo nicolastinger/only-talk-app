@@ -30,7 +30,6 @@ windows = { version = "0.58.0", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 tauri-plugin-opener = "2"
-tauri = { version = "2.5.1", features = [ "protocol-asset", "unstable", "image-ico"] }
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "multipart"] }
 quinn = {version = "0.10.2"}
 rustls = { version = "0.21", features = ["dangerous_configuration"] }
@@ -61,4 +60,7 @@ kamadak-exif = "0.5"
 rusqlite = { version = "0.32.1", features = ["bundled-sqlcipher"] }
 
 [target.'cfg(desktop)'.dependencies]
-tauri = { version = "2.5.1", features = ["tray-icon"] }
+tauri = { version = "2.5.1", features = ["protocol-asset", "unstable", "tray-icon", "image-ico"] }
+
+[target.'cfg(not(desktop))'.dependencies]
+tauri = { version = "2.5.1", features = [ "image-ico", "tray-icon", "protocol-asset", "unstable"] }

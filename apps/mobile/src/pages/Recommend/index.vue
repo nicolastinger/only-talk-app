@@ -291,8 +291,8 @@ const getMatchColor = (rate: number) => {
 }
 
 .avatar {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: 3px solid rgba(99, 102, 241, 0.3);
 }

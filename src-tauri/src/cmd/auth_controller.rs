@@ -40,6 +40,7 @@ pub async fn sign_in(
     let me_url = format!("https://{}:{}/user/me", &domain, &port);
 
     let token = sign_in_result.data.as_str().ok_or("token is not a string")?;
+    info!("获取到的token: {}", token);
 
     {
         GLOBAL_QUIC_USER_INFO

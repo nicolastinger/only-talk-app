@@ -85,10 +85,6 @@ async fn get_db_path() -> String {
         info!("已创建目录: dbData");
     }
 
-    // 检查文件是否存在，不存在则新建
-    if !db_file_path.exists() {
-        File::create(&db_file_path).expect("创建 app.db 文件失败");
-        info!("已创建文件: {}", db_file_path.display());
-    }
+    // 不要预创建文件，让 SQLite 的 create_if_missing 自动处理
     db_file_path.to_str().expect("错误的数据库文件").to_string()
 }

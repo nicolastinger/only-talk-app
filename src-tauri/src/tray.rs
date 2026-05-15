@@ -1,6 +1,6 @@
 use log::{error, info};
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::{Menu, MenuEvent, MenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Manager, Runtime};
 
@@ -19,7 +19,7 @@ pub fn setup_tray<R: Runtime>(
         .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .on_menu_event(|app, event| match event.id.as_ref() {
+        .on_menu_event(|app: &AppHandle<R>, event: MenuEvent| match event.id.as_ref() {
             "show_window" => {
                 if let Some(window) = app.get_webview_window("home") {
                     if let Err(e) = window.show() {

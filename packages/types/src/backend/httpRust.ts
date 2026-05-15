@@ -15,4 +15,9 @@ interface ResponseData {
   message: string;
 }
 
-export type { HttpResponse, ResponseData, RustResponse };
+interface QuicServerInfo {
+  index: number;
+  address: string;
+}
+
+export type { HttpResponse, ResponseData, RustResponse, QuicServerInfo };

@@ -50,7 +50,12 @@
   --gradient-primary: linear-gradient(135deg, #4a90ff 0%, #1a5cff 100%);
   --gradient-primary-light: linear-gradient(135deg, #7eb8ff 0%, #4a90ff 100%);
   --gradient-accent: linear-gradient(135deg, #6366f1 0%, #4a90ff 100%);
-  --gradient-hero: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 50%, #ffffff 100%);
+  --gradient-hero: linear-gradient(
+    135deg,
+    #e8f4fd 0%,
+    #dbeafe 50%,
+    #ffffff 100%
+  );
 
   /* ===== Shadows ===== */
   --shadow-xs: 0 1px 3px rgba(26, 92, 255, 0.06);
