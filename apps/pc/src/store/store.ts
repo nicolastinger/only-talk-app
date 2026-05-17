@@ -1,0 +1,121 @@
+import {
+  RequestMediaMsg,
+  UnreadCount,
+  UserInfo,
+  VideoConfig,
+} from '@workspace/types';
+import { create } from 'zustand';
+
+interface BearState {
+  bears: number;
+  increase: (by: number) => void;
+  userIcon: string;
+  setUserIcon: (userIcon: string) => void;
+  userInfo: UserInfo;
+  setUserInfo: (userInfo: UserInfo) => void;
+  requestMediaMsg: RequestMediaMsg; //通讯请求
+  setRequestMediaMsg: (requestMediaMsg: RequestMediaMsg) => void;
+  videoConfig: VideoConfig;
+  setVideoConfig: (videoConfig: VideoConfig) => void;
+  menuUnread: UnreadCount;
+  setMenuUnread: (menuUnread: UnreadCount) => void;
+  isLogin: boolean;
+  setIsLogin: (isLogin: boolean) => void;
+  setAddContacts: (addContacts: number) => void;
+  setAddGroups: (addGroups: number) => void;
+  setAddSystem: (addSystem: number) => void;
+  setAddSettings: (addSettings: number) => void;
+  chats: number;
+  setChats: (chats: number, isAdd: boolean) => void;
+  refreshFlag: number;
+  triggerRefresh: () => void;
+}
+
+export const useBearStore = create<BearState>()((set) => ({
+  bears: 0,
+  userIcon:
+    'https://ss1.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=3663778712,1545220977&fm=253&gp=0.jpg',
+  userInfo: {
+    uuid: '',
+  },
+  setUserInfo: (userInfo: UserInfo) => set({ userInfo: userInfo }),
+  setUserIcon: (userIcon: string) => set({ userIcon: userIcon }),
+  increase: (by) => set((state) => ({ bears: state.bears + by })),
+  requestMediaMsg: {
+    mediaType: 0,
+    p2pInitMsg: {
+      accept_addr: '',
+      request_addr: '',
+      request_uuid: '',
+      request_token: '',
+      accept: false,
+      ip_type: 0,
+    },
+  },
+  videoConfig: {
+    width: 1280,
+    height: 720,
+    fps: 30,
+    audio: false,
+    video: true,
+    encode: 'video/webm;codecs=vp8',
+    bitrate: 1000000,
+  },
+  setVideoConfig: (videoConfig: VideoConfig) =>
+    set({ videoConfig: videoConfig }),
+  setRequestMediaMsg: (requestMediaMsg: RequestMediaMsg) =>
+    set({ requestMediaMsg: requestMediaMsg }),
+  menuUnread: {
+    contacts: 0,
+    groups: 0,
+    system: 0,
+    settings: 0,
+  },
+  isLogin: false,
+  setIsLogin: (isLogin: boolean) => set({ isLogin: isLogin }),
+  setMenuUnread: (menuUnread: UnreadCount) => set({ menuUnread: menuUnread }),
+  setAddContacts: (addContacts: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        contacts: Math.max(0, state.menuUnread.contacts + addContacts),
+      },
+    })),
+  chats: 0,
+  setChats: (chats: number, isAdd: boolean) => {
+    // 加减
+    if (isAdd) {
+      set((state) => ({
+        chats: Math.max(0, state.chats + chats),
+      }));
+    } else {
+      set((_) => ({
+        chats: Math.max(0, chats),
+      }));
+    }
+  },
+  setAddGroups: (addGroups: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        groups: Math.max(0, state.menuUnread.groups + addGroups),
+      },
+    })),
+  setAddSystem: (addSystem: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        system: Math.max(0, state.menuUnread.system + addSystem),
+      },
+    })),
+  setAddSettings: (addSettings: number) =>
+    set((state) => ({
+      menuUnread: {
+        ...state.menuUnread,
+        settings: Math.max(0, state.menuUnread.settings + addSettings),
+      },
+    })),
+  refreshFlag: 0,
+  triggerRefresh: () =>
+    set((state) => ({ refreshFlag: state.refreshFlag + 1 })),
+}));

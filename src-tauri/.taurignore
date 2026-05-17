@@ -1,3 +1,4 @@
 # 忽略 src-tauri 目录下的所有文件变更
 dbData/
 src/
+resource/

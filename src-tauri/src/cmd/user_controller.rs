@@ -1,0 +1,116 @@
+use std::collections::HashMap;
+
+use crate::dto::update_user_dto::UpdateUserDTO;
+use crate::dto::http_result::HttpResult;
+use crate::entity::user_info::UserInfo;
+use crate::quic_service::connection_state::GLOBAL_QUIC_STATE;
+use crate::service::api_service::post_json;
+use crate::service::user_service::{disconnect_quic, reconnect_quic};
+use crate::utils::global_static_str::TALK_API;
+use crate::GLOBAL_QUIC_USER_INFO;
+
+/// 增加持久化数据
+#[tauri::command]
+pub async fn add_user_map(map: HashMap<String, String>) -> Result<String, String> {
+    GLOBAL_QUIC_USER_INFO.write().await.extend(map.into_iter());
+    Ok("success".to_string())
+}
+
+/// 获取持久化数据
+#[tauri::command]
+pub async fn get_user_map(key: String) -> Result<String, String> {
+    Ok(GLOBAL_QUIC_USER_INFO.read().await.get(&key).cloned().ok_or("not found")?.to_string())
+}
+
+/// 断开QUIC连接
+/// 清理所有与服务器连接的QUIC资源
+#[tauri::command]
+pub async fn disconnect_quic_command() -> Result<String, String> {
+    disconnect_quic().await.map_err(|e| e.to_string())?;
+    Ok("QUIC连接已断开".to_string())
+}
+
+/// 重新连接QUIC服务
+/// 重新建立与服务器连接的QUIC资源
+#[tauri::command]
+pub async fn reconnect_quic_command() -> Result<String, String> {
+    reconnect_quic().await.map_err(|e| e.to_string())?;
+    Ok("QUIC重连请求已发送".to_string())
+}
+
+/// 获取当前 QUIC 连接状态
+#[tauri::command]
+pub async fn get_quic_connection_state() -> Result<String, String> {
+    let state = *GLOBAL_QUIC_STATE.read().await;
+    Ok(state.as_str().to_string())
+}
+
+/// 缓存用户信息到本地数据库
+#[tauri::command]
+pub async fn cache_user_info(user_info: UserInfo) -> Result<(), String> {
+    user_info.upsert().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// 根据UUID获取缓存的用户信息
+#[tauri::command]
+pub async fn get_cached_user_info(uuid: String) -> Result<Option<UserInfo>, String> {
+    UserInfo::query_by_uuid(&uuid).await.map_err(|e| e.to_string())
+}
+
+/// 根据账号获取缓存的用户信息
+#[tauri::command]
+pub async fn get_cached_user_info_by_account(account: String) -> Result<Option<UserInfo>, String> {
+    UserInfo::query_by_account(&account).await.map_err(|e| e.to_string())
+}
+
+/// 更新用户信息
+#[tauri::command]
+pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<String, String> {
+    let url = format!("{}/user/update", TALK_API);
+    
+    let response = post_json(url, &update_dto).await.map_err(|e| e.to_string())?;
+    
+    let status = response.status();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+    
+    if status.is_success() {
+        let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+        if http_result.code == 200 {
+            if let Some(uuid) = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned() {
+                if let Ok(Some(mut cached_user)) = UserInfo::query_by_uuid(&uuid).await {
+                    if let Some(ref username) = update_dto.username {
+                        cached_user.username = Some(username.clone());
+                    }
+                    if let Some(ref info) = update_dto.info {
+                        cached_user.info = Some(info.clone());
+                    }
+                    if update_dto.gender.is_some() {
+                        cached_user.gender = update_dto.gender;
+                    }
+                    if update_dto.age.is_some() {
+                        cached_user.age = update_dto.age;
+                    }
+                    if update_dto.birthday.is_some() {
+                        cached_user.birthday = update_dto.birthday;
+                    }
+                    if let Some(ref phone) = update_dto.phone {
+                        cached_user.phone = Some(phone.clone());
+                    }
+                    if let Some(ref email) = update_dto.email {
+                        cached_user.email = Some(email.clone());
+                    }
+                    if let Some(ref address) = update_dto.address {
+                        cached_user.address = Some(address.clone());
+                    }
+                    let _ = cached_user.update_by_uuid().await;
+                }
+            }
+            Ok(body)
+        } else {
+            Err(http_result.message)
+        }
+    } else {
+        Err(format!("HTTP错误: {}", status))
+    }
+}

@@ -1,0 +1,222 @@
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  outline: none;
+}
+
+.backgroundBlur {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(30px) brightness(0.4);
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-black-30);
+  z-index: 2;
+}
+
+.header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, var(--bg-black-50) 0%, transparent 100%);
+}
+
+.counter {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--bg-white-90);
+  text-shadow: 0 1px 2px var(--bg-black-30);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iconButton {
+  color: var(--bg-white-90);
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-white-15);
+    color: var(--color-white);
+  }
+}
+
+.scaleText {
+  font-size: 13px;
+  color: var(--bg-white-80);
+  min-width: 50px;
+  text-align: center;
+  user-select: none;
+}
+
+.imageContainer {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.image {
+  max-width: 100%;
+  max-height: calc(100vh - 200px);
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px var(--bg-black-40);
+  transition: transform 0.3s ease;
+}
+
+.navAreaLeft,
+.navAreaRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 6;
+
+  .navButton {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--bg-black-30);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bg-white-60);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-white);
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  &:hover .navButton {
+    opacity: 1;
+    transform: scale(1);
+    background: var(--bg-white-15);
+    color: var(--color-white);
+  }
+
+  &:active .navButton {
+    transform: scale(0.95);
+    background: var(--bg-white-25);
+  }
+}
+
+.navAreaLeft {
+  left: 0;
+  background: linear-gradient(90deg, var(--bg-black-30) 0%, transparent 100%);
+}
+
+.navAreaRight {
+  right: 0;
+  background: linear-gradient(-90deg, var(--bg-black-30) 0%, transparent 100%);
+}
+
+.thumbnails {
+  position: relative;
+  z-index: 10;
+  padding: 16px 24px;
+  background: linear-gradient(0deg, var(--bg-black-50) 0%, transparent 100%);
+}
+
+.thumbnailScroll {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px 0;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--bg-white-10);
+    border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--bg-white-30);
+    border-radius: 2px;
+
+    &:hover {
+      background: var(--bg-white-50);
+    }
+  }
+}
+
+.thumbnail {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  background: var(--bg-black-30);
+
+  &:hover {
+    border-color: var(--border-white-lightest);
+    transform: translateY(-2px);
+  }
+
+  &.active {
+    border-color: var(--color-white);
+    box-shadow: 0 0 12px var(--bg-white-30);
+  }
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

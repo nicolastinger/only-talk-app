@@ -1,14 +1,18 @@
 [package]
 name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.0.0"
+description = "Instant Messaging App"
+authors = ["nico"]
 license = ""
 repository = ""
 edition = "2021"
 rust-version = "1.77.2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
 
 [lib]
 name = "app_lib"
@@ -26,13 +30,13 @@ windows = { version = "0.58.0", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 tauri-plugin-opener = "2"
-tauri = { version = "2.5.1", features = ["tray-icon", "unstable"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "multipart"] }
 quinn = {version = "0.10.2"}
 rustls = { version = "0.21", features = ["dangerous_configuration"] }
 rustls-pemfile = "1.0.4"
 fast_log = "1.7.4" #使用简单的异步日志库
-tokio = { version = "1.0.0",features = ["full"] }
+tokio = { version = "1.49.0",features = ["full"] }
+tokio-util = "0.7"
 lazy_static = "1.4"
 anyhow = "1.0.94"
 bincode = "1.3.3"
@@ -40,5 +44,23 @@ nanoid = "0.4.0"
 crc = { version = "3.0" }  # 当前最新稳定版（2025年5月）
 crc-catalog = "2.0"  # 可选，用于预置标准CRC算法
 sqlx = { version = "=0.8.1", features = ["sqlite", "runtime-tokio", "macros"] }
-rusqlite = "=0.32.1"
 rcgen = "0.11.3"
+webpki-roots = "1.0.2"
+uuid = { version = "1.11.0", features = ["v4", "v7"] }
+tauri-plugin-dialog = "2.0.0-rc"
+tauri-plugin-fs = "2"
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "6.0"
+image = "0.25"
+webp = "0.3"
+zune-image = "0.4"
+zune-jpeg = "0.4"
+kamadak-exif = "0.5"
+rusqlite = { version = "0.32.1", features = ["bundled-sqlcipher"] }
+
+[target.'cfg(desktop)'.dependencies]
+tauri = { version = "2.5.1", features = ["protocol-asset", "unstable", "tray-icon", "image-ico"] }
+
+[target.'cfg(not(desktop))'.dependencies]
+tauri = { version = "2.5.1", features = [ "image-ico", "tray-icon", "protocol-asset", "unstable"] }

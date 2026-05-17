@@ -1,0 +1,483 @@
+use serde::{Deserialize, Serialize};
+
+/// 媒体帧类型标识
+/// 用于MediaData通道的轻量级帧头，区分视频帧和音频帧
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum MediaFrameType {
+    /// 视频帧
+    Video = 1,
+    /// 音频帧
+    Audio = 2,
+}
+
+impl TryFrom<u8> for MediaFrameType {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(MediaFrameType::Video),
+            2 => Ok(MediaFrameType::Audio),
+            _ => Err(anyhow::anyhow!("未知的媒体帧类型: {}", value)),
+        }
+    }
+}
+
+/// 媒体帧头部 - MediaData通道专用
+/// 固定5字节头部: frame_type(1字节) + data_len(4字节)
+/// 替代通用的 HeadMsg(9字节) + TextQuicMsg(bincode序列化) 方案
+///
+/// # 性能优势
+/// - 头部仅5字节（vs 原方案9字节HeadMsg + bincode序列化的TextQuicMsg开销）
+/// - 帧体直接写入原始二进制数据，无需bincode序列化
+/// - 省去了nano_id/recv_user/send_user/timestamp等媒体帧不需要的字段
+/// - 避免了对Vec<u8>的bincode长度前缀编码
+#[derive(Debug, Clone)]
+pub struct MediaFrameHeader {
+    /// 帧类型: 1=视频, 2=音频
+    pub frame_type: MediaFrameType,
+    /// 帧数据长度 (字节数)
+    pub data_len: u32,
+}
+
+/// 媒体帧头部固定大小: frame_type(1) + data_len(4)
+pub const MEDIA_FRAME_HEADER_SIZE: usize = 5;
+
+impl MediaFrameHeader {
+    /// 创建新的媒体帧头部
+    pub fn new(frame_type: MediaFrameType, data_len: u32) -> Self {
+        Self { frame_type, data_len }
+    }
+
+    /// 将头部序列化为字节数组（5字节，零拷贝友好）
+    /// 布局: [frame_type: u8][data_len: u32(大端序)]
+    pub fn to_bytes(&self) -> [u8; MEDIA_FRAME_HEADER_SIZE] {
+        let mut buf = [0u8; MEDIA_FRAME_HEADER_SIZE];
+        buf[0] = self.frame_type as u8;
+        buf[1..5].copy_from_slice(&self.data_len.to_be_bytes());
+        buf
+    }
+
+    /// 从字节数组反序列化头部
+    pub fn from_bytes(bytes: &[u8; MEDIA_FRAME_HEADER_SIZE]) -> Result<Self, anyhow::Error> {
+        let frame_type = MediaFrameType::try_from(bytes[0])?;
+        let data_len = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+        Ok(Self { frame_type, data_len })
+    }
+
+    /// 构建完整的媒体帧数据（头部 + 帧体）
+    /// 直接拼接，避免bincode序列化带来的额外开销
+    pub fn build_frame(frame_type: MediaFrameType, data: &[u8]) -> Vec<u8> {
+        let header = Self::new(frame_type, data.len() as u32);
+        let mut frame = Vec::with_capacity(MEDIA_FRAME_HEADER_SIZE + data.len());
+        frame.extend_from_slice(&header.to_bytes());
+        frame.extend_from_slice(data);
+        frame
+    }
+
+    /// 将头部写入已有buffer（避免额外分配）
+    #[allow(dead_code)]
+    pub fn write_to(&self, buf: &mut [u8]) {
+        buf[0] = self.frame_type as u8;
+        buf[1..5].copy_from_slice(&self.data_len.to_be_bytes());
+    }
+}
+
+/// P2P连接初始化消息
+/// 用于建立P2P连接时的握手信息交换
+#[derive(Debug, Serialize, Deserialize)]
+pub struct P2pInitMsg {
+    /// 请求人地址
+    pub accept_addr: String,
+    /// 请求人地址
+    pub request_addr: String,
+    /// 请求人uuid
+    pub request_uuid: String,
+    /// 请求人token - 用于验证身份
+    pub request_token: String,
+    /// 接收人uuid
+    pub accept_uuid: String,
+    /// 是否接受连接请求
+    pub accept: bool,
+    /// ip类型 - 1:IPv4, 2:IPv6
+    pub ip_type: u8,
+    /// 连接步骤状态
+    /// 0-未处理，1-已拒绝，2-已接受，3-交换ip
+    pub step: u8,
+    /// 是否作为服务端
+    pub is_server: bool,
+}
+
+/// 用户地址信息
+/// 用于P2P连接时的地址交换
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserAddressInfo {
+    /// 用户唯一标识
+    pub uuid: String,
+    /// 网络地址 (IP:Port格式)
+    pub address: String,
+    /// 验证令牌
+    pub token: String,
+    /// IP类型 - 1:IPv4, 2:IPv6
+    pub ip_type: u8,
+    /// 目标用户UUID
+    pub target_uuid: String,
+    /// NAT类型 - 用于穿透策略
+    pub nat_type: u8,
+    /// 是否作为服务端
+    pub is_server: bool,
+    /// 锁定UUID - 用于防止重复连接
+    pub lock_uuid: String,
+    /// 是否已锁定
+    pub is_lock: bool,
+}
+
+/// P2P通道类型
+/// 用于区分不同的P2P数据通道
+/// 每个通道类型对应QUIC上的一个独立双向流
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+pub enum P2pChannelType {
+    /// 默认通道 - 用于信令、文本消息、控制命令等
+    Default,
+    /// 媒体信息通道 - 用于传输媒体状态信息、分辨率变化、码率调整等控制信令
+    /// 与数据通道分离，避免大数据帧阻塞控制信息
+    MediaInfo,
+    /// 媒体数据通道 - 专门用于视频帧和音频帧的传输
+    /// 与信令通道分离，保证音视频数据的传输带宽和低延迟
+    MediaData,
+    /// 文件通道 - 专门用于文件传输
+    /// 独立于音视频通道，避免大文件传输影响实时通话质量
+    File,
+}
+
+impl std::fmt::Display for P2pChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            P2pChannelType::Default => write!(f, "default"),
+            P2pChannelType::MediaInfo => write!(f, "media_info"),
+            P2pChannelType::MediaData => write!(f, "media_data"),
+            P2pChannelType::File => write!(f, "file"),
+        }
+    }
+}
+
+/// P2P媒体信息
+/// 用于隐私模式视频聊天的媒体信息通道
+/// 传输实时媒体状态信息，如分辨率变化、码率调整、帧率统计等
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pMediaInfo {
+    /// 媒体信息类型
+    pub info_type: P2pMediaInfoType,
+    /// 信息数据 (JSON序列化)
+    pub data: String,
+    /// 时间戳
+    pub timestamp: u64,
+}
+
+/// 媒体信息类型枚举
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum P2pMediaInfoType {
+    /// 分辨率变化通知
+    ResolutionChange,
+    /// 码率调整通知
+    BitrateChange,
+    /// 帧率统计信息
+    FrameRateStats,
+    /// 网络质量信息
+    NetworkQuality,
+    /// 编码器信息
+    EncoderInfo,
+    /// 自定义媒体信息
+    Custom(String),
+}
+
+/// P2P视频数据包
+/// 用于传输视频帧数据
+/// 注意: MediaData通道已改用轻量级MediaFrameHeader格式，
+/// 此结构体保留供其他场景使用
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct P2pVideoData {
+    /// 目标用户UUID
+    pub uuid: String,
+    /// 视频帧数据 (已编码)
+    pub video_data: Vec<u8>,
+}
+
+/// P2P文件数据包
+/// 用于通过File通道传输文件数据
+#[derive(Debug, Serialize, Deserialize)]
+pub struct P2pFileData {
+    /// 目标用户UUID
+    pub uuid: String,
+    /// 文件名
+    pub file_name: String,
+    /// 文件MIME类型
+    pub mime_type: String,
+    /// 文件总大小 (字节)
+    pub total_size: u64,
+    /// 当前分片索引 (从0开始)
+    pub chunk_index: u32,
+    /// 总分片数
+    pub total_chunks: u32,
+    /// 分片数据
+    pub chunk_data: Vec<u8>,
+    /// 文件传输ID - 用于关联同一次文件传输的所有分片
+    pub transfer_id: String,
+}
+
+/// P2P文件传输请求
+/// 发起文件传输时的握手消息
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pFileTransferRequest {
+    /// 文件名
+    pub file_name: String,
+    /// 文件MIME类型
+    pub mime_type: String,
+    /// 文件总大小 (字节)
+    pub total_size: u64,
+    /// 总分片数
+    pub total_chunks: u32,
+    /// 文件传输ID
+    pub transfer_id: String,
+    /// 时间戳
+    pub timestamp: u64,
+}
+
+/// P2P文件传输响应
+/// 接收方响应文件传输请求
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pFileTransferResponse {
+    /// 文件传输ID
+    pub transfer_id: String,
+    /// 是否接受传输
+    pub accept: bool,
+    /// 时间戳
+    pub timestamp: u64,
+}
+
+/// P2P音频数据包
+/// 用于传输音频帧数据
+/// 注意: MediaData通道已改用轻量级MediaFrameHeader格式，
+/// 此结构体保留供其他场景使用
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct P2pAudioData {
+    /// 目标用户UUID
+    pub uuid: String,
+    /// 音频帧数据 (Opus编码)
+    pub audio_data: Vec<u8>,
+    /// 时间戳 - 用于音视频同步
+    pub timestamp: u64,
+    /// 序列号 - 用于排序和丢包检测
+    pub sequence: u32,
+}
+
+/// P2P视频配置
+/// 用于视频通话参数协商
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pVideoConfig {
+    /// 视频宽度 (像素)
+    pub width: u16,
+    /// 视频高度 (像素)
+    pub height: u16,
+    /// 帧率 (fps)
+    pub fps: u8,
+    /// 视频编码方式 (如: "video/webm;codecs=vp8")
+    pub encode: String,
+    /// 视频码率 (bps)
+    pub bitrate: u32,
+    /// 是否开启视频
+    pub video: bool,
+    /// 是否开启音频
+    pub audio: bool,
+}
+
+/// 音频配置
+/// 用于音频参数设置
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pAudioConfig {
+    /// 采样率 (Hz) - 如: 48000
+    pub sample_rate: u32,
+    /// 声道数 - 1:单声道, 2:立体声
+    pub channels: u8,
+    /// 音频编码方式 (如: "audio/opus")
+    pub encode: String,
+    /// 音频码率 (bps)
+    pub bitrate: u32,
+    /// 是否开启回声消除
+    pub echo_cancellation: bool,
+    /// 是否开启噪声抑制
+    pub noise_suppression: bool,
+    /// 是否开启自动增益控制
+    pub auto_gain_control: bool,
+}
+
+/// P2P媒体配置
+/// 统一的视频和音频配置消息
+/// 用于视频聊天初始化时的参数协商
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pMediaConfig {
+    /// 视频配置
+    pub video_config: P2pVideoConfig,
+    /// 音频配置
+    pub audio_config: P2pAudioConfig,
+    /// 缓冲配置
+    pub buffer_config: P2pBufferConfig,
+}
+
+/// 缓冲配置
+/// 用于控制媒体流的缓冲策略
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pBufferConfig {
+    /// 视频缓冲大小 (帧数)
+    pub video_buffer_size: u8,
+    /// 音频缓冲大小 (帧数)
+    pub audio_buffer_size: u8,
+    /// 是否启用自适应缓冲
+    pub adaptive_buffer: bool,
+    /// 最大延迟 (毫秒)
+    pub max_latency_ms: u16,
+}
+
+/// 媒体控制命令
+/// 用于控制视频/音频的开关等操作
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pMediaControl {
+    /// 控制类型
+    pub control_type: P2pMediaControlType,
+    /// 是否启用
+    pub enabled: bool,
+    /// 时间戳
+    pub timestamp: u64,
+}
+
+/// 媒体控制类型枚举
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum P2pMediaControlType {
+    /// 视频开关
+    VideoToggle,
+    /// 音频开关
+    AudioToggle,
+    /// 暂停
+    Pause,
+    /// 恢复
+    Resume,
+    /// 结束通话
+    EndCall,
+}
+
+/// 视频通话邀请
+/// 当一方发起视频通话时发送此消息
+/// 包含邀请者的基本信息和媒体配置
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pVideoCallInvite {
+    /// 邀请者UUID (发送方)
+    pub from_uuid: String,
+    /// 被邀请者UUID (接收方)
+    pub to_uuid: String,
+    /// 邀请时间戳
+    pub timestamp: u64,
+    /// 邀请者的媒体配置 (可选，用于提前协商)
+    pub media_config: Option<P2pMediaConfig>,
+    /// 邀请者的昵称/用户名 (用于显示)
+    pub from_name: Option<String>,
+}
+
+/// 视频通话响应
+/// 当接收方接受或拒绝视频通话时发送
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pVideoCallResponse {
+    /// 响应者UUID
+    pub from_uuid: String,
+    /// 邀请者UUID
+    pub to_uuid: String,
+    /// 是否接受邀请
+    pub accept: bool,
+    /// 响应时间戳
+    pub timestamp: u64,
+    /// 响应者的媒体配置 (接受时携带)
+    pub media_config: Option<P2pMediaConfig>,
+    /// 拒绝原因 (拒绝时可选)
+    pub reject_reason: Option<String>,
+}
+
+/// 视频通话状态
+/// 用于跟踪视频通话的生命周期状态
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[allow(dead_code)]
+pub enum P2pVideoCallState {
+    /// 空闲状态 - 无通话
+    Idle,
+    /// 正在邀请 - 等待对方响应
+    Inviting,
+    /// 被邀请 - 收到邀请，等待用户操作
+    Invited,
+    /// 通话中 - 双方已建立连接
+    InCall,
+    /// 已结束 - 通话结束
+    Ended,
+}
+
+/// P2P消息 - 前端通信
+/// 用于向前端发送P2P事件通知
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct P2pMsg {
+    /// 消息类型
+    pub r#type: u16,
+    /// 消息内容 (JSON序列化)
+    pub raw: String,
+}
+
+/// 默认视频配置实现
+impl Default for P2pVideoConfig {
+    fn default() -> Self {
+        Self {
+            width: 640, // 低画质: 640x480
+            height: 480,
+            fps: 15, // 较低帧率
+            encode: "video/webm;codecs=vp8".to_string(),
+            bitrate: 500_000, // 500kbps
+            video: true,
+            audio: true,
+        }
+    }
+}
+
+/// 默认音频配置实现
+impl Default for P2pAudioConfig {
+    fn default() -> Self {
+        Self {
+            sample_rate: 48000,
+            channels: 1, // 单声道节省带宽
+            encode: "audio/opus".to_string(),
+            bitrate: 32000, // 32kbps
+            echo_cancellation: true,
+            noise_suppression: true,
+            auto_gain_control: true,
+        }
+    }
+}
+
+/// 默认缓冲配置实现
+impl Default for P2pBufferConfig {
+    fn default() -> Self {
+        Self {
+            video_buffer_size: 5,  // 缓冲5帧
+            audio_buffer_size: 10, // 缓冲10帧
+            adaptive_buffer: true,
+            max_latency_ms: 200, // 最大200ms延迟
+        }
+    }
+}
+
+/// 默认媒体配置实现
+impl Default for P2pMediaConfig {
+    fn default() -> Self {
+        Self {
+            video_config: P2pVideoConfig::default(),
+            audio_config: P2pAudioConfig::default(),
+            buffer_config: P2pBufferConfig::default(),
+        }
+    }
+}

@@ -1,35 +1,76 @@
-use tauri::{generate_handler, AppHandle};
-mod quic_module;
-use crc::Crc;
-use fast_log::Config;
-use lazy_static::lazy_static;
-use log::{info, warn, LevelFilter};
+use tauri::{generate_handler, AppHandle, Manager, Wry};
+mod quic_service;
 use std::collections::HashMap;
-use std::net::SocketAddrV6;
 use std::sync::{Arc, OnceLock};
-use tokio::sync::RwLock;
-mod common_service;
-mod function;
-mod models;
-mod network;
-mod store;
-mod utils;
+
+use crc::Crc;
+use dashmap::DashMap;
+use lazy_static::lazy_static;
+use sqlx::SqlitePool;
+use tauri::path::BaseDirectory;
+use tokio::sync::{Mutex, RwLock};
+pub mod cmd;
+mod config;
+mod dao;
+mod dto;
+mod emit_app;
+mod entity;
+mod init_app;
+pub mod service;
+#[cfg(desktop)]
+mod tray;
+pub mod utils;
 mod vo;
 
-use crate::function::back_end::{
-    add_user_map, get_user_map, process_init_p2p_request, send_init_p2p_udp, send_p2p_init_msg,
-    send_p2p_video_config, send_p2p_video_frame, send_video_frame,
-};
-use crate::network::http_utils::{get_request, post_request, sign_in};
-use crate::quic_module::p2p_stream_quic_server::{
-    udp_port_forward_ipv6
-};
-use crate::quic_module::text_quic_client::send_text_msg;
-use crate::utils::global_static_str::{UDP_SOCKET_V6};
-use models::quic_connection::QuicConnection;
-use store::init_db::init_sqlite;
+use entity::quic_connection::QuicConnection;
 
-static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+use crate::cmd::api_controller::{
+    compress_image_to_webp_command, get_request, post_form_data_request, post_request,
+    upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request,
+    upload_multiple_files_with_extra_fields_request,
+};
+use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
+use crate::cmd::chat_record_controller::{
+    get_chat_record_by_type, get_chat_record_from_store, mark_read, send_file_msg, send_image_msg,
+    send_text_msg,
+};
+use crate::cmd::chat_session_controller::{
+    create_chat_session, get_chat_session_from_store, mark_read_chat_session,
+};
+use crate::cmd::file_controller::{
+    debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
+};
+use crate::cmd::friend_controller::{
+    delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list,
+};
+use crate::cmd::group_controller::{
+    create_group_chat_session_command, create_group_command, get_group_chat_session_list,
+    get_group_info_command, get_group_list, get_group_members, invite_group_members_command,
+    join_group_command, leave_group_command, remove_group_member_command,
+    sync_group_list_command, sync_group_members_command,
+};
+use crate::cmd::notification_controller::{
+    batch_read_system_notification, get_system_notification,
+};
+use crate::cmd::p2p_controller::{
+    close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
+    send_p2p_file_data, send_p2p_file_transfer_request, send_p2p_file_transfer_response,
+    send_p2p_init_msg, send_p2p_media_config, send_p2p_media_control, send_p2p_media_info,
+    send_p2p_media_ready, send_p2p_text_msg, send_p2p_video_call_end, send_p2p_video_call_invite,
+    send_p2p_video_call_response, send_p2p_video_config, send_p2p_video_frame, send_video_frame,
+};
+use crate::cmd::user_controller::{
+    add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
+    get_cached_user_info_by_account, get_quic_connection_state, get_user_map,
+    reconnect_quic_command, update_user_info_command,
+};
+use crate::init_app::init_app;
+use crate::quic_service::models::TargetSendStream;
+#[cfg(desktop)]
+use crate::tray::setup_tray;
+use crate::utils::global_static_str::APP_NAME;
+
+static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();
 // 创建CRC-16/X25计算器
 const X25: Crc<u16> = Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
 
@@ -38,37 +79,60 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref GLOBAL_QUIC_USER_INFO: Arc<RwLock<HashMap<String, String>>> =
         Arc::new(RwLock::new(HashMap::new()));
+    pub static ref P2P_STREAM_SENDER: DashMap<String, DashMap<String, TargetSendStream>> =
+        DashMap::new();
+    pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
+    pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
+    pub static ref GLOBAL_PRIVATE_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
+    // 全局配置DashMap
+    pub static ref GLOBAL_CONFIG: Arc<DashMap<String, String>> = Arc::new(DashMap::new());
+    // 消息发送，全局mutex锁
+    pub static ref GLOBAL_MSG_SEND_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+    // MediaData通道取消令牌，用于视频通话结束时停止媒体帧接收循环
+    pub static ref MEDIA_DATA_CANCEL_TOKEN: Arc<RwLock<Option<tokio_util::sync::CancellationToken>>> =
+        Arc::new(RwLock::new(None));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[allow(non_snake_case)]
 pub fn run() {
-    fast_log::init(
-        Config::new()
-            .console()
-            .level(LevelFilter::Info)
-            .file("target/rust_im.log")
-            .chan_len(Some(10)),
-    )
-    .unwrap();
-    info!("日志初始化完成");
+    #[cfg(target_os = "linux")]
+    {
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        std::env::set_var("QT_QPA_PLATFORM", "wayland");
+    }
 
-    // 定义服务器监听地址
-    tokio::spawn(async {
-        let addr_v6 = "[::]:10086";
-        let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>().unwrap();
-        let udp_socket_v6 = UDP_SOCKET_V6.parse::<SocketAddrV6>().unwrap();
-        let addr_json = Vec::new();
-        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json)
-            .await
-            .unwrap_or_else(|x| {
-                warn!("本机不支持ipv6传输 {}", x.to_string());
-            });
-        init_sqlite().await.expect("初始化数据库失败!");
-    });
+    // 添加backtrace, 错误信息堆栈显示
+    {
+        std::env::set_var("RUST_BACKTRACE", "full");
+    }
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
+            let handle = app.handle().clone();
+            let root_path = handle
+                .path()
+                .resolve(APP_NAME, BaseDirectory::Document)
+                .or_else(|_| handle.path().resolve(APP_NAME, BaseDirectory::AppData))
+                .unwrap_or_else(|_| {
+                    std::env::current_dir().expect("无法获取当前目录").join(APP_NAME)
+                });
+
+            #[cfg(desktop)]
+            {
+                if let Err(e) = setup_tray(app.handle()) {
+                    eprintln!("初始化托盘失败: {}", e);
+                }
+            }
+
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = init_app(root_path, Some(handle)).await {
+                    eprintln!("初始化失败: {}", e);
+                }
+            });
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -76,7 +140,15 @@ pub fn run() {
             send_text_msg,
             get_request,
             post_request,
+            upload_file_request,
+            upload_file_with_extra_fields_request,
+            upload_multiple_files_request,
+            upload_multiple_files_with_extra_fields_request,
+            post_form_data_request,
+            compress_image_to_webp_command,
             sign_in,
+            logout,
+            clear_user_info,
             get_user_map,
             add_user_map,
             send_video_frame,
@@ -84,7 +156,57 @@ pub fn run() {
             send_init_p2p_udp,
             process_init_p2p_request,
             send_p2p_video_config,
-            send_p2p_video_frame
+            send_p2p_video_frame,
+            send_p2p_audio_frame,
+            send_p2p_media_config,
+            send_p2p_media_control,
+            send_p2p_media_info,
+            send_p2p_text_msg,
+            close_p2p_connection,
+            send_p2p_video_call_invite,
+            send_p2p_video_call_response,
+            send_p2p_video_call_end,
+            send_p2p_media_ready,
+            send_p2p_file_data,
+            send_p2p_file_transfer_request,
+            send_p2p_file_transfer_response,
+            get_chat_record_from_store,
+            get_chat_record_by_type,
+            get_chat_session_from_store,
+            get_friend_info,
+            delete_friend_command,
+            mark_read,
+            get_friend_list,
+            create_chat_session,
+            get_system_notification,
+            update_local_friend_list,
+            batch_read_system_notification,
+            mark_read_chat_session,
+            get_local_file,
+            get_file_by_biz_id,
+            get_chat_file_by_biz_id,
+            debug_resource_paths,
+            send_image_msg,
+            send_file_msg,
+            disconnect_quic_command,
+            reconnect_quic_command,
+            get_quic_connection_state,
+            cache_user_info,
+            get_cached_user_info,
+            get_cached_user_info_by_account,
+            update_user_info_command,
+            get_group_list,
+            get_group_members,
+            get_group_info_command,
+            create_group_command,
+            invite_group_members_command,
+            join_group_command,
+            leave_group_command,
+            remove_group_member_command,
+            sync_group_list_command,
+            sync_group_members_command,
+            create_group_chat_session_command,
+            get_group_chat_session_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

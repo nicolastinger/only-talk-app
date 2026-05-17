@@ -1,0 +1,38 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "pc-default",
+  "description": "PC application capability",
+  "windows": ["main"],
+  "permissions": [
+    "core:window:allow-start-dragging",
+    "core:window:allow-scale-factor",
+    "core:app:allow-default-window-icon",
+    "core:tray:allow-new",
+    "core:tray:default",
+    "core:menu:allow-new",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-close",
+    "core:menu:default",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-create-webview-window",
+    "core:event:allow-listen",
+    "core:event:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$DOCUMENT/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$RESOURCE/**" },
+        { "path": "$HOME/**" }
+      ]
+    },
+    "opener:allow-reveal-item-in-dir",
+    "core:default"
+  ]
+}

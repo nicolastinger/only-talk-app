@@ -1,21 +1,21 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "my-app",
-  "version": "0.1.0",
-  "identifier": "myTauriApp",
+  "productName": "only-talk",
+  "version": "1.0.0",
+  "identifier": "com.only.talk.app",
   "build": {
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:8000",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "frontendDist": "../apps/pc/dist",
+    "devUrl": "http://localhost:8080",
+    "beforeDevCommand": "pnpm --filter @workspace/app-pc dev",
+    "beforeBuildCommand": "pnpm --filter @workspace/app-pc build"
   },
   "app": {
     "windows": [
       {
         "label": "main",
-        "title": "歪比巴卜",
+        "title": "用户登录",
         "width": 380,
-        "height": 480,
+        "height": 680,
         "resizable": true,
         "fullscreen": false,
         "dragDropEnabled": true,
@@ -24,7 +24,18 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data: http://asset.localhost; font-src 'self' asset: http://asset.localhost data:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/**",
+          "$DOWNLOAD/**",
+          "$DESKTOP/**",
+          "$DOCUMENT/**",
+          "$HOME/**",
+          "content://**"
+        ]
+      },
       "capabilities": ["window-default"]
     }
   },
@@ -37,6 +48,11 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerHooks": "./installer.nsi"
+      }
+    }
   }
 }

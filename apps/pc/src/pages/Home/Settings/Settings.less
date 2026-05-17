@@ -1,0 +1,188 @@
+.settingsContainer {
+  height: 100%;
+  background-color: var(--color-white-bg);
+  color: var(--color-white-01);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--scrollbar-bg);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+.settingsSidebar {
+  background-color: var(--color-gray-light);
+  border-right: 1px solid var(--color-gray-border-light);
+
+  .sidebarTitle {
+    padding: 20px 16px 10px;
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--color-white-01);
+  }
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-gray-light);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-light);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb);
+  }
+
+  :global {
+    .ant-menu {
+      background: transparent;
+      border-right: none;
+    }
+
+    .ant-menu-item {
+      margin: 0;
+      height: 48px;
+      line-height: 48px;
+    }
+
+    .ant-menu-item-selected {
+      background-color: var(--color-info-bg) !important;
+    }
+  }
+}
+
+.settingsContent {
+  padding: 20px;
+  overflow-y: auto;
+  background-color: var(--color-white-bg);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-white-bg);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-light);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb);
+  }
+}
+
+.settingSection {
+  margin-bottom: 30px;
+
+  :global {
+    .ant-typography {
+      color: var(--color-white-01);
+    }
+  }
+}
+
+.sectionTitle {
+  margin-bottom: 20px !important;
+  color: var(--color-white-01) !important;
+}
+
+.settingCard {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+
+  :global {
+    .ant-card-body {
+      padding: 20px;
+    }
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+
+  .cardIcon {
+    margin-right: 12px;
+    font-size: 18px;
+    color: var(--color-info);
+  }
+}
+
+.divider {
+  margin: 16px 0 !important;
+}
+
+.settingCheckbox {
+  margin-bottom: 12px;
+
+  :global {
+    .ant-checkbox-wrapper {
+      color: var(--color-white-01);
+    }
+  }
+}
+
+.select {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.description {
+  display: block;
+  margin-top: 8px !important;
+}
+
+.accountInfo {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  .accountValue {
+    font-weight: 500;
+  }
+}
+
+.appInfo {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.buttonGroup {
+  display: flex;
+
+  :global {
+    .ant-btn {
+      margin-right: 10px;
+    }
+
+    .ant-btn:last-child {
+      margin-right: 0;
+    }
+  }
+}

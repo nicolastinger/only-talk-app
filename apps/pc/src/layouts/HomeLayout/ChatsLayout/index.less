@@ -1,0 +1,81 @@
+.container {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  background: var(--glass-bg-light);
+  backdrop-filter: var(--glass-blur);
+  flex-direction: row;
+}
+
+.emptyContent {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header {
+  width: 100%;
+  height: 48px;
+  padding: 2px 12px;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.headerTool {
+  position: absolute;
+  width: 100%;
+  height: 40px;
+  top: 0;
+  left: 0;
+}
+
+.left {
+  width: auto !important;
+  overflow: hidden;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.right {
+  width: calc(100% - 280px);
+  background: var(--glass-bg-light);
+  backdrop-filter: var(--glass-blur);
+}
+
+.item {
+  width: 100%;
+  height: calc(100% - 48px);
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.item > div {
+  height: 68px;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin: 4px 8px;
+
+  &:hover {
+    background: rgba(64, 150, 255, 0.05);
+  }
+}

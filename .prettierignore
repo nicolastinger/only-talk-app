@@ -1,3 +1,10 @@
 node_modules
 .umi
 .umi-production
+dist
+target
+src-tauri
+pnpm-lock.yaml
+*.lock
+*.min.js
+*.min.css

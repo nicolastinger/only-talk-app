@@ -1,0 +1,70 @@
+.container {
+  width: 100%;
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg-color);
+}
+
+.content {
+  width: 100%;
+  padding: 10px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .left {
+    width: 30%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+
+    .title {
+      font-size: 1.4rem;
+    }
+
+    .imgItem {
+      width: 40px;
+      height: 40px;
+      border-radius: 5px;
+      overflow: hidden;
+      object-fit: cover;
+    }
+  }
+
+  .right {
+    width: 70%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    .text {
+      font-size: 1rem;
+      text-align: center;
+    }
+
+    .btn {
+      width: 100%;
+      display: flex;
+      height: 70%;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
+
+      .cancelBtn {
+        color: var(--color-white);
+      }
+
+      .confirmBtn {
+        color: var(--color-white);
+      }
+    }
+  }
+}

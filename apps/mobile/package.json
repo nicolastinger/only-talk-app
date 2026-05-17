@@ -1,0 +1,37 @@
+{
+  "name": "@workspace/app-mobile",
+  "version": "1.0.0",
+  "description": "Mobile app with Vue3 + Vant + Vapor + Less + TypeScript",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "format": "prettier --cache --write ."
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
+    "@tauri-apps/plugin-fs": "^2.5.1",
+    "@workspace/services": "workspace:*",
+    "@workspace/types": "workspace:*",
+    "vant": "^4.8.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.0.0-rc.18",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "less": "^4.2.0",
+    "prettier": "^2.8.7",
+    "prettier-plugin-organize-imports": "^3.2.2",
+    "prettier-plugin-packagejson": "^2.4.3",
+    "typescript": "^5.0.3",
+    "vite": "^5.0.0",
+    "vue-tsc": "^2.0.0"
+  }
+}

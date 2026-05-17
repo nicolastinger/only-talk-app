@@ -1,0 +1,27 @@
+# 基本配置
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+newline_style = "Unix"
+use_small_heuristics = "Max"
+indent_style = "Block"
+
+# 导入分组配置
+group_imports = "StdExternalCrate"
+imports_granularity = "Module"
+
+# 排除不需要格式化的文件
+ignore = [
+    "/build/",
+    "/vendor/",
+    "/tests/",
+    "/dbData/",
+    "/config/",
+    "/.git/",
+    "/.idea/",
+    "/.vscode/",
+    "/.cargo/",
+    "/.cargo/registry/",
+    "/gen/"
+    # 其他需要排除的路径
+]

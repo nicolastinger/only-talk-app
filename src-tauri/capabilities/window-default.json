@@ -10,12 +10,30 @@
     "core:tray:default",
     "core:menu:allow-new",
     "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-is-maximized",
     "core:window:allow-close",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
     "core:menu:default",
     "core:webview:allow-create-webview",
     "core:webview:allow-create-webview-window",
-    "core:window:allow-close",
     "core:event:allow-listen",
-    "core:event:default"
+    "core:event:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$DOCUMENT/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$RESOURCE/**" },
+        { "path": "$HOME/**" }
+      ]
+    },
+    "opener:allow-reveal-item-in-dir"
   ]
 }
