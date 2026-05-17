@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm add *)"
+      "Bash(pnpm add *)",
+      "Bash(cargo check *)",
+      "Bash(npx tsc *)",
+      "Bash(npx umi *)"
     ]
   }
 }

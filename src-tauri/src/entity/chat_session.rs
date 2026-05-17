@@ -18,6 +18,7 @@ pub struct ChatSession {
     pub session_type: i64, //1-单聊，2-群聊，3-系统，4-公众号
     pub is_show: i64,
     pub is_top: i64,
+    pub group_id: Option<String>,
 }
 
 impl ChatSession {
@@ -34,6 +35,7 @@ impl ChatSession {
             session_type: chat_session_vo.session_type,
             is_show: chat_session_vo.is_show,
             is_top: chat_session_vo.is_top,
+            group_id: chat_session_vo.group_id,
         })
     }
 }
@@ -61,7 +63,16 @@ impl SqliteStore for ChatSession {
         Ok(())
     }
 
-    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        let result = sqlx::query(
+            "ALTER TABLE chat_session ADD COLUMN group_id TEXT DEFAULT NULL",
+        )
+        .execute(pool_sqlite)
+        .await;
+        match result {
+            Ok(_) => {}
+            Err(_) => {} // Column already exists, ignore
+        }
         Ok(())
     }
 

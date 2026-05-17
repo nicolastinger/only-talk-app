@@ -30,6 +30,9 @@ interface ChatMessage {
   from: MessageFrom;
   ack: boolean | undefined;
   img?: string;
+  sender_name?: string;
+  sender_icon?: string;
+  sender_uuid?: string;
   text_msg_raw: TextQuicMsgVo;
 }
 

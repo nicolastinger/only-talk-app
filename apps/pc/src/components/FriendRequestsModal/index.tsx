@@ -7,6 +7,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
 import {
   get_accept_friend_request_list,
@@ -49,6 +50,22 @@ const FriendRequestsModal = ({
     if (visible) {
       fetchData();
     }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    let unlisten: (() => void) | undefined;
+    const setupListener = async () => {
+      unlisten = await listen<string>('friend_list_changed', () => {
+        fetchData();
+      });
+    };
+    setupListener().catch(console.error);
+
+    return () => {
+      if (unlisten) unlisten();
+    };
   }, [visible]);
 
   const fetchData = async () => {
@@ -162,11 +179,11 @@ const FriendRequestsModal = ({
     }
   };
 
-  const handleAccept = async (uuid: string | undefined) => {
-    if (!uuid) return;
+  const handleAccept = async (requestUserId: string | undefined) => {
+    if (!requestUserId) return;
     let friendRequestInfoDTO: FriendRequestInfoDTO = {
-      accept_message: '',
-      request_user: uuid,
+      accept_message: '我通过了你的好友申请',
+      request_user: requestUserId,
       add_type: 'card',
       version: 0,
       accept_status: 1,
@@ -186,17 +203,18 @@ const FriendRequestsModal = ({
     }
   };
 
-  const handleReject = async (uuid: string | undefined) => {
-    if (!uuid) return;
+  const handleReject = async (requestUserId: string | undefined) => {
+    if (!requestUserId) return;
     let friendRequestInfoDTO: FriendRequestInfoDTO = {
-      accept_message: '',
-      request_user: uuid,
+      accept_message: '我拒绝了你的好友申请',
+      request_user: requestUserId,
       add_type: 'card',
       version: 0,
       accept_status: 2,
     };
     const res = await process_friend_request(friendRequestInfoDTO);
     if (res.netSuccess && res.res.status === 204) {
+      await update_local_friend_list();
       await getAcceptFriendRequestList();
     }
   };

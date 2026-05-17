@@ -8,6 +8,8 @@ use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
 use crate::entity::file_record::FileRecord;
 use crate::entity::friend::Friend;
+use crate::entity::group::Group;
+use crate::entity::group_member::GroupMember;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::user_info::UserInfo;
 use crate::GLOBAL_QUIC_USER_INFO;
@@ -29,6 +31,8 @@ pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error
     init_sqlite::<ChatRecordRead>(pool_sqlite).await?;
     init_sqlite::<ChatSession>(pool_sqlite).await?;
     init_sqlite::<Friend>(pool_sqlite).await?;
+    init_sqlite::<Group>(pool_sqlite).await?;
+    init_sqlite::<GroupMember>(pool_sqlite).await?;
     init_sqlite::<SystemNotification>(pool_sqlite).await?;
 
     init_sqlite::<ChatRecord>(pool_sqlite).await?;

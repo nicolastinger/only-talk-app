@@ -17,6 +17,7 @@ pub struct ChatSessionVo {
     pub is_top: i64,
     pub friend_icon: String,
     pub friend_name: String,
+    pub group_id: Option<String>,
 }
 
 impl ChatSessionVo {
@@ -34,6 +35,7 @@ impl ChatSessionVo {
             is_top: chat_session.is_top,
             friend_icon: "".to_string(),
             friend_name: "".to_string(),
+            group_id: chat_session.group_id,
         })
     }
 }

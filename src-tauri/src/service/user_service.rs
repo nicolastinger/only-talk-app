@@ -20,6 +20,7 @@ use crate::quic_service::center_service::text_quic_client::run_client;
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
+use crate::service::group_service::sync_group_list;
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -36,9 +37,13 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
     update_friend_list().await.unwrap_or_else(|e| {
         error!("获取好友列表失败 {:?}", e);
     });
-    //2、获取未读消息
+    //2、获取群聊列表
+    sync_group_list().await.unwrap_or_else(|e| {
+        error!("获取群聊列表失败 {:?}", e);
+    });
+    //3、获取未读消息
     get_unread_message().await.unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
-    //3、获取未读通知
+    //4、获取未读通知
     get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
     //启动quic服务（带状态机和自动重连）
     {
@@ -119,6 +124,7 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
                 session_type: 1,
                 is_show: 1,
                 is_top: 0,
+                group_id: None,
             };
             unread_count_map.insert(user, chat_session);
         } else {

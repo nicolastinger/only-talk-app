@@ -16,16 +16,18 @@ const imageCache = new Map<string, string>();
 interface CustomerChatBoxProps extends ChatMessage {
   friendUuid: string;
   currentBizId?: string;
+  senderName?: string;
 }
 
 const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   props: CustomerChatBoxProps,
 ) => {
   const {
-    text_msg_raw: { raw, text_type, timestamp, nano_id },
+    text_msg_raw: { raw, text_type, timestamp, nano_id, send_user },
     img,
     friendUuid,
     currentBizId,
+    senderName,
   } = props;
 
   const userInfo = useBearStore((state) => state.userInfo);
@@ -184,6 +186,9 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         />
       </div>
       <div className={styles.chatContainerWrapper}>
+        {senderName && (
+          <div className={styles.senderName}>{senderName}</div>
+        )}
         <div
           className={`${styles.chatContainer} ${
             isImageMessage ? styles.imageMessage : ''

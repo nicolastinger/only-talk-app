@@ -17,6 +17,7 @@ use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{clear_chat_session, process_no_send_success_msg};
 use crate::service::friend_service;
+use crate::service::group_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::{get_user_info, insert_user_info};
 use crate::utils::global_static_str::SYSTEM;
@@ -124,6 +125,13 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
     Ok(())
 }
 
+async fn is_group_message(recv_user: &str) -> bool {
+    crate::entity::group::Group::query_by_group_id(recv_user)
+        .await
+        .map(|g| g.is_some())
+        .unwrap_or(false)
+}
+
 /// 处理纯文本消息
 async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
@@ -137,47 +145,101 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
     }
 
     //3.更新会话列表
-    let mut flag = false;
     let me = get_user_info("uuid").await?;
-    let friend_uuid = &msg.send_user;
-    let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
-    if current_session_friend.is_ok() && current_session_friend? == *friend_uuid {
-        flag = true;
-    }
-    let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
-    if friend_session.is_empty() {
-        let mut chat_session = ChatSession {
-            id: 0,
-            nano_id: msg.nano_id,
-            timestamp: msg.timestamp,
-            text_type: msg.text_type,
-            unread_count: 1,
-            last_message: msg.raw,
-            recv_user: msg.recv_user,
-            send_user: msg.send_user,
-            session_type: 0,
-            is_show: 0,
-            is_top: 0,
-        };
-        if flag {
-            chat_session.unread_count = 0;
-            clear_chat_session(chat_session).await?;
+    let is_group = is_group_message(&msg.recv_user).await;
+
+    if is_group {
+        // 群聊消息：session查询使用 group_id
+        let group_id = &msg.recv_user;
+        let current_session = get_user_info(CURRENT_SESSION_FRIEND).await;
+        let mut flag = false;
+        if let Ok(ref cur) = current_session {
+            if cur == group_id {
+                flag = true;
+            }
+        }
+
+        let mut group_session = query_chat_session_by_user_db(&me, group_id).await?;
+        if group_session.is_empty() {
+            let mut chat_session = ChatSession {
+                id: 0,
+                nano_id: msg.nano_id,
+                timestamp: msg.timestamp,
+                text_type: msg.text_type,
+                unread_count: 1,
+                last_message: msg.raw,
+                recv_user: me.clone(),
+                send_user: group_id.clone(),
+                session_type: 2,
+                is_show: 0,
+                is_top: 0,
+                group_id: Some(group_id.clone()),
+            };
+            if flag {
+                chat_session.unread_count = 0;
+                clear_chat_session(chat_session).await?;
+            } else {
+                update_session_list(chat_session).await?;
+            }
         } else {
-            update_session_list(chat_session).await?;
+            let mut chat_session = group_session.remove(0);
+            chat_session.last_message = msg.raw;
+            chat_session.timestamp = msg.timestamp;
+            chat_session.text_type = msg.text_type;
+            chat_session.nano_id = msg.nano_id;
+            if flag {
+                chat_session.unread_count = 0;
+                update_chat_session_db(&chat_session).await?;
+                clear_chat_session(chat_session).await?;
+            } else {
+                chat_session.unread_count = 1;
+                update_session_list(chat_session).await?;
+            }
         }
     } else {
-        let mut chat_session = friend_session.remove(0);
-        chat_session.last_message = msg.raw;
-        chat_session.timestamp = msg.timestamp;
-        chat_session.text_type = msg.text_type;
-        chat_session.nano_id = msg.nano_id;
-        if flag {
-            chat_session.unread_count = 0;
-            update_chat_session_db(&chat_session).await?;
-            clear_chat_session(chat_session).await?;
+        // 单聊消息：原有逻辑
+        let mut flag = false;
+        let friend_uuid = &msg.send_user;
+        let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
+        if current_session_friend.is_ok() && current_session_friend? == *friend_uuid {
+            flag = true;
+        }
+        let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
+        if friend_session.is_empty() {
+            let mut chat_session = ChatSession {
+                id: 0,
+                nano_id: msg.nano_id,
+                timestamp: msg.timestamp,
+                text_type: msg.text_type,
+                unread_count: 1,
+                last_message: msg.raw,
+                recv_user: msg.recv_user,
+                send_user: msg.send_user,
+                session_type: 0,
+                is_show: 0,
+                is_top: 0,
+                group_id: None,
+            };
+            if flag {
+                chat_session.unread_count = 0;
+                clear_chat_session(chat_session).await?;
+            } else {
+                update_session_list(chat_session).await?;
+            }
         } else {
-            chat_session.unread_count = 1;
-            update_session_list(chat_session).await?;
+            let mut chat_session = friend_session.remove(0);
+            chat_session.last_message = msg.raw;
+            chat_session.timestamp = msg.timestamp;
+            chat_session.text_type = msg.text_type;
+            chat_session.nano_id = msg.nano_id;
+            if flag {
+                chat_session.unread_count = 0;
+                update_chat_session_db(&chat_session).await?;
+                clear_chat_session(chat_session).await?;
+            } else {
+                chat_session.unread_count = 1;
+                update_session_list(chat_session).await?;
+            }
         }
     }
 
@@ -253,6 +315,8 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
     }
 
     // 清除未读计数
+    let is_group = is_group_message(&text_quic_msg_vo.recv_user).await;
+    let recv_user = text_quic_msg_vo.recv_user.clone();
     let chat_session = ChatSession {
         id: 0,
         nano_id: text_quic_msg_vo.nano_id,
@@ -262,9 +326,10 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         last_message: text_quic_msg_vo.raw,
         recv_user: text_quic_msg_vo.recv_user,
         send_user: text_quic_msg_vo.send_user,
-        session_type: 1,
+        session_type: if is_group { 2 } else { 1 },
         is_show: 1,
         is_top: 0,
+        group_id: if is_group { Some(recv_user) } else { None },
     };
     clear_chat_session(chat_session).await?;
     Ok(())
@@ -319,6 +384,9 @@ async fn process_local_notify_message(
         }
         2 => {
             info!("处理用户本身通知 {:?}", system_notification);
+        }
+        3 => {
+            group_service::process_group_notify_message(system_notification).await?;
         }
         _ => {
             info!("处理其他通知 {:?}", system_notification);

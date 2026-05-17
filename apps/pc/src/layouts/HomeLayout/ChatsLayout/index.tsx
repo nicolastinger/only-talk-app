@@ -1,11 +1,13 @@
 import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
+import CreateGroupModal from '@/pages/Home/Chats/components/CreateGroupModal';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
 import { history, Outlet, useLocation } from '@umijs/max';
 import { ChatSessionVo } from '@workspace/types';
-import { Splitter } from 'antd';
+import { Button, Splitter } from 'antd';
+import { UsergroupAddOutlined } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 
@@ -14,6 +16,7 @@ const ChatsLayout = () => {
     [],
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
+  const [createGroupVisible, setCreateGroupVisible] = useState(false);
 
   const { userInfo } = useBearStore();
   const refreshFlag = useBearStore((state) => state.refreshFlag);
@@ -24,18 +27,25 @@ const ChatsLayout = () => {
     const params = new URLSearchParams(location.search);
     const currentFriend = params.get('currentFriend');
     const selfUuid = params.get('selfUuid');
+    const groupId = params.get('groupId');
 
     if (currentFriend) {
-      // 普通聊天页面
       setSelectedSessionKey(currentFriend);
     } else if (selfUuid) {
-      // 自我聊天页面
       setSelectedSessionKey(selfUuid);
+    } else if (groupId) {
+      setSelectedSessionKey(groupId);
     }
   }, [location.search]);
 
   const routeToChat = (item: ChatSessionVo) => {
     console.log('userInfo', userInfo, item);
+    // 群聊会话
+    if (item.session_type === 2) {
+      const groupId = item.group_id || item.send_user;
+      history.push('/home/chats/group-chat?groupId=' + groupId);
+      return;
+    }
     // 判断是否是自己给自己的会话
     if (item.send_user === item.recv_user) {
       // 跳转到 self-chat 页面
@@ -148,7 +158,24 @@ const ChatsLayout = () => {
       >
         <div className={styles.header}>
           <Search />
+          <Button
+            type="text"
+            icon={<UsergroupAddOutlined />}
+            onClick={() => setCreateGroupVisible(true)}
+            style={{ marginLeft: 8 }}
+            title="创建群聊"
+          />
         </div>
+        <CreateGroupModal
+          visible={createGroupVisible}
+          onCancel={() => setCreateGroupVisible(false)}
+          onSuccess={(groupId) => {
+            setCreateGroupVisible(false);
+            if (groupId) {
+              history.push('/home/chats/group-chat?groupId=' + groupId);
+            }
+          }}
+        />
         <div className={styles.item} key="chat">
           {chatSessionList.map((item: ChatSessionVo) => {
             // 生成会话的唯一标识

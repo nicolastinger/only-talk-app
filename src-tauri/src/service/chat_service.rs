@@ -20,8 +20,8 @@ use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
 };
 use crate::dao::session_db::{
-    query_chat_session_by_user_db, query_chat_session_db, update_chat_session_db,
-    update_chat_session_local_db,
+    query_chat_session_by_user_db, query_chat_session_db, query_group_chat_session,
+    update_chat_session_db, update_chat_session_local_db,
 };
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
@@ -30,6 +30,7 @@ use crate::entity::chat_record_raw::{
 };
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
+use crate::dao::group_db::query_group_by_id;
 use crate::entity::chat_session::ChatSession;
 use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
@@ -176,6 +177,7 @@ pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), any
         session_type: last_chat_session.session_type,
         is_show: last_chat_session.is_show,
         is_top: last_chat_session.is_top,
+        group_id: last_chat_session.group_id,
     };
     clear_chat_session(chat_session).await?;
     Ok(())
@@ -237,6 +239,7 @@ pub async fn update_last_read_msg_from_db(
             session_type: 0,
             is_show: 1,
             is_top: 0,
+            group_id: None,
         };
         clear_chat_session(chat_session).await?;
     }
@@ -275,10 +278,57 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
         session_type: 1,
         is_show: 1,
         is_top: 0,
+        group_id: None,
     };
     // 创建会话窗口
     update_chat_session_db(&chat_session).await?;
     Ok(())
+}
+
+/// 创建群聊会话
+pub async fn create_group_chat_session_service(group_id: String) -> Result<(), anyhow::Error> {
+    let me = get_user_map("uuid").await.map_err(|e| anyhow!(e))?;
+
+    // Verify the group exists
+    let group = query_group_by_id(&group_id).await?;
+    if group.is_none() {
+        return Err(anyhow!("群聊不存在"));
+    }
+    let _group = group.unwrap();
+
+    // Check if session already exists
+    let existing = query_group_chat_session(&me, &group_id).await?;
+    if !existing.is_empty() {
+        // Session exists, make it visible
+        let mut chat_session = existing.into_iter().next().unwrap();
+        chat_session.is_show = 1;
+        update_chat_session_local_db(&chat_session).await?;
+        return Ok(());
+    }
+
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: nanoid::nanoid!(),
+        timestamp: get_now_time_stamp_as_millis()?,
+        text_type: 0,
+        unread_count: 0,
+        last_message: "".to_string(),
+        recv_user: me,
+        send_user: group_id.clone(),
+        session_type: 2,
+        is_show: 1,
+        is_top: 0,
+        group_id: Some(group_id),
+    };
+    update_chat_session_db(&chat_session).await?;
+    Ok(())
+}
+
+/// 获取群聊会话列表
+pub async fn get_group_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
+    let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
+    let all_sessions = query_chat_session_db(&uuid).await?;
+    Ok(all_sessions.into_iter().filter(|s| s.session_type == 2).collect())
 }
 
 /// 发送文本消息

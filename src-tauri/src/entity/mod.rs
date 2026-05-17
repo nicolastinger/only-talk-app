@@ -8,6 +8,8 @@ pub mod chat_record_send;
 pub mod chat_session;
 pub mod file_record;
 pub mod friend;
+pub mod group;
+pub mod group_member;
 pub(crate) mod p2p_models;
 pub mod quic_connection;
 pub mod system_notification;

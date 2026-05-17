@@ -61,6 +61,16 @@ const routes = [
                 path: 'dashboard',
                 component: './Home/Chats/Dashboard',
               },
+              {
+                name: 'menu.chats.groupChat',
+                path: 'group-chat',
+                component: './Home/Chats/GroupChat',
+              },
+              {
+                name: 'menu.chats.groupInfo',
+                path: 'group-info',
+                component: './Home/Chats/GroupInfo',
+              },
             ],
           },
           {

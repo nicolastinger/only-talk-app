@@ -43,6 +43,12 @@ use crate::cmd::file_controller::{
 use crate::cmd::friend_controller::{
     delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list,
 };
+use crate::cmd::group_controller::{
+    create_group_chat_session_command, create_group_command, get_group_chat_session_list,
+    get_group_info_command, get_group_list, get_group_members, invite_group_members_command,
+    join_group_command, leave_group_command, remove_group_member_command,
+    sync_group_list_command, sync_group_members_command,
+};
 use crate::cmd::notification_controller::{
     batch_read_system_notification, get_system_notification,
 };
@@ -188,7 +194,19 @@ pub fn run() {
             cache_user_info,
             get_cached_user_info,
             get_cached_user_info_by_account,
-            update_user_info_command
+            update_user_info_command,
+            get_group_list,
+            get_group_members,
+            get_group_info_command,
+            create_group_command,
+            invite_group_members_command,
+            join_group_command,
+            leave_group_command,
+            remove_group_member_command,
+            sync_group_list_command,
+            sync_group_members_command,
+            create_group_chat_session_command,
+            get_group_chat_session_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

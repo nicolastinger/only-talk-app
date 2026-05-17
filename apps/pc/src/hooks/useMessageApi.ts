@@ -26,7 +26,8 @@ const useMessageApi = (sendUuid: string | null, recvUuid: string) => {
             setTextMessage(text);
           }
         } else {
-          // 监听全局服务器发送的quic消息处理
+          // 群聊模式：接收所有发给该groupId的消息
+          setTextMessage(text);
         }
       });
     };

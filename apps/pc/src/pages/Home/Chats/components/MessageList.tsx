@@ -9,6 +9,7 @@ interface MessageListProps {
   messages: ChatMessage[];
   friendIcon?: string;
   friendUuid: string;
+  groupMode?: boolean;
   newMessageIds?: Set<string>;
   loadedMessageIds?: Set<string>;
 }
@@ -19,6 +20,7 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   friendIcon,
   friendUuid,
+  groupMode,
   newMessageIds,
   loadedMessageIds,
 }) => {
@@ -60,6 +62,12 @@ const MessageList: React.FC<MessageListProps> = ({
 
         const animationClass = getMessageAnimationClass(message.nano_id);
 
+        // For group mode, show sender icon/name from the message
+        const displayIcon = groupMode
+          ? msg.sender_icon || msg.img || friendIcon
+          : friendIcon;
+        const senderName = groupMode ? msg.sender_name : undefined;
+
         return (
           <React.Fragment key={message.nano_id}>
             {shouldShowTimestamp && (
@@ -70,14 +78,15 @@ const MessageList: React.FC<MessageListProps> = ({
                 <CustomerChatBox
                   from={MessageFrom.System}
                   ack={undefined}
-                  img={friendIcon}
+                  img={displayIcon}
+                  senderName={senderName}
                   text_msg_raw={message}
                   friendUuid={friendUuid}
                   currentBizId={currentBizId}
                 />
               ) : (
                 <MineChatBox
-                  icon={friendIcon}
+                  icon={displayIcon}
                   msg={msg}
                   isAck={msg.ack}
                   friendUuid={friendUuid}

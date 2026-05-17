@@ -11,6 +11,7 @@ interface ChatSessionVo {
   is_top: number;
   friend_icon: string;
   friend_name: string;
+  group_id?: string;
 }
 
 interface ChatSessionEvent {
@@ -55,4 +56,30 @@ interface FileVo {
   tauri_file_path?: string;
 }
 
-export type { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo };
+interface GroupVo {
+  group_id: string;
+  group_name: string;
+  group_icon: string;
+  owner_id: string;
+  created_at: number;
+  member_count: number;
+  version: number;
+}
+
+interface GroupMemberVo {
+  group_id: string;
+  user_id: string;
+  username: string;
+  icon: string;
+  role: number;
+  nickname: string;
+  joined_at: number;
+}
+
+interface CreateGroupRequest {
+  group_name: string;
+  group_icon: string;
+  member_ids: string[];
+}
+
+export type { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo, GroupVo, GroupMemberVo, CreateGroupRequest };
