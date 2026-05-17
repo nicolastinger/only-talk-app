@@ -4,6 +4,7 @@ import {
   FriendRequestInfoDTO,
   BasicUser,
   UserInfo,
+  UserInfoWithCache,
   QuicServerInfo,
   HttpResponse,
 } from "@workspace/types";
@@ -116,6 +117,18 @@ export const get_cached_user_info = async (uuid: string) => {
 export const get_cached_user_info_by_account = async (account: string) => {
   return await invoke<UserInfo | null>("get_cached_user_info_by_account", {
     account,
+  });
+};
+
+export const get_user_info_with_cache = async (uuid: string) => {
+  return await invoke<UserInfoWithCache>("get_user_info_with_cache", {
+    uuid,
+  });
+};
+
+export const refresh_user_info = async (uuid: string) => {
+  return await invoke<UserInfo>("refresh_user_info", {
+    uuid,
   });
 };
 
