@@ -1,12 +1,10 @@
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import {
-  cache_user_info,
-  get_cached_user_info,
-  get_friend_info,
+  get_user_info_with_cache,
+  refresh_user_info,
   getFiles,
-  invoke_rust,
 } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
 import { Button, Collapse, message } from 'antd';
@@ -19,6 +17,7 @@ const FriendInfo = (props: { uuid: string }) => {
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [friendIcon, setFriendIcon] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
   const genderMap: { [key: number]: string } = {
     0: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }),
@@ -35,81 +34,69 @@ const FriendInfo = (props: { uuid: string }) => {
   }, [uuid]);
 
   const initUserData = async (uuid: string) => {
+    setLoading(true);
     try {
-      const cachedUserInfo = await get_cached_user_info(uuid);
-      if (cachedUserInfo) {
-        setUserInfo(cachedUserInfo);
-        const friendVo: FriendVo = {
-          timestamp: 0,
-          friend_id: cachedUserInfo.uuid,
-          friend_account: cachedUserInfo.account || '',
-          friend_name: cachedUserInfo.username || '',
-          friend_icon: cachedUserInfo.icon || '',
-          friend_status: 0,
-          is_del: false,
-          is_block: 0,
-          is_mute: 0,
-          is_top: 0,
-          is_show: 1,
-        };
-        setCurrentFriend(friendVo);
-        const icon = await getUserIcon(cachedUserInfo.icon || '');
-        setFriendIcon(icon);
+      const result = await get_user_info_with_cache(uuid);
+      console.log('get_user_info_with_cache result:', result);
+      
+      const user = result.user_info;
+      setUserInfo(user);
+      
+      const friendVo: FriendVo = {
+        timestamp: 0,
+        friend_id: user.uuid,
+        friend_account: user.account || '',
+        friend_name: user.username || '',
+        friend_icon: user.icon || '',
+        friend_status: 0,
+        is_del: false,
+        is_block: 0,
+        is_mute: 0,
+        is_top: 0,
+        is_show: 1,
+      };
+      setCurrentFriend(friendVo);
+      
+      const icon = await getUserIcon(user.icon || '');
+      setFriendIcon(icon);
+      
+      if (result.from_cache) {
+        console.log('用户信息来自缓存，后台刷新中...');
+        refreshUserInfo(uuid);
       }
     } catch (err) {
-      console.log('从缓存获取用户信息失败', err);
+      console.error('获取用户信息失败', err);
+      message.error(intl.formatMessage({ id: 'friendInfo.loadError' }) || '获取用户信息失败');
+    } finally {
+      setLoading(false);
     }
+  };
 
+  const refreshUserInfo = async (uuid: string) => {
     try {
-      const res = (await get_friend_info(uuid)) as FriendVo;
-      console.log('res', res);
-      setCurrentFriend(res);
-      const icon = await getUserIcon(res.friend_icon || '');
+      const freshUser = await refresh_user_info(uuid);
+      console.log('用户信息已刷新:', freshUser);
+      setUserInfo(freshUser);
+      
+      const friendVo: FriendVo = {
+        timestamp: 0,
+        friend_id: freshUser.uuid,
+        friend_account: freshUser.account || '',
+        friend_name: freshUser.username || '',
+        friend_icon: freshUser.icon || '',
+        friend_status: 0,
+        is_del: false,
+        is_block: 0,
+        is_mute: 0,
+        is_top: 0,
+        is_show: 1,
+      };
+      setCurrentFriend(friendVo);
+      
+      const icon = await getUserIcon(freshUser.icon || '');
       setFriendIcon(icon);
     } catch (err) {
-      console.log('从本地好友数据库获取失败', err);
-    }
-
-    try {
-      const result = await invoke_rust(
-        'post_request',
-        TALK_API + '/user/get_user_by_uuid/' + uuid,
-        '',
-      );
-      if (result.netSuccess && result.res.status === 200) {
-        const data = JSON.parse(result.res.body);
-        const remoteUserInfo: UserInfo = data.data;
-
-        setUserInfo(remoteUserInfo);
-
-        const cachedUserInfo = await get_cached_user_info(uuid);
-        const isDifferent =
-          !cachedUserInfo ||
-          JSON.stringify(cachedUserInfo) !== JSON.stringify(remoteUserInfo);
-
-        if (isDifferent) {
-          await cache_user_info(remoteUserInfo);
-        }
-
-        const friendVo: FriendVo = {
-          timestamp: 0,
-          friend_id: remoteUserInfo.uuid,
-          friend_account: remoteUserInfo.account || '',
-          friend_name: remoteUserInfo.username || '',
-          friend_icon: remoteUserInfo.icon || '',
-          friend_status: 0,
-          is_del: false,
-          is_block: 0,
-          is_mute: 0,
-          is_top: 0,
-          is_show: 1,
-        };
-        setCurrentFriend(friendVo);
-        const icon = await getUserIcon(remoteUserInfo.icon || '');
-        setFriendIcon(icon);
-      }
-    } catch (err) {
-      console.log('从远程获取用户信息失败', err);
+      console.log('后台刷新用户信息失败', err);
     }
   };
 

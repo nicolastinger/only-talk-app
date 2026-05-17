@@ -81,6 +81,11 @@ interface UserInfo {
   status?: number;
 }
 
+interface UserInfoWithCache {
+  user_info: UserInfo;
+  from_cache: boolean;
+}
+
 interface P2pMsg {
   type: number;
   raw: string;
@@ -110,5 +115,6 @@ export type {
   P2pMsg,
   RequestMediaMsg,
   UserInfo,
+  UserInfoWithCache,
   BasicUser,
 };

@@ -11,7 +11,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
 import {
   get_accept_friend_request_list,
-  get_cached_user_info,
+  get_user_info_with_cache,
   get_friend_request_list,
   getFiles,
   process_friend_request,
@@ -87,21 +87,26 @@ const FriendRequestsModal = ({
     }
 
     try {
-      const cachedUserInfo = await get_cached_user_info(userUuid);
+      const result = await get_user_info_with_cache(userUuid);
+      const userInfo = result.user_info;
       let avatarUrl = '';
 
-      if (cachedUserInfo?.icon) {
-        const fileVos = await getFiles(cachedUserInfo.icon);
+      if (userInfo?.icon) {
+        const fileVos = await getFiles(userInfo.icon);
         avatarUrl = fileVos?.[0]?.tauri_file_path || '';
       }
 
+      console.log(
+        `好友请求用户信息 ${userUuid}: from_cache=${result.from_cache}`,
+      );
+
       return {
         ...request,
-        userInfo: cachedUserInfo,
+        userInfo,
         avatarUrl,
       };
     } catch (error) {
-      console.log('获取用户缓存信息失败', error);
+      console.log('获取用户信息失败', error);
       return { ...request };
     }
   };

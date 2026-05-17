@@ -66,6 +66,7 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
     }
 
     try {
+      console.log('MessageBox message:', message);
       const parsed = JSON.parse(message);
       if (parsed.text) {
         return parsed.text;
