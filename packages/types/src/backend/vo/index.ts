@@ -57,13 +57,16 @@ interface FileVo {
 }
 
 interface GroupVo {
-  group_id: string;
+  group_uuid: string;
   group_name: string;
-  group_icon: string;
-  owner_id: string;
-  created_at: number;
+  avatar?: string;
+  owner_uuid: string;
+  description?: string;
+  max_members: number;
   member_count: number;
-  version: number;
+  created_at: number;
+  updated_at: number;
+  status: number;
 }
 
 interface GroupMemberVo {

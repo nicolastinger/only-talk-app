@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { CreateGroupRequest, FriendVo, GroupVo } from '@workspace/types';
+import { FriendVo, GroupVo } from '@workspace/types';
+import { get_friend_list, create_group, invite_group_members } from '@workspace/services';
 import { Modal, Input, Select, message } from 'antd';
-import React from 'react';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -30,7 +29,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   const loadFriends = async () => {
     try {
-      const friends: FriendVo[] = await invoke('get_friend_list');
+      const friends = await get_friend_list();
       setFriendList(friends);
     } catch (err) {
       console.log('获取好友列表失败', err);
@@ -44,14 +43,14 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     }
     setLoading(true);
     try {
-      const request: CreateGroupRequest = {
+      const group: GroupVo = await create_group({
         group_name: groupName.trim(),
-        group_icon: '',
-        member_ids: selectedFriends,
-      };
-      const group: GroupVo = await invoke('create_group_command', { request });
+      });
+      if (selectedFriends.length > 0) {
+        await invite_group_members(group.group_uuid, selectedFriends);
+      }
       message.success('群聊创建成功');
-      onSuccess(group.group_id);
+      onSuccess(group.group_uuid);
     } catch (err) {
       console.log('创建群聊失败', err);
       message.error('创建群聊失败');

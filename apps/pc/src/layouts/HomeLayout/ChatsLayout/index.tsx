@@ -6,10 +6,12 @@ import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
 import { history, Outlet, useLocation } from '@umijs/max';
 import { ChatSessionVo } from '@workspace/types';
-import { Button, Splitter } from 'antd';
-import { UsergroupAddOutlined } from '@ant-design/icons';
-import React, { useEffect, useState } from 'react';
+import { Button, Segmented, Splitter } from 'antd';
+import { MessageOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
+import React, { useEffect, useState, useMemo } from 'react';
 import styles from './index.less';
+
+type ChatTabType = 'private' | 'group';
 
 const ChatsLayout = () => {
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
@@ -17,12 +19,13 @@ const ChatsLayout = () => {
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
   const [createGroupVisible, setCreateGroupVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<ChatTabType>('private');
 
   const { userInfo } = useBearStore();
   const refreshFlag = useBearStore((state) => state.refreshFlag);
   const location = useLocation();
   const { chatSessionEvent } = useChatSession(userInfo.uuid);
-  // 监听路由变化，更新选中的会话
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const currentFriend = params.get('currentFriend');
@@ -31,24 +34,23 @@ const ChatsLayout = () => {
 
     if (currentFriend) {
       setSelectedSessionKey(currentFriend);
+      setActiveTab('private');
     } else if (selfUuid) {
       setSelectedSessionKey(selfUuid);
+      setActiveTab('private');
     } else if (groupId) {
       setSelectedSessionKey(groupId);
+      setActiveTab('group');
     }
   }, [location.search]);
 
   const routeToChat = (item: ChatSessionVo) => {
-    console.log('userInfo', userInfo, item);
-    // 群聊会话
     if (item.session_type === 2) {
       const groupId = item.group_id || item.send_user;
       history.push('/home/chats/group-chat?groupId=' + groupId);
       return;
     }
-    // 判断是否是自己给自己的会话
     if (item.send_user === item.recv_user) {
-      // 跳转到 self-chat 页面
       history.push('/home/chats/self-chat?selfUuid=' + item.send_user);
       return;
     }
@@ -148,6 +150,39 @@ const ChatsLayout = () => {
     }
   };
 
+  const privateChatList = useMemo(() => {
+    return chatSessionList.filter((item) => item.session_type !== 2);
+  }, [chatSessionList]);
+
+  const groupChatList = useMemo(() => {
+    return chatSessionList.filter((item) => item.session_type === 2);
+  }, [chatSessionList]);
+
+  const currentList = useMemo(() => {
+    return activeTab === 'private' ? privateChatList : groupChatList;
+  }, [activeTab, privateChatList, groupChatList]);
+
+  const tabOptions = [
+    {
+      value: 'private',
+      label: (
+        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MessageOutlined />
+          <span>单聊</span>
+        </div>
+      ),
+    },
+    {
+      value: 'group',
+      label: (
+        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <TeamOutlined />
+          <span>群聊</span>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <Splitter>
       <Splitter.Panel
@@ -156,6 +191,7 @@ const ChatsLayout = () => {
         defaultSize="32%"
         className={styles.left}
       >
+        <div style={{ height: '100%' }}>
         <div className={styles.header}>
           <Search />
           <Button
@@ -164,6 +200,14 @@ const ChatsLayout = () => {
             onClick={() => setCreateGroupVisible(true)}
             style={{ marginLeft: 8 }}
             title="创建群聊"
+          />
+        </div>
+        <div className={styles.tabContainer}>
+          <Segmented
+            value={activeTab}
+            onChange={(value) => setActiveTab(value as ChatTabType)}
+            options={tabOptions}
+            block
           />
         </div>
         <CreateGroupModal
@@ -177,8 +221,7 @@ const ChatsLayout = () => {
           }}
         />
         <div className={styles.item} key="chat">
-          {chatSessionList.map((item: ChatSessionVo) => {
-            // 生成会话的唯一标识
+          {currentList.map((item: ChatSessionVo) => {
             const sessionKey =
               item.send_user === item.recv_user
                 ? item.send_user
@@ -205,6 +248,7 @@ const ChatsLayout = () => {
               </div>
             );
           })}
+        </div>
         </div>
       </Splitter.Panel>
       <Splitter.Panel className={styles.right}>

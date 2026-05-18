@@ -1,60 +1,87 @@
-import { CreateGroupRequest, GroupMemberVo, GroupVo } from "@workspace/types";
 import { invoke } from "@tauri-apps/api/core";
+import { TALK_API, GroupVo, GroupMemberVo } from "@workspace/types";
+
+const BASE = TALK_API;
+
+function getHeaders(): HeadersInit {
+  const token = localStorage.getItem("token") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const url = `${BASE}${path}`;
+  const options: RequestInit = {
+    method,
+    headers: getHeaders(),
+  };
+  if (body !== undefined) {
+    options.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, options);
+  const json = await res.json();
+  if (json.code === 200) {
+    return json.data as T;
+  }
+  throw new Error(json.message || "请求失败");
+}
+
+// ========== 远程 API（直接调用）==========
 
 export const get_group_list = async (): Promise<GroupVo[]> => {
-  return await invoke("get_group_list");
+  return request<GroupVo[]>("POST", "/group/chat/my/list");
 };
 
 export const get_group_members = async (
   groupId: string,
 ): Promise<GroupMemberVo[]> => {
-  return await invoke("get_group_members", { groupId });
+  return request<GroupMemberVo[]>("GET", `/group/chat/member/list/${groupId}`);
 };
 
 export const get_group_info = async (groupId: string): Promise<GroupVo> => {
-  return await invoke("get_group_info_command", { groupId });
+  return request<GroupVo>("GET", `/group/chat/info/${groupId}`);
 };
 
 export const create_group = async (
-  request: CreateGroupRequest,
+  dto: { group_name: string; avatar?: string; max_members?: number },
 ): Promise<GroupVo> => {
-  return await invoke("create_group_command", { request });
+  return request<GroupVo>("POST", "/group/chat/create", dto);
 };
 
 export const invite_group_members = async (
   groupId: string,
-  userIds: string[],
+  userUuids: string[],
 ): Promise<void> => {
-  return await invoke("invite_group_members_command", { groupId, userIds });
+  return request("POST", "/group/chat/member/add", {
+    group_uuid: groupId,
+    user_uuids: userUuids,
+  });
 };
 
 export const join_group = async (groupId: string): Promise<void> => {
-  return await invoke("join_group_command", { groupId });
+  return request("POST", `/group/chat/join/${groupId}`);
 };
 
 export const leave_group = async (groupId: string): Promise<void> => {
-  return await invoke("leave_group_command", { groupId });
+  return request("POST", `/group/chat/member/quit/${groupId}`);
 };
 
 export const remove_group_member = async (
   groupId: string,
   userId: string,
 ): Promise<void> => {
-  return await invoke("remove_group_member_command", { groupId, userId });
+  return request(
+    "DELETE",
+    `/group/chat/member/remove/${groupId}/${userId}`,
+  );
 };
 
-export const sync_group_list = async (): Promise<void> => {
-  return await invoke("sync_group_list_command");
-};
-
-export const sync_group_members = async (
-  groupId: string,
-): Promise<GroupMemberVo[]> => {
-  return await invoke("sync_group_members_command", { groupId });
-};
+// ========== 本地操作（Tauri invoke）==========
 
 export const create_group_chat_session = async (
   groupId: string,
 ): Promise<void> => {
-  return await invoke("create_group_chat_session_command", { groupId });
+  await invoke("create_group_chat_session_command", { group_id: groupId });
 };
