@@ -37,6 +37,44 @@
   left: 0;
 }
 
+.tabContainer {
+  width: 100%;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  background: var(--glass-bg);
+
+  :global {
+    .ant-segmented {
+      background: rgba(0, 0, 0, 0.04);
+      padding: 3px;
+      border-radius: 10px;
+    }
+
+    .ant-segmented-item {
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      color: var(--text-color-secondary);
+      font-size: 13px;
+
+      &:hover {
+        color: var(--color-primary);
+      }
+    }
+
+    .ant-segmented-item-selected {
+      background: linear-gradient(135deg, var(--color-primary) 0%, #4096ff 100%);
+      color: #fff;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(64, 150, 255, 0.3);
+    }
+
+    .ant-segmented-thumb {
+      background: linear-gradient(135deg, var(--color-primary) 0%, #4096ff 100%);
+      border-radius: 8px;
+    }
+  }
+}
+
 .left {
   width: 280px;
   background: var(--glass-bg);
@@ -57,13 +95,28 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-right: 4px;
 
   &::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
+    width: 6px;
+    height: 6px;
   }
 
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    transition: background 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }

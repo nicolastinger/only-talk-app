@@ -1,5 +1,8 @@
 use std::time::Duration;
 
+use crate::service::chat_service::{
+    create_chat_session_service
+};
 use anyhow::anyhow;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
@@ -206,6 +209,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
         }
         let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
         if friend_session.is_empty() {
+            create_chat_session_service(friend_uuid.to_string()).await?;
             let mut chat_session = ChatSession {
                 id: 0,
                 nano_id: msg.nano_id,
@@ -222,6 +226,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
             };
             if flag {
                 chat_session.unread_count = 0;
+                update_chat_session_db(&chat_session).await?;
                 clear_chat_session(chat_session).await?;
             } else {
                 update_session_list(chat_session).await?;
