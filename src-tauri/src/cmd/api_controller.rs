@@ -68,6 +68,54 @@ pub async fn post_request(url: String, body: String) -> Result<ApiResponse, Stri
 }
 
 #[command]
+pub async fn put_request(url: String, body: String) -> Result<ApiResponse, String> {
+    let client = Client::new();
+    let empty_token = String::new();
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let mut headers = HeaderMap::new();
+    headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
+
+    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
+
+    let response = client
+        .put(&url)
+        .json(&json_body)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let response_body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse { status, body: response_body })
+}
+
+#[command]
+pub async fn delete_request(url: String, body: String) -> Result<ApiResponse, String> {
+    let client = Client::new();
+    let empty_token = String::new();
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let mut headers = HeaderMap::new();
+    headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
+
+    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
+
+    let response = client
+        .delete(&url)
+        .json(&json_body)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let response_body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse { status, body: response_body })
+}
+
+#[command]
 pub async fn upload_file_request(
     url: String,
     file_path: String,

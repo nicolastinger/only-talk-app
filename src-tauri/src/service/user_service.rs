@@ -363,7 +363,7 @@ async fn discover_quic_server_addr() -> SocketAddr {
     #[derive(Deserialize)]
     struct QuicServerInfo {
         #[allow(dead_code)]
-        name: String,
+        index: u32,
         address: String,
     }
 
@@ -371,7 +371,7 @@ async fn discover_quic_server_addr() -> SocketAddr {
     struct ApiResult {
         #[allow(dead_code)]
         code: u16,
-        data: Vec<QuicServerInfo>,
+        data: QuicServerInfo,
     }
 
     // 尝试通过 API 获取 QUIC 服务器列表
@@ -380,13 +380,12 @@ async fn discover_quic_server_addr() -> SocketAddr {
         Ok(response) => {
             match serde_json::from_str::<ApiResult>(&response.body) {
                 Ok(result) => {
-                    if let Some(server) = result.data.first() {
-                        info!("通过API发现QUIC服务器: {} -> {}", server.name, server.address);
-                        if let Ok(addr) = server.address.parse::<SocketAddr>() {
-                            return addr;
-                        }
+                    let server = result.data;
+                    info!("通过API发现QUIC服务器: index={} -> {}", server.index, server.address);
+                    if let Ok(addr) = server.address.parse::<SocketAddr>() {
+                        return addr;
                     }
-                    warn!("API返回的QUIC服务器列表为空，回退到DNS解析");
+                    warn!("API返回的QUIC服务器地址无效，回退到DNS解析");
                 }
                 Err(e) => {
                     warn!("解析QUIC服务器列表失败: {}，回退到DNS解析", e);

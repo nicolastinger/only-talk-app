@@ -3,7 +3,7 @@ use log::{error, info};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::cmd::api_controller::post_request;
+use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::group_db::{get_last_group, query_group_list, soft_delete_group, upsert_group};
 use crate::dao::group_member_db::{
     insert_group_member, query_group_members, remove_group_member, upsert_group_members,
@@ -25,7 +25,7 @@ fn parse_http_result(data: &str) -> Result<HttpResult, anyhow::Error> {
 /// 同步群聊列表
 pub async fn sync_group_list() -> Result<(), anyhow::Error> {
     let url = format!("{}/group/chat/my/list", TALK_API);
-    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+    let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
     if let Value::Array(arr) = response.data {
@@ -158,7 +158,7 @@ pub async fn remove_group_member_service(
     user_id: &str,
 ) -> Result<(), anyhow::Error> {
     let url = format!("{}/group/chat/member/remove/{}/{}", TALK_API, group_id, user_id);
-    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+    let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
     if response.code != 200 {
@@ -172,7 +172,7 @@ pub async fn remove_group_member_service(
 /// 同步群成员列表
 pub async fn sync_group_members(group_id: &str) -> Result<Vec<GroupMemberVo>, anyhow::Error> {
     let url = format!("{}/group/chat/member/list/{}", TALK_API, group_id);
-    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+    let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
     let mut member_vos = Vec::new();
@@ -202,7 +202,7 @@ pub async fn sync_group_members(group_id: &str) -> Result<Vec<GroupMemberVo>, an
 /// 获取群详情
 pub async fn get_group_info(group_id: &str) -> Result<GroupVo, anyhow::Error> {
     let url = format!("{}/group/chat/info/{}", TALK_API, group_id);
-    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+    let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
     if response.code != 200 {
