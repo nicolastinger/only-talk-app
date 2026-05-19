@@ -1,10 +1,10 @@
 export const TALK_API = "https://onlytalk.local:8443";
 
 export const HTTP_METHOD = {
-  GET: "GET",
+  GET: "get_request",
   POST: "post_request",
-  PUT: "PUT",
-  DELETE: "DELETE",
+  PUT: "put_request",
+  DELETE: "delete_request",
 };
 
 export const HttpStatusMap: Map<number, string> = new Map([

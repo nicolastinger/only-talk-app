@@ -25,9 +25,9 @@ mod vo;
 use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
-    compress_image_to_webp_command, get_request, post_form_data_request, post_request,
-    upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request,
-    upload_multiple_files_with_extra_fields_request,
+    compress_image_to_webp_command, delete_request, get_request, post_form_data_request,
+    post_request, put_request, upload_file_request, upload_file_with_extra_fields_request,
+    upload_multiple_files_request, upload_multiple_files_with_extra_fields_request,
 };
 use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
 use crate::cmd::chat_record_controller::{
@@ -140,6 +140,8 @@ pub fn run() {
             send_text_msg,
             get_request,
             post_request,
+            put_request,
+            delete_request,
             upload_file_request,
             upload_file_with_extra_fields_request,
             upload_multiple_files_request,
