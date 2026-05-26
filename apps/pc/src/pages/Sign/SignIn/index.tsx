@@ -4,7 +4,7 @@ import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { TALK_API } from '@/constants';
 import { FormattedMessage } from '@@/exports';
-import { CloseOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
+import { CloseOutlined, LockOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
@@ -19,6 +19,7 @@ const LoginPage: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [userCode, setUserCode] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [privacyContent, setPrivacyContent] = useState('');
@@ -272,13 +273,19 @@ const LoginPage: React.FC = () => {
             >
               <LockOutlined className={styles.inputIcon} />
               <input
-                type="password"
+                type={passwordVisible ? 'text' : 'password'}
                 className={styles.input}
                 placeholder={intl.formatMessage({ id: 'signIn.password' })}
                 value={password}
                 onChange={handlePasswordChange}
                 onBlur={() => validatePassword(password)}
               />
+              <span
+                className={styles.eyeIcon}
+                onClick={() => setPasswordVisible(!passwordVisible)}
+              >
+                {passwordVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              </span>
             </div>
             {passwordError && (
               <span className={styles.errorText}>{passwordError}</span>

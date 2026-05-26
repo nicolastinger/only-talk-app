@@ -3,6 +3,7 @@ import {
   TALK_API,
   GroupVo,
   GroupMemberVo,
+  GroupInvitationVo,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -63,13 +64,45 @@ export const get_group_members = async (
 export const invite_group_members = async (
   groupId: string,
   userUuids: string[],
+): Promise<string[]> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/group/chat/member/invite",
+    JSON.stringify({ group_uuid: groupId, user_uuids: userUuids }),
+  );
+  return parseData<string[]>(res);
+};
+
+export const accept_group_invitation = async (
+  groupUuid: string,
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/group/chat/member/add",
-    JSON.stringify({ group_uuid: groupId, user_uuids: userUuids }),
+    TALK_API + "/group/chat/member/invite/accept",
+    JSON.stringify({ group_uuid: groupUuid }),
   );
   return parseData<boolean>(res);
+};
+
+export const decline_group_invitation = async (
+  groupUuid: string,
+): Promise<boolean> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/group/chat/member/invite/decline",
+    JSON.stringify({ group_uuid: groupUuid }),
+  );
+  return parseData<boolean>(res);
+};
+
+export const get_pending_invitations = async (): Promise<GroupInvitationVo[]> => {
+  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/member/invite/pending", "");
+  return parseData<GroupInvitationVo[]>(res);
+};
+
+export const get_sent_invitations = async (): Promise<GroupInvitationVo[]> => {
+  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/member/invite/sent", "");
+  return parseData<GroupInvitationVo[]>(res);
 };
 
 export const remove_group_member = async (

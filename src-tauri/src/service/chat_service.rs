@@ -15,6 +15,7 @@ use crate::dao::chat_record_ack::{
 use crate::dao::chat_record_db::{
     query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
 };
+use crate::dao::group_chat_record_db::query_group_chat_record_from_db;
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
@@ -25,12 +26,20 @@ use crate::dao::session_db::{
 };
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
+use crate::dao::group_message_ack::insert_group_message_ack;
+use crate::dao::group_chat_record_db::insert_group_chat_record;
+use crate::entity::group_message_ack::GroupMessageAck;
+use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::chat_record_raw::{
     ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
 };
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
-use crate::dao::group_db::query_group_by_id;
+use crate::dao::group_db::{query_group_by_id, upsert_group};
+use crate::entity::group::Group;
+use crate::cmd::api_controller::get_request;
+use crate::dto::http_result::HttpResult;
+use crate::vo::group_vo::GroupVo;
 use crate::entity::chat_session::ChatSession;
 use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
@@ -289,17 +298,38 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
 pub async fn create_group_chat_session_service(group_id: String) -> Result<(), anyhow::Error> {
     let me = get_user_map("uuid").await.map_err(|e| anyhow!(e))?;
 
-    // Verify the group exists
     let group = query_group_by_id(&group_id).await?;
     if group.is_none() {
-        return Err(anyhow!("群聊不存在"));
-    }
-    let _group = group.unwrap();
+        let url = format!("{}/group/chat/info/{}", TALK_API, group_id);
+        let result = get_request(url).await.map_err(|e| anyhow!(e))?;
+        let response: HttpResult = serde_json::from_str(&result.body)
+            .map_err(|e| anyhow!("解析响应失败: {}", e))?;
 
-    // Check if session already exists
+        if response.code != 200 {
+            return Err(anyhow!("群聊不存在"));
+        }
+
+        let group_vo: GroupVo = serde_json::from_value(response.data)
+            .map_err(|e| anyhow!("解析群信息失败: {}", e))?;
+
+        let new_group = Group {
+            id: 0,
+            group_id: group_vo.group_uuid.clone(),
+            group_name: group_vo.group_name.clone(),
+            group_icon: group_vo.avatar.clone().unwrap_or_default(),
+            owner_id: group_vo.owner_uuid.clone(),
+            created_at: group_vo.created_at,
+            updated_at: get_now_time_stamp_as_millis()?,
+            member_count: group_vo.member_count,
+            is_del: 0,
+            is_show: 1,
+            version: 0,
+        };
+        upsert_group(&new_group).await?;
+    }
+
     let existing = query_group_chat_session(&me, &group_id).await?;
     if !existing.is_empty() {
-        // Session exists, make it visible
         let mut chat_session = existing.into_iter().next().unwrap();
         chat_session.is_show = 1;
         update_chat_session_local_db(&chat_session).await?;
@@ -331,6 +361,16 @@ pub async fn get_group_chat_session_service() -> Result<Vec<ChatSessionVo>, anyh
     Ok(all_sessions.into_iter().filter(|s| s.session_type == 2).collect())
 }
 
+/// 分页获取群聊记录
+pub async fn get_group_chat_record_service(
+    group_id: String,
+    page: Page,
+) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    let limit = page.size;
+    let offset = (page.current - 1) * page.size;
+    query_group_chat_record_from_db(&group_id, limit, offset).await
+}
+
 /// 发送文本消息
 pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
     let sender = get_user_info("uuid").await?;
@@ -347,8 +387,9 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
             .first()
             .ok_or(anyhow!("last_send_success_msg is empty"))?
             .send_id;
-        let prev_ack = query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await?;
-        prev_id = prev_ack.msg_id;
+        if let Some(prev_ack) = query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await? {
+            prev_id = prev_ack.msg_id;
+        }
     }
 
     let prev_id_clone = prev_id.clone();
@@ -425,6 +466,275 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     };
 
     send_msg(test_msg, &conn).await
+}
+
+/// 发送群聊文本消息（简化版，无prev_id和锁机制，写入群消息 ack 表）
+pub async fn send_group_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
+    let timestamp = text_quic_msg.timestamp;
+    let group_id = text_quic_msg.recv_user.clone();
+
+    // 写入群聊记录表
+    let group_text_raw = GroupTextRecord {
+        text: text_quic_msg.raw.clone(),
+    };
+    let raw = group_text_raw.json_serialize()?;
+    
+    let record = GroupChatRecord {
+        id: 0,
+        nano_id: text_quic_msg.nano_id.clone(),
+        text_type: text_quic_msg.text_type,
+        raw: raw.clone(),
+        group_id: group_id.clone(),
+        send_user: sender.clone(),
+        timestamp,
+    };
+    insert_group_chat_record(&record).await?;
+
+    // 写入群消息 ack 表
+    let ack = GroupMessageAck {
+        id: 0,
+        nano_id: text_quic_msg.nano_id.clone(),
+        group_uuid: group_id.clone(),
+        send_user: sender.clone(),
+        ack_status: 0,
+        timestamp,
+    };
+    insert_group_message_ack(&ack).await?;
+
+    // 更新会话列表
+    update_group_session_after_send(&group_id, &raw, text_quic_msg.text_type, &text_quic_msg.nano_id, timestamp).await?;
+
+    let raw_bytes: Vec<u8> = Vec::from(raw);
+    let test_msg = generate_text_msg_without_nano(
+        text_quic_msg.text_type,
+        raw_bytes,
+        text_quic_msg.recv_user,
+        sender,
+        text_quic_msg.nano_id,
+    )?;
+
+    let conn = {
+        let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+    };
+
+    send_msg(test_msg, &conn).await
+}
+
+/// 发送群聊消息后更新会话列表
+async fn update_group_session_after_send(
+    group_id: &str,
+    last_message: &str,
+    text_type: u16,
+    nano_id: &str,
+    timestamp: i64,
+) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    
+    // 查询现有会话
+    let mut group_session = query_chat_session_by_user_db(&me, group_id).await?;
+    
+    if group_session.is_empty() {
+        // 会话不存在，创建新会话
+        let chat_session = ChatSession {
+            id: 0,
+            nano_id: nano_id.to_string(),
+            timestamp,
+            text_type,
+            unread_count: 0,
+            last_message: last_message.to_string(),
+            recv_user: me.clone(),
+            send_user: group_id.to_string(),
+            session_type: 2,
+            is_show: 1,
+            is_top: 0,
+            group_id: Some(group_id.to_string()),
+        };
+        update_chat_session_db(&chat_session).await?;
+        
+        // 发送会话事件到前端
+        let chat_session_event = ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+        let payload = serde_json::to_string(&chat_session_event)?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
+    } else {
+        // 更新现有会话
+        let mut chat_session = group_session.remove(0);
+        chat_session.last_message = last_message.to_string();
+        chat_session.timestamp = timestamp;
+        chat_session.text_type = text_type;
+        chat_session.nano_id = nano_id.to_string();
+        chat_session.unread_count = 0;
+        
+        update_chat_session_db(&chat_session).await?;
+        
+        // 发送会话事件到前端
+        let chat_session_event = ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+        let payload = serde_json::to_string(&chat_session_event)?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
+    }
+    
+    Ok(())
+}
+
+/// 发送群聊图片消息（简化版，无prev_id和锁机制）
+pub async fn send_group_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+    let file_path = text_quic_msg.raw.clone();
+
+    // 1、压缩图片到当月资源目录
+    let compressed_path = compress_image_to_webp(&Path::new(&file_path))?;
+    let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
+
+    // 2、上传图片到文件服务器
+    let upload_data =
+        upload_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+
+    // 3、获取图片尺寸信息
+    let img = ImageReader::open(&file_path)?.decode()?;
+    let img_width = img.width() as i32;
+    let img_height = img.height() as i32;
+
+    // 4、获取文件大小
+    let metadata = std::fs::metadata(compressed_path_str)?;
+    let img_size = metadata.len() as i32;
+
+    // 5、获取第一个 file_info 的 biz_id
+    let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
+    let biz_id = file_info.biz_id.clone();
+
+    // 6、组装 GroupImageRecord
+    let file_name = std::path::Path::new(&file_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("image")
+        .to_string();
+    let group_image_record = GroupImageRecord {
+        biz_id,
+        file_name,
+        img_width,
+        img_height,
+        img_size,
+    };
+
+    let image_raw = group_image_record.json_serialize()?;
+
+    // 7、创建新的 TextQuicMsgVo 用于发送
+    let mut image_msg = text_quic_msg.clone();
+    image_msg.raw = image_raw;
+
+    // 8、调用 send_group_text_msg_service 发送消息（无锁）
+    send_group_text_msg_service(image_msg).await?;
+
+    Ok(())
+}
+
+/// 发送群聊文件消息（简化版，无prev_id和锁机制）
+pub async fn send_group_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+    let file_path = text_quic_msg.raw.clone();
+    let path = Path::new(&file_path);
+
+    // 1、获取文件名和文件扩展名
+    let file_name =
+        path.file_name().and_then(|name| name.to_str()).unwrap_or("unknown").to_string();
+
+    let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
+
+    // 2、获取文件大小
+    let metadata = std::fs::metadata(&file_path)?;
+    let file_size = metadata.len() as i64;
+
+    // 3、上传文件到文件服务器
+    let upload_data = upload_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
+
+    // 4、获取第一个 file_info 的 biz_id
+    let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
+    let biz_id = file_info.biz_id.clone();
+
+    // 5、组装 GroupFileRecord
+    let group_file_record = GroupFileRecord {
+        biz_id,
+        file_name,
+        file_size,
+        file_type,
+    };
+
+    let file_raw = group_file_record.json_serialize()?;
+
+    // 6、创建新的 TextQuicMsgVo 用于发送
+    let mut file_msg = text_quic_msg.clone();
+    file_msg.raw = file_raw;
+
+    // 7、调用 send_group_text_msg_service 发送消息（无锁）
+    send_group_text_msg_service(file_msg).await?;
+
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GroupTextRecord {
+    pub text: String,
+}
+
+impl ChatRecordRaw for GroupTextRecord {
+    fn deserialize(data: &str) -> Result<Self, anyhow::Error> {
+        let record: GroupTextRecord = serde_json::from_str(data)?;
+        Ok(record)
+    }
+
+    fn json_serialize(&self) -> Result<String, anyhow::Error> {
+        Ok(serde_json::to_string(self)?)
+    }
+
+    fn set_prev_id(&mut self, _prev_id: String) {
+        // 群聊消息不需要 prev_id
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GroupImageRecord {
+    pub biz_id: String,
+    pub file_name: String,
+    pub img_width: i32,
+    pub img_height: i32,
+    pub img_size: i32,
+}
+
+impl ChatRecordRaw for GroupImageRecord {
+    fn deserialize(data: &str) -> Result<Self, anyhow::Error> {
+        let record: GroupImageRecord = serde_json::from_str(data)?;
+        Ok(record)
+    }
+
+    fn json_serialize(&self) -> Result<String, anyhow::Error> {
+        Ok(serde_json::to_string(self)?)
+    }
+
+    fn set_prev_id(&mut self, _prev_id: String) {
+        // 群聊消息不需要 prev_id
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GroupFileRecord {
+    pub biz_id: String,
+    pub file_name: String,
+    pub file_size: i64,
+    pub file_type: String,
+}
+
+impl ChatRecordRaw for GroupFileRecord {
+    fn deserialize(data: &str) -> Result<Self, anyhow::Error> {
+        let record: GroupFileRecord = serde_json::from_str(data)?;
+        Ok(record)
+    }
+
+    fn json_serialize(&self) -> Result<String, anyhow::Error> {
+        Ok(serde_json::to_string(self)?)
+    }
+
+    fn set_prev_id(&mut self, _prev_id: String) {
+        // 群聊消息不需要 prev_id
+    }
 }
 
 // 设置消息prev_id
@@ -517,8 +827,9 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
                     .first()
                     .ok_or(anyhow!("last_send_success_msg is empty"))?
                     .send_id;
-                let prev_ack = query_chat_record_by_send_id(send_id, &recv_user).await?;
-                prev_id = prev_ack.msg_id;
+                if let Some(prev_ack) = query_chat_record_by_send_id(send_id, &recv_user).await? {
+                    prev_id = prev_ack.msg_id;
+                }
             }
             let raw = &item.raw;
             let text_type = item.text_type;

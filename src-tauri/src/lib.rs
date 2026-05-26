@@ -31,8 +31,9 @@ use crate::cmd::api_controller::{
 };
 use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
 use crate::cmd::chat_record_controller::{
-    get_chat_record_by_type, get_chat_record_from_store, mark_read, send_file_msg, send_image_msg,
-    send_text_msg,
+    get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
+    mark_read, send_file_msg, send_group_file_msg, send_group_image_msg, send_group_text_msg,
+    send_image_msg, send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
     create_chat_session, get_chat_session_from_store, mark_read_chat_session,
@@ -44,10 +45,11 @@ use crate::cmd::friend_controller::{
     delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list,
 };
 use crate::cmd::group_controller::{
-    create_group_chat_session_command, create_group_command, get_group_chat_session_list,
-    get_group_info_command, get_group_list, get_group_members, invite_group_members_command,
-    join_group_command, leave_group_command, remove_group_member_command,
-    sync_group_list_command, sync_group_members_command,
+    accept_group_invitation_command, create_group_chat_session_command, create_group_command,
+    decline_group_invitation_command, get_group_chat_session_list, get_group_info_command,
+    get_group_list, get_group_members, invite_group_members_command, join_group_command,
+    leave_group_command, remove_group_member_command, sync_group_list_command,
+    sync_group_members_command,
 };
 use crate::cmd::notification_controller::{
     batch_read_system_notification, get_system_notification,
@@ -138,6 +140,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(generate_handler![
             send_text_msg,
+            send_group_text_msg,
+            send_group_image_msg,
+            send_group_file_msg,
             get_request,
             post_request,
             put_request,
@@ -174,6 +179,7 @@ pub fn run() {
             send_p2p_file_transfer_response,
             get_chat_record_from_store,
             get_chat_record_by_type,
+            get_group_chat_record_from_store,
             get_chat_session_from_store,
             get_friend_info,
             delete_friend_command,
@@ -204,6 +210,8 @@ pub fn run() {
             get_group_info_command,
             create_group_command,
             invite_group_members_command,
+            accept_group_invitation_command,
+            decline_group_invitation_command,
             join_group_command,
             leave_group_command,
             remove_group_member_command,

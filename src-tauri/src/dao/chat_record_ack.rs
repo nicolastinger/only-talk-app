@@ -33,14 +33,14 @@ pub async fn query_ack_record_from_db(nanoid: &str) -> Result<ChatRecordAck, any
 pub async fn query_chat_record_by_send_id(
     send_id: &str,
     recv_user: &str,
-) -> Result<ChatRecordAck, anyhow::Error> {
+) -> Result<Option<ChatRecordAck>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let record = sqlx::query_as::<_, ChatRecordAck>(
         r#"SELECT * FROM chat_record_ack WHERE send_id = ?1 and recv_user = ?2"#,
     )
     .bind(send_id)
     .bind(recv_user)
-    .fetch_one(&pool_sqlite)
+    .fetch_optional(&pool_sqlite)
     .await?;
     Ok(record)
 }

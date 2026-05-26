@@ -6,12 +6,21 @@ pub struct GroupVo {
     pub group_name: String,
     pub avatar: Option<String>,
     pub owner_uuid: String,
+    #[serde(default)]
     pub description: Option<String>,
+    #[serde(default)]
     pub max_members: i32,
     pub member_count: i64,
+    #[serde(default)]
     pub created_at: i64,
+    #[serde(default)]
     pub updated_at: i64,
+    #[serde(default)]
     pub status: i16,
+    #[serde(default)]
+    pub last_msg_time: Option<i64>,
+    #[serde(default)]
+    pub unread_count: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

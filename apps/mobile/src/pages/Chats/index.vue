@@ -62,6 +62,11 @@ const onRefresh = async () => {
 };
 
 const openChat = async (item: ChatSessionVo) => {
+  if (item.session_type === 2) {
+    const groupId = item.group_id || item.send_user;
+    router.push(`/chats/group-chat/${groupId}`);
+    return;
+  }
   const myUuid = await getMyUuid();
   const friendUuid = isSelfChat(item)
     ? item.send_user

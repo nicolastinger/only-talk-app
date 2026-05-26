@@ -84,6 +84,22 @@ pub async fn query_last_chat_record(
     Ok(record)
 }
 
+/// 分页获取群聊记录（按接收者即groupId查询）
+pub async fn query_group_chat_record_from_db(
+    group_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE recv_user = ?1 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#)
+        .bind(group_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&pool_sqlite)
+        .await?;
+    Ok(record)
+}
+
 /// 按消息类型分页获取聊天记录
 pub async fn query_chat_record_by_type_from_db(
     send_user: &str,

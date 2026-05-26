@@ -1,25 +1,28 @@
 import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
 import { invoke } from '@tauri-apps/api/core';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './QuicDisconnectAlert.less';
 
-/**
- * QUIC连接断开提示组件
- * 当QUIC连接断开时持续显示遮罩，直到连接恢复或用户手动重连
- */
 const QuicDisconnectAlert: React.FC = () => {
   const { isConnected, connectionState, message, resetConnection } =
     useQuicDisconnect();
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
-  // 处理重新连接
+  useEffect(() => {
+    if (!isConnected) {
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
+    }
+  }, [isConnected]);
+
   const handleReconnect = async () => {
     if (isReconnecting) return;
 
     try {
       setIsReconnecting(true);
       await invoke('reconnect_quic_command');
-      // 重连请求已发送，重置前端状态
       resetConnection();
     } catch (error) {
       console.error('重新连接失败:', error);
@@ -28,8 +31,11 @@ const QuicDisconnectAlert: React.FC = () => {
     }
   };
 
-  // 连接正常时不显示
-  if (isConnected) {
+  const handleClose = () => {
+    setIsVisible(false);
+  };
+
+  if (!isVisible) {
     return null;
   }
 
@@ -42,6 +48,14 @@ const QuicDisconnectAlert: React.FC = () => {
     <div className="quic-disconnect-alert">
       <div className="quic-disconnect-alert-overlay" />
       <div className="quic-disconnect-alert-content">
+        <button
+          className="quic-disconnect-alert-close"
+          onClick={handleClose}
+          title="关闭提示"
+        >
+          ✕
+        </button>
+
         <div className="quic-disconnect-alert-icon">
           <svg viewBox="0 0 1024 1024" width="64" height="64">
             <path

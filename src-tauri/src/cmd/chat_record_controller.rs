@@ -6,8 +6,10 @@ use tokio::time::timeout;
 use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
 use crate::entity::Page;
 use crate::service::chat_service::{
-    get_chat_record_by_type_service, get_chat_record_service, send_file_msg_service,
-    send_image_msg_service, send_text_msg_service, update_last_read_msg_from_db,
+    get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
+    send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
+    send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
+    update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -34,6 +36,30 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
             Err("获取锁超时".to_string())
         }
     }
+}
+
+/// 发送群聊文本消息（无锁机制）
+#[tauri::command]
+pub async fn send_group_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
+    send_group_text_msg_service(text_quic_msg)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 发送群聊图片消息（无锁机制）
+#[tauri::command]
+pub async fn send_group_image_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
+    send_group_image_msg_service(text_quic_msg)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 发送群聊文件消息（无锁机制）
+#[tauri::command]
+pub async fn send_group_file_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
+    send_group_file_msg_service(text_quic_msg)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 // 发送图片数据
@@ -80,4 +106,13 @@ pub async fn get_chat_record_by_type(
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, String> {
     get_chat_record_by_type_service(text_quic_msg, text_type, page).await.map_err(|e| e.to_string())
+}
+
+/// 获取群聊的本地聊天数据
+#[tauri::command]
+pub async fn get_group_chat_record_from_store(
+    group_id: String,
+    page: Page,
+) -> Result<Vec<TextQuicMsgVo>, String> {
+    get_group_chat_record_service(group_id, page).await.map_err(|e| e.to_string())
 }

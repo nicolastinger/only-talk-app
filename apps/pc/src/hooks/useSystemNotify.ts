@@ -34,6 +34,10 @@ const useSystemNotify = (recvUuid: string) => {
             if (notify.level2 === 1) {
               setAddContacts(notify?.unread_count || 0);
             }
+            // 群聊模块
+            if (notify.level2 === 3) {
+              setAddGroups(notify?.unread_count || 0);
+            }
           }
           console.log('接受到系统通知', notify);
         } catch (e) {
@@ -56,6 +60,7 @@ const useSystemNotify = (recvUuid: string) => {
         isRead: 0,
       })) as SystemNotification[];
       let contacts = 0;
+      let groups = 0;
       systemNotifications.forEach((notification) => {
         // 只监听当前用户的通知
         if (notification.user_id !== recvUuid) {
@@ -67,11 +72,15 @@ const useSystemNotify = (recvUuid: string) => {
           if (notification.level2 === 1) {
             contacts = (notification.unread_count || 0) + contacts;
           }
+          // 群聊模块通知
+          if (notification.level2 === 3) {
+            groups = (notification.unread_count || 0) + groups;
+          }
         }
       });
       setMenuUnread({
         contacts,
-        groups: 0,
+        groups,
         system: 0,
         settings: 0,
       });

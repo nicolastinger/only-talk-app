@@ -5,11 +5,16 @@ import { getFiles } from '@workspace/services';
 import { get_group_list } from '@workspace/services';
 import { GroupVo } from '@workspace/types';
 import { Badge, message } from 'antd';
+import { PlusOutlined, MailOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
+import CreateGroupModal from './CreateGroupModal';
+import InvitationManager from './InvitationManager';
 import styles from './styles/GroupList.less';
 
 const GroupList = () => {
   const [groups, setGroups] = useState<GroupVo[]>([]);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [invitationVisible, setInvitationVisible] = useState(false);
   const refreshFlag = useBearStore((state) => state.refreshFlag);
 
   useEffect(() => {
@@ -37,17 +42,49 @@ const GroupList = () => {
     history.push('/home/contacts/group?groupId=' + groupId);
   };
 
+  const handleCreateSuccess = async (group: GroupVo) => {
+    setCreateModalVisible(false);
+    await getGroupList();
+  };
+
   return (
     <div className={styles.container}>
-      {groups.length > 0
-        ? groups.map((group) => (
-            <GroupBox
-              key={group.group_uuid}
-              group={group}
-              onClick={() => routeToGroupInfo(group.group_uuid)}
-            />
-          ))
-        : null}
+      <div className={styles.listContent}>
+        {groups.length > 0
+          ? groups.map((group) => (
+              <GroupBox
+                key={group.group_uuid}
+                group={group}
+                onClick={() => routeToGroupInfo(group.group_uuid)}
+              />
+            ))
+          : null}
+      </div>
+      <div className={styles.bottomBar}>
+        <div
+          className={styles.invitationBtn}
+          onClick={() => setInvitationVisible(true)}
+        >
+          <MailOutlined />
+          <span>邀请管理</span>
+        </div>
+        <div
+          className={styles.createBtn}
+          onClick={() => setCreateModalVisible(true)}
+        >
+          <PlusOutlined />
+          <span>创建群组</span>
+        </div>
+      </div>
+      <CreateGroupModal
+        visible={createModalVisible}
+        onCancel={() => setCreateModalVisible(false)}
+        onSuccess={handleCreateSuccess}
+      />
+      <InvitationManager
+        visible={invitationVisible}
+        onCancel={() => setInvitationVisible(false)}
+      />
     </div>
   );
 };

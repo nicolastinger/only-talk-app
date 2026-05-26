@@ -62,11 +62,13 @@ interface GroupVo {
   avatar?: string;
   owner_uuid: string;
   description?: string;
-  max_members: number;
+  max_members?: number;
   member_count: number;
-  created_at: number;
-  updated_at: number;
-  status: number;
+  created_at?: number;
+  updated_at?: number;
+  status?: number;
+  last_msg_time?: number;
+  unread_count?: number;
 }
 
 interface GroupMemberVo {
@@ -85,4 +87,15 @@ interface CreateGroupRequest {
   member_ids: string[];
 }
 
-export type { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo, GroupVo, GroupMemberVo, CreateGroupRequest };
+interface GroupInvitationVo {
+  id: number;
+  group_uuid: string;
+  group_name: string;
+  group_avatar?: string;
+  inviter_uuid: string;
+  invitee_uuid: string;
+  status: number;
+  created_at: number;
+}
+
+export type { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo, GroupVo, GroupMemberVo, CreateGroupRequest, GroupInvitationVo };

@@ -127,3 +127,18 @@ pub const MSG_TYPE_SYSTEM: u16 = 10001;
 
 /// 当前会话好友
 pub const CURRENT_SESSION_FRIEND: &str = "current_session_friend";
+
+// ==================== 群聊消息类型 ====================
+
+/// 群文本消息
+pub const MSG_TYPE_GROUP_TEXT: u16 = 2001;
+
+/// 群图片消息
+pub const MSG_TYPE_GROUP_IMAGE: u16 = 2002;
+
+/// 群文件消息
+pub const MSG_TYPE_GROUP_FILE: u16 = 2003;
+
+/// 群通知消息（成员变更等）
+pub const MSG_TYPE_GROUP_NOTIFICATION: u16 = 2004;
+
