@@ -20,6 +20,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/chats/group-chat/:groupId",
+    name: "GroupChat",
+    component: () => import("@/pages/Chats/GroupChat/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/friends",
     name: "Friends",
     component: () => import("@/pages/Friends/index.vue"),

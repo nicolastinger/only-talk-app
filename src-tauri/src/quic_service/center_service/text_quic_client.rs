@@ -277,6 +277,21 @@ async fn send_ping_msg(conn: Connection, disconnect_tx: watch::Sender<bool>) -> 
     // 重置心跳丢失计数
     insert_user_info("ping_lost_count", "0").await?;
 
+    // 立即发送一次心跳，确认连接正常
+    let ping_msg =
+        generate_text_msg(MSG_TYPE_PING, PING.as_bytes().to_vec(), SYSTEM.to_string(), sender.clone())
+            .expect("生成心跳消息失败");
+    match send_via_new_stream(&conn, &ping_msg).await {
+        Ok(_) => {
+            info!("初始心跳发送成功");
+        }
+        Err(e) => {
+            error!("初始心跳发送失败: {}", e);
+            let _ = disconnect_tx.send(true);
+            return Err(anyhow!("初始心跳发送失败: {}", e));
+        }
+    };
+
     loop {
         tokio::time::sleep(Duration::from_secs(60)).await;
         info!("发送quic客户端心跳");
@@ -284,7 +299,14 @@ async fn send_ping_msg(conn: Connection, disconnect_tx: watch::Sender<bool>) -> 
         // 检查心跳实例是否一致
         let current_ping_uuid = get_user_info("ping_uuid").await.unwrap_or_default();
         if ping_uuid != current_ping_uuid {
-            warn!("终止发送心跳，心跳实例id不一致");
+            info!("心跳实例id已更新，当前任务正常退出");
+            break;
+        }
+
+        // 检查连接状态
+        let state = *GLOBAL_QUIC_STATE.read().await;
+        if state != QuicConnectionState::Connected {
+            info!("连接状态已变更({:?})，心跳任务退出", state);
             break;
         }
 

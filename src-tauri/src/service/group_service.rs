@@ -93,18 +93,21 @@ pub async fn create_group(request: CreateGroupRequest) -> Result<GroupVo, anyhow
     upsert_group(&group).await?;
 
     if !request.member_ids.is_empty() {
-        let _ = invite_group_members(&group_vo.group_uuid, request.member_ids).await;
+        match invite_group_members(&group_vo.group_uuid, request.member_ids.clone()).await {
+            Ok(invited) => info!("群创建时邀请成员成功: {} 人", invited.len()),
+            Err(e) => error!("群创建时邀请成员失败: {}", e),
+        }
     }
 
     Ok(group_vo)
 }
 
-/// 邀请群成员
+/// 邀请群成员（发送邀请通知，需对方同意）
 pub async fn invite_group_members(
     group_id: &str,
     user_ids: Vec<String>,
-) -> Result<(), anyhow::Error> {
-    let url = format!("{}/group/chat/member/add", TALK_API);
+) -> Result<Vec<String>, anyhow::Error> {
+    let url = format!("{}/group/chat/member/invite", TALK_API);
     let body = serde_json::json!({
         "group_uuid": group_id,
         "user_uuids": user_ids
@@ -117,23 +120,48 @@ pub async fn invite_group_members(
         return Err(anyhow!("邀请成员失败: {}", response.message));
     }
 
+    let invited: Vec<String> = serde_json::from_value(response.data)?;
+    Ok(invited)
+}
+
+/// 接受群邀请
+pub async fn accept_group_invitation(group_id: &str) -> Result<(), anyhow::Error> {
+    let url = format!("{}/group/chat/member/invite/accept", TALK_API);
+    let body = serde_json::json!({
+        "group_uuid": group_id
+    }).to_string();
+    let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
+    let response: HttpResult = parse_http_result(&result.body)?;
+
+    if response.code != 200 {
+        return Err(anyhow!("接受邀请失败: {}", response.message));
+    }
+
+    sync_group_list().await?;
+    get_group_info(group_id).await?;
     sync_group_members(group_id).await?;
     Ok(())
 }
 
-/// 加入群聊
-pub async fn join_group(group_id: &str) -> Result<(), anyhow::Error> {
-    let url = format!("{}/group/chat/join/{}", TALK_API, group_id);
-    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+/// 拒绝群邀请
+pub async fn decline_group_invitation(group_id: &str) -> Result<(), anyhow::Error> {
+    let url = format!("{}/group/chat/member/invite/decline", TALK_API);
+    let body = serde_json::json!({
+        "group_uuid": group_id
+    }).to_string();
+    let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
     if response.code != 200 {
-        return Err(anyhow!("加入群聊失败: {}", response.message));
+        return Err(anyhow!("拒绝邀请失败: {}", response.message));
     }
 
-    get_group_info(group_id).await?;
-    sync_group_members(group_id).await?;
     Ok(())
+}
+
+/// 加入群聊（已废弃，改为 accept_group_invitation）
+pub async fn join_group(group_id: &str) -> Result<(), anyhow::Error> {
+    accept_group_invitation(group_id).await
 }
 
 /// 离开群聊
@@ -246,6 +274,8 @@ pub async fn get_local_group_list() -> Result<Vec<GroupVo>, anyhow::Error> {
             created_at: g.created_at,
             updated_at: g.updated_at,
             status: 1,
+            last_msg_time: None,
+            unread_count: 0,
         })
         .collect())
 }
@@ -274,6 +304,8 @@ pub async fn process_group_notify_message(
     match notification.level3.ok_or(anyhow!("level3为空"))? {
         1 => {
             info!("收到群邀请通知 {:?}", notification);
+            // 群邀请通知已通过 NOTIFY_TYPE_MSG 插入本地 DB 并推送到前端
+            // 前端可直接调用 get_pending_invitations 获取待处理邀请列表
         }
         2 => {
             info!("群信息更新通知，同步群列表");
@@ -281,6 +313,13 @@ pub async fn process_group_notify_message(
         }
         3 => {
             info!("群成员变更通知 {:?}", notification);
+            if let Some(biz_id) = &notification.biz_id {
+                sync_group_members(biz_id).await?;
+            }
+        }
+        4 => {
+            info!("群邀请结果通知 {:?}", notification);
+            // 邀请已被处理，可选刷新群成员列表
             if let Some(biz_id) = &notification.biz_id {
                 sync_group_members(biz_id).await?;
             }

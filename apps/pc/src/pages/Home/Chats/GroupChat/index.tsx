@@ -12,11 +12,10 @@ import {
   TextQuicMsgVo,
 } from '@workspace/types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ChatFooter from '../components/Footer';
-import MessageList from '../components/MessageList';
-import Splitter from '../components/Splitter';
+import GroupMessageList from './components/GroupMessageList';
+import GroupChatFooter from './components/GroupChatFooter';
 import GroupTopBar from '../components/GroupTopBar';
-import styles from '../Chat/index.less';
+import styles from './index.less';
 
 const PAGE_SIZE = 20;
 
@@ -41,19 +40,7 @@ const GroupChatPage: React.FC = () => {
   const groupId = params.get('groupId') || '';
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
-  // Use useMessageApi with null sender to receive all messages for the group
   const { textMessage } = useMessageApi(null as any, groupId);
-
-  const handleHeightChange = (heightPercent: number) => {
-    const containerHeight = window.innerHeight;
-    const minHeightPx = 20;
-    const maxHeightPx = containerHeight * 0.8;
-    const heightPx = Math.max(
-      minHeightPx,
-      Math.min(maxHeightPx, (heightPercent / 100) * containerHeight),
-    );
-    setFooterHeight(heightPx);
-  };
 
   useEffect(() => {
     setRealFooterHeight(footerHeight + 6);
@@ -112,7 +99,7 @@ const GroupChatPage: React.FC = () => {
       console.log('获取群信息失败，从本地加载', err);
       try {
         const localGroups: GroupVo[] = await invoke('get_group_list');
-        const found = localGroups.find((g) => g.group_id === groupId);
+        const found = localGroups.find((g) => g.group_uuid === groupId);
         if (found) setGroupInfo(found);
       } catch (e) {
         console.log(e);
@@ -144,21 +131,13 @@ const GroupChatPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const textRawText: TextQuicMsgVo = {
-        nano_id: '',
-        raw: '',
-        recv_user: meUuid,
-        send_user: groupId,
-        text_type: 0,
-        timestamp: 0,
-      };
       const pageParam: Page = {
         size: PAGE_SIZE,
         current: page,
         total: 0,
       };
-      const data: TextQuicMsgVo[] = await invoke('get_chat_record_from_store', {
-        textQuicMsg: textRawText,
+      const data: TextQuicMsgVo[] = await invoke('get_group_chat_record_from_store', {
+        groupId,
         page: pageParam,
       });
 
@@ -349,23 +328,16 @@ const GroupChatPage: React.FC = () => {
           {!hasMore && messageList.length > 0 && (
             <div className={styles.noMoreIndicator}>没有更多消息了</div>
           )}
-          <MessageList
+          <GroupMessageList
             messages={messageList}
-            groupMode={true}
-            friendUuid={groupId}
+            groupUuid={groupId}
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
           />
-          <div id="anchor"></div>
         </div>
-        <Splitter
-          onHeightChange={handleHeightChange}
-          minHeight={20}
-          maxHeight={80}
-        />
         <div style={{ height: `${footerHeight}px` }}>
-          <ChatFooter
-            friendUuid={groupId}
+          <GroupChatFooter
+            groupUuid={groupId}
             onMessageSent={handleMessageSent}
             onUploadStart={handleUploadStart}
             onUploadEnd={handleUploadEnd}

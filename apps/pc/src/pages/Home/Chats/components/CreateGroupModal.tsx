@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { FriendVo, GroupVo } from '@workspace/types';
-import { get_friend_list, create_group, invite_group_members } from '@workspace/services';
+import {
+  get_friend_list,
+  create_group,
+  invite_group_members,
+  create_group_chat_session,
+} from '@workspace/services';
 import { Modal, Input, Select, message } from 'antd';
+import { history } from '@umijs/max';
 
 interface CreateGroupModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: (groupId?: string) => void;
+  onSuccess?: (groupId?: string) => void;
 }
 
 const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
@@ -49,8 +55,11 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       if (selectedFriends.length > 0) {
         await invite_group_members(group.group_uuid, selectedFriends);
       }
+      await create_group_chat_session(group.group_uuid);
       message.success('群聊创建成功');
-      onSuccess(group.group_uuid);
+      onSuccess?.(group.group_uuid);
+      onCancel();
+      history.push('/home/chats/group-chat?groupId=' + group.group_uuid);
     } catch (err) {
       console.log('创建群聊失败', err);
       message.error('创建群聊失败');
@@ -61,7 +70,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   return (
     <Modal
-      title="创建群聊"
+      title="发起群会话"
       open={visible}
       onOk={handleCreate}
       onCancel={onCancel}
