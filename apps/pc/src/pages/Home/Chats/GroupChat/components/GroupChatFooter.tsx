@@ -18,7 +18,6 @@ const { TextArea } = Input;
 const MSG_TYPE_GROUP_TEXT = 2001;
 const MSG_TYPE_GROUP_IMAGE = 2002;
 const MSG_TYPE_GROUP_FILE = 2003;
-const MSG_TYPE_GROUP_NOTIFICATION = 2004;
 
 interface GroupChatFooterProps {
   groupUuid: string;
@@ -173,11 +172,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
   };
 
   return (
-    <div className={styles.groupChatFooter}>
-      <div className={styles.groupFooterToolBar}>
+    <div className={styles.footer}>
+      <div className={styles.footerBtnBar}>
         <div className={styles.emojiWrapper} ref={emojiPickerRef}>
           <div
-            className={styles.groupFooterBtn}
+            className={styles.footerBtn}
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           >
             <SmileOutlined />
@@ -198,35 +197,23 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
             </div>
           )}
         </div>
-        <div
-          className={styles.groupFooterBtn}
-          onClick={sendImage}
-          title="发送图片"
-        >
+        <div className={styles.footerBtn} onClick={sendImage} title="发送图片">
           <PictureOutlined />
         </div>
-        <div
-          className={styles.groupFooterBtn}
-          onClick={sendFile}
-          title="发送文件"
-        >
+        <div className={styles.footerBtn} onClick={sendFile} title="发送文件">
           <FileOutlined />
         </div>
       </div>
-      <div className={styles.groupFooterMessage}>
+      <div className={styles.footerMessage}>
         <TextArea
           onPressEnter={sendMessage}
           value={msg}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMsg(e.target.value)}
-          className={styles.groupFooterTextArea}
+          className={styles.footerTextArea}
           placeholder="输入群聊消息..."
         />
-        <div className={styles.groupFooterSendBtn}>
-          <Button
-            type="primary"
-            className={styles.groupSendBtn}
-            onClick={sendMessage}
-          >
+        <div className={styles.footerSendBtn}>
+          <Button type="primary" variant="outlined" onClick={sendMessage}>
             发送(S)
           </Button>
         </div>

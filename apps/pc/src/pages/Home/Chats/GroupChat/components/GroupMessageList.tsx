@@ -1,6 +1,9 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { ChatMessage, MessageFrom } from '@workspace/types';
 import React from 'react';
+import CustomerChatBox from '../../components/CustomerChatBox';
+import MineChatBox from '../../components/MineChatBox';
+import MessageTimestamp from '../../components/MessageTimestamp';
 import styles from './GroupMessageList.less';
 
 interface GroupMessageListProps {
@@ -16,21 +19,6 @@ const MSG_TYPE_GROUP_FILE = 2003;
 const MSG_TYPE_GROUP_NOTIFICATION = 2004;
 
 const TEN_MINUTES = 10 * 60 * 1000;
-
-const formatTime = (timestamp: number) => {
-  const d = new Date(timestamp);
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${month}-${day} ${hours}:${minutes}`;
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-};
 
 const GroupMessageList: React.FC<GroupMessageListProps> = ({
   messages,
@@ -70,122 +58,61 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
         const senderName = msg.sender_name || (isMine ? '我' : '群成员');
         const senderIcon = msg.sender_icon || msg.img || '';
 
-        let content = null;
-
         if (isSystem || message.text_type === MSG_TYPE_GROUP_NOTIFICATION) {
+          let systemContent = message.raw;
           try {
             const sysMsg = JSON.parse(message.raw);
-            content = (
-              <div className={styles.groupMessageSystem}>
-                {sysMsg.text || sysMsg.content || message.raw}
-              </div>
-            );
-          } catch {
-            content = (
-              <div className={styles.groupMessageSystem}>
-                {message.raw}
-              </div>
-            );
-          }
-        } else if (message.text_type === MSG_TYPE_GROUP_TEXT) {
-          try {
-            const textMsg = JSON.parse(message.raw);
-            content = (
-              <div className={styles.groupMessageBody}>
-                {textMsg.text || message.raw}
-              </div>
-            );
-          } catch {
-            content = (
-              <div className={styles.groupMessageBody}>
-                {message.raw}
-              </div>
-            );
-          }
-        } else if (message.text_type === MSG_TYPE_GROUP_IMAGE) {
-          let imageUrl = message.raw;
-          try {
-            const imgData = JSON.parse(message.raw);
-            imageUrl = imgData.biz_id || imgData.url || imgData.path || message.raw;
+            systemContent = sysMsg.text || sysMsg.content || message.raw;
           } catch {}
-          content = (
-            <img
-              className={styles.groupMessageImage}
-              src={imageUrl}
-              alt="图片"
-              onClick={() => window.open(imageUrl, '_blank')}
-            />
-          );
-        } else if (message.text_type === MSG_TYPE_GROUP_FILE) {
-          let fileName = '文件';
-          let fileSize = 0;
-          try {
-            const fileData = JSON.parse(message.raw);
-            fileName = fileData.file_name || fileData.name || '文件';
-            fileSize = fileData.file_size || fileData.size || 0;
-          } catch {}
-          content = (
-            <div className={styles.groupMessageFile}>
-              <span className={styles.groupMessageFileIcon}>📄</span>
-              <div className={styles.groupMessageFileInfo}>
-                <span className={styles.groupMessageFileName}>{fileName}</span>
-                <span className={styles.groupMessageFileSize}>
-                  {formatFileSize(fileSize)}
-                </span>
+          
+          return (
+            <React.Fragment key={message.nano_id}>
+              {shouldShowTimestamp && (
+                <MessageTimestamp timestamp={currentTimestamp} />
+              )}
+              <div className={styles.groupMessageSystem}>
+                {systemContent}
               </div>
-            </div>
+            </React.Fragment>
           );
+        }
+
+        let currentBizId = '';
+        if (message.text_type === MSG_TYPE_GROUP_IMAGE) {
+          try {
+            const imageRecord = JSON.parse(message.raw);
+            currentBizId = imageRecord.biz_id || imageRecord.url || '';
+          } catch (error) {
+            console.error('Failed to parse image record:', error);
+          }
         }
 
         return (
           <React.Fragment key={message.nano_id}>
             {shouldShowTimestamp && (
-              <div className={styles.timestampDivider}>
-                <span className={styles.timestampText}>
-                  {formatTime(currentTimestamp)}
-                </span>
-              </div>
+              <MessageTimestamp timestamp={currentTimestamp} />
             )}
-            {isSystem ? (
-              content
-            ) : (
-              <div
-                className={`${styles.groupMessageItem} ${animationClass} ${
-                  isMine ? styles.groupMessageItemMine : ''
-                }`}
-              >
-                <div className={styles.groupMessageAvatar}>
-                  {senderIcon ? (
-                    <img src={senderIcon} alt="avatar" />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#4096ff',
-                        fontSize: '16px',
-                      }}
-                    >
-                      {senderName.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div className={styles.groupMessageContent}>
-                  <div className={styles.groupMessageHeader}>
-                    <span className={styles.groupMessageSenderName}>
-                      {senderName}
-                    </span>
-                    <span className={styles.groupMessageTimestamp}>
-                      {formatTime(currentTimestamp)}
-                    </span>
-                  </div>
-                  {content}
-                </div>
-              </div>
-            )}
+            <div className={animationClass}>
+              {isMine ? (
+                <MineChatBox
+                  msg={msg}
+                  isAck={msg.ack}
+                  icon={senderIcon}
+                  friendUuid={groupUuid}
+                  currentBizId={currentBizId}
+                />
+              ) : (
+                <CustomerChatBox
+                  from={MessageFrom.Customer}
+                  ack={undefined}
+                  img={senderIcon}
+                  senderName={senderName}
+                  text_msg_raw={message}
+                  friendUuid={groupUuid}
+                  currentBizId={currentBizId}
+                />
+              )}
+            </div>
           </React.Fragment>
         );
       })}

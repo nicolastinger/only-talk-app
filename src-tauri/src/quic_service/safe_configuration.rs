@@ -63,6 +63,7 @@ pub fn configure_client() -> ClientConfig {
         Duration::from_secs(1800).try_into().expect("Duration::from_secs(1800).try_into() failed"),
     ));
     time_out_config.max_concurrent_uni_streams(32_u8.into());
+    time_out_config.keep_alive_interval(Some(Duration::from_secs(5)));
     // 获取传输配置并设置最大空闲超时时间（例如3分钟）
     config.transport_config(Arc::from(time_out_config));
     config

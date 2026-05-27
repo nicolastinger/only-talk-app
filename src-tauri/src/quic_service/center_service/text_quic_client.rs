@@ -50,7 +50,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
 
         // 尝试连接
         match try_connect_once(server_addr).await {
-            Ok(_disconnect_rx) => {
+            Ok((_disconnect_rx, _endpoint)) => {
                 // 连接成功 → Connected
                 {
                     let mut state = GLOBAL_QUIC_STATE.write().await;
@@ -62,10 +62,11 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
                     }
                 }
 
-                // 等待断开信号
+                // 等待断开信号（_endpoint 必须保持存活直到断开）
                 let mut rx = _disconnect_rx;
                 let _ = rx.changed().await;
                 info!("收到断开信号");
+                drop(_endpoint);
             }
             Err(e) => {
                 error!("QUIC 连接失败: {}", e);
@@ -116,8 +117,8 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
     }
 }
 
-/// 单次连接尝试，成功则返回 disconnect 信号接收器
-async fn try_connect_once(server_addr: SocketAddr) -> Result<watch::Receiver<bool>, anyhow::Error> {
+/// 单次连接尝试，成功则返回 disconnect 信号接收器和 Endpoint（必须保持存活）
+async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bool>, Endpoint), anyhow::Error> {
     let mut endpoint = Endpoint::client("0.0.0.0:0".parse()?)?;
     endpoint.set_default_client_config(configure_client());
 
@@ -160,7 +161,7 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<watch::Receiver<boo
                         break;
                     }
                     Err(e) => {
-                        error!("[客户端] bidi recv 读取错误: {}", e);
+                        error!("[客户端] bidi recv 读取错误: {} (source: {:?})", e, std::error::Error::source(&e));
                         let _ = tx.send(true);
                         break;
                     }
@@ -194,7 +195,7 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<watch::Receiver<boo
                         }
                     }
                     Err(e) => {
-                        error!("[客户端] uni accept 错误: {}", e);
+                        error!("[客户端] uni accept 错误: {} (source: {:?})", e, std::error::Error::source(&e));
                         let _ = tx.send(true);
                         break;
                     }
@@ -229,7 +230,7 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<watch::Receiver<boo
         });
     }
 
-    Ok(disconnect_rx)
+    Ok((disconnect_rx, endpoint))
 }
 
 /// 发送初始化消息给服务器

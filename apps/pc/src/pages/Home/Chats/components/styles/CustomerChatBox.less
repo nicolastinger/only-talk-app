@@ -47,12 +47,26 @@
 .chatContainerWrapper {
   cursor: pointer;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 
   &:hover .tooltip {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
   }
+}
+
+.senderName {
+  font-size: 12px;
+  color: #4096ff;
+  font-weight: 500;
+  margin-left: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 120px;
 }
 
 .tooltip {

@@ -25,6 +25,23 @@ type MineChatBoxProps = {
   currentBizId?: string;
 };
 
+const MSG_TYPE_TEXT = 1;
+const MSG_TYPE_IMAGE = 2;
+const MSG_TYPE_FILE = 3;
+const MSG_TYPE_PRIVACY = 4;
+const MSG_TYPE_GROUP_TEXT = 2001;
+const MSG_TYPE_GROUP_IMAGE = 2002;
+const MSG_TYPE_GROUP_FILE = 2003;
+
+const isTextType = (text_type: number) => 
+  text_type === MSG_TYPE_TEXT || text_type === MSG_TYPE_GROUP_TEXT;
+
+const isImageType = (text_type: number) => 
+  text_type === MSG_TYPE_IMAGE || text_type === MSG_TYPE_GROUP_IMAGE;
+
+const isFileType = (text_type: number) => 
+  text_type === MSG_TYPE_FILE || text_type === MSG_TYPE_GROUP_FILE;
+
 const isLocalFilePath = (raw: string): boolean => {
   return (
     raw.includes(':\\') || raw.startsWith('/') || raw.startsWith('file://')
@@ -103,7 +120,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   }, [userInfo?.icon]);
 
   useEffect(() => {
-    if (text_type === 2) {
+    if (isImageType(text_type)) {
       if (isLocalFilePath(raw)) {
         const tauriUrl = convertPathToTauriUrl(raw);
         if (tauriUrl) {
@@ -151,7 +168,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     }
 
     // 处理文件消息
-    if (text_type === 3) {
+    if (isFileType(text_type)) {
       if (isLocalFilePath(raw)) {
         // 本地文件路径，显示临时信息
         const fileName = raw.split(/[/\\]/).pop() || 'unknown';
@@ -176,34 +193,37 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   }, [raw, text_type]);
 
   const renderMessage = (message: string) => {
-    switch (text_type) {
-      case 1:
-        return TextBox(message);
-      case 2:
+    if (isTextType(text_type)) {
+      return TextBox(message);
+    }
+    if (isImageType(text_type)) {
+      return (
+        <ChatImage
+          src={imageUrl}
+          loading={loading}
+          friendUuid={friendUuid}
+          currentBizId={currentBizId || ''}
+          meUuid={userInfo?.uuid || ''}
+        />
+      );
+    }
+    if (isFileType(text_type)) {
+      if (fileRecord) {
         return (
-          <ChatImage
-            src={imageUrl}
+          <ChatFile
+            bizId={fileRecord.biz_id}
+            fileName={fileRecord.file_name}
+            fileSize={fileRecord.file_size}
+            fileType={fileRecord.file_type}
+            nanoId={nano_id}
             loading={loading}
-            friendUuid={friendUuid}
-            currentBizId={currentBizId || ''}
-            meUuid={userInfo?.uuid || ''}
           />
         );
-      case 3:
-        if (fileRecord) {
-          return (
-            <ChatFile
-              bizId={fileRecord.biz_id}
-              fileName={fileRecord.file_name}
-              fileSize={fileRecord.file_size}
-              fileType={fileRecord.file_type}
-              nanoId={nano_id}
-              loading={loading}
-            />
-          );
-        }
-        return <div className={styles.container}>[文件]</div>;
-      case 4:
+      }
+      return <div className={styles.container}>[文件]</div>;
+    }
+    switch (text_type) {
+      case MSG_TYPE_PRIVACY:
         return <PrivacyModeMessage isMine={true} />;
       case 5:
       case 12:
@@ -231,9 +251,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     return null;
   };
 
-  const isImageMessage = text_type === 2;
-  const isFileMessage = text_type === 3;
-  const isSpecialMessage = [4, 5, 12, 13, 14, 15, 100].includes(text_type);
+  const isImageMessage = isImageType(text_type);
+  const isFileMessage = isFileType(text_type);
+  const isSpecialMessage = [MSG_TYPE_PRIVACY, 5, 12, 13, 14, 15, 100].includes(text_type);
 
   return (
     <div className={styles.container}>
