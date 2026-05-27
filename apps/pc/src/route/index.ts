@@ -92,6 +92,11 @@ const routes = [
                 path: 'friend',
                 component: './Home/Contacts',
               },
+              {
+                name: 'menu.contacts.group',
+                path: 'group',
+                component: './Home/Contacts/GroupInfo',
+              },
             ],
           },
         ],

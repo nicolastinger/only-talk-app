@@ -29,11 +29,11 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
   const [loading, setLoading] = useState(false);
 
   const displayMessage = useMemo(() => {
-    if (text_type === 2) {
+    if (text_type === 2 || text_type === 2002) {
       return '[图片]';
     }
 
-    if (text_type === 3) {
+    if (text_type === 3 || text_type === 2003) {
       return '[文件]';
     }
 
@@ -65,7 +65,12 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
       return '[WebRTC信令]';
     }
 
+    if (text_type === 2004) {
+      return '[群通知]';
+    }
+
     try {
+      console.log('MessageBox message:', message);
       const parsed = JSON.parse(message);
       if (parsed.text) {
         return parsed.text;

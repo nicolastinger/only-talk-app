@@ -1,0 +1,43 @@
+.invitation-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.invitation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.invitation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.invitation-group {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.invitation-meta {
+  font-size: 12px;
+  color: var(--color-gray-6);
+  margin-top: 4px;
+}
+
+.invitation-actions {
+  flex-shrink: 0;
+  margin-left: 16px;
+  display: flex;
+  align-items: center;
+}

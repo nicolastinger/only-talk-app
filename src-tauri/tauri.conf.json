@@ -15,7 +15,7 @@
         "label": "main",
         "title": "用户登录",
         "width": 380,
-        "height": 680,
+        "height": 580,
         "resizable": true,
         "fullscreen": false,
         "dragDropEnabled": true,

@@ -2,9 +2,9 @@ use crate::service::chat_service::{
     create_group_chat_session_service, get_group_chat_session_service,
 };
 use crate::service::group_service::{
-    create_group, get_group_info, get_local_group_list, get_local_group_members, invite_group_members,
-    join_group, leave_group, remove_group_member_service, sync_group_list,
-    sync_group_members,
+    accept_group_invitation, create_group, decline_group_invitation, get_group_info,
+    get_local_group_list, get_local_group_members, invite_group_members, join_group,
+    leave_group, remove_group_member_service, sync_group_list, sync_group_members,
 };
 use crate::vo::group_vo::{CreateGroupRequest, GroupMemberVo, GroupVo};
 
@@ -32,16 +32,32 @@ pub async fn create_group_command(request: CreateGroupRequest) -> Result<GroupVo
     create_group(request).await.map_err(|e| e.to_string())
 }
 
-/// 邀请群成员
+/// 邀请群成员（发送邀请通知）
 #[tauri::command]
 pub async fn invite_group_members_command(
     group_id: String,
     user_ids: Vec<String>,
-) -> Result<(), String> {
+) -> Result<Vec<String>, String> {
     invite_group_members(&group_id, user_ids).await.map_err(|e| e.to_string())
 }
 
-/// 加入群聊
+/// 接受群邀请
+#[tauri::command]
+pub async fn accept_group_invitation_command(
+    group_id: String,
+) -> Result<(), String> {
+    accept_group_invitation(&group_id).await.map_err(|e| e.to_string())
+}
+
+/// 拒绝群邀请
+#[tauri::command]
+pub async fn decline_group_invitation_command(
+    group_id: String,
+) -> Result<(), String> {
+    decline_group_invitation(&group_id).await.map_err(|e| e.to_string())
+}
+
+/// 加入群聊（已废弃，改为 accept_group_invitation_command）
 #[tauri::command]
 pub async fn join_group_command(group_id: String) -> Result<(), String> {
     join_group(&group_id).await.map_err(|e| e.to_string())

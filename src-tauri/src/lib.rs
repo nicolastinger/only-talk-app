@@ -25,14 +25,15 @@ mod vo;
 use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
-    compress_image_to_webp_command, get_request, post_form_data_request, post_request,
-    upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request,
-    upload_multiple_files_with_extra_fields_request,
+    compress_image_to_webp_command, delete_request, get_request, post_form_data_request,
+    post_request, put_request, upload_file_request, upload_file_with_extra_fields_request,
+    upload_multiple_files_request, upload_multiple_files_with_extra_fields_request,
 };
 use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
 use crate::cmd::chat_record_controller::{
-    get_chat_record_by_type, get_chat_record_from_store, mark_read, send_file_msg, send_image_msg,
-    send_text_msg,
+    get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
+    mark_read, send_file_msg, send_group_file_msg, send_group_image_msg, send_group_text_msg,
+    send_image_msg, send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
     create_chat_session, get_chat_session_from_store, mark_read_chat_session,
@@ -44,10 +45,11 @@ use crate::cmd::friend_controller::{
     delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list,
 };
 use crate::cmd::group_controller::{
-    create_group_chat_session_command, create_group_command, get_group_chat_session_list,
-    get_group_info_command, get_group_list, get_group_members, invite_group_members_command,
-    join_group_command, leave_group_command, remove_group_member_command,
-    sync_group_list_command, sync_group_members_command,
+    accept_group_invitation_command, create_group_chat_session_command, create_group_command,
+    decline_group_invitation_command, get_group_chat_session_list, get_group_info_command,
+    get_group_list, get_group_members, invite_group_members_command, join_group_command,
+    leave_group_command, remove_group_member_command, sync_group_list_command,
+    sync_group_members_command,
 };
 use crate::cmd::notification_controller::{
     batch_read_system_notification, get_system_notification,
@@ -62,7 +64,7 @@ use crate::cmd::p2p_controller::{
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
     get_cached_user_info_by_account, get_quic_connection_state, get_user_map,
-    reconnect_quic_command, update_user_info_command,
+    get_user_info_with_cache, refresh_user_info, reconnect_quic_command, update_user_info_command,
 };
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
@@ -138,8 +140,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(generate_handler![
             send_text_msg,
+            send_group_text_msg,
+            send_group_image_msg,
+            send_group_file_msg,
             get_request,
             post_request,
+            put_request,
+            delete_request,
             upload_file_request,
             upload_file_with_extra_fields_request,
             upload_multiple_files_request,
@@ -172,6 +179,7 @@ pub fn run() {
             send_p2p_file_transfer_response,
             get_chat_record_from_store,
             get_chat_record_by_type,
+            get_group_chat_record_from_store,
             get_chat_session_from_store,
             get_friend_info,
             delete_friend_command,
@@ -194,12 +202,16 @@ pub fn run() {
             cache_user_info,
             get_cached_user_info,
             get_cached_user_info_by_account,
+            get_user_info_with_cache,
+            refresh_user_info,
             update_user_info_command,
             get_group_list,
             get_group_members,
             get_group_info_command,
             create_group_command,
             invite_group_members_command,
+            accept_group_invitation_command,
+            decline_group_invitation_command,
             join_group_command,
             leave_group_command,
             remove_group_member_command,

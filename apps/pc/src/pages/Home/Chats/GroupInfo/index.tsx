@@ -1,7 +1,8 @@
 import { useBearStore } from '@/store/store';
 import { history, useLocation } from '@umijs/max';
-import { GroupMemberVo, GroupVo } from '@workspace/types';
-import { Avatar, Button, List, Modal, Spin, Typography, message } from 'antd';
+import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
+import { get_friend_list, invite_group_members } from '@workspace/services';
+import { Avatar, Button, List, Modal, Select, Spin, Typography, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import React, { useEffect, useState } from 'react';
@@ -10,6 +11,10 @@ const GroupInfoPage: React.FC = () => {
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
   const [members, setMembers] = useState<GroupMemberVo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [friendList, setFriendList] = useState<FriendVo[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -81,7 +86,39 @@ const GroupInfoPage: React.FC = () => {
     }
   };
 
-  const isOwner = groupInfo?.owner_id === meUuid;
+  const openInviteModal = async () => {
+    try {
+      const friends = await get_friend_list();
+      const memberIds = new Set(members.map((m) => m.user_id));
+      const nonMembers = friends.filter((f) => !memberIds.has(f.friend_id));
+      setFriendList(nonMembers);
+      setSelectedFriends([]);
+      setInviteModalOpen(true);
+    } catch (err) {
+      console.log('获取好友列表失败', err);
+    }
+  };
+
+  const handleInvite = async () => {
+    if (selectedFriends.length === 0) {
+      message.warning('请选择要邀请的好友');
+      return;
+    }
+    setInviteLoading(true);
+    try {
+      const invited = await invite_group_members(groupId, selectedFriends);
+      message.success(`已向 ${invited.length} 位好友发送群邀请`);
+      setInviteModalOpen(false);
+      loadMembers();
+    } catch (err) {
+      message.error('邀请失败');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const isOwner = groupInfo?.owner_uuid === meUuid;
+  const isAdmin = members.some((m) => m.user_id === meUuid && m.role >= 1);
 
   return (
     <div style={{ padding: 24, maxWidth: 600, margin: '0 auto' }}>
@@ -94,10 +131,15 @@ const GroupInfoPage: React.FC = () => {
           <Typography.Text type="secondary">
             {groupInfo.member_count} 位成员
           </Typography.Text>
-          <div style={{ marginTop: 16, display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <div style={{ marginTop: 16, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button type="primary" onClick={handleStartChat}>
               进入群聊
             </Button>
+            {(isOwner || isAdmin) && (
+              <Button onClick={openInviteModal}>
+                邀请成员
+              </Button>
+            )}
             {!isOwner && (
               <Button danger onClick={handleLeaveGroup}>
                 退出群聊
@@ -138,6 +180,31 @@ const GroupInfoPage: React.FC = () => {
           )}
         />
       )}
+
+      <Modal
+        title="邀请成员"
+        open={inviteModalOpen}
+        onOk={handleInvite}
+        onCancel={() => setInviteModalOpen(false)}
+        confirmLoading={inviteLoading}
+        okText="邀请"
+        cancelText="取消"
+      >
+        <div style={{ marginBottom: 12, color: '#666' }}>
+          选择要邀请入群的好友，被邀请方将收到通知并可选择接受或拒绝。
+        </div>
+        <Select
+          mode="multiple"
+          style={{ width: '100%' }}
+          placeholder="选择好友"
+          value={selectedFriends}
+          onChange={setSelectedFriends}
+          options={friendList.map((f) => ({
+            label: f.friend_name || f.friend_id,
+            value: f.friend_id,
+          }))}
+        />
+      </Modal>
     </div>
   );
 };

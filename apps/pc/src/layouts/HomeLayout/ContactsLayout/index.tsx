@@ -1,10 +1,38 @@
 import SearchBar from '@/components/SearchBar';
 import FriendList from '@/pages/Home/Contacts/components/FriendList';
+import GroupList from '@/pages/Home/Contacts/components/GroupList';
 import { Outlet } from '@umijs/max';
-import { Splitter } from 'antd';
+import { Segmented, Splitter } from 'antd';
+import { UserOutlined, TeamOutlined } from '@ant-design/icons';
+import { useState } from 'react';
 import styles from './index.less';
 
+type ContactsTabType = 'friends' | 'groups';
+
 const ContactsLayout = () => {
+  const [activeTab, setActiveTab] = useState<ContactsTabType>('friends');
+
+  const tabOptions = [
+    {
+      value: 'friends',
+      label: (
+        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <UserOutlined />
+          <span>好友</span>
+        </div>
+      ),
+    },
+    {
+      value: 'groups',
+      label: (
+        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <TeamOutlined />
+          <span>群组</span>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <Splitter>
       <Splitter.Panel
@@ -16,8 +44,16 @@ const ContactsLayout = () => {
         <div className={styles.header}>
           <SearchBar />
         </div>
-        <div className={styles.item} key="chat">
-          <FriendList key={'contact'} />
+        <div className={styles.tabContainer}>
+          <Segmented
+            value={activeTab}
+            onChange={(value) => setActiveTab(value as ContactsTabType)}
+            options={tabOptions}
+            block
+          />
+        </div>
+        <div className={styles.item} key="contact">
+          {activeTab === 'friends' ? <FriendList /> : <GroupList />}
         </div>
       </Splitter.Panel>
       <Splitter.Panel className={styles.right}>

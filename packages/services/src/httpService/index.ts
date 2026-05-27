@@ -35,10 +35,11 @@ export const invoke_rust = async (
     },
   };
   try {
-    res.res = await invoke(method, {
-      url,
-      body,
-    });
+    if (method === "get_request") {
+      res.res = await invoke(method, { url });
+    } else {
+      res.res = await invoke(method, { url, body });
+    }
     res.netSuccess = true;
     if (res.res.status !== 200 && res.res.status !== 204) {
       res.error = HttpStatusMap.get(res.res.status);

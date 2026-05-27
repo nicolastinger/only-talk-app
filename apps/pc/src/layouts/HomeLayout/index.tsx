@@ -183,7 +183,7 @@ const HomeLayout = () => {
             <div className={styles.quicReconnectTip}>
               <span className={styles.tipIcon}>⚠️</span>
               <span className={styles.tipText}>
-                连接已断开，可点击重连按钮重新连接
+                连接已断开
               </span>
               <div
                 className={styles.tipReconnectButton}

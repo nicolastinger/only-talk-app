@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { CreateGroupRequest, FriendVo, GroupVo } from '@workspace/types';
+import { FriendVo, GroupVo } from '@workspace/types';
+import {
+  get_friend_list,
+  create_group,
+  invite_group_members,
+  create_group_chat_session,
+} from '@workspace/services';
 import { Modal, Input, Select, message } from 'antd';
-import React from 'react';
+import { history } from '@umijs/max';
 
 interface CreateGroupModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: (groupId?: string) => void;
+  onSuccess?: (groupId?: string) => void;
 }
 
 const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
@@ -30,7 +35,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   const loadFriends = async () => {
     try {
-      const friends: FriendVo[] = await invoke('get_friend_list');
+      const friends = await get_friend_list();
       setFriendList(friends);
     } catch (err) {
       console.log('获取好友列表失败', err);
@@ -44,14 +49,17 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     }
     setLoading(true);
     try {
-      const request: CreateGroupRequest = {
+      const group: GroupVo = await create_group({
         group_name: groupName.trim(),
-        group_icon: '',
-        member_ids: selectedFriends,
-      };
-      const group: GroupVo = await invoke('create_group_command', { request });
+      });
+      if (selectedFriends.length > 0) {
+        await invite_group_members(group.group_uuid, selectedFriends);
+      }
+      await create_group_chat_session(group.group_uuid);
       message.success('群聊创建成功');
-      onSuccess(group.group_id);
+      onSuccess?.(group.group_uuid);
+      onCancel();
+      history.push('/home/chats/group-chat?groupId=' + group.group_uuid);
     } catch (err) {
       console.log('创建群聊失败', err);
       message.error('创建群聊失败');
@@ -62,7 +70,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   return (
     <Modal
-      title="创建群聊"
+      title="发起群会话"
       open={visible}
       onOk={handleCreate}
       onCancel={onCancel}

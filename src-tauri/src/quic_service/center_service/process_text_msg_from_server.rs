@@ -1,5 +1,8 @@
 use std::time::Duration;
 
+use crate::service::chat_service::{
+    create_chat_session_service, create_group_chat_session_service,
+};
 use anyhow::anyhow;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
@@ -8,10 +11,12 @@ use tokio::time::timeout;
 use uuid::Uuid;
 use crate::dao::chat_record_ack::update_chat_record_ack;
 use crate::dao::chat_record_db::insert_chat_record;
+use crate::dao::group_chat_record_db::insert_group_chat_record;
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::chat_session::ChatSession;
+use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::p2p_models::P2pInitMsg;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
@@ -25,6 +30,7 @@ use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P,
     MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS,
     MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
+    MSG_TYPE_GROUP_TEXT, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_NOTIFICATION,
 };
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -64,6 +70,10 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
         match msg.text_type {
             // 聊天消息
             MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE => {
+                process_text_type(msg).await?;
+            }
+            // 群聊消息
+            MSG_TYPE_GROUP_TEXT | MSG_TYPE_GROUP_IMAGE | MSG_TYPE_GROUP_FILE => {
                 process_text_type(msg).await?;
             }
             // JSON信息
@@ -135,8 +145,26 @@ async fn is_group_message(recv_user: &str) -> bool {
 /// 处理纯文本消息
 async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
-    //1.插入数据库
-    insert_chat_record(&msg).await?;
+    
+    let me = get_user_info("uuid").await?;
+    let is_group = is_group_message(&msg.recv_user).await;
+
+    //1.插入数据库（群聊消息用群聊表，单聊消息用单聊表）
+    if is_group {
+        let record = GroupChatRecord {
+            id: 0,
+            nano_id: msg.nano_id.clone(),
+            text_type: msg.text_type,
+            raw: msg.raw.clone(),
+            group_id: msg.recv_user.clone(),
+            send_user: msg.send_user.clone(),
+            timestamp: msg.timestamp,
+        };
+        insert_group_chat_record(&record).await?;
+    } else {
+        insert_chat_record(&msg).await?;
+    }
+    
     let payload = serde_json::to_string(&msg)?;
 
     //2.发送消息给前端
@@ -161,6 +189,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
 
         let mut group_session = query_chat_session_by_user_db(&me, group_id).await?;
         if group_session.is_empty() {
+            create_group_chat_session_service(group_id.to_string()).await?;
             let mut chat_session = ChatSession {
                 id: 0,
                 nano_id: msg.nano_id,
@@ -171,7 +200,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
                 recv_user: me.clone(),
                 send_user: group_id.clone(),
                 session_type: 2,
-                is_show: 0,
+                is_show: 1,
                 is_top: 0,
                 group_id: Some(group_id.clone()),
             };
@@ -206,6 +235,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
         }
         let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
         if friend_session.is_empty() {
+            create_chat_session_service(friend_uuid.to_string()).await?;
             let mut chat_session = ChatSession {
                 id: 0,
                 nano_id: msg.nano_id,
@@ -222,6 +252,7 @@ async fn process_text_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Err
             };
             if flag {
                 chat_session.unread_count = 0;
+                update_chat_session_db(&chat_session).await?;
                 clear_chat_session(chat_session).await?;
             } else {
                 update_session_list(chat_session).await?;
