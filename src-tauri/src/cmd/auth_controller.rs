@@ -7,6 +7,7 @@ use tauri::command;
 
 use crate::cmd::api_controller::{post_request, ApiResponse};
 use crate::dto::http_result::HttpResult;
+use crate::entity::user_token::UserToken;
 use crate::service::user_service::{add_user_map, get_user_info, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
@@ -39,14 +40,20 @@ pub async fn sign_in(
     let port = parsed.port_or_known_default().unwrap_or(8443);
     let me_url = format!("https://{}:{}/user/me", &domain, &port);
 
-    let token = sign_in_result.data.as_str().ok_or("token is not a string")?;
-    info!("获取到的token: {}", token);
+    let data = sign_in_result.data.as_object().ok_or("sign_in data 不是 JSON 对象")?;
+    let access_token = data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
+    let refresh_token = data.get("refresh_token").and_then(|v| v.as_str()).ok_or("缺少 refresh_token")?;
+    info!("获取到的access_token: {}, refresh_token: {}", access_token, refresh_token);
 
     {
         GLOBAL_QUIC_USER_INFO
             .write()
             .await
-            .insert("token".to_string(), token.to_string());
+            .insert("token".to_string(), access_token.to_string());
+        GLOBAL_QUIC_USER_INFO
+            .write()
+            .await
+            .insert("refresh_token".to_string(), refresh_token.to_string());
         GLOBAL_QUIC_USER_INFO
             .write()
             .await
@@ -54,16 +61,90 @@ pub async fn sign_in(
     }
 
     let me_res = post_request(me_url, String::new()).await?;
-    if me_res.status == 200 {
+    let uuid = if me_res.status == 200 {
         let res: Value =
             serde_json::from_str(&me_res.body).map_err(|_| "解析用户信息失败".to_string())?;
         let data = res["data"].as_object().ok_or("me_res.body 不是 JSON 对象")?;
         let uuid = data["uuid"].as_str().ok_or("me_res.body 缺少 uuid 字段")?.to_string();
         add_user_map("uuid", &uuid).await.map_err(|e| e.to_string())?;
-    }
+        Some(uuid)
+    } else {
+        None
+    };
 
     user_login().await.map_err(|e| e.to_string())?;
+
+    // 持久化 refresh_token 到 user_token 表
+    if let Some(ref user_uuid) = uuid {
+        let local_credit = local_ip_address::local_ip()
+            .ok()
+            .map(|ip| ip.to_string())
+            .unwrap_or_default();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+        let user_token = UserToken {
+            id: None,
+            user_id: Some(user_uuid.clone()),
+            refresh_token: Some(refresh_token.to_string()),
+            local_credit: Some(local_credit),
+            created_at: Some(now),
+            updated_at: Some(now),
+            version: Some(0),
+        };
+        if let Err(e) = UserToken::upsert(&user_token).await {
+            info!("持久化 refresh_token 失败: {}", e);
+        }
+    }
+
     info!("登录成功");
+    Ok(ApiResponse { status, body: response_body })
+}
+
+/// 通过 refresh_token 刷新 access_token
+#[command]
+pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
+    let refresh_token = {
+        GLOBAL_QUIC_USER_INFO
+            .read()
+            .await
+            .get("refresh_token")
+            .cloned()
+            .ok_or("refresh_token 不存在，请重新登录")?
+    };
+
+    let refresh_url = format!("{}/refresh_token", url.trim_end_matches('/'));
+    let body = serde_json::json!({ "refresh_token": refresh_token });
+
+    let client = Client::new();
+    let response = client.post(&refresh_url).json(&body).send().await.map_err(|e| e.to_string())?;
+    let status = response.status().as_u16();
+    let response_body = response.text().await.map_err(|e| e.to_string())?;
+
+    let refresh_result: serde_json::Result<HttpResult> = serde_json::from_str(&response_body);
+    let refresh_result = match refresh_result {
+        Ok(t) => t,
+        Err(_) => {
+            return Err(response_body);
+        }
+    };
+
+    if refresh_result.code != 200 {
+        return Err(response_body);
+    }
+
+    let data = refresh_result.data.as_object().ok_or("refresh_token data 不是 JSON 对象")?;
+    let new_access_token = data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
+
+    {
+        GLOBAL_QUIC_USER_INFO
+            .write()
+            .await
+            .insert("token".to_string(), new_access_token.to_string());
+    }
+
+    info!("access_token 刷新成功");
     Ok(ApiResponse { status, body: response_body })
 }
 

@@ -29,7 +29,7 @@ use crate::cmd::api_controller::{
     post_request, put_request, upload_file_request, upload_file_with_extra_fields_request,
     upload_multiple_files_request, upload_multiple_files_with_extra_fields_request,
 };
-use crate::cmd::auth_controller::{clear_user_info, logout, sign_in};
+use crate::cmd::auth_controller::{clear_user_info, logout, refresh_token_command, sign_in};
 use crate::cmd::chat_record_controller::{
     get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
     mark_read, send_file_msg, send_group_file_msg, send_group_image_msg, send_group_text_msg,
@@ -154,6 +154,7 @@ pub fn run() {
             post_form_data_request,
             compress_image_to_webp_command,
             sign_in,
+            refresh_token_command,
             logout,
             clear_user_info,
             get_user_map,
