@@ -9,3 +9,13 @@ resource/
 logs/
 dbData/
 src-tauri/openssl-android/
+
+# Generated files by Tauri (auto-generated, should not be committed)
+src-tauri/gen/
+
+# Keystore / certificate files
+**/*.keystore
+**/*.jks
+
+# TLS config (keep only non-secret certs)
+src-tauri/config/TLS/
