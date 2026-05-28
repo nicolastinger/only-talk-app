@@ -32,4 +32,34 @@ interface TextQuicMsgVo {
   timestamp: number; //消息时间戳
 }
 
-export type { TextMsgRaw, TextQuicMsgVo, ImageRecord, FileRecord };
+interface GroupTextRecord {
+  text: string;
+  send_user: string;
+}
+
+interface GroupImageRecord {
+  biz_id: string;
+  file_name: string;
+  img_width: number;
+  img_height: number;
+  img_size: number;
+  send_user: string;
+}
+
+interface GroupFileRecord {
+  biz_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  send_user: string;
+}
+
+export type {
+  TextMsgRaw,
+  TextQuicMsgVo,
+  ImageRecord,
+  FileRecord,
+  GroupTextRecord,
+  GroupImageRecord,
+  GroupFileRecord,
+};

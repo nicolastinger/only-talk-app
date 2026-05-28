@@ -98,4 +98,14 @@ impl UserToken {
             .await?;
         Ok(())
     }
+
+    pub async fn query_all_valid() -> Result<Vec<UserToken>, Error> {
+        let pool_sqlite = get_common_db_client().await?;
+        let records = sqlx::query_as::<_, UserToken>(
+            r#"SELECT * FROM user_token WHERE refresh_token IS NOT NULL AND refresh_token != '' ORDER BY updated_at DESC"#,
+        )
+        .fetch_all(&pool_sqlite)
+        .await?;
+        Ok(records)
+    }
 }

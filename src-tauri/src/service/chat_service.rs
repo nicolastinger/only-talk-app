@@ -27,7 +27,9 @@ use crate::dao::session_db::{
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::dao::group_message_ack::insert_group_message_ack;
+use crate::dao::group_message_read::update_group_message_read;
 use crate::entity::group_message_ack::GroupMessageAck;
+use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::chat_record_raw::{
     ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
 };
@@ -121,6 +123,37 @@ pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow:
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     }
+    Ok(())
+}
+
+pub async fn update_group_last_read_msg_service(
+    group_uuid: String,
+    nano_id: String,
+    timestamp: i64,
+) -> Result<(), anyhow::Error> {
+    let user_uuid = get_user_map("uuid").await.map_err(|e| anyhow!(e))?;
+    
+    let record = GroupMessageRead {
+        id: 0,
+        nano_id,
+        group_uuid: group_uuid.clone(),
+        user_uuid: user_uuid.clone(),
+        timestamp,
+    };
+    
+    update_group_message_read(&record).await?;
+    
+    let mut group_session = query_chat_session_by_user_db(&user_uuid, &group_uuid).await?;
+    if !group_session.is_empty() {
+        let mut chat_session = group_session.remove(0);
+        chat_session.unread_count = 0;
+        update_chat_session_local_db(&chat_session).await?;
+        
+        let chat_session_event = ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+        let payload = serde_json::to_string(&chat_session_event)?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
+    }
+    
     Ok(())
 }
 
@@ -475,6 +508,7 @@ pub async fn send_group_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result
     // 序列化群聊消息内容
     let group_text_raw = GroupTextRecord {
         text: text_quic_msg.raw.clone(),
+        send_user: sender.clone(),
     };
     let raw = group_text_raw.json_serialize()?;
 
@@ -569,6 +603,7 @@ async fn update_group_session_after_send(
 
 /// 发送群聊图片消息（简化版，无prev_id和锁机制）
 pub async fn send_group_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
 
     // 1、压缩图片到当月资源目录
@@ -604,6 +639,7 @@ pub async fn send_group_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Resul
         img_width,
         img_height,
         img_size,
+        send_user: sender.clone(),
     };
 
     let image_raw = group_image_record.json_serialize()?;
@@ -620,6 +656,7 @@ pub async fn send_group_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Resul
 
 /// 发送群聊文件消息（简化版，无prev_id和锁机制）
 pub async fn send_group_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
     let path = Path::new(&file_path);
 
@@ -646,6 +683,7 @@ pub async fn send_group_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result
         file_name,
         file_size,
         file_type,
+        send_user: sender.clone(),
     };
 
     let file_raw = group_file_record.json_serialize()?;
@@ -663,6 +701,7 @@ pub async fn send_group_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GroupTextRecord {
     pub text: String,
+    pub send_user: String,
 }
 
 impl ChatRecordRaw for GroupTextRecord {
@@ -687,6 +726,7 @@ pub struct GroupImageRecord {
     pub img_width: i32,
     pub img_height: i32,
     pub img_size: i32,
+    pub send_user: String,
 }
 
 impl ChatRecordRaw for GroupImageRecord {
@@ -710,6 +750,7 @@ pub struct GroupFileRecord {
     pub file_name: String,
     pub file_size: i64,
     pub file_type: String,
+    pub send_user: String,
 }
 
 impl ChatRecordRaw for GroupFileRecord {

@@ -12,6 +12,7 @@ use crate::entity::group::Group;
 use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::group_member::GroupMember;
 use crate::entity::group_message_ack::GroupMessageAck;
+use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::user_info::UserInfo;
 use crate::entity::user_token::UserToken;
@@ -44,6 +45,7 @@ pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error
     init_sqlite::<ChatRecordSend>(pool_sqlite).await?;
     init_sqlite::<ChatRecordAck>(pool_sqlite).await?;
     init_sqlite::<GroupMessageAck>(pool_sqlite).await?;
+    init_sqlite::<GroupMessageRead>(pool_sqlite).await?;
     {
         // 本地存储初始化成功
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
@@ -59,6 +61,7 @@ pub async fn init_private_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Er
     init_sqlite::<ChatRecordSend>(pool_sqlite).await?;
     init_sqlite::<ChatRecordAck>(pool_sqlite).await?;
     init_sqlite::<GroupMessageAck>(pool_sqlite).await?;
+    init_sqlite::<GroupMessageRead>(pool_sqlite).await?;
     {
         // 本地存储初始化成功
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;

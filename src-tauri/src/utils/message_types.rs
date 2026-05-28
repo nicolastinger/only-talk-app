@@ -139,8 +139,11 @@ pub const MSG_TYPE_GROUP_IMAGE: u16 = 2002;
 /// 群文件消息
 pub const MSG_TYPE_GROUP_FILE: u16 = 2003;
 
-/// 群通知消息（成员变更等）
+/// 通知消息（成员变更等）
 pub const MSG_TYPE_GROUP_NOTIFICATION: u16 = 2004;
+
+/// 群消息已读回执
+pub const MSG_TYPE_GROUP_READ: u16 = 2005;
 
 /// 群消息接收成功回执
 pub const GROUP_MSG_TYPE_RECALL_SUCCESS: u16 = 2201;

@@ -9,7 +9,6 @@ import {
   GroupVo,
   MessageFrom,
   Page,
-  ResponseData,
   TextQuicMsgVo,
 } from '@workspace/types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -54,7 +53,7 @@ const GroupChatPage: React.FC = () => {
       const last_message = messageList[messageList.length - 1];
       last_nano_id = last_message.text_msg_raw.nano_id;
       if (last_nano_id !== '' && last_message.ack === undefined) {
-        markRead(last_nano_id);
+        markRead(last_nano_id, last_message.text_msg_raw.timestamp);
       }
     }
   }, [messageList]);
@@ -109,16 +108,14 @@ const GroupChatPage: React.FC = () => {
     }
   };
 
-  const markRead = async (last_read_record: string) => {
+  const markRead = async (nano_id: string, timestamp: number) => {
     try {
-      let lastList = [] as string[];
-      if (last_read_record) {
-        lastList.push(last_read_record);
-      }
-      const data: ResponseData = await invoke('mark_read', {
-        textQuicMsgVec: lastList,
+      await invoke('mark_group_read', {
+        groupUuid: groupId,
+        nanoId: nano_id,
+        timestamp: timestamp,
       });
-      console.log('已读', data);
+      console.log('群消息已读', nano_id);
     } catch (err) {
       console.log(err);
     }
@@ -167,12 +164,12 @@ const GroupChatPage: React.FC = () => {
           scrollToBottom();
         }, 100);
         if (chatMessages.length > 0) {
-          const last_read_record = chatMessages.reduce((latest, current) =>
+          const last_read_msg = chatMessages.reduce((latest, current) =>
             latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
               ? latest
               : current,
-          )?.text_msg_raw.nano_id;
-          markRead(last_read_record);
+          );
+          markRead(last_read_msg.text_msg_raw.nano_id, last_read_msg.text_msg_raw.timestamp);
         }
       } else {
         const container = messageContainerRef.current;

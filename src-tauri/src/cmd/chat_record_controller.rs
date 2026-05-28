@@ -9,7 +9,7 @@ use crate::service::chat_service::{
     get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
     send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
     send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
-    update_last_read_msg_from_db,
+    update_last_read_msg_from_db, update_group_last_read_msg_service,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -115,4 +115,16 @@ pub async fn get_group_chat_record_from_store(
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, String> {
     get_group_chat_record_service(group_id, page).await.map_err(|e| e.to_string())
+}
+
+/// 群消息已读
+#[tauri::command]
+pub async fn mark_group_read(
+    group_uuid: String,
+    nano_id: String,
+    timestamp: i64,
+) -> Result<(), String> {
+    update_group_last_read_msg_service(group_uuid, nano_id, timestamp)
+        .await
+        .map_err(|e| e.to_string())
 }

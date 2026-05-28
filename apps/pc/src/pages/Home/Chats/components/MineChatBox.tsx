@@ -273,22 +273,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           >
             {renderMessage(raw)}
             {ackFlag === 101 && (
-              <span className={styles.sentBadge}>
-                <svg
-                  width="10"
-                  height="8"
-                  viewBox="0 0 10 8"
-                  fill="none"
-                >
-                  <path
-                    d="M1 4L3.5 6.5L9 1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
+              <span className={styles.sentBadge} />
             )}
           </div>
           {ackFlag === 101 && (

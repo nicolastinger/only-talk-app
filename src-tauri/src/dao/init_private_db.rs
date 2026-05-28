@@ -67,11 +67,11 @@ async fn get_db_path() -> String {
         sleep(Duration::from_secs(3));
         panic!("获取应用路径失败");
     });
-    let account = get_user_map("account".to_string()).await.expect("获取用户信息失败");
+    let uuid = get_user_map("uuid".to_string()).await.expect("获取用户uuid失败");
     let sqlite_path = Path::new(&app_path).join(SQLITE_PATH);
 
-    let db_data_dir = Path::new(&app_path).join(SQLITE_PATH).join(&account);
-    let db_file_path = Path::new(&app_path).join(SQLITE_PATH).join(&account).join(PRIVATE_DB); // 路径拼接
+    let db_data_dir = Path::new(&app_path).join(SQLITE_PATH).join(&uuid);
+    let db_file_path = Path::new(&app_path).join(SQLITE_PATH).join(&uuid).join(PRIVATE_DB); // 路径拼接
 
     // 检查目录是否存在，不存在则新建
     if !sqlite_path.exists() {

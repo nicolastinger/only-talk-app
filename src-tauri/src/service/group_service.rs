@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use log::{error, info};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 

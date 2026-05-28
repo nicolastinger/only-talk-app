@@ -29,10 +29,10 @@ use crate::cmd::api_controller::{
     post_request, put_request, upload_file_request, upload_file_with_extra_fields_request,
     upload_multiple_files_request, upload_multiple_files_with_extra_fields_request,
 };
-use crate::cmd::auth_controller::{clear_user_info, logout, refresh_token_command, sign_in};
+use crate::cmd::auth_controller::{clear_user_info, delete_quick_login_user, get_quick_login_users, logout, quick_login, refresh_token_command, sign_in};
 use crate::cmd::chat_record_controller::{
     get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
-    mark_read, send_file_msg, send_group_file_msg, send_group_image_msg, send_group_text_msg,
+    mark_group_read, mark_read, send_file_msg, send_group_file_msg, send_group_image_msg, send_group_text_msg,
     send_image_msg, send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
@@ -157,6 +157,9 @@ pub fn run() {
             refresh_token_command,
             logout,
             clear_user_info,
+            get_quick_login_users,
+            quick_login,
+            delete_quick_login_user,
             get_user_map,
             add_user_map,
             send_video_frame,
@@ -181,6 +184,7 @@ pub fn run() {
             get_chat_record_from_store,
             get_chat_record_by_type,
             get_group_chat_record_from_store,
+            mark_group_read,
             get_chat_session_from_store,
             get_friend_info,
             delete_friend_command,

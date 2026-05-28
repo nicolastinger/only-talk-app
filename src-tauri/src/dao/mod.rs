@@ -13,6 +13,7 @@ pub mod group_chat_record_db;
 pub mod group_db;
 pub mod group_member_db;
 pub mod group_message_ack;
+pub mod group_message_read;
 pub mod init_common_db;
 pub mod init_db;
 pub mod init_private_db;

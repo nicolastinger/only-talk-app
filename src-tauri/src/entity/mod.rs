@@ -12,6 +12,7 @@ pub mod group;
 pub mod group_chat_record;
 pub mod group_member;
 pub mod group_message_ack;
+pub mod group_message_read;
 pub(crate) mod p2p_models;
 pub mod quic_connection;
 pub mod system_notification;
