@@ -20,7 +20,7 @@ use crate::quic_service::center_service::text_quic_client::run_client;
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
-use crate::service::group_service::sync_group_list;
+use crate::service::group_service::{pull_group_messages, sync_group_list};
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -261,7 +261,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
 }
 
 /// 获取未读通知
-async fn get_unread_notification() -> Result<(), anyhow::Error> {
+pub async fn get_unread_notification() -> Result<(), anyhow::Error> {
     let url = format!("{}/notify/get_user_unread_notification", TALK_API);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
     let data = result.body;
@@ -287,6 +287,19 @@ async fn get_unread_notification() -> Result<(), anyhow::Error> {
         }
     }
     Ok(())
+}
+
+/// 重连后同步离线消息（私聊 + 通知 + 群聊）
+pub async fn sync_offline_messages() {
+    get_unread_message()
+        .await
+        .unwrap_or_else(|e| error!("拉取私聊未读消息失败 {:?}", e));
+    get_unread_notification()
+        .await
+        .unwrap_or_else(|e| error!("拉取未读通知失败 {:?}", e));
+    pull_group_messages()
+        .await
+        .unwrap_or_else(|e| error!("拉取群聊未读消息失败 {:?}", e));
 }
 
 pub async fn get_user_map(key: &str) -> Result<String, String> {

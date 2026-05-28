@@ -1,5 +1,6 @@
 import DevAssistant from '@/components/DevAssistant';
 import { QuicDisconnectAlert } from '@/components/QuicDisconnectAlert';
+import SyncLoadingOverlay from '@/components/SyncLoadingOverlay';
 import { useP2pMessageApi, useWebRTCSignalApi } from '@/hooks';
 import { Outlet } from '@umijs/max';
 import styles from './styles/RootLayout.less';
@@ -13,6 +14,7 @@ const RootLayout: React.FC = () => {
       <Outlet />
       <DevAssistant />
       <QuicDisconnectAlert />
+      <SyncLoadingOverlay />
     </div>
   );
 };

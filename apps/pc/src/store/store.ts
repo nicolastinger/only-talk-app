@@ -29,6 +29,8 @@ interface BearState {
   setChats: (chats: number, isAdd: boolean) => void;
   refreshFlag: number;
   triggerRefresh: () => void;
+  isSyncing: boolean;
+  setIsSyncing: (isSyncing: boolean) => void;
 }
 
 export const useBearStore = create<BearState>()((set) => ({
@@ -118,4 +120,6 @@ export const useBearStore = create<BearState>()((set) => ({
   refreshFlag: 0,
   triggerRefresh: () =>
     set((state) => ({ refreshFlag: state.refreshFlag + 1 })),
+  isSyncing: false,
+  setIsSyncing: (isSyncing: boolean) => set({ isSyncing }),
 }));

@@ -13,7 +13,7 @@ use crate::quic_service::center_service::process_text_msg_from_server::process_m
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::quic_service::safe_configuration::configure_client;
-use crate::service::user_service::{get_user_info, insert_user_info};
+use crate::service::user_service::{get_user_info, insert_user_info, sync_offline_messages};
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::MSG_TYPE_PING;
 use crate::utils::time::get_now_time_stamp_as_millis;
@@ -60,6 +60,18 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
                     if let Some(handle) = APP_HANDLE.get() {
                         let _ = handle.emit("quic_connected", "QUIC 连接已恢复");
                     }
+                    // 后台拉取离线消息
+                    tokio::spawn(async move {
+                        // 通知前端开始同步
+                        if let Some(handle) = APP_HANDLE.get() {
+                            let _ = handle.emit("quic_sync_start", "开始同步离线消息");
+                        }
+                        sync_offline_messages().await;
+                        // 通知前端同步完成
+                        if let Some(handle) = APP_HANDLE.get() {
+                            let _ = handle.emit("quic_sync_complete", "离线消息同步完成");
+                        }
+                    });
                 }
 
                 // 等待断开信号（_endpoint 必须保持存活直到断开）

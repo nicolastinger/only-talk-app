@@ -8,15 +8,18 @@ use crate::dao::group_db::{get_last_group, query_group_list, soft_delete_group, 
 use crate::dao::group_member_db::{
     insert_group_member, query_group_members, remove_group_member, upsert_group_members,
 };
-use crate::dao::session_db::hide_group_session_db;
+use crate::dao::session_db::{hide_group_session_db, update_chat_session_db};
 use crate::dto::http_result::HttpResult;
+use crate::entity::chat_session::ChatSession;
 use crate::entity::group::Group;
+use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::group_member::GroupMember;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::TALK_API;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::group_vo::{CreateGroupApiRequest, CreateGroupRequest, GroupMemberVo, GroupVo};
+use std::collections::HashMap;
 
 fn parse_http_result(data: &str) -> Result<HttpResult, anyhow::Error> {
     serde_json::from_str::<HttpResult>(data).map_err(|e| anyhow!("解析响应失败: {}", e))
@@ -328,5 +331,134 @@ pub async fn process_group_notify_message(
             info!("处理其他群通知 {:?}", notification);
         }
     }
+    Ok(())
+}
+
+/// 群消息 VO（来自后端 HTTP API）
+#[derive(Debug, Deserialize, Serialize)]
+struct GroupMessageVO {
+    nano_id: String,
+    group_uuid: String,
+    send_user: String,
+    timestamp: i64,
+    raw: Vec<u8>,
+    msg_type: i16,
+    recalled: bool,
+}
+
+/// 未读计数 VO（来自后端 HTTP API）
+#[derive(Debug, Deserialize, Serialize)]
+struct UnreadCountVO {
+    group_uuid: String,
+    unread_count: i64,
+}
+
+/// 拉取群聊离线消息
+/// 先获取有未读消息的群列表，再逐个拉取历史消息并保存到本地 SQLite
+pub async fn pull_group_messages() -> Result<(), anyhow::Error> {
+    // 1. 获取有未读消息的群
+    let url = format!("{}/group/chat/message/unread", TALK_API);
+    let result = get_request(url).await.map_err(|e| anyhow!(e))?;
+    let response: HttpResult = parse_http_result(&result.body)?;
+
+    if response.code != 200 || response.data.is_null() {
+        info!("无群聊未读消息");
+        return Ok(());
+    }
+
+    let unread_groups: Vec<UnreadCountVO> = serde_json::from_value(response.data)?;
+    if unread_groups.is_empty() {
+        return Ok(());
+    }
+
+    info!("发现 {} 个群有未读消息", unread_groups.len());
+
+    let uuid = get_user_info("uuid").await?;
+    let mut session_map: HashMap<String, ChatSession> = HashMap::new();
+
+    for group in unread_groups {
+        // 2. 拉取该群的历史消息（最多 50 条）
+        let url = format!("{}/group/chat/message/history", TALK_API);
+        let dto = serde_json::json!({
+            "group_uuid": group.group_uuid,
+            "start": 0,
+            "size": 50
+        });
+        let body = serde_json::to_string(&dto)?;
+        let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
+        let resp: HttpResult = parse_http_result(&result.body)?;
+
+        if resp.code != 200 || resp.data.is_null() {
+            continue;
+        }
+
+        let messages: Vec<GroupMessageVO> = match serde_json::from_value(resp.data) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("解析群 {} 消息失败: {}", group.group_uuid, e);
+                continue;
+            }
+        };
+
+        info!("群 {} 拉取到 {} 条未读消息", group.group_uuid, messages.len());
+
+        for msg in messages {
+            // 3. 转换为 GroupChatRecord 并插入本地 DB
+            let raw_str = match String::from_utf8(msg.raw) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("群消息 raw 转换失败: {}", e);
+                    continue;
+                }
+            };
+
+            let record = GroupChatRecord {
+                id: 0,
+                nano_id: msg.nano_id,
+                text_type: msg.msg_type as u16,
+                raw: raw_str,
+                group_id: msg.group_uuid.clone(),
+                send_user: msg.send_user,
+                timestamp: msg.timestamp,
+            };
+
+            if let Err(e) = GroupChatRecord::insert(&record).await {
+                error!("插入群聊消息失败: {}", e);
+                continue;
+            }
+
+            // 4. 更新会话
+            let session = session_map.entry(msg.group_uuid.clone()).or_insert_with(|| ChatSession {
+                id: 0,
+                nano_id: record.nano_id.clone(),
+                timestamp: record.timestamp,
+                text_type: record.text_type,
+                unread_count: 0,
+                last_message: record.raw.clone(),
+                recv_user: uuid.clone(),
+                send_user: msg.group_uuid.clone(),
+                session_type: 2,
+                is_show: 1,
+                is_top: 0,
+                group_id: Some(msg.group_uuid.clone()),
+            });
+
+            session.unread_count += 1;
+            if session.timestamp < record.timestamp {
+                session.timestamp = record.timestamp;
+                session.last_message = record.raw;
+                session.text_type = record.text_type;
+                session.nano_id = record.nano_id;
+            }
+        }
+    }
+
+    // 5. 批量更新会话
+    for (_, session) in session_map {
+        if let Err(e) = update_chat_session_db(&session).await {
+            error!("更新群会话失败: {}", e);
+        }
+    }
+
     Ok(())
 }
