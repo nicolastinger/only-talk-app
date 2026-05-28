@@ -45,14 +45,15 @@ pub async fn query_group_message_ack_by_nano_id(nano_id: &str) -> Result<Option<
     Ok(record)
 }
 
-/// 更新群消息 ack 状态
-pub async fn update_group_message_ack_status(nano_id: &str, ack_status: u16) -> Result<(), anyhow::Error> {
+/// 更新群消息 ack 状态和 nano_id
+pub async fn update_group_message_ack_status(local_nano_id: &str, server_nano_id: &str, ack_status: u16) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     sqlx::query(
-        r#"UPDATE group_message_ack SET ack_status = ?1 WHERE local_nano_id = ?2"#,
+        r#"UPDATE group_message_ack SET nano_id = ?1, ack_status = ?2 WHERE local_nano_id = ?3"#,
     )
+    .bind(server_nano_id)
     .bind(ack_status)
-    .bind(nano_id)
+    .bind(local_nano_id)
     .execute(&pool_sqlite)
     .await?;
     Ok(())

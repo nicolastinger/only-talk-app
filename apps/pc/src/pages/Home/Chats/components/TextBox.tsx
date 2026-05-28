@@ -1,13 +1,42 @@
-import { TextMsgRaw } from '@workspace/types/src/backend';
 import React from 'react';
-import styles from './styles/TextBox.less';
 
-export const TextBox: React.FC<string> = (raw: string) => {
+type TextMsgRaw = {
+  text?: string;
+  content?: string;
+};
+
+export const TextBox = (raw: string): React.ReactNode => {
+  if (!raw) {
+    return '[空消息]';
+  }
+
   try {
-    const msg = JSON.parse(raw) as TextMsgRaw;
-    return <div className={styles.container}>{msg.text}</div>;
-  } catch (error) {
-    console.error('TextBox JSON解析失败:', error, '原始数据:', raw);
-    return <div className={styles.container}>[消息解析失败]</div>;
+    const parsed: TextMsgRaw = JSON.parse(raw);
+    const text = parsed.text || parsed.content || raw;
+    return (
+      <span
+        style={{
+          wordBreak: 'break-word',
+          whiteSpace: 'pre-wrap',
+          lineHeight: 1.5,
+        }}
+      >
+        {text}
+      </span>
+    );
+  } catch {
+    return (
+      <span
+        style={{
+          wordBreak: 'break-word',
+          whiteSpace: 'pre-wrap',
+          lineHeight: 1.5,
+        }}
+      >
+        {raw}
+      </span>
+    );
   }
 };
+
+export default TextBox;

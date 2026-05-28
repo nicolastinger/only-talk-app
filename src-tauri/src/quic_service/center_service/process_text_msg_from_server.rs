@@ -13,7 +13,6 @@ use crate::dao::chat_record_ack::update_chat_record_ack;
 use crate::dao::chat_record_db::insert_chat_record;
 use crate::dao::group_chat_record_db::insert_group_chat_record;
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
-use crate::dao::group_chat_record_db::insert_group_chat_record;
 use crate::dao::group_message_ack::{query_group_message_ack_by_local_nano_id, update_group_message_ack_status};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
@@ -396,7 +395,7 @@ async fn process_group_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
     // ack 成功后插入群聊记录
     let record = GroupChatRecord {
         id: 0,
-        nano_id: ack_record.nano_id.clone(),
+        nano_id: msg.nano_id.clone(),
         text_type: ack_record.text_type,
         raw: ack_record.raw.clone(),
         group_id: ack_record.group_uuid.clone(),
@@ -405,7 +404,7 @@ async fn process_group_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
     };
     insert_group_chat_record(&record).await?;
 
-    update_group_message_ack_status(&ack_record.local_nano_id, 1).await?;
+    update_group_message_ack_status(&ack_record.local_nano_id, &msg.nano_id, 1).await?;
 
     // emit 给前端：通知消息已送达
     let payload = serde_json::to_string(&msg)?;
