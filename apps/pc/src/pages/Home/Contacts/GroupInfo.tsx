@@ -168,7 +168,7 @@ const GroupInfoPage = () => {
           </div>
           {isOwner && (
             <div className={styles.button}>
-              <Button variant="outlined" color="default" block>
+              <Button variant="outlined" color="default" block onClick={() => history.push(`/home/chats/group-settings?groupId=${groupId}`)}>
                 群设置
               </Button>
             </div>

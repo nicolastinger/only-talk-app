@@ -44,6 +44,11 @@ const GroupTopBar: React.FC<GroupTopBarProps> = ({
       onClick: handleViewGroupInfo,
     },
     {
+      key: 'settings',
+      label: '群设置',
+      onClick: () => history.push(`/home/chats/group-settings?groupId=${groupId}`),
+    },
+    {
       type: 'divider',
     },
     {

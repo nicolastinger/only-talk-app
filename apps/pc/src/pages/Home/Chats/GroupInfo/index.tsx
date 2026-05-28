@@ -140,6 +140,11 @@ const GroupInfoPage: React.FC = () => {
                 邀请成员
               </Button>
             )}
+            {(isOwner || isAdmin) && (
+              <Button onClick={() => history.push(`/home/chats/group-settings?groupId=${groupId}`)}>
+                群设置
+              </Button>
+            )}
             {!isOwner && (
               <Button danger onClick={handleLeaveGroup}>
                 退出群聊

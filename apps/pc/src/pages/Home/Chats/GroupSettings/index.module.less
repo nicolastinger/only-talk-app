@@ -1,0 +1,250 @@
+.container {
+  height: 100%;
+  background-color: var(--color-white-bg);
+  color: var(--color-white-01);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--scrollbar-bg);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+.sidebar {
+  background-color: var(--color-gray-light);
+  border-right: 1px solid var(--color-gray-border-light);
+
+  .sidebarHeader {
+    padding: 16px;
+    border-bottom: 1px solid var(--color-gray-border-light);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .backBtn {
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--color-white-01);
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: var(--hover-bg-primary);
+      }
+    }
+
+    .groupName {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-white-01);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+  }
+
+  :global {
+    .ant-menu {
+      background: transparent;
+      border-right: none;
+    }
+
+    .ant-menu-item {
+      margin: 0;
+      height: 48px;
+      line-height: 48px;
+    }
+
+    .ant-menu-item-selected {
+      background-color: var(--color-info-bg) !important;
+    }
+  }
+}
+
+.content {
+  padding: 24px;
+  overflow-y: auto;
+  background-color: var(--color-white-bg);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-white-bg);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-light);
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb);
+  }
+}
+
+/* Basic Settings */
+.avatarSection {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+
+  .avatarWrapper {
+    position: relative;
+    cursor: pointer;
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 2px solid var(--color-gray-border-light);
+      transition: opacity 0.2s;
+
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+
+    .avatarOverlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      color: #fff;
+      font-size: 12px;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+
+  .avatarHint {
+    color: var(--color-gray-text);
+    font-size: 12px;
+  }
+}
+
+.formSection {
+  margin-bottom: 24px;
+
+  .formLabel {
+    display: block;
+    font-size: 13px;
+    color: var(--color-gray-text-dark);
+    margin-bottom: 8px;
+  }
+}
+
+/* Members */
+.memberListHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.memberItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-gray-border-light);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .memberInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+
+    .memberName {
+      font-size: 14px;
+      color: var(--color-white-01);
+    }
+
+    .memberId {
+      font-size: 12px;
+      color: var(--color-gray-text);
+    }
+
+    .roleTag {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-left: 4px;
+    }
+
+    .roleOwner {
+      background-color: rgba(250, 173, 20, 0.1);
+      color: #faad14;
+    }
+
+    .roleAdmin {
+      background-color: rgba(64, 150, 255, 0.1);
+      color: #4096ff;
+    }
+  }
+
+  .memberActions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+}
+
+/* Management */
+.dangerZone {
+  border: 1px solid var(--color-error-border);
+  border-radius: 8px;
+  padding: 16px;
+
+  .dangerTitle {
+    color: var(--color-error);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .dangerItem {
+    margin-bottom: 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .dangerDesc {
+      font-size: 12px;
+      color: var(--color-gray-text);
+      margin-top: 4px;
+    }
+  }
+}

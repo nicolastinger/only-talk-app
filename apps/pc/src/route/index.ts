@@ -71,6 +71,11 @@ const routes = [
                 path: 'group-info',
                 component: './Home/Chats/GroupInfo',
               },
+              {
+                name: 'menu.chats.groupSettings',
+                path: 'group-settings',
+                component: './Home/Chats/GroupSettings',
+              },
             ],
           },
           {
