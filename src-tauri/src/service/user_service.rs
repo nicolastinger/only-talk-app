@@ -222,6 +222,17 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     while count < 1000000 {
         // 校验定时任务key
         check_schedule_key(&key).await?;
+
+        // 同步中则跳过
+        {
+            let user_info = GLOBAL_QUIC_USER_INFO.read().await;
+            if user_info.get("is_syncing").map(|v| v == "true").unwrap_or(false) {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                count += 1;
+                continue;
+            }
+        }
+
         let last_chat_record = query_last_read_msg(&uuid, timestamp).await?;
         if !last_chat_record.is_empty() {
             let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
@@ -291,6 +302,12 @@ pub async fn get_unread_notification() -> Result<(), anyhow::Error> {
 
 /// 重连后同步离线消息（私聊 + 通知 + 群聊）
 pub async fn sync_offline_messages() {
+    // 设置同步中标志，阻止已读消息发送
+    {
+        let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
+        user_info.insert("is_syncing".to_string(), "true".to_string());
+    }
+
     get_unread_message()
         .await
         .unwrap_or_else(|e| error!("拉取私聊未读消息失败 {:?}", e));
@@ -300,6 +317,12 @@ pub async fn sync_offline_messages() {
     pull_group_messages()
         .await
         .unwrap_or_else(|e| error!("拉取群聊未读消息失败 {:?}", e));
+
+    // 同步完成，移除标志
+    {
+        let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
+        user_info.insert("is_syncing".to_string(), "false".to_string());
+    }
 }
 
 pub async fn get_user_map(key: &str) -> Result<String, String> {
