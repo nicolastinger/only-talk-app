@@ -14,12 +14,14 @@ use crate::entity::group_member::GroupMember;
 use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::user_info::UserInfo;
+use crate::entity::user_token::UserToken;
 use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 初始化公共数据库
 pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
     init_sqlite::<FileRecord>(pool_sqlite).await?;
     init_sqlite::<UserInfo>(pool_sqlite).await?;
+    init_sqlite::<UserToken>(pool_sqlite).await?;
     {
         // 本地存储初始化成功
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;

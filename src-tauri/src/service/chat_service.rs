@@ -27,9 +27,7 @@ use crate::dao::session_db::{
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::dao::group_message_ack::insert_group_message_ack;
-use crate::dao::group_chat_record_db::insert_group_chat_record;
 use crate::entity::group_message_ack::GroupMessageAck;
-use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::chat_record_raw::{
     ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
 };
@@ -474,30 +472,22 @@ pub async fn send_group_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result
     let timestamp = text_quic_msg.timestamp;
     let group_id = text_quic_msg.recv_user.clone();
 
-    // 写入群聊记录表
+    // 序列化群聊消息内容
     let group_text_raw = GroupTextRecord {
         text: text_quic_msg.raw.clone(),
     };
     let raw = group_text_raw.json_serialize()?;
-    
-    let record = GroupChatRecord {
-        id: 0,
-        nano_id: text_quic_msg.nano_id.clone(),
-        text_type: text_quic_msg.text_type,
-        raw: raw.clone(),
-        group_id: group_id.clone(),
-        send_user: sender.clone(),
-        timestamp,
-    };
-    insert_group_chat_record(&record).await?;
 
-    // 写入群消息 ack 表
+    // 写入群消息 ack 表（等待 ack 回执后再插入 group_chat_record）
     let ack = GroupMessageAck {
         id: 0,
         nano_id: text_quic_msg.nano_id.clone(),
+        local_nano_id: text_quic_msg.nano_id.clone(),
         group_uuid: group_id.clone(),
         send_user: sender.clone(),
+        text_type: text_quic_msg.text_type,
         ack_status: 0,
+        raw: raw.clone(),
         timestamp,
     };
     insert_group_message_ack(&ack).await?;

@@ -1,5 +1,6 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
+import { useGroupMessageAckApi } from '@/hooks/useGroupMessageAckApi';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
 import { useLocation } from '@umijs/max';
@@ -41,6 +42,7 @@ const GroupChatPage: React.FC = () => {
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(null as any, groupId);
+  const { groupAckMessage } = useGroupMessageAckApi(groupId);
 
   useEffect(() => {
     setRealFooterHeight(footerHeight + 6);
@@ -271,6 +273,25 @@ const GroupChatPage: React.FC = () => {
       }, 100);
     }
   }, [textMessage]);
+
+  // 处理群消息 ack 回执
+  useEffect(() => {
+    if (groupAckMessage) {
+      // raw 字段携带的是原消息的 nano_id
+      setMessageList((prevState) => {
+        const index = prevState.findIndex(
+          (item) => item.text_msg_raw.nano_id === groupAckMessage.raw,
+        );
+        if (index !== -1) {
+          prevState[index].ack = true;
+        }
+        return [...prevState];
+      });
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
+  }, [groupAckMessage]);
 
   const scrollToBottom = () => {
     const container = messageContainerRef.current;

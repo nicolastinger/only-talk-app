@@ -13,6 +13,8 @@ use crate::dao::chat_record_ack::update_chat_record_ack;
 use crate::dao::chat_record_db::insert_chat_record;
 use crate::dao::group_chat_record_db::insert_group_chat_record;
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
+use crate::dao::group_chat_record_db::insert_group_chat_record;
+use crate::dao::group_message_ack::{query_group_message_ack_by_local_nano_id, update_group_message_ack_status};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::chat_session::ChatSession;
@@ -27,10 +29,11 @@ use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::{get_user_info, insert_user_info};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
-    CURRENT_SESSION_FRIEND, MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P,
-    MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS,
-    MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
-    MSG_TYPE_GROUP_TEXT, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_NOTIFICATION,
+    CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_IMAGE,
+    MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER,
+    MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT,
+    MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG, MSG_TYPE_GROUP_TEXT, MSG_TYPE_GROUP_IMAGE,
+    MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_NOTIFICATION,
 };
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -114,6 +117,17 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                     }
                     Err(e) => {
                         error!("处理ack失败 {}", e);
+                    }
+                };
+            }
+            // 收到群消息ack
+            GROUP_MSG_TYPE_RECALL_SUCCESS => {
+                match process_group_ack_type(msg).await {
+                    Ok(_) => {
+                        info!("处理群ack成功");
+                    }
+                    Err(e) => {
+                        error!("处理群ack失败 {}", e);
                     }
                 };
             }
@@ -363,6 +377,40 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         group_id: if is_group { Some(recv_user) } else { None },
     };
     clear_chat_session(chat_session).await?;
+    Ok(())
+}
+
+/// 处理群ack消息
+async fn process_group_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    info!("收到群ack消息{:?}", text_quic_msg);
+    let msg = TextQuicMsgVo::from(text_quic_msg)?;
+
+    let ack_record = query_group_message_ack_by_local_nano_id(&msg.raw).await?;
+    let ack_record = ack_record.ok_or_else(|| anyhow!("群ack记录不存在: local_nano_id={}", msg.raw))?;
+
+    if ack_record.ack_status == 1 {
+        info!("群消息已经确认过，跳过重复处理: local_nano_id={}", msg.raw);
+        return Ok(());
+    }
+
+    // ack 成功后插入群聊记录
+    let record = GroupChatRecord {
+        id: 0,
+        nano_id: ack_record.nano_id.clone(),
+        text_type: ack_record.text_type,
+        raw: ack_record.raw.clone(),
+        group_id: ack_record.group_uuid.clone(),
+        send_user: ack_record.send_user.clone(),
+        timestamp: ack_record.timestamp,
+    };
+    insert_group_chat_record(&record).await?;
+
+    update_group_message_ack_status(&ack_record.local_nano_id, 1).await?;
+
+    // emit 给前端：通知消息已送达
+    let payload = serde_json::to_string(&msg)?;
+    APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("group_message_ack", payload)?;
+
     Ok(())
 }
 
