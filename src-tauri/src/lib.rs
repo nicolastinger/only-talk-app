@@ -36,7 +36,8 @@ use crate::cmd::chat_record_controller::{
     send_image_msg, send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
-    create_chat_session, get_chat_session_from_store, mark_read_chat_session,
+    clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
+    mark_read_chat_session,
 };
 use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
@@ -52,7 +53,7 @@ use crate::cmd::group_controller::{
     sync_group_members_command,
 };
 use crate::cmd::notification_controller::{
-    batch_read_system_notification, get_system_notification,
+    batch_read_system_notification, clear_all_unread_notifications, get_system_notification,
 };
 use crate::cmd::p2p_controller::{
     close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
@@ -194,7 +195,9 @@ pub fn run() {
             get_system_notification,
             update_local_friend_list,
             batch_read_system_notification,
+            clear_all_unread_notifications,
             mark_read_chat_session,
+            clear_all_unread_sessions,
             get_local_file,
             get_file_by_biz_id,
             get_chat_file_by_biz_id,

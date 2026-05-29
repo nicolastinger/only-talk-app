@@ -3,11 +3,12 @@ import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
 import CreateGroupModal from '@/pages/Home/Chats/components/CreateGroupModal';
 import { useBearStore } from '@/store/store';
+import { clearAllUnreadSessions } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
 import { history, Outlet, useLocation } from '@umijs/max';
 import { ChatSessionVo } from '@workspace/types';
-import { Button, Segmented, Splitter } from 'antd';
-import { MessageOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
+import { Button, Segmented, Splitter, Popconfirm } from 'antd';
+import { MessageOutlined, TeamOutlined, UsergroupAddOutlined, ClearOutlined } from '@ant-design/icons';
 import React, { useEffect, useState, useMemo } from 'react';
 import styles from './index.less';
 
@@ -150,6 +151,10 @@ const ChatsLayout = () => {
     }
   };
 
+  const handleClearAllUnread = async () => {
+    await clearAllUnreadSessions();
+  };
+
   const privateChatList = useMemo(() => {
     return chatSessionList.filter((item) => item.session_type !== 2);
   }, [chatSessionList]);
@@ -201,6 +206,19 @@ const ChatsLayout = () => {
             style={{ marginLeft: 8 }}
             title="创建群聊"
           />
+          <Popconfirm
+            title="确定清空所有未读消息？"
+            onConfirm={handleClearAllUnread}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button
+              type="text"
+              icon={<ClearOutlined />}
+              style={{ marginLeft: 4 }}
+              title="清空未读"
+            />
+          </Popconfirm>
         </div>
         <div className={styles.tabContainer}>
           <Segmented

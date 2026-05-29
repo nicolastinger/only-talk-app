@@ -19,3 +19,11 @@ pub async fn batch_read_system_notification(read_ids: Vec<String>) -> Result<i32
     let res = SystemNotification::batch_read(&me, read_ids).await.map_err(|e| e.to_string())?;
     Ok(res)
 }
+
+/// 一键清空所有未读通知
+#[tauri::command]
+pub async fn clear_all_unread_notifications() -> Result<(), String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    SystemNotification::clear_all_unread(&me).await.map_err(|e| e.to_string())?;
+    Ok(())
+}

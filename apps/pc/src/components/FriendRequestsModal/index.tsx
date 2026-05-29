@@ -5,6 +5,7 @@ import {
   ClockCircleOutlined,
   CloseOutlined,
   UserOutlined,
+  ClearOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -16,13 +17,14 @@ import {
   getFiles,
   process_friend_request,
   readContactsNotification,
+  clearAllUnreadNotifications,
 } from '@workspace/services';
 import {
   FriendRequestInfo,
   FriendRequestInfoDTO,
   UserInfo,
 } from '@workspace/types';
-import { Avatar, Button, Modal, Tabs } from 'antd';
+import { Avatar, Button, Modal, Tabs, Popconfirm } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 
@@ -45,6 +47,7 @@ const FriendRequestsModal = ({
   const [sentRequests, setSentRequests] = useState<RequestWithUserInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const setAddContacts = useBearStore((state) => state.setAddContacts);
+  const setMenuUnread = useBearStore((state) => state.setMenuUnread);
 
   useEffect(() => {
     if (visible) {
@@ -182,6 +185,11 @@ const FriendRequestsModal = ({
           icon: null,
         };
     }
+  };
+
+  const handleClearAll = async () => {
+    await clearAllUnreadNotifications(setMenuUnread);
+    await fetchData();
   };
 
   const handleAccept = async (requestUserId: string | undefined) => {
@@ -376,9 +384,21 @@ const FriendRequestsModal = ({
   return (
     <Modal
       title={
-        <span className={styles.modalTitle}>
-          {intl.formatMessage({ id: 'friendRequest.title' })}
-        </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className={styles.modalTitle}>
+            {intl.formatMessage({ id: 'friendRequest.title' })}
+          </span>
+          <Popconfirm
+            title="确定清空所有未读通知？"
+            onConfirm={handleClearAll}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="text" size="small" icon={<ClearOutlined />}>
+              清空未读
+            </Button>
+          </Popconfirm>
+        </div>
       }
       open={visible}
       onCancel={onClose}

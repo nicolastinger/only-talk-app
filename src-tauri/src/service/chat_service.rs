@@ -126,6 +126,32 @@ pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow:
     Ok(())
 }
 
+/// 一键清空所有未读会话
+pub async fn clear_all_unread_sessions_service() -> Result<(), anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+    let sessions = crate::dao::session_db::query_chat_session_db(&uuid).await?;
+    for session in sessions {
+        if session.unread_count > 0 {
+            let mut chat_session = ChatSession {
+                id: 0,
+                nano_id: session.nano_id,
+                timestamp: session.timestamp,
+                text_type: session.text_type,
+                unread_count: 0,
+                last_message: session.last_message,
+                recv_user: uuid.clone(),
+                send_user: session.send_user,
+                session_type: session.session_type,
+                is_show: session.is_show,
+                is_top: session.is_top,
+                group_id: session.group_id,
+            };
+            clear_chat_session(chat_session).await?;
+        }
+    }
+    Ok(())
+}
+
 pub async fn update_group_last_read_msg_service(
     group_uuid: String,
     nano_id: String,
