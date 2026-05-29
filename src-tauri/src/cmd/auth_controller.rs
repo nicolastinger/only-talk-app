@@ -115,7 +115,7 @@ pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
             .ok_or("refresh_token 不存在，请重新登录")?
     };
 
-    let refresh_url = format!("{}/refresh_token", url.trim_end_matches('/'));
+    let refresh_url = format!("{}/user/refresh_token", url.trim_end_matches('/'));
     let body = serde_json::json!({ "refresh_token": refresh_token });
 
     let client = Client::new();
