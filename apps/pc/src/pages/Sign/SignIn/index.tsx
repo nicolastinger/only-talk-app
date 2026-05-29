@@ -305,12 +305,14 @@ const LoginPage: React.FC = () => {
                   <LeftOutlined />
                 </div>
               )}
-              <div className={styles.avatarWrapper}>
-                {avatarUrl ? (
-                  <Avatar src={avatarUrl} size={80} />
-                ) : (
-                  <LocalImage width={80} height={80} />
-                )}
+              <div className={styles.avatarContainer}>
+                <div className={styles.avatarWrapper}>
+                  {avatarUrl ? (
+                    <Avatar src={avatarUrl} size={80} />
+                  ) : (
+                    <LocalImage width={80} height={80} />
+                  )}
+                </div>
                 <div className={styles.deleteBtn} onClick={handleDeleteUser}>
                   <DeleteOutlined />
                 </div>

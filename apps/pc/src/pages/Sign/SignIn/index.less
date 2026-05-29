@@ -142,8 +142,16 @@
   margin-bottom: 30px;
 }
 
-.avatarWrapper {
+.avatarContainer {
   position: relative;
+  margin-bottom: 16px;
+
+  &:hover .deleteBtn {
+    opacity: 1;
+  }
+}
+
+.avatarWrapper {
   width: 80px;
   height: 80px;
   border-radius: 50%;
@@ -153,11 +161,6 @@
   box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 0.3),
     0 0 60px rgba(100, 180, 255, 0.2);
   animation: avatarGlow 3s ease-in-out infinite alternate;
-  margin-bottom: 16px;
-
-  &:hover .deleteBtn {
-    opacity: 1;
-  }
 }
 
 @keyframes avatarGlow {
@@ -483,24 +486,25 @@
 
 .deleteBtn {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 24px;
-  height: 24px;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 77, 79, 0.8);
+  background: rgba(255, 77, 79, 0.9);
   color: var(--color-white);
-  font-size: 12px;
+  font-size: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0;
+  z-index: 10;
 
   &:hover {
     background: #ff4d4f;
-    transform: scale(1.1);
+    transform: scale(1.15);
   }
 
   &:active {
