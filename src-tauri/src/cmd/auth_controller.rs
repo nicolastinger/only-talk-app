@@ -45,7 +45,6 @@ pub async fn sign_in(
     let data = sign_in_result.data.as_object().ok_or("sign_in data 不是 JSON 对象")?;
     let access_token = data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
     let refresh_token = data.get("refresh_token").and_then(|v| v.as_str()).ok_or("缺少 refresh_token")?;
-    info!("获取到的access_token: {}, refresh_token: {}", access_token, refresh_token);
 
     {
         GLOBAL_QUIC_USER_INFO
