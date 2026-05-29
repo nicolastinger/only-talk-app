@@ -19,14 +19,6 @@ const DashboardPage: React.FC = () => {
         <div className={styles.text}>
           {intl.formatMessage({ id: 'chat.selectConversation' })}
         </div>
-        <Button
-          type="primary"
-          icon={<TeamOutlined />}
-          onClick={() => setCreateGroupVisible(true)}
-          className={styles.groupBtn}
-        >
-          发起群会话
-        </Button>
       </div>
       <CreateGroupModal
         visible={createGroupVisible}

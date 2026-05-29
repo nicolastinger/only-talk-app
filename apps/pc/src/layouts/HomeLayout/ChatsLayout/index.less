@@ -20,12 +20,11 @@
 .header {
   width: 100%;
   height: 48px;
-  padding: 2px 12px;
+  padding: 8px 12px;
   box-sizing: border-box;
-  position: relative;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  align-items: center;
+  gap: 8px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
@@ -130,5 +129,51 @@
 
   &:hover {
     background: rgba(64, 150, 255, 0.05);
+  }
+}
+
+.clearBtn {
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(249, 115, 22, 0.1) !important;
+  }
+
+  :global(.ant-btn-icon svg) {
+    color: #a1a1aa;
+    transition: all 0.3s ease;
+  }
+}
+
+.clearBtn:hover :global(.ant-btn-icon svg) {
+  color: #f97316 !important;
+}
+
+.clearIcon {
+  width: 18px;
+  height: 18px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.clearBtn:hover .clearIcon {
+  transform: scale(1.1);
+  animation: pulse 0.4s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1.1);
+  }
+  50% {
+    transform: scale(1.15);
   }
 }

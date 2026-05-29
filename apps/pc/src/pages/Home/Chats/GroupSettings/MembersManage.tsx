@@ -1,8 +1,9 @@
 import { useBearStore } from '@/store/store';
-import { get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
+import { invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
 import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
 import { Avatar, Button, Dropdown, Input, List, MenuProps, Modal, Select, Space, message, Tag } from 'antd';
 import { UserOutlined, PlusOutlined, MoreOutlined } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
 import styles from './index.module.less';
 
@@ -34,7 +35,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
 
   const loadFriends = async () => {
     try {
-      const friends = await get_friend_list();
+      const friends: FriendVo[] = await invoke('get_friend_list');
       const memberIds = new Set(members.map((m) => m.user_id));
       setFriendList(friends.filter((f) => !memberIds.has(f.friend_id)));
       setSelectedFriends([]);

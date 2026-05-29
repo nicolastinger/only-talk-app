@@ -1,25 +1,40 @@
 import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
-import CreateGroupModal from '@/pages/Home/Chats/components/CreateGroupModal';
 import { useBearStore } from '@/store/store';
 import { clearAllUnreadSessions } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
 import { history, Outlet, useLocation } from '@umijs/max';
 import { ChatSessionVo } from '@workspace/types';
 import { Button, Segmented, Splitter, Popconfirm } from 'antd';
-import { MessageOutlined, TeamOutlined, UsergroupAddOutlined, ClearOutlined } from '@ant-design/icons';
+import { MessageOutlined, TeamOutlined } from '@ant-design/icons';
 import React, { useEffect, useState, useMemo } from 'react';
 import styles from './index.less';
 
 type ChatTabType = 'private' | 'group';
+
+const ClearIcon = () => (
+  <svg
+    className={styles.clearIcon}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    <line x1="18" y1="2" x2="22" y2="6" />
+    <line x1="22" y1="2" x2="18" y2="6" />
+  </svg>
+);
 
 const ChatsLayout = () => {
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
     [],
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
-  const [createGroupVisible, setCreateGroupVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<ChatTabType>('private');
 
   const { userInfo } = useBearStore();
@@ -199,13 +214,6 @@ const ChatsLayout = () => {
         <div style={{ height: '100%' }}>
         <div className={styles.header}>
           <Search />
-          <Button
-            type="text"
-            icon={<UsergroupAddOutlined />}
-            onClick={() => setCreateGroupVisible(true)}
-            style={{ marginLeft: 8 }}
-            title="创建群聊"
-          />
           <Popconfirm
             title="确定清空所有未读消息？"
             onConfirm={handleClearAllUnread}
@@ -214,8 +222,8 @@ const ChatsLayout = () => {
           >
             <Button
               type="text"
-              icon={<ClearOutlined />}
-              style={{ marginLeft: 4 }}
+              icon={<ClearIcon />}
+              className={styles.clearBtn}
               title="清空未读"
             />
           </Popconfirm>
@@ -228,16 +236,6 @@ const ChatsLayout = () => {
             block
           />
         </div>
-        <CreateGroupModal
-          visible={createGroupVisible}
-          onCancel={() => setCreateGroupVisible(false)}
-          onSuccess={(groupId) => {
-            setCreateGroupVisible(false);
-            if (groupId) {
-              history.push('/home/chats/group-chat?groupId=' + groupId);
-            }
-          }}
-        />
         <div className={styles.item} key="chat">
           {currentList.map((item: ChatSessionVo) => {
             const sessionKey =

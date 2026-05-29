@@ -144,7 +144,9 @@
 
 .avatarContainer {
   position: relative;
-  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover .deleteBtn {
     opacity: 1;
@@ -161,6 +163,22 @@
   box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 0.3),
     0 0 60px rgba(100, 180, 255, 0.2);
   animation: avatarGlow 3s ease-in-out infinite alternate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  :global(.ant-avatar) {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 50% !important;
+  }
 }
 
 @keyframes avatarGlow {
@@ -171,11 +189,6 @@
     box-shadow: 0 0 30px rgba(100, 180, 255, 0.8),
       0 0 60px rgba(100, 180, 255, 0.5), 0 0 80px rgba(100, 180, 255, 0.3);
   }
-}
-
-.avatarWrapper img {
-  border-radius: 50%;
-  object-fit: cover;
 }
 
 .welcomeText {
@@ -407,6 +420,7 @@
 .quickLoginAvatar {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 20px;
   margin-bottom: 8px;
 }
@@ -486,17 +500,17 @@
 
 .deleteBtn {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 20px;
-  height: 20px;
+  top: -4px;
+  right: -4px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 77, 79, 0.9);
   color: var(--color-white);
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0;
