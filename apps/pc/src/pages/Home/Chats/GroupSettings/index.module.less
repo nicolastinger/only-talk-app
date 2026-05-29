@@ -1,93 +1,58 @@
 .container {
   height: 100%;
-  background-color: var(--color-white-bg);
-  color: var(--color-white-01);
-
-  &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: var(--scrollbar-bg);
-    border-radius: 10px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 10px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover);
-  }
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-gray-lighter);
+  overflow: hidden;
 }
 
-.sidebar {
-  background-color: var(--color-gray-light);
-  border-right: 1px solid var(--color-gray-border-light);
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--color-white-bg);
+  border-bottom: 1px solid var(--color-gray-border-light);
+  flex-shrink: 0;
 
-  .sidebarHeader {
-    padding: 16px;
-    border-bottom: 1px solid var(--color-gray-border-light);
+  .backBtn {
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--color-gray-text-darker);
+    padding: 6px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    transition: background-color 0.2s;
+    width: 32px;
+    height: 32px;
 
-    .backBtn {
-      cursor: pointer;
-      font-size: 16px;
-      color: var(--color-white-01);
-      padding: 4px;
-      border-radius: 4px;
-      transition: background-color 0.2s;
-
-      &:hover {
-        background-color: var(--hover-bg-primary);
-      }
-    }
-
-    .groupName {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--color-white-01);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
+    &:hover {
+      background-color: var(--hover-bg-primary);
     }
   }
 
-  :global {
-    .ant-menu {
-      background: transparent;
-      border-right: none;
-    }
-
-    .ant-menu-item {
-      margin: 0;
-      height: 48px;
-      line-height: 48px;
-    }
-
-    .ant-menu-item-selected {
-      background-color: var(--color-info-bg) !important;
-    }
+  .headerTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-text-darker);
   }
 }
 
-.content {
-  padding: 24px;
+/* Scrollable content */
+.scrollContent {
+  flex: 1;
   overflow-y: auto;
-  background-color: var(--color-white-bg);
+  padding: 0;
 
   &::-webkit-scrollbar {
     width: 6px;
   }
 
   &::-webkit-scrollbar-track {
-    background: var(--color-white-bg);
-    border-radius: 10px;
+    background: transparent;
   }
 
   &::-webkit-scrollbar-thumb {
@@ -100,117 +65,343 @@
   }
 }
 
-/* Basic Settings */
-.avatarSection {
+/* Loading */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background-color: var(--color-white-bg);
+
+  .loadingText {
+    color: var(--color-gray-text);
+    font-size: 14px;
+  }
+}
+
+/* Group header - avatar + name */
+.groupHeader {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 24px;
+  padding: 24px 20px;
+  background-color: var(--color-white-bg);
+  border-bottom: 1px solid var(--color-gray-border-light);
 
   .avatarWrapper {
-    position: relative;
-    cursor: pointer;
+    flex-shrink: 0;
 
-    .avatar {
-      width: 80px;
-      height: 80px;
+    .groupAvatar {
       border-radius: 12px;
-      object-fit: cover;
-      border: 2px solid var(--color-gray-border-light);
-      transition: opacity 0.2s;
-
-      &:hover {
-        opacity: 0.8;
-      }
-    }
-
-    .avatarOverlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: rgba(0, 0, 0, 0.4);
-      border-radius: 12px;
-      opacity: 0;
-      transition: opacity 0.2s;
-      color: #fff;
-      font-size: 12px;
-
-      &:hover {
-        opacity: 1;
-      }
+      box-shadow: var(--shadow-sm);
     }
   }
 
-  .avatarHint {
+  .groupNameSection {
+    flex: 1;
+    min-width: 0;
+
+    .nameRow {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+
+      .groupName {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--color-gray-text-darker);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .editNameRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .nameInput {
+        flex: 1;
+      }
+    }
+
+    .memberCount {
+      font-size: 13px;
+      color: var(--color-gray-text);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+/* Description */
+.descSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background-color: var(--color-white-bg);
+  border-bottom: 1px solid var(--color-gray-border-light);
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--bg-black-02);
+  }
+
+  .descText {
+    font-size: 13px;
+    color: var(--color-gray-text-dark);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+
+  .descEditIcon {
+    color: var(--color-gray-text);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+}
+
+.descEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background-color: var(--color-white-bg);
+  border-bottom: 1px solid var(--color-gray-border-light);
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--bg-black-02);
+  }
+
+  span {
+    font-size: 13px;
+    color: var(--color-gray-text);
+  }
+
+  .descEditIcon {
     color: var(--color-gray-text);
     font-size: 12px;
   }
 }
 
-.formSection {
-  margin-bottom: 24px;
-
-  .formLabel {
-    display: block;
-    font-size: 13px;
-    color: var(--color-gray-text-dark);
-    margin-bottom: 8px;
-  }
-}
-
-/* Members */
-.memberListHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.memberItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
+.descEditSection {
+  padding: 12px 20px;
+  background-color: var(--color-white-bg);
   border-bottom: 1px solid var(--color-gray-border-light);
 
-  &:last-child {
-    border-bottom: none;
+  .descEditActions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+}
+
+/* Section */
+.section {
+  margin-top: 12px;
+  background-color: var(--color-white-bg);
+
+  .sectionTitle {
+    font-size: 12px;
+    color: var(--color-gray-text);
+    padding: 10px 20px 6px;
+    font-weight: 500;
+  }
+}
+
+/* Members grid - QQ style */
+.memberGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 20px 16px;
+
+  .memberGridItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 56px;
+    cursor: default;
+
+    .memberAvatar {
+      border-radius: 8px;
+    }
+
+    .addMemberBtn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px dashed var(--color-gray-border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background-color: var(--color-gray-3);
+
+      &:hover {
+        border-color: var(--color-primary);
+        background-color: var(--color-primary-bg);
+
+        .addIcon {
+          color: var(--color-primary);
+        }
+      }
+
+      .addIcon {
+        font-size: 18px;
+        color: var(--color-gray-text-dark);
+        transition: color 0.2s;
+      }
+    }
+
+    .moreMembersBtn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background-color: var(--color-gray-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: var(--color-primary-bg);
+      }
+
+      .moreText {
+        font-size: 11px;
+        color: var(--color-gray-text-dark);
+        font-weight: 600;
+      }
+    }
+
+    .memberGridLabel {
+      font-size: 11px;
+      color: var(--color-gray-text-dark);
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 100%;
+      text-align: center;
+    }
+
+    .meTag {
+      margin: 2px 0 0 !important;
+      padding: 0 4px !important;
+      font-size: 10px !important;
+      line-height: 16px !important;
+      height: 16px !important;
+    }
+  }
+}
+
+/* Info list */
+.infoList {
+  .infoItem {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: default;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: var(--bg-black-02);
+    }
+
+    .infoIcon {
+      font-size: 16px;
+      color: var(--color-gray-text);
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+    }
+
+    .infoLabel {
+      font-size: 14px;
+      color: var(--color-gray-text-dark);
+      flex-shrink: 0;
+      width: 80px;
+    }
+
+    .infoValue {
+      font-size: 14px;
+      color: var(--color-gray-text-darker);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+      margin-right: 8px;
+    }
+
+    .arrow {
+      font-size: 18px;
+      color: var(--color-gray-text);
+      flex-shrink: 0;
+    }
+  }
+}
+
+/* Member search */
+.memberSearch {
+  margin: 0 16px 12px;
+  width: calc(100% - 32px);
+
+  :global {
+    .ant-input {
+      border-radius: 8px;
+      background-color: var(--color-gray-3);
+      border: none;
+    }
+  }
+}
+
+/* Member list items */
+.memberListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--bg-black-02);
   }
 
-  .memberInfo {
+  .memberListItemInfo {
     display: flex;
     align-items: center;
     gap: 12px;
     flex: 1;
     min-width: 0;
 
-    .memberName {
-      font-size: 14px;
-      color: var(--color-white-01);
-    }
+    .memberTextInfo {
+      flex: 1;
+      min-width: 0;
 
-    .memberId {
-      font-size: 12px;
-      color: var(--color-gray-text);
-    }
+      .memberListItemName {
+        font-size: 14px;
+        color: var(--color-gray-text-darker);
+      }
 
-    .roleTag {
-      font-size: 11px;
-      padding: 1px 6px;
-      border-radius: 3px;
-      margin-left: 4px;
-    }
-
-    .roleOwner {
-      background-color: rgba(250, 173, 20, 0.1);
-      color: #faad14;
-    }
-
-    .roleAdmin {
-      background-color: rgba(64, 150, 255, 0.1);
-      color: #4096ff;
+      .memberItemId {
+        font-size: 12px;
+        color: var(--color-gray-text);
+      }
     }
   }
 
@@ -218,33 +409,53 @@
     display: flex;
     gap: 4px;
     flex-shrink: 0;
+
+    .actionBtn {
+      font-size: 12px;
+      padding: 2px 8px;
+    }
   }
 }
 
-/* Management */
-.dangerZone {
-  border: 1px solid var(--color-error-border);
-  border-radius: 8px;
+/* Role tags */
+.roleTag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+.roleOwner {
+  background-color: rgba(250, 173, 20, 0.1);
+  color: #faad14;
+}
+
+.roleAdmin {
+  background-color: rgba(64, 150, 255, 0.1);
+  color: #4096ff;
+}
+
+/* Danger zone buttons */
+.section:last-of-type {
   padding: 16px;
 
-  .dangerTitle {
-    color: var(--color-error);
+  .dangerBtn {
+    border-radius: 8px;
+    height: 40px;
     font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 12px;
   }
 
-  .dangerItem {
-    margin-bottom: 12px;
+  .transferBtn {
+    border-radius: 8px;
+    height: 40px;
+    font-size: 14px;
+    border: 1px solid var(--color-gray-border-light);
+    color: var(--color-gray-text-darker);
+    background-color: var(--color-white-bg);
 
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    .dangerDesc {
-      font-size: 12px;
-      color: var(--color-gray-text);
-      margin-top: 4px;
+    &:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
     }
   }
 }
