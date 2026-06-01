@@ -177,6 +177,39 @@ impl SystemNotification {
         .await?;
         Ok(())
     }
+
+    /// 查询各模块未读通知数量
+    /// 返回 { contacts: level2=1的未读数, groups: level2=3的未读数 }
+    pub async fn get_unread_counts(user_id: &str) -> Result<UnreadCounts, anyhow::Error> {
+        let pool_sqlite = get_db_client().await?;
+        let row = sqlx::query(
+            r#"
+            SELECT
+                SUM(CASE WHEN level2 = 1 THEN 1 ELSE 0 END) as contacts_unread,
+                SUM(CASE WHEN level2 = 3 THEN 1 ELSE 0 END) as groups_unread
+            FROM system_notification
+            WHERE user_id = ? AND is_read = 0
+            "#,
+        )
+        .bind(user_id)
+        .fetch_one(&pool_sqlite)
+        .await?;
+
+        let contacts: i64 = row.try_get(0).unwrap_or(0);
+        let groups: i64 = row.try_get(1).unwrap_or(0);
+
+        Ok(UnreadCounts {
+            contacts: contacts as i32,
+            groups: groups as i32,
+        })
+    }
+}
+
+/// 各模块未读数量
+#[derive(Debug, Serialize)]
+pub struct UnreadCounts {
+    pub contacts: i32,
+    pub groups: i32,
 }
 
 impl SqliteStore for SystemNotification {

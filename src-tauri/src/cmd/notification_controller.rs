@@ -1,4 +1,4 @@
-use crate::entity::system_notification::SystemNotification;
+use crate::entity::system_notification::{SystemNotification, UnreadCounts};
 use crate::service::user_service::get_user_info;
 
 /// 获取系统通知信息
@@ -42,4 +42,13 @@ pub async fn clear_unread_by_level(
         .await
         .map_err(|e| e.to_string())?;
     Ok(res)
+}
+
+/// 查询各模块未读通知数量（从 SQLite 实时查询）
+#[tauri::command]
+pub async fn get_unread_notification_counts() -> Result<UnreadCounts, String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    SystemNotification::get_unread_counts(&me)
+        .await
+        .map_err(|e| e.to_string())
 }

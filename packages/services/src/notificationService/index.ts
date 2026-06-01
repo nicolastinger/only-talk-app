@@ -1,15 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export const readContactsNotification = async (
-  ids: string[],
-  setAddContacts: (addContacts: number) => void
-) => {
+export const readContactsNotification = async (ids: string[]) => {
   try {
     const res = (await invoke("batch_read_system_notification", {
       readIds: ids,
     })) as number;
     if (res <= 0) return;
-    setAddContacts(-res);
   } catch (e) {
     console.log("读取联系人通知失败", e);
   }
@@ -63,5 +59,19 @@ export const clearUnreadByLevel = async (
   } catch (e) {
     console.log("按层级清除未读通知失败", e);
     return 0;
+  }
+};
+
+/**
+ * 从 SQLite 实时查询各模块未读通知数量
+ */
+export const getUnreadNotificationCounts = async () => {
+  try {
+    return await invoke<{ contacts: number; groups: number }>(
+      "get_unread_notification_counts"
+    );
+  } catch (e) {
+    console.log("查询未读通知数量失败", e);
+    return { contacts: 0, groups: 0 };
   }
 };

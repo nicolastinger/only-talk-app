@@ -15,7 +15,7 @@ use crate::dao::group_chat_record_db::insert_group_chat_record;
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
 use crate::dao::group_message_ack::{query_group_message_ack_by_local_nano_id, update_group_message_ack_status};
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
-use crate::emit_app::emit_controller::{emit_unread_count, process_p2p_msg, send_notify_msg};
+use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::p2p_models::P2pInitMsg;
@@ -429,8 +429,6 @@ async fn process_notify_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
     let payload = serde_json::to_string(&system_notification)?;
     // 发送完整通知数据给前端
     send_notify_msg(&payload)?;
-    // 发送未读数量更新给前端
-    emit_unread_count(&system_notification)?;
     // 处理对应通知类型
     match system_notification.level1.ok_or(anyhow!("level1为空"))? {
         1 => {

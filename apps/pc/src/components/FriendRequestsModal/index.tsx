@@ -18,6 +18,7 @@ import {
   process_friend_request,
   readContactsNotification,
   clearUnreadByLevel,
+  getUnreadNotificationCounts,
 } from '@workspace/services';
 import {
   FriendRequestInfo,
@@ -46,7 +47,21 @@ const FriendRequestsModal = ({
   );
   const [sentRequests, setSentRequests] = useState<RequestWithUserInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  const setAddContacts = useBearStore((state) => state.setAddContacts);
+  const setMenuUnread = useBearStore((state) => state.setMenuUnread);
+
+  const refreshUnreadCounts = async () => {
+    try {
+      const counts = await getUnreadNotificationCounts();
+      setMenuUnread({
+        contacts: counts.contacts,
+        groups: counts.groups,
+        system: 0,
+        settings: 0,
+      });
+    } catch (e) {
+      console.log('刷新未读通知数量失败', e);
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -127,7 +142,7 @@ const FriendRequestsModal = ({
           .map((item) => item.uuid)
           .filter((item) => item !== undefined);
         if (ids && ids.length > 0) {
-          await readContactsNotification(ids, setAddContacts);
+          await readContactsNotification(ids);
         }
       }
     } catch (e) {
@@ -149,7 +164,7 @@ const FriendRequestsModal = ({
           .map((item) => item.uuid)
           .filter((item) => item !== undefined);
         if (ids && ids.length > 0) {
-          await readContactsNotification(ids, setAddContacts);
+          await readContactsNotification(ids);
         }
       }
     } catch (e) {
@@ -187,11 +202,8 @@ const FriendRequestsModal = ({
   };
 
   const handleClearAll = async () => {
-    // 清除所有好友模块未读通知（level1=1, level2=1, level3/level4通配）
-    const affected = await clearUnreadByLevel(1, 1, -1, -1);
-    if (affected > 0) {
-      setAddContacts(-(affected));
-    }
+    await clearUnreadByLevel(1, 1, -1, -1);
+    refreshUnreadCounts();
     await fetchData();
   };
 

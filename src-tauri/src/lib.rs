@@ -53,7 +53,7 @@ use crate::cmd::group_controller::{
     sync_group_members_command,
 };
 use crate::cmd::notification_controller::{
-    batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level, get_system_notification,
+    batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level, get_system_notification, get_unread_notification_counts,
 };
 use crate::cmd::p2p_controller::{
     close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
@@ -197,6 +197,7 @@ pub fn run() {
             batch_read_system_notification,
             clear_all_unread_notifications,
             clear_unread_by_level,
+            get_unread_notification_counts,
             mark_read_chat_session,
             clear_all_unread_sessions,
             get_local_file,

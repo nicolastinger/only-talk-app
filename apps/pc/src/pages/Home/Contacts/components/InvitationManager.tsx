@@ -5,6 +5,7 @@ import {
   accept_group_invitation,
   decline_group_invitation,
   clearUnreadByLevel,
+  getUnreadNotificationCounts,
 } from '@workspace/services';
 import { Modal, Tabs, Tag, Empty, Button, message, Popconfirm } from 'antd';
 import { ClearOutlined } from '@ant-design/icons';
@@ -35,7 +36,21 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
 }) => {
   const [receivedList, setReceivedList] = useState<GroupInvitationVo[]>([]);
   const [sentList, setSentList] = useState<GroupInvitationVo[]>([]);
-  const setAddGroups = useBearStore((state) => state.setAddGroups);
+  const setMenuUnread = useBearStore((state) => state.setMenuUnread);
+
+  const refreshUnreadCounts = async () => {
+    try {
+      const counts = await getUnreadNotificationCounts();
+      setMenuUnread({
+        contacts: counts.contacts,
+        groups: counts.groups,
+        system: 0,
+        settings: 0,
+      });
+    } catch (e) {
+      console.log('刷新未读通知数量失败', e);
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -58,11 +73,8 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
   };
 
   const handleClearUnread = async () => {
-    // 清除所有群组模块未读通知（level1=1, level2=3, level3/level4通配）
-    const affected = await clearUnreadByLevel(1, 3, -1, -1);
-    if (affected > 0) {
-      setAddGroups(-affected);
-    }
+    await clearUnreadByLevel(1, 3, -1, -1);
+    refreshUnreadCounts();
     message.success('已清空群组邀请未读');
   };
 
