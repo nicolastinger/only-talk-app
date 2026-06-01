@@ -27,3 +27,19 @@ pub async fn clear_all_unread_notifications() -> Result<(), String> {
     SystemNotification::clear_all_unread(&me).await.map_err(|e| e.to_string())?;
     Ok(())
 }
+
+/// 按层级条件批量清除未读通知
+/// level 参数传 -1 表示通配该层级所有值
+#[tauri::command]
+pub async fn clear_unread_by_level(
+    level1: i32,
+    level2: i32,
+    level3: i32,
+    level4: i32,
+) -> Result<i32, String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    let res = SystemNotification::clear_unread_by_level(&me, level1, level2, level3, level4)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(res)
+}

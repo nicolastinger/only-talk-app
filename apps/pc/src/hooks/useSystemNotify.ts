@@ -9,8 +9,6 @@ const useSystemNotify = (recvUuid: string) => {
   const setMenuUnread = useBearStore((state) => state.setMenuUnread);
   const setAddContacts = useBearStore((state) => state.setAddContacts);
   const setAddGroups = useBearStore((state) => state.setAddGroups);
-  const setAddSystem = useBearStore((state) => state.setAddSystem);
-  const setAddSettings = useBearStore((state) => state.setAddSettings);
 
   useEffect(() => {
     if (recvUuid === '') {
@@ -18,38 +16,40 @@ const useSystemNotify = (recvUuid: string) => {
     }
 
     initSystemNotify();
-    let unlisten: (() => void) | undefined;
+    let unlistenNotify: (() => void) | undefined;
+    let unlistenUnread: (() => void) | undefined;
 
     const setupListener = async () => {
-      unlisten = await listen<string>('listen_notify_msg', (event) => {
+      // 监听完整通知数据（用于通知中心面板展示）
+      unlistenNotify = await listen<string>('listen_notify_msg', (event) => {
         try {
           const notify = JSON.parse(event.payload) as SystemNotification;
-          // 只监听当前用户的通知
-          if (notify.user_id !== recvUuid) {
-            return;
-          }
-          // 系统通知
-          if (notify.level1 === 1) {
-            // 用户模块
-            if (notify.level2 === 1) {
-              setAddContacts(notify?.unread_count || 0);
-            }
-            // 群聊模块
-            if (notify.level2 === 3) {
-              setAddGroups(notify?.unread_count || 0);
-            }
-          }
-          console.log('接受到系统通知', notify);
+          console.log('接收到系统通知', notify);
         } catch (e) {
           console.log('接受信息错误', e);
         }
       });
+
+      // 监听未读数量更新（自动按模块分发）
+      unlistenUnread = await listen<{ module: string; count: number }>(
+        'listen_unread_count',
+        (event) => {
+          const { module, count } = event.payload;
+          if (module === 'contacts') {
+            setAddContacts(count);
+          } else if (module === 'groups') {
+            setAddGroups(count);
+          }
+          console.log('未读数量更新', module, count);
+        },
+      );
     };
 
     setupListener().catch(console.error);
 
     return () => {
-      if (unlisten) unlisten(); // 组件卸载时取消订阅
+      if (unlistenNotify) unlistenNotify();
+      if (unlistenUnread) unlistenUnread();
     };
   }, [recvUuid]);
 

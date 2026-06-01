@@ -4,8 +4,11 @@ import {
   get_sent_invitations,
   accept_group_invitation,
   decline_group_invitation,
+  clearUnreadByLevel,
 } from '@workspace/services';
-import { Modal, Tabs, Tag, Empty, Button, message } from 'antd';
+import { Modal, Tabs, Tag, Empty, Button, message, Popconfirm } from 'antd';
+import { ClearOutlined } from '@ant-design/icons';
+import { useBearStore } from '@/store/store';
 import { useEffect, useState } from 'react';
 import styles from './styles/InvitationManager.less';
 
@@ -32,6 +35,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
 }) => {
   const [receivedList, setReceivedList] = useState<GroupInvitationVo[]>([]);
   const [sentList, setSentList] = useState<GroupInvitationVo[]>([]);
+  const setAddGroups = useBearStore((state) => state.setAddGroups);
 
   useEffect(() => {
     if (visible) {
@@ -51,6 +55,15 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
       console.error('获取邀请列表失败', err);
       message.error('获取邀请列表失败');
     }
+  };
+
+  const handleClearUnread = async () => {
+    // 清除所有群组模块未读通知（level1=1, level2=3, level3/level4通配）
+    const affected = await clearUnreadByLevel(1, 3, -1, -1);
+    if (affected > 0) {
+      setAddGroups(-affected);
+    }
+    message.success('已清空群组邀请未读');
   };
 
   const handleAccept = async (groupUuid: string) => {
@@ -164,7 +177,21 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
 
   return (
     <Modal
-      title="群聊邀请管理"
+      title={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>群聊邀请管理</span>
+          <Popconfirm
+            title="确定清空所有群组邀请未读通知？"
+            onConfirm={handleClearUnread}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="text" size="small" icon={<ClearOutlined />}>
+              清空未读
+            </Button>
+          </Popconfirm>
+        </div>
+      }
       open={visible}
       onCancel={onCancel}
       footer={null}

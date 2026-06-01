@@ -17,7 +17,7 @@ import {
   getFiles,
   process_friend_request,
   readContactsNotification,
-  clearAllUnreadNotifications,
+  clearUnreadByLevel,
 } from '@workspace/services';
 import {
   FriendRequestInfo,
@@ -47,7 +47,6 @@ const FriendRequestsModal = ({
   const [sentRequests, setSentRequests] = useState<RequestWithUserInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const setAddContacts = useBearStore((state) => state.setAddContacts);
-  const setMenuUnread = useBearStore((state) => state.setMenuUnread);
 
   useEffect(() => {
     if (visible) {
@@ -188,7 +187,11 @@ const FriendRequestsModal = ({
   };
 
   const handleClearAll = async () => {
-    await clearAllUnreadNotifications(setMenuUnread);
+    // 清除所有好友模块未读通知（level1=1, level2=1, level3/level4通配）
+    const affected = await clearUnreadByLevel(1, 1, -1, -1);
+    if (affected > 0) {
+      setAddContacts(-(affected));
+    }
     await fetchData();
   };
 

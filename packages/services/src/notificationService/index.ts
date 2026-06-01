@@ -33,3 +33,35 @@ export const clearAllUnreadSessions = async () => {
     console.log("清空所有未读会话失败", e);
   }
 };
+
+/**
+ * 按层级条件批量清除未读通知
+ * @param level1 -1 表示通配
+ * @param level2 -1 表示通配
+ * @param level3 -1 表示通配
+ * @param level4 -1 表示通配
+ * @returns 影响的行数
+ */
+export const clearUnreadByLevel = async (
+  level1: number,
+  level2: number,
+  level3: number,
+  level4: number,
+  callback?: (affected: number) => void
+) => {
+  try {
+    const res = (await invoke("clear_unread_by_level", {
+      level1,
+      level2,
+      level3,
+      level4,
+    })) as number;
+    if (res > 0 && callback) {
+      callback(res);
+    }
+    return res;
+  } catch (e) {
+    console.log("按层级清除未读通知失败", e);
+    return 0;
+  }
+};

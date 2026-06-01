@@ -1,8 +1,10 @@
 import LayoutBtn from '@/components/Button/LayoutBtn';
+import NotificationPanel from '@/components/NotificationPanel';
 import { DEFAULT_ICON } from '@/constants';
 import { useChatsUnread } from '@/hooks/useChatsUnread';
 import { useBearStore } from '@/store/store';
 import {
+  BellOutlined,
   MessageOutlined,
   SettingOutlined,
   UserOutlined,
@@ -10,6 +12,7 @@ import {
 import { history, useIntl } from '@umijs/max';
 import { getFiles } from '@workspace/services';
 import { LayoutBtnProps } from '@workspace/types';
+import { Badge } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
@@ -21,10 +24,12 @@ const LeftAside = () => {
     [],
   );
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [notifyVisible, setNotifyVisible] = useState(false);
   const userInfo = useBearStore((state) => state.userInfo);
 
   const menuUnread = useBearStore((state) => state.menuUnread);
   const { totalUnreadCount } = useChatsUnread(userInfo.uuid);
+  const totalNotifyUnread = menuUnread.contacts + menuUnread.groups;
   const [userIcon, setUserIcon] = useState<string | null>(null);
 
   const routeToPage = async (url: string) => {
@@ -189,10 +194,23 @@ const LeftAside = () => {
           />
         </div>
         {renderBtn(topBtnList)}
+        <div
+          onClick={() => setNotifyVisible(true)}
+          className={styles.iconBtn}
+        >
+          <Badge
+            count={totalNotifyUnread > 99 ? '99+' : totalNotifyUnread}
+            offset={[-8, 8]}
+            size="small"
+          >
+            <BellOutlined style={{ fontSize: '18px' }} />
+          </Badge>
+        </div>
       </div>
       <div className={styles.bottom}>{renderBtn(bottomBtnList)}</div>
 
       <UserInfoModal visible={isModalVisible} onClose={handleCancel} />
+      <NotificationPanel visible={notifyVisible} onClose={() => setNotifyVisible(false)} />
     </div>
   );
 };

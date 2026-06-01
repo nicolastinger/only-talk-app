@@ -112,6 +112,59 @@ impl SystemNotification {
         Ok(effect_row)
     }
 
+    /// 按层级条件批量清除未读通知
+    /// level 参数传 -1 表示通配（匹配该层级所有值）
+    pub async fn clear_unread_by_level(
+        user_id: &str,
+        level1: i32,
+        level2: i32,
+        level3: i32,
+        level4: i32,
+    ) -> Result<i32, anyhow::Error> {
+        info!(
+            "按层级清除未读通知，user_id: {}, level1: {}, level2: {}, level3: {}, level4: {}",
+            user_id, level1, level2, level3, level4
+        );
+        let pool_sqlite = get_db_client().await?;
+
+        let mut conditions = vec!["user_id = ?".to_string(), "is_read = 0".to_string()];
+        if level1 != -1 {
+            conditions.push("level1 = ?".to_string());
+        }
+        if level2 != -1 {
+            conditions.push("level2 = ?".to_string());
+        }
+        if level3 != -1 {
+            conditions.push("level3 = ?".to_string());
+        }
+        if level4 != -1 {
+            conditions.push("level4 = ?".to_string());
+        }
+
+        let where_clause = conditions.join(" AND ");
+        let sql = format!("UPDATE system_notification SET is_read = 1 WHERE {}", where_clause);
+
+        let mut query = sqlx::query(&sql).bind(user_id);
+        if level1 != -1 {
+            query = query.bind(level1);
+        }
+        if level2 != -1 {
+            query = query.bind(level2);
+        }
+        if level3 != -1 {
+            query = query.bind(level3);
+        }
+        if level4 != -1 {
+            query = query.bind(level4);
+        }
+
+        let result = query.execute(&pool_sqlite).await?;
+        let effect_row = result.rows_affected() as i32;
+        info!("按层级清除未读通知完成，user_id: {}, effect_row: {}", user_id, effect_row);
+
+        Ok(effect_row)
+    }
+
     /// 一键清空所有未读通知
     pub async fn clear_all_unread(user_id: &str) -> Result<(), anyhow::Error> {
         info!("清空所有未读通知，user_id: {}", user_id);
