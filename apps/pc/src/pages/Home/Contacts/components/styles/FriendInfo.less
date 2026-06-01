@@ -1,224 +1,202 @@
 .container {
   width: 100%;
   height: 100%;
-  background: var(--color-gray-lighter);
-  overflow-y: auto;
-  display: flex;
-  justify-content: center;
-  padding: 16px;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb-light);
-    border-radius: 4px;
-  }
-}
-
-.loadingState {
+  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-
-  .loadingText {
-    font-size: 13px;
-    color: var(--color-gray-text);
-  }
-}
-
-/* Card */
-.card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--color-white-bg);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--bg-black-08);
-  overflow: hidden;
-}
-
-/* Header */
-.cardHeader {
-  display: flex;
-  align-items: flex-start;
-  padding: 20px 20px 16px;
+  background: var(--glass-bg-light);
+  backdrop-filter: var(--glass-blur);
   position: relative;
-  background: linear-gradient(180deg, var(--color-primary-bg) 0%, var(--color-white-bg) 100%);
+  overflow: hidden;
 
-  .avatarSection {
-    position: relative;
-    flex-shrink: 0;
-
-    .avatar {
-      width: 64px;
-      height: 64px;
-      border-radius: 12px;
-      object-fit: cover;
-      box-shadow: 0 2px 6px var(--bg-black-08);
-    }
-
-    .avatarBadge {
-      position: absolute;
-      bottom: -2px;
-      right: -2px;
-
-      .onlineDot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--color-success);
-        border: 2px solid var(--color-white-bg);
-      }
-    }
-  }
-
-  .userSection {
-    flex: 1;
-    min-width: 0;
-    margin-left: 14px;
-
-    .nameRow {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
-
-      .name {
-        font-size: 17px;
-        font-weight: 600;
-        color: var(--color-gray-text-darker);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .genderBadge {
-        flex-shrink: 0;
-        font-size: 14px;
-
-        .genderIconMale {
-          color: var(--color-primary);
-        }
-
-        .genderIconFemale {
-          color: #eb407a;
-        }
-      }
-    }
-
-    .accountRow {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-bottom: 6px;
-
-      .account {
-        font-size: 12px;
-        color: var(--color-gray-text);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .copyIcon {
-        font-size: 12px;
-        color: var(--color-gray-text);
-        cursor: pointer;
-        flex-shrink: 0;
-        transition: color 0.2s;
-
-        &:hover {
-          color: var(--color-primary);
-        }
-      }
-    }
-
-    .bio {
-      font-size: 12px;
-      color: var(--color-gray-text-dark);
-      line-height: 1.4;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-
-  .headerActions {
-    flex-shrink: 0;
-    margin-left: 8px;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        ellipse at 20% 20%,
+        var(--hover-bg-primary-lighter) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse at 80% 80%,
+        rgba(100, 200, 255, 0.03) 0%,
+        transparent 50%
+      );
+    pointer-events: none;
   }
 }
 
-/* Info list */
-.infoList {
-  padding: 0 20px;
+.content {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--glass-bg);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--bg-white-80);
+  position: relative;
 
-  .infoRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 0;
-
-    .infoLabel {
-      font-size: 13px;
-      color: var(--color-gray-text-dark);
-      flex-shrink: 0;
-      width: 50px;
-    }
-
-    .infoValue {
-      font-size: 13px;
-      color: var(--color-gray-text-darker);
-      text-align: right;
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      margin-left: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 6px;
-    }
-  }
-
-  .divider {
-    height: 1px;
-    background: var(--color-gray-border-light);
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, var(--bg-white-10), transparent);
+    pointer-events: none;
   }
 }
 
-/* Footer */
-.cardFooter {
-  padding: 16px 20px 20px;
-  border-top: 1px solid var(--color-gray-border-light);
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex-shrink: 0;
 
-  .chatBtn {
-    height: 40px;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    background: var(--color-primary);
-    border: none;
-    transition: all 0.2s;
+  .icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: var(--shadow-sm), 0 0 0 4px var(--bg-white-80);
+    transition: all 0.3s ease;
+    border: 3px solid var(--border-white-lightest);
 
     &:hover {
-      background: var(--color-primary-05);
+      box-shadow: 0 8px 24px rgba(64, 150, 255, 0.3),
+        0 0 0 4px var(--border-white-lightest);
+      transform: scale(1.05);
+      border-color: var(--color-primary);
+    }
+  }
+
+  .name {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-color);
+    text-align: center;
+  }
+
+  .bio {
+    font-size: 13px;
+    color: var(--text-color-secondary);
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.4;
+  }
+}
+
+.infoSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-white-40);
+  border-radius: 12px;
+  border: 1px solid var(--border-white-lightest);
+}
+
+.infoItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-white-lightest);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .label {
+    font-size: 13px;
+    color: var(--text-color-secondary);
+    flex-shrink: 0;
+  }
+
+  .value {
+    font-size: 13px;
+    color: var(--text-color);
+    text-align: right;
+    word-break: break-all;
+    margin-left: 12px;
+  }
+}
+
+.collapse {
+  width: 100%;
+  margin-top: 4px;
+  background: transparent !important;
+  border: none !important;
+
+  :global {
+    .ant-collapse-header {
+      padding: 6px 0 !important;
+      font-size: 13px;
+      color: var(--color-primary) !important;
+      border: none !important;
+
+      &:hover {
+        color: var(--color-primary-hover) !important;
+      }
     }
 
-    &:active {
-      opacity: 0.9;
+    .ant-collapse-content {
+      border: none !important;
+      background: transparent !important;
+    }
+
+    .ant-collapse-content-box {
+      padding: 0 !important;
+    }
+
+    .ant-collapse-expand-icon {
+      color: var(--color-primary) !important;
     }
   }
 }
 
-/* Gender icons */
-.genderIconMale {
-  color: var(--color-primary);
-}
+.footer {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 
-.genderIconFemale {
-  color: #eb407a;
+  .button {
+    width: 100%;
+
+    :global(.ant-btn) {
+      width: 100%;
+      height: 44px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      background: linear-gradient(
+        135deg,
+        var(--color-primary) 0%,
+        var(--gradient-blue-accent) 100%
+      );
+      border: none;
+      box-shadow: var(--shadow-primary), 0 0 0 1px var(--border-white-light);
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: var(--btn-gradient-primary-hover);
+        box-shadow: var(--shadow-primary-lg),
+          0 0 0 1px var(--border-white-lighter);
+        transform: translateY(-2px);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
 }

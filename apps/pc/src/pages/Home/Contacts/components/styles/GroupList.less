@@ -17,47 +17,71 @@
 .groupBox {
   width: 100%;
   min-width: 160px;
-  height: 56px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  color: var(--color-gray-text-darker);
-  background: var(--color-white-bg);
-  border-bottom: 1px solid var(--color-gray-border-light);
-  transition: background-color 0.2s ease;
+  color: var(--text-color);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
 
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(64, 150, 255, 0.05), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
   &:hover {
-    background: var(--color-gray-lighter);
+    background: var(--glass-bg-dark);
+    box-shadow: inset 0 0 20px rgba(64, 150, 255, 0.05),
+      0 2px 8px rgba(0, 0, 0, 0.04);
+    transform: translateX(2px);
+
+    &::before {
+      opacity: 1;
+    }
 
     .imgItem {
-      box-shadow: 0 2px 8px var(--bg-black-10);
+      box-shadow: 0 4px 12px rgba(64, 150, 255, 0.25);
+      transform: scale(1.05);
+      border-color: var(--color-primary);
     }
+  }
+
+  &:active {
+    transform: translateX(1px);
   }
 }
 
 .left {
-  width: 56px;
+  width: 64px;
   height: 100%;
-  padding: 8px 12px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .imgItem {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   overflow: hidden;
   object-fit: cover;
-  box-shadow: 0 1px 4px var(--bg-black-08);
-  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.8);
 }
 
 .center {
-  width: calc(100% - 56px);
+  width: calc(100% - 64px);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -67,9 +91,9 @@
 
 .centerTitle {
   width: 100%;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
-  color: var(--color-gray-text-darker);
+  color: var(--text-color);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -77,17 +101,19 @@
 
 .centerText {
   width: 100%;
-  font-size: 12px;
-  color: var(--color-gray-text);
+  font-size: 13px;
+  color: var(--color-gray-6);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  margin-top: 2px;
 }
 
 .bottomBar {
   padding: 12px 16px;
-  border-top: 1px solid var(--color-gray-border-light);
-  background: var(--color-white-bg);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
   display: flex;
   gap: 10px;
 }
@@ -100,22 +126,22 @@
   justify-content: center;
   gap: 8px;
   border-radius: 8px;
-  background: var(--color-gray-lighter);
-  color: var(--color-gray-text-darker);
+  background: var(--glass-bg-dark);
+  color: var(--text-color);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid var(--color-gray-border-light);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 
   &:hover {
-    background: var(--color-primary-bg);
-    border-color: var(--color-primary);
+    background: rgba(64, 150, 255, 0.08);
+    border-color: rgba(64, 150, 255, 0.3);
     color: var(--color-primary);
   }
 
   &:active {
-    opacity: 0.8;
+    transform: translateY(0);
   }
 }
 
@@ -127,18 +153,21 @@
   justify-content: center;
   gap: 8px;
   border-radius: 8px;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary), #4096ff);
   color: #fff;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(64, 150, 255, 0.3);
 
   &:hover {
-    background: var(--color-primary-05);
+    box-shadow: 0 4px 16px rgba(64, 150, 255, 0.45);
+    transform: translateY(-1px);
   }
 
   &:active {
-    opacity: 0.9;
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(64, 150, 255, 0.3);
   }
 }
