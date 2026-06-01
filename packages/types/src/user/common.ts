@@ -86,6 +86,17 @@ interface UserInfoWithCache {
   from_cache: boolean;
 }
 
+interface UpdateUserDTO {
+  username?: string;
+  info?: string;
+  gender?: number;
+  age?: number;
+  birthday?: number;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
 interface P2pMsg {
   type: number;
   raw: string;
@@ -114,6 +125,7 @@ export type {
   P2pInitMsg,
   P2pMsg,
   RequestMediaMsg,
+  UpdateUserDTO,
   UserInfo,
   UserInfoWithCache,
   BasicUser,

@@ -7,6 +7,7 @@ import {
   UserInfoWithCache,
   QuicServerInfo,
   HttpResponse,
+  UpdateUserDTO,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -142,4 +143,12 @@ export const get_quic_servers = async (): Promise<QuicServerInfo[]> => {
     return [];
   }
   return data.data as QuicServerInfo[];
+};
+
+export const update_user_info = async (updateDto: UpdateUserDTO) => {
+  return await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/user/update",
+    JSON.stringify(updateDto)
+  );
 };

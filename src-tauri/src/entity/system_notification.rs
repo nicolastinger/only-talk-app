@@ -1,7 +1,7 @@
 use anyhow::Error;
 use log::info;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, Row, SqlitePool};
 
 use crate::dao::get_db_client;
 use crate::dao::store::SqliteStore;
@@ -95,7 +95,7 @@ impl SystemNotification {
 
         // 更新未读的系统消息为已读，并返回更新的行数
         let query_str = format!(
-            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND biz_id IN ({}) AND is_read = 0",
+            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND id IN ({}) AND is_read = 0",
             placeholders_str
         );
 

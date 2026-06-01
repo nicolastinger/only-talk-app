@@ -69,6 +69,7 @@ export default {
   leftAside: {
     chatList: '會話列表',
     friendList: '朋友列表',
+    notification: '通知',
     settings: '設置',
   },
   userInfo: {

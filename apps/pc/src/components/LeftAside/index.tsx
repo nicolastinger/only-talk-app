@@ -12,7 +12,7 @@ import {
 import { history, useIntl } from '@umijs/max';
 import { getFiles } from '@workspace/services';
 import { LayoutBtnProps } from '@workspace/types';
-import { Badge } from 'antd';
+
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
 import UserInfoModal from './UserInfoModal';
@@ -33,6 +33,11 @@ const LeftAside = () => {
   const [userIcon, setUserIcon] = useState<string | null>(null);
 
   const routeToPage = async (url: string) => {
+    if (url === 'notification') {
+      setNotifyVisible(true);
+      return;
+    }
+
     setTopBtnList((prev) => {
       // 创建新数组保持不可变性
       return prev.map((item) => {
@@ -87,6 +92,13 @@ const LeftAside = () => {
     ]);
 
     setBottomBtnList([
+      {
+        text: intl.formatMessage({ id: 'leftAside.notification' }),
+        url: 'notification',
+        active: false,
+        icon: <BellOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: totalNotifyUnread,
+      },
       {
         text: intl.formatMessage({ id: 'leftAside.settings' }),
         url: '/home/settings',
@@ -194,18 +206,6 @@ const LeftAside = () => {
           />
         </div>
         {renderBtn(topBtnList)}
-        <div
-          onClick={() => setNotifyVisible(true)}
-          className={styles.iconBtn}
-        >
-          <Badge
-            count={totalNotifyUnread > 99 ? '99+' : totalNotifyUnread}
-            offset={[-8, 8]}
-            size="small"
-          >
-            <BellOutlined style={{ fontSize: '18px' }} />
-          </Badge>
-        </div>
       </div>
       <div className={styles.bottom}>{renderBtn(bottomBtnList)}</div>
 

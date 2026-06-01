@@ -42,7 +42,7 @@ pub fn emit_unread_count(notification: &SystemNotification) -> Result<(), anyhow
         }
     };
 
-    let event = UnreadCountEvent { module, count: unread };
+    let event = UnreadCountEvent { module: module.to_string(), count: unread };
     info!("emit 未读数量更新: module={}, count={}", module, unread);
     APP_HANDLE
         .get()
@@ -100,11 +100,5 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
             error!("发错人了")
         }
     }
-    Ok(())
-}
-
-/// 发送通知信息给前端
-pub fn send_notify_msg(msg: &str) -> Result<(), anyhow::Error> {
-    APP_HANDLE.get().ok_or(anyhow!("无法获取app"))?.emit("listen_notify_msg", msg)?;
     Ok(())
 }

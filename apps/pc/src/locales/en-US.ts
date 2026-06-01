@@ -73,6 +73,7 @@ export default {
   leftAside: {
     chatList: 'Chats',
     friendList: 'Friends',
+    notification: 'Notification',
     settings: 'Settings',
   },
   userInfo: {

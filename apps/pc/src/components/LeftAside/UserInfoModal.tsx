@@ -16,7 +16,10 @@ import {
   convertPathToTauriUrl,
   getFiles,
   selectFile,
+  update_user_info,
+  refresh_user_info,
 } from '@workspace/services';
+import { UpdateUserDTO } from '@workspace/types';
 import {
   Avatar,
   Button,
@@ -233,7 +236,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       const values = await form.validateFields();
       setSaving(true);
 
-      const updateData: any = {};
+      const updateData: UpdateUserDTO = {};
       if (values.username !== userInfo?.username) {
         updateData.username = values.username;
       }
@@ -241,10 +244,10 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
         updateData.info = values.info;
       }
       if (values.gender !== userInfo?.gender) {
-        updateData.gender = values.gender;
+        updateData.gender = Number(values.gender);
       }
       if (values.age !== userInfo?.age) {
-        updateData.age = values.age;
+        updateData.age = Number(values.age);
       }
       if (values.birthday) {
         const birthdayTimestamp = values.birthday.unix();
@@ -268,25 +271,26 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
         return;
       }
 
-      const result = await invoke<string>('update_user_info_command', {
-        updateDto: updateData,
-      });
+      const response = await update_user_info(updateData);
 
-      const response = JSON.parse(result);
-      if (response.code === 200) {
-        const updatedUserInfo = {
-          ...userInfo,
-          ...updateData,
-          birthday: updateData.birthday || userInfo?.birthday,
-        };
-        setUserInfo(updatedUserInfo);
-        message.success(
-          intl.formatMessage({ id: 'userInfo.edit.updateSuccess' }),
-        );
-        setIsEditing(false);
+      if (response.netSuccess && response.res.status === 200) {
+        const data = JSON.parse(response.res.body);
+        if (data.code === 200 || data.code === 204) {
+          const updatedUserInfo = await refresh_user_info(userInfo.uuid);
+          setUserInfo(updatedUserInfo);
+          message.success(
+            intl.formatMessage({ id: 'userInfo.edit.updateSuccess' }),
+          );
+          setIsEditing(false);
+        } else {
+          message.error(
+            data.message ||
+              intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
+          );
+        }
       } else {
         message.error(
-          response.message ||
+          response.error ||
             intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
         );
       }

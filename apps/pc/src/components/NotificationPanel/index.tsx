@@ -167,7 +167,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       label: '全部',
       children: (
         <div>
-          {renderTabContent(1)}
+          {renderTabContent(1, undefined, -1)}
         </div>
       ),
     },
