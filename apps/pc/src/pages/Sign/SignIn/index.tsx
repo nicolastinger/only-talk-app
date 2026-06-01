@@ -191,6 +191,22 @@ const LoginPage: React.FC = () => {
     if (userCodeError) {
       validateUserCode(value);
     }
+    loadAvatarByAccount(value);
+  };
+
+  const loadAvatarByAccount = (account: string) => {
+    if (!account) {
+      setAvatarUrl('');
+      return;
+    }
+    const matchedUser = quickUsers.find(
+      (user) => user.account === account || user.username === account
+    );
+    if (matchedUser) {
+      loadUserAvatar(matchedUser);
+    } else {
+      setAvatarUrl('');
+    }
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,7 +364,7 @@ const LoginPage: React.FC = () => {
                 '一键登录'
               )}
             </button>
-            <a className={styles.switchToPassword} onClick={() => setShowQuickLogin(false)}>
+            <a className={styles.switchToPassword} onClick={() => { setAvatarUrl(''); setShowQuickLogin(false); }}>
               使用密码登录
             </a>
           </div>
@@ -356,7 +372,11 @@ const LoginPage: React.FC = () => {
           <div className={styles.passwordLoginSection}>
             <div className={styles.avatarSection}>
               <div className={styles.avatarWrapper}>
-                <LocalImage width={80} height={80} />
+                {avatarUrl ? (
+                  <Avatar src={avatarUrl} size={80} />
+                ) : (
+                  <LocalImage width={80} height={80} />
+                )}
               </div>
               <div className={styles.welcomeText}>
                 <FormattedMessage id="signIn.welcome" />
