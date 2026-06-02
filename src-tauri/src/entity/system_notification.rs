@@ -179,14 +179,14 @@ impl SystemNotification {
     }
 
     /// 查询各模块未读通知数量
-    /// 返回 { contacts: level2=1的未读数, groups: level2=3的未读数 }
+    /// 返回 { contacts: level1=1且level2=1的未读数, groups: level1=1且level2=3的未读数 }
     pub async fn get_unread_counts(user_id: &str) -> Result<UnreadCounts, anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
         let row = sqlx::query(
             r#"
             SELECT
-                SUM(CASE WHEN level2 = 1 THEN 1 ELSE 0 END) as contacts_unread,
-                SUM(CASE WHEN level2 = 3 THEN 1 ELSE 0 END) as groups_unread
+                SUM(CASE WHEN level1 = 1 AND level2 = 1 THEN 1 ELSE 0 END) as contacts_unread,
+                SUM(CASE WHEN level1 = 1 AND level2 = 3 THEN 1 ELSE 0 END) as groups_unread
             FROM system_notification
             WHERE user_id = ? AND is_read = 0
             "#,

@@ -46,6 +46,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
         groups: counts.groups,
         system: 0,
         settings: 0,
+        total: counts.contacts + counts.groups,
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);

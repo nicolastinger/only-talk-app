@@ -45,11 +45,6 @@ const SearchBar = () => {
     );
   };
 
-  const totalUnread = Object.values(menuUnread).reduce(
-    (sum, count) => sum + count,
-    0,
-  );
-
   return (
     <div className={styles.container}>
       <div className={styles.searchWrapper}>
@@ -69,7 +64,7 @@ const SearchBar = () => {
         <div className={styles.divider} />
         <div className={styles.actionBtn} onClick={handleNotificationClick}>
           <Badge
-            count={totalUnread > 99 ? '99+' : totalUnread}
+            count={menuUnread.contacts > 99 ? '99+' : menuUnread.contacts}
             overflowCount={99}
             size="small"
           >

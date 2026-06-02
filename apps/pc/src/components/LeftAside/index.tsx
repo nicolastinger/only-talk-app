@@ -29,7 +29,6 @@ const LeftAside = () => {
 
   const menuUnread = useBearStore((state) => state.menuUnread);
   const { totalUnreadCount } = useChatsUnread(userInfo.uuid);
-  const totalNotifyUnread = menuUnread.contacts + menuUnread.groups;
   const [userIcon, setUserIcon] = useState<string | null>(null);
 
   const routeToPage = async (url: string) => {
@@ -97,7 +96,7 @@ const LeftAside = () => {
         url: 'notification',
         active: false,
         icon: <BellOutlined style={{ fontSize: '18px' }} />,
-        unreadCount: totalNotifyUnread,
+        unreadCount: menuUnread.total,
       },
       {
         text: intl.formatMessage({ id: 'leftAside.settings' }),

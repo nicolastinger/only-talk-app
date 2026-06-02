@@ -3,7 +3,7 @@ import { useBearStore } from '@/store/store';
 import { BellOutlined, CheckOutlined, UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
-import { clearUnreadByLevel, getFiles, get_user_info_with_cache } from '@workspace/services';
+import { clearUnreadByLevel, getFiles, get_user_info_with_cache, getUnreadNotificationCounts } from '@workspace/services';
 import { SystemNotification, UserInfo } from '@workspace/types';
 import { Avatar, Badge, Button, Empty, Modal, Tabs, Tag } from 'antd';
 import { useEffect, useState } from 'react';
@@ -27,8 +27,8 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
   const intl = useIntl();
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
-  const setAddContacts = useBearStore((state) => state.setAddContacts);
-  const setAddGroups = useBearStore((state) => state.setAddGroups);
+  const menuUnread = useBearStore((state) => state.menuUnread);
+  const setMenuUnread = useBearStore((state) => state.setMenuUnread);
 
   useEffect(() => {
     if (visible) {
@@ -48,11 +48,14 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
   };
 
   const handleClearUnread = async (level1: number, level2: number) => {
-    const affected = await clearUnreadByLevel(level1, level2, -1, -1);
-    if (affected > 0) {
-      if (level2 === 1) setAddContacts(-affected);
-      if (level2 === 3) setAddGroups(-affected);
-    }
+    await clearUnreadByLevel(level1, level2, -1, -1);
+    const counts = await getUnreadNotificationCounts();
+    setMenuUnread({
+      ...menuUnread,
+      contacts: counts.contacts,
+      groups: counts.groups,
+      total: counts.contacts + counts.groups,
+    });
     loadNotifications();
   };
 

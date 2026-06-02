@@ -72,6 +72,7 @@ export const useBearStore = create<BearState>()((set) => ({
     groups: 0,
     system: 0,
     settings: 0,
+    total: 0,
   },
   isLogin: false,
   setIsLogin: (isLogin: boolean) => set({ isLogin: isLogin }),

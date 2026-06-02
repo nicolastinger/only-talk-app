@@ -49,6 +49,12 @@ pub async fn get_with_token(url: String) -> Result<Response, anyhow::Error> {
     Ok(response)
 }
 
+pub async fn get_without_token(url: String) -> Result<Response, anyhow::Error> {
+    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+    let response = client.get(&url).send().await?;
+    Ok(response)
+}
+
 pub async fn upload_file(
     url: &str,
     file_path: &str,
