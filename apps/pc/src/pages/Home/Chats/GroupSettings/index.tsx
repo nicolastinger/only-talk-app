@@ -1,4 +1,5 @@
 import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
 import { GroupMemberVo, GroupVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
@@ -18,7 +19,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './index.module.less';
 import { FriendVo } from '@workspace/types';
 
@@ -140,6 +141,12 @@ const GroupSettingsPage = () => {
   const isOwner = groupInfo?.owner_uuid === userInfo?.uuid;
   const isAdmin = members.some((m) => m.user_id === userInfo?.uuid && m.role >= 1);
   const canManage = isOwner || isAdmin;
+
+  const memberUuids = useMemo(
+    () => members.map((m) => m.user_id).filter(Boolean),
+    [members],
+  );
+  const { memberInfoMap } = useGroupMemberInfo(memberUuids);
 
   const filteredMembers = members.filter((m) => {
     const keyword = searchText.toLowerCase();
@@ -493,23 +500,28 @@ const GroupSettingsPage = () => {
                 <span className={styles.memberGridLabel}>添加</span>
               </div>
             )}
-            {displayMembers.map((member) => (
+            {displayMembers.map((member) => {
+              const info = memberInfoMap.get(member.user_id);
+              const displayName = info?.username || member.nickname || member.username || '成员';
+              const displayIcon = info?.icon || member.icon;
+              return (
               <div key={member.user_id} className={styles.memberGridItem}>
                 <Avatar
                   size={40}
                   shape="square"
                   icon={<UserOutlined />}
-                  src={member.icon}
+                  src={displayIcon}
                   className={styles.memberAvatar}
                 />
                 <span className={styles.memberGridLabel}>
-                  {member.role === 2 ? '群主' : (member.nickname || member.username || '成员').slice(0, 4)}
+                  {member.role === 2 ? '群主' : displayName.slice(0, 4)}
                 </span>
                 {member.user_id === userInfo?.uuid && (
                   <Tag className={styles.meTag}>我</Tag>
                 )}
               </div>
-            ))}
+              );
+            })}
             {hasMoreMembers && (
               <div
                 className={styles.memberGridItem}
@@ -557,6 +569,9 @@ const GroupSettingsPage = () => {
             dataSource={filteredMembers}
             renderItem={(member) => {
               const isSelf = member.user_id === userInfo?.uuid;
+              const info = memberInfoMap.get(member.user_id);
+              const displayName = info?.username || member.nickname || member.username || member.user_id;
+              const displayIcon = info?.icon || member.icon;
               const actions: { label: React.ReactNode; onClick: () => void }[] = [];
               if (!isSelf && isOwner) {
                 if (member.role === 0) {
@@ -573,11 +588,11 @@ const GroupSettingsPage = () => {
               return (
                 <div className={styles.memberListItem}>
                   <div className={styles.memberListItemInfo}>
-                    <Avatar size={36} icon={<UserOutlined />} src={member.icon} />
+                    <Avatar size={36} icon={<UserOutlined />} src={displayIcon} />
                     <div className={styles.memberTextInfo}>
                       <div>
                         <span className={styles.memberListItemName}>
-                          {member.nickname || member.username || member.user_id}
+                          {displayName}
                         </span>
                         {member.role > 0 && (
                           <span className={`${styles.roleTag} ${member.role === 2 ? styles.roleOwner : styles.roleAdmin}`}>

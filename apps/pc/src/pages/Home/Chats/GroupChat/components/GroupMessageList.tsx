@@ -1,5 +1,5 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
-import { ChatMessage, MessageFrom } from '@workspace/types';
+import { ChatMessage, MessageFrom, UserInfo } from '@workspace/types';
 import React from 'react';
 import CustomerChatBox from '../../components/CustomerChatBox';
 import MineChatBox from '../../components/MineChatBox';
@@ -11,6 +11,7 @@ interface GroupMessageListProps {
   groupUuid: string;
   newMessageIds?: Set<string>;
   loadedMessageIds?: Set<string>;
+  memberInfoMap: Map<string, UserInfo>;
 }
 
 const MSG_TYPE_GROUP_TEXT = 2001;
@@ -25,6 +26,7 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
   groupUuid,
   newMessageIds,
   loadedMessageIds,
+  memberInfoMap,
 }) => {
   const getMessageAnimationClass = (nanoId: string): string => {
     if (newMessageIds?.has(nanoId)) {
@@ -55,8 +57,9 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
         const isMine = msg.from === MessageFrom.Mine;
         const isSystem = msg.from === MessageFrom.System || message.send_user === SYSTEM_ACCOUNT || message.text_type === MSG_TYPE_GROUP_NOTIFICATION;
 
-        const senderName = msg.sender_name || (isMine ? '我' : '群成员');
-        const senderIcon = msg.sender_icon || msg.img || '';
+        const memberInfo = memberInfoMap.get(msg.sender_uuid || message.send_user || '');
+        const senderName = memberInfo?.username || msg.sender_name || (isMine ? '我' : '群成员');
+        const senderIcon = memberInfo?.icon || msg.sender_icon || msg.img || '';
 
         if (isSystem || message.text_type === MSG_TYPE_GROUP_NOTIFICATION) {
           let systemContent = message.raw;
@@ -142,6 +145,10 @@ export default React.memo(GroupMessageList, (prevProps, nextProps) => {
     prevProps.newMessageIds?.size !== nextProps.newMessageIds?.size ||
     prevProps.loadedMessageIds?.size !== nextProps.loadedMessageIds?.size
   ) {
+    return false;
+  }
+
+  if (prevProps.memberInfoMap.size !== nextProps.memberInfoMap.size) {
     return false;
   }
 

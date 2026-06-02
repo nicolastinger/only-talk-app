@@ -1,10 +1,11 @@
+import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
 import { invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
 import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
 import { Avatar, Button, Dropdown, Input, List, MenuProps, Modal, Select, Space, message, Tag } from 'antd';
 import { UserOutlined, PlusOutlined, MoreOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './index.module.less';
 
 interface Props {
@@ -26,6 +27,12 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const isOwner = groupInfo.owner_uuid === userInfo?.uuid;
   const isAdmin = members.some((m) => m.user_id === userInfo?.uuid && m.role >= 1);
   const canManage = isOwner || isAdmin;
+
+  const memberUuids = useMemo(
+    () => members.map((m) => m.user_id).filter(Boolean),
+    [members],
+  );
+  const { memberInfoMap } = useGroupMemberInfo(memberUuids);
 
   useEffect(() => {
     if (inviteModalOpen) {
@@ -164,14 +171,18 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
 
       <List
         dataSource={filteredMembers}
-        renderItem={(member) => (
+        renderItem={(member) => {
+          const info = memberInfoMap.get(member.user_id);
+          const displayName = info?.username || member.nickname || member.username;
+          const displayIcon = info?.icon || member.icon;
+          return (
           <div className={styles.memberItem}>
             <div className={styles.memberInfo}>
-              <Avatar size={32} icon={<UserOutlined />} src={member.icon} />
+              <Avatar size={32} icon={<UserOutlined />} src={displayIcon} />
               <div>
                 <div>
                   <span className={styles.memberName}>
-                    {member.nickname || member.username}
+                    {displayName}
                   </span>
                   {member.role > 0 && (
                     <span className={`${styles.roleTag} ${member.role === 2 ? styles.roleOwner : styles.roleAdmin}`}>
@@ -191,7 +202,8 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
               </Dropdown>
             )}
           </div>
-        )}
+          );
+        }}
       />
 
       <Modal

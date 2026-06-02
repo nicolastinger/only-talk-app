@@ -1,11 +1,12 @@
 import { useBearStore } from '@/store/store';
+import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { history, useLocation } from '@umijs/max';
 import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
 import { get_friend_list, invite_group_members } from '@workspace/services';
 import { Avatar, Button, List, Modal, Select, Spin, Typography, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const GroupInfoPage: React.FC = () => {
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
@@ -120,6 +121,12 @@ const GroupInfoPage: React.FC = () => {
   const isOwner = groupInfo?.owner_uuid === meUuid;
   const isAdmin = members.some((m) => m.user_id === meUuid && m.role >= 1);
 
+  const memberUuids = useMemo(
+    () => members.map((m) => m.user_id).filter(Boolean),
+    [members],
+  );
+  const { memberInfoMap } = useGroupMemberInfo(memberUuids);
+
   return (
     <div style={{ padding: 24, maxWidth: 600, margin: '0 auto' }}>
       {groupInfo && (
@@ -160,13 +167,16 @@ const GroupInfoPage: React.FC = () => {
       ) : (
         <List
           dataSource={members}
-          renderItem={(member: GroupMemberVo) => (
+          renderItem={(member: GroupMemberVo) => {
+            const info = memberInfoMap.get(member.user_id);
+            const displayName = info?.username || member.nickname || member.user_id;
+            return (
             <List.Item>
               <List.Item.Meta
-                avatar={<Avatar size={32} icon={<UserOutlined />} />}
+                avatar={<Avatar size={32} icon={<UserOutlined />} src={info?.icon || member.icon} />}
                 title={
                   <span>
-                    {member.nickname || member.user_id}
+                    {displayName}
                     {member.role === 2 && (
                       <span style={{ color: '#faad14', fontSize: 12, marginLeft: 8 }}>
                         群主
@@ -182,7 +192,8 @@ const GroupInfoPage: React.FC = () => {
                 description={member.user_id === meUuid ? '我' : member.user_id}
               />
             </List.Item>
-          )}
+            );
+          }}
         />
       )}
 

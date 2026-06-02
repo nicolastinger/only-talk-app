@@ -1,4 +1,5 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
+import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useGroupMessageAckApi } from '@/hooks/useGroupMessageAckApi';
 import { useBearStore } from '@/store/store';
@@ -11,7 +12,7 @@ import {
   Page,
   TextQuicMsgVo,
 } from '@workspace/types';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GroupMessageList from './components/GroupMessageList';
 import GroupChatFooter from './components/GroupChatFooter';
 import GroupTopBar from '../components/GroupTopBar';
@@ -42,6 +43,19 @@ const GroupChatPage: React.FC = () => {
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(null as any, groupId);
   const { groupAckMessage } = useGroupMessageAckApi(groupId);
+
+  const uniqueSenderUuids = useMemo(
+    () =>
+      [
+        ...new Set(
+          messageList
+            .map((msg) => msg.sender_uuid || msg.text_msg_raw.send_user)
+            .filter((uuid) => uuid && uuid !== meUuid && uuid !== SYSTEM_ACCOUNT),
+        ),
+      ],
+    [messageList, meUuid],
+  );
+  const { memberInfoMap } = useGroupMemberInfo(uniqueSenderUuids);
 
   useEffect(() => {
     setRealFooterHeight(footerHeight + 6);
@@ -351,6 +365,7 @@ const GroupChatPage: React.FC = () => {
             groupUuid={groupId}
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
+            memberInfoMap={memberInfoMap}
           />
         </div>
         <div style={{ height: `${footerHeight}px` }}>

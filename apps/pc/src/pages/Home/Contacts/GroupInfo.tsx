@@ -1,11 +1,12 @@
 import { DEFAULT_ICON } from '@/constants';
+import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
 import { history, useSearchParams } from '@umijs/max';
 import { get_group_info, get_group_members, getFiles, create_group_chat_session } from '@workspace/services';
 import { GroupVo, GroupMemberVo } from '@workspace/types';
 import { Avatar, Button, Collapse, List, message, Spin } from 'antd';
 import { UserOutlined, TeamOutlined, MessageOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './styles/GroupInfo.less';
 
 const GroupInfoPage = () => {
@@ -62,6 +63,12 @@ const GroupInfoPage = () => {
   };
 
   const isOwner = groupInfo?.owner_uuid === userInfo?.uuid;
+
+  const memberUuids = useMemo(
+    () => members.map((m) => m.user_id).filter(Boolean),
+    [members],
+  );
+  const { memberInfoMap } = useGroupMemberInfo(memberUuids);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -129,17 +136,20 @@ const GroupInfoPage = () => {
                 children: (
                   <List
                     dataSource={members}
-                    renderItem={(member) => (
+                    renderItem={(member) => {
+                      const info = memberInfoMap.get(member.user_id);
+                      const displayName = info?.username || member.nickname || member.username;
+                      return (
                       <List.Item className={styles.memberItem}>
                         <div className={styles.memberInfo}>
                           <Avatar
                             size={32}
                             icon={<UserOutlined />}
-                            src={member.icon}
+                            src={info?.icon || member.icon}
                           />
                           <div className={styles.memberDetail}>
                             <span className={styles.memberName}>
-                              {member.nickname || member.username}
+                              {displayName}
                             </span>
                             <span className={styles.memberRole}>
                               {getRoleName(member.role)}
@@ -147,7 +157,8 @@ const GroupInfoPage = () => {
                           </div>
                         </div>
                       </List.Item>
-                    )}
+                      );
+                    }}
                   />
                 ),
               },

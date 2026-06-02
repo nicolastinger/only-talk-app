@@ -577,7 +577,7 @@ const goBack = () => router.back();
 
 .msg-row {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 8px;
   margin-bottom: 8px;
 }
