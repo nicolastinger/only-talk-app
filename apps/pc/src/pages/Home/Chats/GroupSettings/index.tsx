@@ -1,19 +1,23 @@
-import { DEFAULT_ICON } from '@/constants';
+import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { GroupMemberVo, GroupVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
+import { convertPathToTauriUrl, getFiles, selectFile } from '@workspace/services';
 import { history, useSearchParams } from '@umijs/max';
-import { Avatar, Button, Input, List, Modal, Select, Tag, message } from 'antd';
+import { Avatar, Button, Input, List, Modal, Select, Tag, message, Spin } from 'antd';
 import {
   ArrowLeftOutlined,
+  CameraOutlined,
   CopyOutlined,
   EditOutlined,
+  LoadingOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
   TeamOutlined,
   UserAddOutlined,
   UserOutlined,
 } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useRef, useState } from 'react';
 import styles from './index.module.less';
 import { FriendVo } from '@workspace/types';
@@ -28,6 +32,8 @@ const GroupSettingsPage = () => {
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
   const [members, setMembers] = useState<GroupMemberVo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Basic settings state
   const [editingName, setEditingName] = useState(false);
@@ -62,6 +68,12 @@ const GroupSettingsPage = () => {
         setGroupInfo(info.value);
         setGroupName(info.value.group_name);
         setGroupDesc(info.value.description || '');
+        if (info.value.avatar) {
+          const files = await getFiles(info.value.avatar);
+          setAvatarUrl(files?.[0]?.tauri_file_path || null);
+        } else {
+          setAvatarUrl(null);
+        }
       }
       if (memberList.status === 'fulfilled') {
         setMembers(memberList.value || []);
@@ -70,6 +82,58 @@ const GroupSettingsPage = () => {
       console.error('加载群设置失败', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAvatarClick = async () => {
+    if (!canManage || avatarUploading) return;
+    try {
+      const files = await selectFile(false);
+      if (!files || files.length === 0) return;
+
+      const filePath = files[0];
+      setAvatarUploading(true);
+
+      const compressedResult = await invoke<string>('compress_image_to_webp_command', {
+        inputPath: filePath,
+      });
+
+      const preview = convertPathToTauriUrl(compressedResult);
+      if (preview) {
+        setAvatarUrl(preview);
+      }
+
+      const uploadResult = await invoke<{ status: number; body: string }>('upload_file_request', {
+        url: `${TALK_API}/file_integrated/upload/group_avatar/${groupInfo!.group_uuid}`,
+        filePath: compressedResult,
+        fieldName: 'file',
+      });
+
+      if (uploadResult.status === 200) {
+        const responseBody = JSON.parse(uploadResult.body);
+        if (responseBody.code === 200 && responseBody.data) {
+          const bizId = responseBody.data;
+          const FileVos = await getFiles(bizId);
+          const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
+
+          if (tauriFilePath) {
+            setGroupInfo({ ...groupInfo!, avatar: bizId });
+            setAvatarUrl(tauriFilePath);
+            message.success('群头像更新成功');
+          } else {
+            message.error('获取群头像文件失败');
+          }
+        } else {
+          message.error(responseBody.msg || '群头像上传失败');
+        }
+      } else {
+        message.error('群头像上传失败');
+      }
+    } catch (error: any) {
+      console.error('群头像更新失败:', error);
+      message.error(error.message || '群头像更新失败');
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -331,16 +395,27 @@ const GroupSettingsPage = () => {
       <div className={styles.scrollContent} ref={scrollRef}>
         {/* Group avatar and name section */}
         <div className={styles.groupHeader}>
-          <div className={styles.avatarWrapper}>
-            <Avatar
-              size={72}
-              shape="square"
-              src={groupInfo.avatar || DEFAULT_ICON}
-              className={styles.groupAvatar}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = DEFAULT_ICON;
-              }}
-            />
+          <div
+            className={styles.avatarWrapper}
+            onClick={canManage ? handleAvatarClick : undefined}
+            style={canManage ? { cursor: 'pointer' } : undefined}
+          >
+            <Spin
+              indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
+              spinning={avatarUploading}
+            >
+              <Avatar
+                size={72}
+                shape="square"
+                src={avatarUrl || DEFAULT_ICON}
+                className={styles.groupAvatar}
+              />
+            </Spin>
+            {canManage && !avatarUploading && (
+              <div className={styles.avatarOverlay}>
+                <CameraOutlined style={{ fontSize: 20, color: '#fff' }} />
+              </div>
+            )}
           </div>
           <div className={styles.groupNameSection}>
             {editingName ? (
