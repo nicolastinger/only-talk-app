@@ -13,11 +13,7 @@ import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
 
 export const get_friend_list = async () => {
-  return await invoke_rust(
-    HTTP_METHOD.POST,
-    TALK_API + "/friend/get_friend",
-    ""
-  );
+  return await invoke("get_friend_list");
 };
 
 export const get_friend_info = async (uuid: string) => {
