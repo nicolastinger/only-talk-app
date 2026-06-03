@@ -15,7 +15,6 @@ pub static UDP_SOCKET_2: &str = "REDACTED_SERVER_IP_3:9564";
 pub static UDP_SOCKET_V6: &str = "[REDACTED_IPV6]:9563";
 pub static UDP_SOCKET_V6_2: &str = "[REDACTED_IPV6]:9565";
 
-pub static QUIC_SERVER_ADDR: &str = "REDACTED_SERVER_IP_3:4433";
 
 // 用户发起好友申请
 pub static USER_ADD_FRIEND: &str = "USER_ADD_FRIEND_REQUEST";
