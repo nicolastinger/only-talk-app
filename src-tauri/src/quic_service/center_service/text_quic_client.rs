@@ -157,7 +157,7 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bo
                     Ok(Some(length)) => {
                         match process_rec_msg(
                             &mut buffer, length, &ConnectionType::Text,
-                            buffer_msg.clone(), head_length,
+                            Arc::new(Mutex::new(Vec::new())), head_length,
                         )
                         .await
                         {
@@ -205,7 +205,7 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bo
                                     Ok(Some(length)) => {
                                         let _ = process_rec_msg(
                                             &mut buf, length, &ConnectionType::Text,
-                                            uni_buffer_msg.clone(), head_length,
+                                            Arc::new(Mutex::new(Vec::new())), head_length,
                                         )
                                         .await;
                                     }
@@ -385,6 +385,7 @@ async fn process_rec_msg(
     buffer_msg: Arc<Mutex<Vec<u8>>>,
     head_length: usize,
 ) -> anyhow::Result<()> {
+    info!("[quic client]收到服务器返回的消息: {:?}", buffer);
     match msg_type {
         ConnectionType::Text => {
             let text_vec = get_text_msg(buffer, length, buffer_msg, head_length).await?;
