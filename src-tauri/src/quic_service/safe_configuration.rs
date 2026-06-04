@@ -60,7 +60,7 @@ pub fn configure_client() -> ClientConfig {
     let mut config = ClientConfig::new(Arc::new(crypto));
     let mut time_out_config = TransportConfig::default();
     time_out_config.max_idle_timeout(Some(
-        Duration::from_secs(1800).try_into().expect("Duration::from_secs(1800).try_into() failed"),
+        Duration::from_secs(190).try_into().expect("Duration::from_secs(190).try_into() failed"),
     ));
     time_out_config.max_concurrent_uni_streams(32_u8.into());
     time_out_config.keep_alive_interval(Some(Duration::from_secs(5)));

@@ -182,34 +182,46 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bo
         });
     }
 
-    // uni stream 接收循环
+    // uni stream 接收循环（只通过共享断连信号退出，不自行判断错误）
     {
         let conn_for_uni = connection.clone();
         let tx = disconnect_tx.clone();
         tokio::spawn(async move {
             let uni_buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+            let mut disconnect_rx = tx.subscribe();
             loop {
-                match conn_for_uni.accept_uni().await {
-                    Ok(mut recv) => {
-                        let mut buf = vec![0u8; 1024 * 8];
-                        match recv.read(&mut buf).await {
-                            Ok(Some(length)) => {
-                                let _ = process_rec_msg(
-                                    &mut buf, length, &ConnectionType::Text,
-                                    uni_buffer_msg.clone(), head_length,
-                                )
-                                .await;
+                tokio::select! {
+                    // 收到断连信号 → 统一退出
+                    _ = disconnect_rx.changed() => {
+                        info!("[客户端] uni accept 循环收到断开信号，退出");
+                        break;
+                    }
+                    // 接收服务端单向流
+                    result = conn_for_uni.accept_uni() => {
+                        match result {
+                            Ok(mut recv) => {
+                                let mut buf = vec![0u8; 1024 * 8];
+                                match recv.read(&mut buf).await {
+                                    Ok(Some(length)) => {
+                                        let _ = process_rec_msg(
+                                            &mut buf, length, &ConnectionType::Text,
+                                            uni_buffer_msg.clone(), head_length,
+                                        )
+                                        .await;
+                                    }
+                                    Ok(None) => {}
+                                    Err(e) => {
+                                        error!("[客户端] uni流读取错误: {}", e);
+                                    }
+                                }
                             }
-                            Ok(None) => {}
                             Err(e) => {
-                                error!("[客户端] uni流读取错误: {}", e);
+                                // 瞬时错误不退出，等1秒后继续接收
+                                // 真正的断连由 bidi recv 或心跳检测 → disconnect_tx 通知退出
+                                warn!("[客户端] uni accept 错误: {}, 1秒后重试", e);
+                                tokio::time::sleep(Duration::from_secs(1)).await;
                             }
                         }
-                    }
-                    Err(e) => {
-                        error!("[客户端] uni accept 错误: {} (source: {:?})", e, std::error::Error::source(&e));
-                        let _ = tx.send(true);
-                        break;
                     }
                 }
             }
@@ -306,7 +318,7 @@ async fn send_ping_msg(conn: Connection, disconnect_tx: watch::Sender<bool>) -> 
     };
 
     loop {
-        tokio::time::sleep(Duration::from_secs(60)).await;
+        tokio::time::sleep(Duration::from_secs(10)).await;
         info!("发送quic客户端心跳");
 
         // 检查心跳实例是否一致
