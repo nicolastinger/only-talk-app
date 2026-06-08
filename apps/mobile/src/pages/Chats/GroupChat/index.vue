@@ -84,7 +84,12 @@ const loadGroupInfo = async () => {
 
 const loadImageMessage = async (msg: TextQuicMsgVo): Promise<string | null> => {
   try {
-    const parsed = JSON.parse(msg.raw);
+    // 群聊图片消息 raw 被双层序列化: {"text":"{...GroupImageRecord...}","send_user":"..."}
+    // 需要先解外层 GroupTextRecord，再解内层 GroupImageRecord
+    let parsed = JSON.parse(msg.raw);
+    if (parsed.text) {
+      parsed = JSON.parse(parsed.text);
+    }
     const bizId = parsed.biz_id;
     if (!bizId) return null;
     if (imageCache.has(bizId)) return imageCache.get(bizId)!;
@@ -132,7 +137,8 @@ const loadMessages = async (page: number = 1, prepend: boolean = false) => {
       });
 
     for (const msg of chatMessages) {
-      if (msg.textMsg.text_type === 2) {
+      // 群聊图片消息类型是 2002
+      if (msg.textMsg.text_type === 2002) {
         msg.imageUrl = await loadImageMessage(msg.textMsg);
       }
     }
@@ -175,8 +181,8 @@ const sendMessage = async () => {
     .join("");
   const textMsg: TextQuicMsgVo = {
     nano_id: nanoId,
-    text_type: 1,
-    raw: JSON.stringify({ text, prev_id: "", platform: 0 }),
+    text_type: 2001, // 群聊文本消息类型是 2001
+    raw: text, // 群聊文本消息直接发送文本内容
     recv_user: groupId,
     send_user: "",
     timestamp: Date.now(),
@@ -196,7 +202,8 @@ const sendMessage = async () => {
   await nextTick();
   scrollToBottom(true);
   try {
-    await invoke("send_text_msg", { textQuicMsg: textMsg });
+    // 群聊使用 send_group_text_msg 命令
+    await invoke("send_group_text_msg", { textQuicMsg: textMsg });
   } catch (e) {
     tempMsg.ack = undefined;
     showToast({ message: "发送失败", icon: "fail" });
@@ -221,7 +228,8 @@ watch(textMessage, async (msg) => {
         !prev || msg.timestamp - prev.textMsg.timestamp > 10 * 60 * 1000,
       senderName: !isMine && msg.send_user !== "system" ? shortUuid(msg.send_user) : undefined,
     };
-    if (msg.text_type === 2) {
+    // 群聊图片消息类型是 2002
+    if (msg.text_type === 2002) {
       newMsg.imageUrl = await loadImageMessage(msg);
     }
     messages.value.push(newMsg);
@@ -278,13 +286,20 @@ const scrollToBottom = (smooth: boolean) => {
 
 const getMessageText = (msg: TextQuicMsgVo): string => {
   switch (msg.text_type) {
-    case 1:
+    case 1: // 单聊文本
+    case 2001: // 群聊文本
       try {
+        // 群聊文本消息 raw 直接是文本内容
+        if (msg.text_type === 2001) return msg.raw || "";
         return JSON.parse(msg.raw).text || "";
       } catch {
         return msg.raw || "";
       }
-    case 3:
+    case 2: // 单聊图片
+    case 2002: // 群聊图片
+      return "[图片]";
+    case 3: // 单聊文件
+    case 2003: // 群聊文件
       return "[文件]";
     case 4:
       return "[隐私模式]";
@@ -359,7 +374,8 @@ const goBack = () => router.back();
               <span class="sender-name" v-if="msg.senderName">{{
                 msg.senderName
               }}</span>
-              <template v-if="msg.textMsg.text_type === 2 && msg.imageUrl">
+              <!-- 群聊图片消息类型是 2002 -->
+              <template v-if="msg.textMsg.text_type === 2002 && msg.imageUrl">
                 <img :src="msg.imageUrl" class="msg-image" alt="图片消息" />
               </template>
               <template v-else>
@@ -378,9 +394,10 @@ const goBack = () => router.back();
               @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
             />
             <div class="msg-content">
+              <!-- 群聊图片消息类型是 2002 -->
               <template
                 v-if="
-                  msg.textMsg.text_type === 2 &&
+                  msg.textMsg.text_type === 2002 &&
                   (msg.imageUrl || (msg as any).sendingImage)
                 "
               >

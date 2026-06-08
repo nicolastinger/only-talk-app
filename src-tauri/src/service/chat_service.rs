@@ -636,9 +636,9 @@ pub async fn send_group_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Resul
     let compressed_path = compress_image_to_webp(&Path::new(&file_path))?;
     let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
 
-    // 2、上传图片到文件服务器
+    // 2、上传图片到文件服务器（使用群聊专用接口）
     let upload_data =
-        upload_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+        upload_group_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
 
     // 3、获取图片尺寸信息
     let img = ImageReader::open(&file_path)?.decode()?;
@@ -696,8 +696,8 @@ pub async fn send_group_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result
     let metadata = std::fs::metadata(&file_path)?;
     let file_size = metadata.len() as i64;
 
-    // 3、上传文件到文件服务器
-    let upload_data = upload_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
+    // 3、上传文件到文件服务器（使用群聊专用接口）
+    let upload_data = upload_group_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
 
     // 4、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
@@ -922,6 +922,31 @@ async fn upload_chat_file_server(
     friend_uuid: &str,
 ) -> Result<UploadData, anyhow::Error> {
     let url = format!("{}/file_integrated/upload/user_chat/{}", TALK_API, friend_uuid);
+    let response = upload_file(&url, file_path, "file").await?;
+
+    let status = response.status();
+    let response_text = response.text().await?;
+
+    if !status.is_success() {
+        return Err(anyhow!("上传失败: {}, 响应: {}", status, response_text));
+    }
+
+    let upload_response: UploadResponse = serde_json::from_str(&response_text)
+        .map_err(|e| anyhow!("解析上传响应失败: {}, 响应内容: {}", e, response_text))?;
+
+    if upload_response.code != 200 {
+        return Err(anyhow!("上传失败: {}", upload_response.message));
+    }
+
+    Ok(upload_response.data)
+}
+
+/// 上传群聊文件到服务器（不检查好友关系）
+async fn upload_group_chat_file_server(
+    file_path: &str,
+    group_uuid: &str,
+) -> Result<UploadData, anyhow::Error> {
+    let url = format!("{}/file_integrated/upload/group_chat/{}", TALK_API, group_uuid);
     let response = upload_file(&url, file_path, "file").await?;
 
     let status = response.status();

@@ -135,7 +135,7 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bo
     endpoint.set_default_client_config(configure_client());
 
     info!("尝试连接到服务器 {}", server_addr);
-    let connection = endpoint.connect(server_addr, "onlytalk.local")?.await?;
+    let connection = endpoint.connect(server_addr, "onlytalk.cn")?.await?;
     info!("[client] connected: addr={}", connection.remote_address());
 
     // 创建 disconnect 信号通道
@@ -385,7 +385,6 @@ async fn process_rec_msg(
     buffer_msg: Arc<Mutex<Vec<u8>>>,
     head_length: usize,
 ) -> anyhow::Result<()> {
-    info!("[quic client]收到服务器返回的消息: {:?}", buffer);
     match msg_type {
         ConnectionType::Text => {
             let text_vec = get_text_msg(buffer, length, buffer_msg, head_length).await?;

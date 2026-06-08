@@ -83,8 +83,13 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
         let currentBizId = '';
         if (message.text_type === MSG_TYPE_GROUP_IMAGE) {
           try {
-            const imageRecord = JSON.parse(message.raw);
-            currentBizId = imageRecord.biz_id || imageRecord.url || '';
+            // 群聊图片消息 raw 被双层序列化: {"text":"{...GroupImageRecord...}","send_user":"..."}
+            // 需要先解外层 GroupTextRecord，再解内层 GroupImageRecord
+            let parsed = JSON.parse(message.raw);
+            if (parsed.text) {
+              parsed = JSON.parse(parsed.text);
+            }
+            currentBizId = parsed.biz_id || parsed.url || '';
           } catch (error) {
             console.error('Failed to parse image record:', error);
           }
