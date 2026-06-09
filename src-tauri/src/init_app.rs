@@ -74,10 +74,10 @@ pub async fn init_app(
     // 初始化公共数据库
     init_common_sqlite(sqlite_path).await.expect("初始化公共数据库失败!");
 
-    // 复制打包的资源文件到可访问目录（移动平台需要）
-    if let Some(handle) = app_handle {
-        copy_resources_to_app_dir(&handle, &resource_path).await;
-    }
+    // // 复制打包的资源文件到可访问目录（移动平台需要）
+    // if let Some(handle) = app_handle {
+    //     copy_resources_to_app_dir(&handle, &resource_path).await;
+    // }
 
     // 监测ipv6是否支持
     let addr_v6 = "[::]:10086";

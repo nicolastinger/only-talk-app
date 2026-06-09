@@ -1,4 +1,4 @@
-export const TALK_API = "https://onlytalk.local:8443";
+export const TALK_API = "https://onlytalk.cn:8443";
 
 export const HTTP_METHOD = {
   GET: "get_request",
