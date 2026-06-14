@@ -27,7 +27,10 @@ pub async fn update_group_message_read(record: &GroupMessageRead) -> Result<(), 
     Ok(())
 }
 
-pub async fn query_group_message_read(group_uuid: &str, user_uuid: &str) -> Result<Option<GroupMessageRead>, anyhow::Error> {
+pub async fn query_group_message_read(
+    group_uuid: &str,
+    user_uuid: &str,
+) -> Result<Option<GroupMessageRead>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let record = sqlx::query_as::<_, GroupMessageRead>(
         r#"SELECT * FROM group_message_read WHERE group_uuid = ?1 AND user_uuid = ?2"#,

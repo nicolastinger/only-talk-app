@@ -3,8 +3,8 @@ use crate::service::chat_service::{
 };
 use crate::service::group_service::{
     accept_group_invitation, create_group, decline_group_invitation, get_group_info,
-    get_local_group_list, get_local_group_members, invite_group_members, join_group,
-    leave_group, remove_group_member_service, sync_group_list, sync_group_members,
+    get_local_group_list, get_local_group_members, invite_group_members, join_group, leave_group,
+    remove_group_member_service, sync_group_list, sync_group_members,
 };
 use crate::vo::group_vo::{CreateGroupRequest, GroupMemberVo, GroupVo};
 
@@ -43,17 +43,13 @@ pub async fn invite_group_members_command(
 
 /// 接受群邀请
 #[tauri::command]
-pub async fn accept_group_invitation_command(
-    group_id: String,
-) -> Result<(), String> {
+pub async fn accept_group_invitation_command(group_id: String) -> Result<(), String> {
     accept_group_invitation(&group_id).await.map_err(|e| e.to_string())
 }
 
 /// 拒绝群邀请
 #[tauri::command]
-pub async fn decline_group_invitation_command(
-    group_id: String,
-) -> Result<(), String> {
+pub async fn decline_group_invitation_command(group_id: String) -> Result<(), String> {
     decline_group_invitation(&group_id).await.map_err(|e| e.to_string())
 }
 
@@ -71,10 +67,7 @@ pub async fn leave_group_command(group_id: String) -> Result<(), String> {
 
 /// 移除群成员
 #[tauri::command]
-pub async fn remove_group_member_command(
-    group_id: String,
-    user_id: String,
-) -> Result<(), String> {
+pub async fn remove_group_member_command(group_id: String, user_id: String) -> Result<(), String> {
     remove_group_member_service(&group_id, &user_id).await.map_err(|e| e.to_string())
 }
 
@@ -98,6 +91,7 @@ pub async fn create_group_chat_session_command(group_id: String) -> Result<(), S
 
 /// 获取群聊会话列表
 #[tauri::command]
-pub async fn get_group_chat_session_list() -> Result<Vec<crate::vo::chat_session_vo::ChatSessionVo>, String> {
+pub async fn get_group_chat_session_list(
+) -> Result<Vec<crate::vo::chat_session_vo::ChatSessionVo>, String> {
     get_group_chat_session_service().await.map_err(|e| e.to_string())
 }

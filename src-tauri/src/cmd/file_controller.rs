@@ -197,7 +197,9 @@ pub async fn get_chat_file_by_biz_id(
 
 /// 调试命令：列出所有资源路径和文件
 #[tauri::command]
-pub async fn debug_resource_paths<R: Runtime>(app_handle: tauri::AppHandle<R>) -> Result<String, String> {
+pub async fn debug_resource_paths<R: Runtime>(
+    app_handle: tauri::AppHandle<R>,
+) -> Result<String, String> {
     use tauri::path::BaseDirectory;
 
     let mut output = String::new();

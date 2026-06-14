@@ -64,11 +64,9 @@ impl SqliteStore for ChatSession {
     }
 
     async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
-        let result = sqlx::query(
-            "ALTER TABLE chat_session ADD COLUMN group_id TEXT DEFAULT NULL",
-        )
-        .execute(pool_sqlite)
-        .await;
+        let result = sqlx::query("ALTER TABLE chat_session ADD COLUMN group_id TEXT DEFAULT NULL")
+            .execute(pool_sqlite)
+            .await;
         match result {
             Ok(_) => {}
             Err(_) => {} // Column already exists, ignore

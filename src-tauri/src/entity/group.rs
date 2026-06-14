@@ -123,9 +123,11 @@ impl SqliteStore for Group {
 
     async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
         // Add member_count column if it doesn't exist (migration from old schema)
-        let result = sqlx::query("ALTER TABLE group_info ADD COLUMN member_count INTEGER NOT NULL DEFAULT 0")
-            .execute(pool_sqlite)
-            .await;
+        let result = sqlx::query(
+            "ALTER TABLE group_info ADD COLUMN member_count INTEGER NOT NULL DEFAULT 0",
+        )
+        .execute(pool_sqlite)
+        .await;
         match result {
             Ok(_) => {}
             Err(_) => {} // Column already exists, ignore

@@ -29,11 +29,14 @@ use crate::cmd::api_controller::{
     post_request, put_request, upload_file_request, upload_file_with_extra_fields_request,
     upload_multiple_files_request, upload_multiple_files_with_extra_fields_request,
 };
-use crate::cmd::auth_controller::{clear_user_info, delete_quick_login_user, get_quick_login_users, logout, quick_login, refresh_token_command, sign_in};
+use crate::cmd::auth_controller::{
+    clear_user_info, delete_quick_login_user, get_quick_login_users, logout, quick_login,
+    refresh_token_command, sign_in,
+};
 use crate::cmd::chat_record_controller::{
     get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
-    mark_group_read, mark_read, send_file_msg, send_group_file_msg, send_group_image_msg, send_group_text_msg,
-    send_image_msg, send_text_msg,
+    mark_group_read, mark_read, send_file_msg, send_group_file_msg, send_group_image_msg,
+    send_group_text_msg, send_image_msg, send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
@@ -53,7 +56,8 @@ use crate::cmd::group_controller::{
     sync_group_members_command,
 };
 use crate::cmd::notification_controller::{
-    batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level, get_system_notification, get_unread_notification_counts,
+    batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level,
+    get_system_notification, get_unread_notification_counts,
 };
 use crate::cmd::p2p_controller::{
     close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
@@ -64,8 +68,8 @@ use crate::cmd::p2p_controller::{
 };
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
-    get_cached_user_info_by_account, get_quic_connection_state, get_user_map,
-    get_user_info_with_cache, refresh_user_info, reconnect_quic_command, update_user_info_command,
+    get_cached_user_info_by_account, get_quic_connection_state, get_user_info_with_cache,
+    get_user_map, reconnect_quic_command, refresh_user_info, update_user_info_command,
 };
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;

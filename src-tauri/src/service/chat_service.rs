@@ -9,38 +9,37 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::time::timeout;
 
+use crate::cmd::api_controller::get_request;
 use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
 };
 use crate::dao::chat_record_db::{
     query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
 };
-use crate::dao::group_chat_record_db::query_group_chat_record_from_db;
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
 };
+use crate::dao::group_chat_record_db::query_group_chat_record_from_db;
+use crate::dao::group_db::{query_group_by_id, upsert_group};
+use crate::dao::group_message_ack::insert_group_message_ack;
+use crate::dao::group_message_read::update_group_message_read;
 use crate::dao::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, query_group_chat_session,
     update_chat_session_db, update_chat_session_local_db,
 };
+use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::dao::group_message_ack::insert_group_message_ack;
-use crate::dao::group_message_read::update_group_message_read;
-use crate::entity::group_message_ack::GroupMessageAck;
-use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::chat_record_raw::{
     ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
 };
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
-use crate::dao::group_db::{query_group_by_id, upsert_group};
-use crate::entity::group::Group;
-use crate::cmd::api_controller::get_request;
-use crate::dto::http_result::HttpResult;
-use crate::vo::group_vo::GroupVo;
 use crate::entity::chat_session::ChatSession;
+use crate::entity::group::Group;
+use crate::entity::group_message_ack::GroupMessageAck;
+use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
@@ -49,6 +48,7 @@ use crate::utils::global_static_str::{PLATFORM, TALK_API, ZERO_UUID};
 use crate::utils::image_utils::compress_image_to_webp;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
+use crate::vo::group_vo::GroupVo;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -158,7 +158,7 @@ pub async fn update_group_last_read_msg_service(
     timestamp: i64,
 ) -> Result<(), anyhow::Error> {
     let user_uuid = get_user_map("uuid").await.map_err(|e| anyhow!(e))?;
-    
+
     let record = GroupMessageRead {
         id: 0,
         nano_id,
@@ -166,28 +166,26 @@ pub async fn update_group_last_read_msg_service(
         user_uuid: user_uuid.clone(),
         timestamp,
     };
-    
+
     update_group_message_read(&record).await?;
-    
+
     let mut group_session = query_chat_session_by_user_db(&user_uuid, &group_uuid).await?;
     if !group_session.is_empty() {
         let mut chat_session = group_session.remove(0);
         chat_session.unread_count = 0;
         update_chat_session_local_db(&chat_session).await?;
-        
-        let chat_session_event = ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+
+        let chat_session_event =
+            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
         let payload = serde_json::to_string(&chat_session_event)?;
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     }
-    
+
     Ok(())
 }
 
 /// 按需开流发送文本信息
-pub async fn send_msg(
-    text_msg: Vec<u8>,
-    conn: &Connection,
-) -> Result<String, anyhow::Error> {
+pub async fn send_msg(text_msg: Vec<u8>, conn: &Connection) -> Result<String, anyhow::Error> {
     let mut send = conn.open_uni().await?;
     send.write_all(&text_msg).await?;
     send.finish().await?;
@@ -359,15 +357,15 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
     if group.is_none() {
         let url = format!("{}/group/chat/info/{}", TALK_API, group_id);
         let result = get_request(url).await.map_err(|e| anyhow!(e))?;
-        let response: HttpResult = serde_json::from_str(&result.body)
-            .map_err(|e| anyhow!("解析响应失败: {}", e))?;
+        let response: HttpResult =
+            serde_json::from_str(&result.body).map_err(|e| anyhow!("解析响应失败: {}", e))?;
 
         if response.code != 200 {
             return Err(anyhow!("群聊不存在"));
         }
 
-        let group_vo: GroupVo = serde_json::from_value(response.data)
-            .map_err(|e| anyhow!("解析群信息失败: {}", e))?;
+        let group_vo: GroupVo =
+            serde_json::from_value(response.data).map_err(|e| anyhow!("解析群信息失败: {}", e))?;
 
         let new_group = Group {
             id: 0,
@@ -413,7 +411,8 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
 
 /// 获取群聊会话列表
 pub async fn get_group_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
-    let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
+    let uuid =
+        GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
     let all_sessions = query_chat_session_db(&uuid).await?;
     Ok(all_sessions.into_iter().filter(|s| s.session_type == 2).collect())
 }
@@ -444,7 +443,9 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
             .first()
             .ok_or(anyhow!("last_send_success_msg is empty"))?
             .send_id;
-        if let Some(prev_ack) = query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await? {
+        if let Some(prev_ack) =
+            query_chat_record_by_send_id(send_id, &text_quic_msg.recv_user).await?
+        {
             prev_id = prev_ack.msg_id;
         }
     }
@@ -526,16 +527,16 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
 }
 
 /// 发送群聊文本消息（简化版，无prev_id和锁机制，写入群消息 ack 表）
-pub async fn send_group_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
+pub async fn send_group_text_msg_service(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<String, anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let timestamp = text_quic_msg.timestamp;
     let group_id = text_quic_msg.recv_user.clone();
 
     // 序列化群聊消息内容
-    let group_text_raw = GroupTextRecord {
-        text: text_quic_msg.raw.clone(),
-        send_user: sender.clone(),
-    };
+    let group_text_raw =
+        GroupTextRecord { text: text_quic_msg.raw.clone(), send_user: sender.clone() };
     let raw = group_text_raw.json_serialize()?;
 
     // 写入群消息 ack 表（等待 ack 回执后再插入 group_chat_record）
@@ -553,7 +554,14 @@ pub async fn send_group_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result
     insert_group_message_ack(&ack).await?;
 
     // 更新会话列表
-    update_group_session_after_send(&group_id, &raw, text_quic_msg.text_type, &text_quic_msg.nano_id, timestamp).await?;
+    update_group_session_after_send(
+        &group_id,
+        &raw,
+        text_quic_msg.text_type,
+        &text_quic_msg.nano_id,
+        timestamp,
+    )
+    .await?;
 
     let raw_bytes: Vec<u8> = Vec::from(raw);
     let test_msg = generate_text_msg_without_nano(
@@ -581,10 +589,10 @@ async fn update_group_session_after_send(
     timestamp: i64,
 ) -> Result<(), anyhow::Error> {
     let me = get_user_info("uuid").await?;
-    
+
     // 查询现有会话
     let mut group_session = query_chat_session_by_user_db(&me, group_id).await?;
-    
+
     if group_session.is_empty() {
         // 会话不存在，创建新会话
         let chat_session = ChatSession {
@@ -602,9 +610,10 @@ async fn update_group_session_after_send(
             group_id: Some(group_id.to_string()),
         };
         update_chat_session_db(&chat_session).await?;
-        
+
         // 发送会话事件到前端
-        let chat_session_event = ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+        let chat_session_event =
+            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
         let payload = serde_json::to_string(&chat_session_event)?;
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     } else {
@@ -615,20 +624,23 @@ async fn update_group_session_after_send(
         chat_session.text_type = text_type;
         chat_session.nano_id = nano_id.to_string();
         chat_session.unread_count = 0;
-        
+
         update_chat_session_db(&chat_session).await?;
-        
+
         // 发送会话事件到前端
-        let chat_session_event = ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+        let chat_session_event =
+            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
         let payload = serde_json::to_string(&chat_session_event)?;
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     }
-    
+
     Ok(())
 }
 
 /// 发送群聊图片消息（简化版，无prev_id和锁机制）
-pub async fn send_group_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+pub async fn send_group_image_msg_service(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<(), anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
 
@@ -681,7 +693,9 @@ pub async fn send_group_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Resul
 }
 
 /// 发送群聊文件消息（简化版，无prev_id和锁机制）
-pub async fn send_group_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
+pub async fn send_group_file_msg_service(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<(), anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
     let path = Path::new(&file_path);
@@ -704,13 +718,8 @@ pub async fn send_group_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result
     let biz_id = file_info.biz_id.clone();
 
     // 5、组装 GroupFileRecord
-    let group_file_record = GroupFileRecord {
-        biz_id,
-        file_name,
-        file_size,
-        file_type,
-        send_user: sender.clone(),
-    };
+    let group_file_record =
+        GroupFileRecord { biz_id, file_name, file_size, file_type, send_user: sender.clone() };
 
     let file_raw = group_file_record.json_serialize()?;
 

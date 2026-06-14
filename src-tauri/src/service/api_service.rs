@@ -70,7 +70,7 @@ pub async fn upload_file_with_fields(
     extra_fields: Vec<(String, String)>,
 ) -> Result<Response, anyhow::Error> {
     use log::info;
-    
+
     let path = Path::new(file_path);
     if !path.exists() {
         return Err(anyhow!("文件不存在: {}", file_path));
@@ -86,9 +86,13 @@ pub async fn upload_file_with_fields(
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
-    
-    info!("upload_file_with_fields - URL: {}, Token length: {}, Token preview: {}", 
-          url, token.len(), if token.len() > 20 { &token[..20] } else { &token });
+
+    info!(
+        "upload_file_with_fields - URL: {}, Token length: {}, Token preview: {}",
+        url,
+        token.len(),
+        if token.len() > 20 { &token[..20] } else { &token }
+    );
 
     let mut request = client.post(url);
 

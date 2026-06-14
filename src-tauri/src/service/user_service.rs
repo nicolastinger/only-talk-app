@@ -2,10 +2,6 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::Duration;
 
-use anyhow::anyhow;
-use log::{error, info, warn};
-use tokio::time::timeout;
-use uuid::Uuid;
 use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::init_db::init_sqlite;
@@ -25,6 +21,10 @@ use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use anyhow::anyhow;
+use log::{error, info, warn};
+use tokio::time::timeout;
+use uuid::Uuid;
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -308,15 +308,9 @@ pub async fn sync_offline_messages() {
         user_info.insert("is_syncing".to_string(), "true".to_string());
     }
 
-    get_unread_message()
-        .await
-        .unwrap_or_else(|e| error!("拉取私聊未读消息失败 {:?}", e));
-    get_unread_notification()
-        .await
-        .unwrap_or_else(|e| error!("拉取未读通知失败 {:?}", e));
-    pull_group_messages()
-        .await
-        .unwrap_or_else(|e| error!("拉取群聊未读消息失败 {:?}", e));
+    get_unread_message().await.unwrap_or_else(|e| error!("拉取私聊未读消息失败 {:?}", e));
+    get_unread_notification().await.unwrap_or_else(|e| error!("拉取未读通知失败 {:?}", e));
+    pull_group_messages().await.unwrap_or_else(|e| error!("拉取群聊未读消息失败 {:?}", e));
 
     // 同步完成，移除标志
     {
@@ -413,21 +407,19 @@ async fn discover_quic_server_addr() -> SocketAddr {
     // 尝试通过 API 获取 QUIC 服务器列表
     let url = format!("{}/integrated/quic_servers", TALK_API);
     match get_request(url).await {
-        Ok(response) => {
-            match serde_json::from_str::<ApiResult>(&response.body) {
-                Ok(result) => {
-                    let server = result.data;
-                    info!("通过API发现QUIC服务器: index={} -> {}", server.index, server.address);
-                    if let Ok(addr) = server.address.parse::<SocketAddr>() {
-                        return addr;
-                    }
-                    warn!("API返回的QUIC服务器地址无效，回退到DNS解析");
+        Ok(response) => match serde_json::from_str::<ApiResult>(&response.body) {
+            Ok(result) => {
+                let server = result.data;
+                info!("通过API发现QUIC服务器: index={} -> {}", server.index, server.address);
+                if let Ok(addr) = server.address.parse::<SocketAddr>() {
+                    return addr;
                 }
-                Err(e) => {
-                    warn!("解析QUIC服务器列表失败: {}，回退到DNS解析", e);
-                }
+                warn!("API返回的QUIC服务器地址无效，回退到DNS解析");
             }
-        }
+            Err(e) => {
+                warn!("解析QUIC服务器列表失败: {}，回退到DNS解析", e);
+            }
+        },
         Err(e) => {
             warn!("获取QUIC服务器列表失败: {}，回退到DNS解析", e);
         }

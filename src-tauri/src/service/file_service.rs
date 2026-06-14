@@ -205,9 +205,9 @@ pub async fn download_file_by_biz_service(
                 let file_url_str = format!("{}", file_url_str);
                 info!("下载文件URL: {}", file_url_str);
 
-                let is_public_bucket = file_url_str.contains("/user-avatar/") 
+                let is_public_bucket = file_url_str.contains("/user-avatar/")
                     || file_url_str.contains("/group-avatar/");
-                
+
                 let response = if is_public_bucket {
                     info!("公开桶文件，不带token下载");
                     get_without_token(file_url_str).await?

@@ -44,10 +44,7 @@ pub fn emit_unread_count(notification: &SystemNotification) -> Result<(), anyhow
 
     let event = UnreadCountEvent { module: module.to_string(), count: unread };
     info!("emit 未读数量更新: module={}, count={}", module, unread);
-    APP_HANDLE
-        .get()
-        .ok_or(anyhow!("无法获取app"))?
-        .emit("listen_unread_count", event)?;
+    APP_HANDLE.get().ok_or(anyhow!("无法获取app"))?.emit("listen_unread_count", event)?;
 
     Ok(())
 }
