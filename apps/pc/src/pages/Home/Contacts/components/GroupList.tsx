@@ -1,7 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { history } from '@umijs/max';
-import { getFiles } from '@workspace/services';
+import { getFiles, getUnreadNotificationCounts } from '@workspace/services';
 import { get_group_list } from '@workspace/services';
 import { GroupVo } from '@workspace/types';
 import { Badge, message } from 'antd';
@@ -15,17 +15,35 @@ const GroupList = () => {
   const [groups, setGroups] = useState<GroupVo[]>([]);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [invitationVisible, setInvitationVisible] = useState(false);
+  const [groupInvitationUnread, setGroupInvitationUnread] = useState(0);
   const refreshFlag = useBearStore((state) => state.refreshFlag);
 
   useEffect(() => {
     getGroupList();
+    fetchGroupInvitationUnread();
   }, []);
 
   useEffect(() => {
     if (refreshFlag > 0) {
       getGroupList();
+      fetchGroupInvitationUnread();
     }
   }, [refreshFlag]);
+
+  useEffect(() => {
+    if (!invitationVisible) {
+      fetchGroupInvitationUnread();
+    }
+  }, [invitationVisible]);
+
+  const fetchGroupInvitationUnread = async () => {
+    try {
+      const counts = await getUnreadNotificationCounts();
+      setGroupInvitationUnread(counts.groups || 0);
+    } catch (e) {
+      console.log('获取群邀请未读数失败', e);
+    }
+  };
 
   const getGroupList = async () => {
     try {
@@ -61,13 +79,15 @@ const GroupList = () => {
           : null}
       </div>
       <div className={styles.bottomBar}>
-        <div
-          className={styles.invitationBtn}
-          onClick={() => setInvitationVisible(true)}
-        >
-          <MailOutlined />
-          <span>邀请管理</span>
-        </div>
+        <Badge count={groupInvitationUnread} size="small" offset={[-4, 2]}>
+          <div
+            className={styles.invitationBtn}
+            onClick={() => setInvitationVisible(true)}
+          >
+            <MailOutlined />
+            <span>邀请管理</span>
+          </div>
+        </Badge>
         <div
           className={styles.createBtn}
           onClick={() => setCreateModalVisible(true)}

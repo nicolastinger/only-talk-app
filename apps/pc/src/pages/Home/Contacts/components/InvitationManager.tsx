@@ -8,7 +8,7 @@ import {
   getUnreadNotificationCounts,
 } from '@workspace/services';
 import { Modal, Tabs, Tag, Empty, Button, message, Popconfirm } from 'antd';
-import { ClearOutlined } from '@ant-design/icons';
+import { ClearOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons';
 import { useBearStore } from '@/store/store';
 import { useEffect, useState } from 'react';
 import styles from './styles/InvitationManager.less';
@@ -109,11 +109,19 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
 
   const renderReceivedItem = (inv: GroupInvitationVo) => (
     <div key={inv.id} className={styles.invitationItem}>
+      <div className={styles.invitationLeft}>
+        <div className={`${styles.invitationAvatar} ${styles.avatarReceived}`}>
+          <UserSwitchOutlined />
+        </div>
+      </div>
       <div className={styles.invitationInfo}>
         <div className={styles.invitationGroup}>{inv.group_name}</div>
         <div className={styles.invitationMeta}>
-          <span>邀请人: {inv.inviter_uuid.slice(0, 8)}...</span>
-          <span style={{ marginLeft: 12 }}>{formatTime(inv.created_at)}</span>
+          <span>
+            <TeamOutlined style={{ marginRight: 4, fontSize: 11 }} />
+            {inv.inviter_uuid.slice(0, 8)}...
+          </span>
+          <span>{formatTime(inv.created_at)}</span>
         </div>
       </div>
       <div className={styles.invitationActions}>
@@ -130,7 +138,6 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
               size="small"
               danger
               onClick={() => handleDecline(inv.group_uuid)}
-              style={{ marginLeft: 8 }}
             >
               拒绝
             </Button>
@@ -146,11 +153,19 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
 
   const renderSentItem = (inv: GroupInvitationVo) => (
     <div key={inv.id} className={styles.invitationItem}>
+      <div className={styles.invitationLeft}>
+        <div className={`${styles.invitationAvatar} ${styles.avatarSent}`}>
+          <TeamOutlined />
+        </div>
+      </div>
       <div className={styles.invitationInfo}>
         <div className={styles.invitationGroup}>{inv.group_name}</div>
         <div className={styles.invitationMeta}>
-          <span>被邀请人: {inv.invitee_uuid.slice(0, 8)}...</span>
-          <span style={{ marginLeft: 12 }}>{formatTime(inv.created_at)}</span>
+          <span>
+            <UserSwitchOutlined style={{ marginRight: 4, fontSize: 11 }} />
+            {inv.invitee_uuid.slice(0, 8)}...
+          </span>
+          <span>{formatTime(inv.created_at)}</span>
         </div>
       </div>
       <div className={styles.invitationActions}>
@@ -166,7 +181,12 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
   const tabItems = [
     {
       key: 'received',
-      label: `邀请我的${pendingCount > 0 ? ` (${pendingCount})` : ''}`,
+      label: (
+        <span className={styles.tabLabel}>
+          <span>邀请我的</span>
+          {pendingCount > 0 && <span className={styles.badge}>{pendingCount > 99 ? '99+' : pendingCount}</span>}
+        </span>
+      ),
       children: receivedList.length > 0 ? (
         <div className={styles.invitationList}>
           {receivedList.map(renderReceivedItem)}
