@@ -4,7 +4,7 @@ use crate::service::chat_service::{
 use crate::service::group_service::{
     accept_group_invitation, create_group, decline_group_invitation, get_group_info,
     get_local_group_list, get_local_group_members, invite_group_members, join_group, leave_group,
-    remove_group_member_service, sync_group_list, sync_group_members,
+    remove_group_member_service, search_local_group_list, sync_group_list, sync_group_members,
 };
 use crate::vo::group_vo::{CreateGroupRequest, GroupMemberVo, GroupVo};
 
@@ -94,4 +94,10 @@ pub async fn create_group_chat_session_command(group_id: String) -> Result<(), S
 pub async fn get_group_chat_session_list(
 ) -> Result<Vec<crate::vo::chat_session_vo::ChatSessionVo>, String> {
     get_group_chat_session_service().await.map_err(|e| e.to_string())
+}
+
+/// 模糊搜索群聊列表
+#[tauri::command]
+pub async fn search_group(keyword: String) -> Result<Vec<GroupVo>, String> {
+    search_local_group_list(keyword).await.map_err(|e| e.to_string())
 }

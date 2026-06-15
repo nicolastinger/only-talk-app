@@ -40,19 +40,20 @@ use crate::cmd::chat_record_controller::{
 };
 use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
-    mark_read_chat_session,
+    mark_read_chat_session, search_chat_session,
 };
 use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
 };
 use crate::cmd::friend_controller::{
-    delete_friend_command, get_friend_info, get_friend_list, update_local_friend_list,
+    delete_friend_command, get_friend_info, get_friend_list, search_friend,
+    update_local_friend_list,
 };
 use crate::cmd::group_controller::{
     accept_group_invitation_command, create_group_chat_session_command, create_group_command,
     decline_group_invitation_command, get_group_chat_session_list, get_group_info_command,
     get_group_list, get_group_members, invite_group_members_command, join_group_command,
-    leave_group_command, remove_group_member_command, sync_group_list_command,
+    leave_group_command, remove_group_member_command, search_group, sync_group_list_command,
     sync_group_members_command,
 };
 use crate::cmd::notification_controller::{
@@ -195,6 +196,7 @@ pub fn run() {
             delete_friend_command,
             mark_read,
             get_friend_list,
+            search_friend,
             create_chat_session,
             get_system_notification,
             update_local_friend_list,
@@ -232,7 +234,9 @@ pub fn run() {
             sync_group_list_command,
             sync_group_members_command,
             create_group_chat_session_command,
-            get_group_chat_session_list
+            get_group_chat_session_list,
+            search_group,
+            search_chat_session
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

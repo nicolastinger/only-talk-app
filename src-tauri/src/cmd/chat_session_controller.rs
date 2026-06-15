@@ -1,6 +1,6 @@
 use crate::service::chat_service::{
     clear_all_unread_sessions_service, create_chat_session_service, get_chat_session_service,
-    update_last_read_msg_service,
+    search_chat_session_service, update_last_read_msg_service,
 };
 use crate::vo::chat_session_vo::ChatSessionVo;
 
@@ -27,4 +27,10 @@ pub async fn get_chat_session_from_store() -> Result<Vec<ChatSessionVo>, String>
 #[tauri::command]
 pub async fn clear_all_unread_sessions() -> Result<(), String> {
     clear_all_unread_sessions_service().await.map_err(|e| e.to_string())
+}
+
+/// 模糊搜索会话列表
+#[tauri::command]
+pub async fn search_chat_session(keyword: String) -> Result<Vec<ChatSessionVo>, String> {
+    search_chat_session_service(keyword).await.map_err(|e| e.to_string())
 }

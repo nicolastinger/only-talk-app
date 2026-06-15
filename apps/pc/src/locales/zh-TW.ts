@@ -288,5 +288,9 @@ export default {
   search: {
     placeholder: '搜索',
     noResults: '未找到相關結果',
+    searching: '搜索中...',
+    groupTag: '群聊',
+    friendTag: '好友',
+    memberCount: '成員',
   },
 };

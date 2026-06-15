@@ -26,7 +26,7 @@ use crate::dao::group_message_ack::insert_group_message_ack;
 use crate::dao::group_message_read::update_group_message_read;
 use crate::dao::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, query_group_chat_session,
-    update_chat_session_db, update_chat_session_local_db,
+    search_chat_session_db, update_chat_session_db, update_chat_session_local_db,
 };
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record::ChatRecord;
@@ -81,6 +81,15 @@ pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Er
     let uuid =
         GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
     query_chat_session_db(&uuid).await
+}
+
+/// 模糊搜索会话列表
+pub async fn search_chat_session_service(
+    keyword: String,
+) -> Result<Vec<ChatSessionVo>, anyhow::Error> {
+    let uuid =
+        GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned().ok_or(anyhow!("获取失败"))?;
+    search_chat_session_db(&uuid, &keyword).await
 }
 
 /// 分页获取聊天记录

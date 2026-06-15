@@ -213,7 +213,7 @@ const ChatsLayout = () => {
       >
         <div style={{ height: '100%' }}>
         <div className={styles.header}>
-          <Search />
+          <Search onSelect={(item) => routeToChat(item)} />
           <Popconfirm
             title="确定清空所有未读消息？"
             onConfirm={handleClearAllUnread}

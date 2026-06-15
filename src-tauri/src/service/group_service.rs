@@ -5,7 +5,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::cmd::api_controller::{get_request, post_request};
-use crate::dao::group_db::{get_last_group, query_group_list, soft_delete_group, upsert_group};
+use crate::dao::group_db::{get_last_group, query_group_list, search_group_list, soft_delete_group, upsert_group};
 use crate::dao::group_member_db::{
     insert_group_member, query_group_members, remove_group_member, upsert_group_members,
 };
@@ -264,6 +264,29 @@ pub async fn get_group_info(group_id: &str) -> Result<GroupVo, anyhow::Error> {
 pub async fn get_local_group_list() -> Result<Vec<GroupVo>, anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
     let groups = query_group_list(&uuid).await?;
+    Ok(groups
+        .into_iter()
+        .map(|g| GroupVo {
+            group_uuid: g.group_id,
+            group_name: g.group_name,
+            avatar: if g.group_icon.is_empty() { None } else { Some(g.group_icon) },
+            owner_uuid: g.owner_id,
+            description: None,
+            max_members: 500,
+            member_count: g.member_count,
+            created_at: g.created_at,
+            updated_at: g.updated_at,
+            status: 1,
+            last_msg_time: None,
+            unread_count: 0,
+        })
+        .collect())
+}
+
+/// 模糊搜索群聊列表
+pub async fn search_local_group_list(keyword: String) -> Result<Vec<GroupVo>, anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+    let groups = search_group_list(&uuid, &keyword).await?;
     Ok(groups
         .into_iter()
         .map(|g| GroupVo {

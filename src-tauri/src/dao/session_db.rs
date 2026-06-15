@@ -136,6 +136,31 @@ pub async fn query_group_chat_session(
     Ok(record)
 }
 
+/// 模糊搜索会话列表（按好友名称、群名称、最后消息内容搜索）
+pub async fn search_chat_session_db(
+    uuid: &str,
+    keyword: &str,
+) -> Result<Vec<ChatSessionVo>, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let pattern = format!("%{}%", keyword);
+    let record = sqlx::query_as::<_, ChatSessionVo>(
+        r#"select cs.*,
+        COALESCE(fr.friend_icon, gr.group_icon, '') as friend_icon,
+        COALESCE(fr.friend_name, gr.group_name, '') as friend_name
+        from chat_session cs
+        left join (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
+        on cs.send_user = fr.friend_id and cs.session_type != 2
+        left join group_info gr on cs.group_id = gr.group_id and cs.session_type = 2
+        where cs.recv_user = ?1 and cs.is_show = 1
+        and (COALESCE(fr.friend_name, gr.group_name, '') LIKE ?2 or cs.last_message LIKE ?2)"#,
+    )
+    .bind(uuid)
+    .bind(&pattern)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(record)
+}
+
 /// 隐藏群聊会话
 pub async fn hide_group_session_db(me: &str, group_id: &str) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_db_client().await?;

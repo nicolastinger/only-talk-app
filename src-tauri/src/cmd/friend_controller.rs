@@ -1,5 +1,5 @@
 use crate::dao::friend_db::{query_friend_info_by_id_db, query_friend_info_db};
-use crate::service::friend_service::{delete_friend, update_friend_list};
+use crate::service::friend_service::{delete_friend, search_friend_list, update_friend_list};
 use crate::service::user_service::get_user_info;
 use crate::vo::friend_vo::FriendVo;
 
@@ -37,4 +37,10 @@ pub async fn update_local_friend_list() -> Result<(), String> {
 pub async fn delete_friend_command(friend_uuid: String) -> Result<(), String> {
     delete_friend(&friend_uuid).await.map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// 模糊搜索好友列表
+#[tauri::command]
+pub async fn search_friend(keyword: String) -> Result<Vec<FriendVo>, String> {
+    search_friend_list(keyword).await.map_err(|e| e.to_string())
 }

@@ -295,5 +295,9 @@ export default {
   search: {
     placeholder: 'Search',
     noResults: 'No results found',
+    searching: 'Searching...',
+    groupTag: 'Group',
+    friendTag: 'Friend',
+    memberCount: 'Members',
   },
 };
