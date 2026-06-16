@@ -65,7 +65,7 @@ const GroupInfoPage = () => {
   const isOwner = groupInfo?.owner_uuid === userInfo?.uuid;
 
   const memberUuids = useMemo(
-    () => members.map((m) => m.user_id).filter(Boolean),
+    () => members.map((m) => m.user_uuid).filter(Boolean),
     [members],
   );
   const { memberInfoMap } = useGroupMemberInfo(memberUuids);
@@ -137,7 +137,7 @@ const GroupInfoPage = () => {
                   <List
                     dataSource={members}
                     renderItem={(member) => {
-                      const info = memberInfoMap.get(member.user_id);
+                      const info = memberInfoMap.get(member.user_uuid);
                       const displayName = info?.username || member.nickname || member.username;
                       return (
                       <List.Item className={styles.memberItem}>

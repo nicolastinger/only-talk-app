@@ -8,12 +8,13 @@ import {
   QuicServerInfo,
   HttpResponse,
   UpdateUserDTO,
+  FriendVo,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
 
-export const get_friend_list = async () => {
-  return await invoke("get_friend_list");
+export const get_friend_list = async (): Promise<FriendVo[]> => {
+  return await invoke<FriendVo[]>("get_friend_list");
 };
 
 export const get_friend_info = async (uuid: string) => {

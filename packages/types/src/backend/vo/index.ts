@@ -73,12 +73,12 @@ interface GroupVo {
 
 interface GroupMemberVo {
   group_id: string;
-  user_id: string;
+  user_uuid: string;
   username: string;
   icon: string;
   role: number;
   nickname: string;
-  joined_at: number;
+  join_time: number;
 }
 
 interface CreateGroupRequest {

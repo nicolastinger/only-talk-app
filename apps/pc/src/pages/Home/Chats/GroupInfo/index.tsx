@@ -90,7 +90,7 @@ const GroupInfoPage: React.FC = () => {
   const openInviteModal = async () => {
     try {
       const friends = await get_friend_list();
-      const memberIds = new Set(members.map((m) => m.user_id));
+      const memberIds = new Set(members.map((m) => m.user_uuid));
       const nonMembers = friends.filter((f) => !memberIds.has(f.friend_id));
       setFriendList(nonMembers);
       setSelectedFriends([]);
@@ -119,10 +119,10 @@ const GroupInfoPage: React.FC = () => {
   };
 
   const isOwner = groupInfo?.owner_uuid === meUuid;
-  const isAdmin = members.some((m) => m.user_id === meUuid && m.role >= 1);
+  const isAdmin = members.some((m) => m.user_uuid === meUuid && m.role >= 1);
 
   const memberUuids = useMemo(
-    () => members.map((m) => m.user_id).filter(Boolean),
+    () => members.map((m) => m.user_uuid).filter(Boolean),
     [members],
   );
   const { memberInfoMap } = useGroupMemberInfo(memberUuids);
@@ -168,8 +168,8 @@ const GroupInfoPage: React.FC = () => {
         <List
           dataSource={members}
           renderItem={(member: GroupMemberVo) => {
-            const info = memberInfoMap.get(member.user_id);
-            const displayName = info?.username || member.nickname || member.user_id;
+            const info = memberInfoMap.get(member.user_uuid);
+            const displayName = info?.username || member.nickname || member.user_uuid;
             return (
             <List.Item>
               <List.Item.Meta
@@ -189,7 +189,7 @@ const GroupInfoPage: React.FC = () => {
                     )}
                   </span>
                 }
-                description={member.user_id === meUuid ? '我' : member.user_id}
+                description={member.user_uuid === meUuid ? '我' : member.user_uuid}
               />
             </List.Item>
             );

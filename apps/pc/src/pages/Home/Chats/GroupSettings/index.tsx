@@ -1,11 +1,12 @@
 import { DEFAULT_ICON, TALK_API } from '@/constants';
-import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
+import { useUserInfoList } from '@/hooks/useUserInfoList';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { useBearStore } from '@/store/store';
 import { GroupMemberVo, GroupVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
 import { convertPathToTauriUrl, getFiles, selectFile } from '@workspace/services';
 import { history, useSearchParams } from '@umijs/max';
-import { Avatar, Button, Input, List, Modal, Select, Tag, message, Spin } from 'antd';
+import { Avatar, Button, Input, Modal, Select, Tag, message, Spin } from 'antd';
 import {
   ArrowLeftOutlined,
   CameraOutlined,
@@ -139,21 +140,34 @@ const GroupSettingsPage = () => {
   };
 
   const isOwner = groupInfo?.owner_uuid === userInfo?.uuid;
-  const isAdmin = members.some((m) => m.user_id === userInfo?.uuid && m.role >= 1);
+  const isAdmin = members.some((m) => m.user_uuid === userInfo?.uuid && m.role >= 1);
   const canManage = isOwner || isAdmin;
 
   const memberUuids = useMemo(
-    () => members.map((m) => m.user_id).filter(Boolean),
+    () => members.map((m) => m.user_uuid).filter(Boolean),
     [members],
   );
-  const { memberInfoMap } = useGroupMemberInfo(memberUuids);
+  const { userInfoMap: memberInfoMap, loading: memberInfoLoading } = useUserInfoList(memberUuids);
+
+  // 收集所有成员的 icon bizId，批量转换为可用的头像 URL
+  const memberIconBizIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const member of members) {
+      const info = memberInfoMap.get(member.user_uuid);
+      const bizId = info?.icon || member.icon;
+      if (bizId) ids.push(bizId);
+    }
+    return ids;
+  }, [members, memberInfoMap]);
+  const { avatarMap } = useAvatarMap(memberIconBizIds);
 
   const filteredMembers = members.filter((m) => {
     const keyword = searchText.toLowerCase();
+    const info = memberInfoMap.get(m.user_uuid);
     return (
-      (m.nickname || '').toLowerCase().includes(keyword) ||
       (m.username || '').toLowerCase().includes(keyword) ||
-      m.user_id.toLowerCase().includes(keyword)
+      (info?.account || '').toLowerCase().includes(keyword) ||
+      m.user_uuid.toLowerCase().includes(keyword)
     );
   });
 
@@ -202,7 +216,7 @@ const GroupSettingsPage = () => {
   const loadFriends = async () => {
     try {
       const friends = await get_friend_list();
-      const memberIds = new Set(members.map((m) => m.user_id));
+      const memberIds = new Set(members.map((m) => m.user_uuid));
       setFriendList(friends.filter((f) => !memberIds.has(f.friend_id)));
       setSelectedFriends([]);
     } catch {
@@ -231,13 +245,13 @@ const GroupSettingsPage = () => {
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
       title: '移出群聊',
-      content: `确定要将 "${member.nickname || member.user_id}" 移出群聊吗？`,
+      content: `确定要将 "${member.username || member.user_uuid}" 移出群聊吗？`,
       okText: '确定',
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
         try {
-          await remove_group_member(groupInfo!.group_uuid, member.user_id);
+          await remove_group_member(groupInfo!.group_uuid, member.user_uuid);
           message.success('已移出群聊');
           loadData();
         } catch {
@@ -251,7 +265,7 @@ const GroupSettingsPage = () => {
     try {
       await set_member_role({
         group_uuid: groupInfo!.group_uuid,
-        user_uuid: member.user_id,
+        user_uuid: member.user_uuid,
         role,
       });
       message.success(role === 1 ? '已设为管理员' : '已取消管理员');
@@ -301,7 +315,7 @@ const GroupSettingsPage = () => {
   };
 
   const handleTransferOwnership = async () => {
-    const membersToTransfer = members.filter((m) => m.user_id !== userInfo?.uuid);
+    const membersToTransfer = members.filter((m) => m.user_uuid !== userInfo?.uuid);
     if (membersToTransfer.length === 0) {
       message.warning('群内没有其他成员可转让');
       return;
@@ -323,8 +337,8 @@ const GroupSettingsPage = () => {
               selectedUser = val;
             }}
             options={membersToTransfer.map((m) => ({
-              label: `${m.nickname || m.user_id} (${m.user_id})`,
-              value: m.user_id,
+              label: `${m.username || m.user_uuid} (${m.user_uuid})`,
+              value: m.user_uuid,
             }))}
           />
         </div>
@@ -384,7 +398,7 @@ const GroupSettingsPage = () => {
     { label: '群号', value: groupInfo.group_uuid, icon: <CopyOutlined />, onClick: copyGroupId, showArrow: true },
     { label: '群主', value: (() => {
       const owner = members.find((m) => m.role === 2);
-      return owner ? (owner.nickname || owner.user_id) : '-';
+      return owner ? (owner.username || owner.user_uuid) : '-';
     })(), icon: <SafetyCertificateOutlined /> },
     { label: '创建时间', value: groupInfo.created_at ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN') : '-', icon: null },
   ];
@@ -493,7 +507,7 @@ const GroupSettingsPage = () => {
           <div className={styles.sectionTitle}>群成员</div>
           <div className={styles.memberGrid}>
             {canManage && (
-              <div className={styles.memberGridItem} onClick={() => { loadFriends(); setInviteModalOpen(true); }}>
+              <div key="add" className={styles.memberGridItem} onClick={() => { loadFriends(); setInviteModalOpen(true); }}>
                 <div className={styles.addMemberBtn}>
                   <UserAddOutlined className={styles.addIcon} />
                 </div>
@@ -501,22 +515,23 @@ const GroupSettingsPage = () => {
               </div>
             )}
             {displayMembers.map((member) => {
-              const info = memberInfoMap.get(member.user_id);
-              const displayName = info?.username || member.nickname || member.username || '成员';
-              const displayIcon = info?.icon || member.icon;
+              const info = memberInfoMap.get(member.user_uuid);
+              const displayName = info?.username || member.username || '成员';
+              const iconBizId = info?.icon || member.icon;
+              const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
               return (
-              <div key={member.user_id} className={styles.memberGridItem}>
+              <div key={member.user_uuid} className={styles.memberGridItem}>
                 <Avatar
                   size={40}
                   shape="square"
                   icon={<UserOutlined />}
-                  src={displayIcon}
+                  src={avatarSrc || DEFAULT_ICON}
                   className={styles.memberAvatar}
                 />
                 <span className={styles.memberGridLabel}>
                   {member.role === 2 ? '群主' : displayName.slice(0, 4)}
                 </span>
-                {member.user_id === userInfo?.uuid && (
+                {member.user_uuid === userInfo?.uuid && (
                   <Tag className={styles.meTag}>我</Tag>
                 )}
               </div>
@@ -524,6 +539,7 @@ const GroupSettingsPage = () => {
             })}
             {hasMoreMembers && (
               <div
+                key="more"
                 className={styles.memberGridItem}
                 onClick={() => {
                   const el = document.getElementById('memberListSection');
@@ -565,13 +581,13 @@ const GroupSettingsPage = () => {
             className={styles.memberSearch}
             allowClear
           />
-          <List
-            dataSource={filteredMembers}
-            renderItem={(member) => {
-              const isSelf = member.user_id === userInfo?.uuid;
-              const info = memberInfoMap.get(member.user_id);
-              const displayName = info?.username || member.nickname || member.username || member.user_id;
-              const displayIcon = info?.icon || member.icon;
+          <div>
+            {filteredMembers.map((member) => {
+              const isSelf = member.user_uuid === userInfo?.uuid;
+              const info = memberInfoMap.get(member.user_uuid);
+              const displayName = info?.username || member.username || member.user_uuid;
+              const iconBizId = info?.icon || member.icon;
+              const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
               const actions: { label: React.ReactNode; onClick: () => void }[] = [];
               if (!isSelf && isOwner) {
                 if (member.role === 0) {
@@ -586,9 +602,9 @@ const GroupSettingsPage = () => {
               }
 
               return (
-                <div className={styles.memberListItem}>
+                <div key={member.user_uuid} className={styles.memberListItem}>
                   <div className={styles.memberListItemInfo}>
-                    <Avatar size={36} icon={<UserOutlined />} src={displayIcon} />
+                    <Avatar size={36} icon={<UserOutlined />} src={avatarSrc || DEFAULT_ICON} />
                     <div className={styles.memberTextInfo}>
                       <div>
                         <span className={styles.memberListItemName}>
@@ -601,7 +617,7 @@ const GroupSettingsPage = () => {
                         )}
                         {isSelf && <Tag style={{ marginLeft: 4 }} color="blue">我</Tag>}
                       </div>
-                      <span className={styles.memberItemId}>{member.user_id}</span>
+                      <span className={styles.memberItemId}>{info?.account || member.user_uuid}</span>
                     </div>
                   </div>
                   {actions.length > 0 && (
@@ -615,8 +631,8 @@ const GroupSettingsPage = () => {
                   )}
                 </div>
               );
-            }}
-          />
+            })}
+          </div>
         </div>
 
         {/* Danger zone */}

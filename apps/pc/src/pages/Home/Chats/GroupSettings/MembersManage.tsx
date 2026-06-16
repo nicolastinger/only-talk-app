@@ -1,4 +1,6 @@
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
+import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
 import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
@@ -25,14 +27,26 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const [inviteLoading, setInviteLoading] = useState(false);
 
   const isOwner = groupInfo.owner_uuid === userInfo?.uuid;
-  const isAdmin = members.some((m) => m.user_id === userInfo?.uuid && m.role >= 1);
+  const isAdmin = members.some((m) => m.user_uuid === userInfo?.uuid && m.role >= 1);
   const canManage = isOwner || isAdmin;
 
   const memberUuids = useMemo(
-    () => members.map((m) => m.user_id).filter(Boolean),
+    () => members.map((m) => m.user_uuid).filter(Boolean),
     [members],
   );
   const { memberInfoMap } = useGroupMemberInfo(memberUuids);
+
+  // 收集所有成员的 icon bizId，批量转换为可用的头像 URL
+  const memberIconBizIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const member of members) {
+      const info = memberInfoMap.get(member.user_uuid);
+      const bizId = info?.icon || member.icon;
+      if (bizId) ids.push(bizId);
+    }
+    return ids;
+  }, [members, memberInfoMap]);
+  const { avatarMap } = useAvatarMap(memberIconBizIds);
 
   useEffect(() => {
     if (inviteModalOpen) {
@@ -43,7 +57,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const loadFriends = async () => {
     try {
       const friends: FriendVo[] = await invoke('get_friend_list');
-      const memberIds = new Set(members.map((m) => m.user_id));
+      const memberIds = new Set(members.map((m) => m.user_uuid));
       setFriendList(friends.filter((f) => !memberIds.has(f.friend_id)));
       setSelectedFriends([]);
     } catch {
@@ -72,13 +86,13 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
       title: '移出群聊',
-      content: `确定要将 "${member.nickname || member.user_id}" 移出群聊吗？`,
+      content: `确定要将 "${member.username || member.user_uuid}" 移出群聊吗？`,
       okText: '确定',
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
         try {
-          await remove_group_member(groupInfo.group_uuid, member.user_id);
+          await remove_group_member(groupInfo.group_uuid, member.user_uuid);
           message.success('已移出群聊');
           onUpdate();
         } catch {
@@ -92,7 +106,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
     try {
       await set_member_role({
         group_uuid: groupInfo.group_uuid,
-        user_uuid: member.user_id,
+        user_uuid: member.user_uuid,
         role,
       });
       message.success(role === 1 ? '已设为管理员' : '已取消管理员');
@@ -104,7 +118,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
 
   const getMemberActions = (member: GroupMemberVo): MenuProps['items'] => {
     const items: MenuProps['items'] = [];
-    const isSelf = member.user_id === userInfo?.uuid;
+    const isSelf = member.user_uuid === userInfo?.uuid;
 
     if (isSelf) {
       return [];
@@ -143,10 +157,11 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
 
   const filteredMembers = members.filter((m) => {
     const keyword = searchText.toLowerCase();
+    const info = memberInfoMap.get(m.user_uuid);
     return (
-      (m.nickname || '').toLowerCase().includes(keyword) ||
       (m.username || '').toLowerCase().includes(keyword) ||
-      m.user_id.toLowerCase().includes(keyword)
+      (info?.account || '').toLowerCase().includes(keyword) ||
+      m.user_uuid.toLowerCase().includes(keyword)
     );
   });
 
@@ -172,13 +187,14 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
       <List
         dataSource={filteredMembers}
         renderItem={(member) => {
-          const info = memberInfoMap.get(member.user_id);
-          const displayName = info?.username || member.nickname || member.username;
-          const displayIcon = info?.icon || member.icon;
+          const info = memberInfoMap.get(member.user_uuid);
+          const displayName = info?.username || member.username || member.user_uuid;
+          const iconBizId = info?.icon || member.icon;
+          const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
           return (
           <div className={styles.memberItem}>
             <div className={styles.memberInfo}>
-              <Avatar size={32} icon={<UserOutlined />} src={displayIcon} />
+              <Avatar size={32} icon={<UserOutlined />} src={avatarSrc || DEFAULT_ICON} />
               <div>
                 <div>
                   <span className={styles.memberName}>
@@ -189,11 +205,11 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
                       {ROLE_TEXT[member.role]}
                     </span>
                   )}
-                  {member.user_id === userInfo?.uuid && (
+                  {member.user_uuid === userInfo?.uuid && (
                     <Tag style={{ marginLeft: 4 }} color="blue">我</Tag>
                   )}
                 </div>
-                <span className={styles.memberId}>{member.user_id}</span>
+                <span className={styles.memberId}>{info?.account || member.user_uuid}</span>
               </div>
             </div>
             {getMemberActions(member).length > 0 && (
