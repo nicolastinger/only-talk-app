@@ -1,8 +1,8 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { ChatMessage, MessageFrom, UserInfo } from '@workspace/types';
 import React from 'react';
-import CustomerChatBox from '../../components/CustomerChatBox';
-import MineChatBox from '../../components/MineChatBox';
+import GroupCustomerChatBox from './GroupCustomerChatBox';
+import GroupMineChatBox from './GroupMineChatBox';
 import MessageTimestamp from '../../components/MessageTimestamp';
 import styles from './GroupMessageList.less';
 
@@ -80,21 +80,6 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
           );
         }
 
-        let currentBizId = '';
-        if (message.text_type === MSG_TYPE_GROUP_IMAGE) {
-          try {
-            // 群聊图片消息 raw 被双层序列化: {"text":"{...GroupImageRecord...}","send_user":"..."}
-            // 需要先解外层 GroupTextRecord，再解内层 GroupImageRecord
-            let parsed = JSON.parse(message.raw);
-            if (parsed.text) {
-              parsed = JSON.parse(parsed.text);
-            }
-            currentBizId = parsed.biz_id || parsed.url || '';
-          } catch (error) {
-            console.error('Failed to parse image record:', error);
-          }
-        }
-
         return (
           <React.Fragment key={message.nano_id}>
             {shouldShowTimestamp && (
@@ -102,22 +87,18 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
             )}
             <div className={animationClass}>
               {isMine ? (
-                <MineChatBox
+                <GroupMineChatBox
                   msg={msg}
                   isAck={msg.ack}
                   icon={senderIcon}
-                  friendUuid={groupUuid}
-                  currentBizId={currentBizId}
+                  groupUuid={groupUuid}
                 />
               ) : (
-                <CustomerChatBox
-                  from={MessageFrom.Customer}
-                  ack={undefined}
-                  img={senderIcon}
+                <GroupCustomerChatBox
+                  msg={msg}
+                  icon={senderIcon}
                   senderName={senderName}
-                  text_msg_raw={message}
-                  friendUuid={groupUuid}
-                  currentBizId={currentBizId}
+                  groupUuid={groupUuid}
                 />
               )}
             </div>

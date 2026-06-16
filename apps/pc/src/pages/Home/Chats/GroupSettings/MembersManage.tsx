@@ -212,7 +212,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
                 <span className={styles.memberId}>{info?.account || member.user_uuid}</span>
               </div>
             </div>
-            {getMemberActions(member).length > 0 && (
+            {(getMemberActions(member) || []).length > 0 && (
               <Dropdown menu={{ items: getMemberActions(member) }} placement="bottomRight" trigger={['click']}>
                 <Button type="text" size="small" icon={<MoreOutlined />} />
               </Dropdown>
