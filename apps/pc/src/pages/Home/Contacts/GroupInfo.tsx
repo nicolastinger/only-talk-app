@@ -1,7 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
-import { history, useSearchParams } from '@umijs/max';
+import { history, useIntl, useSearchParams } from '@umijs/max';
 import { get_group_info, get_group_members, getFiles, create_group_chat_session } from '@workspace/services';
 import { GroupVo, GroupMemberVo } from '@workspace/types';
 import { Avatar, Button, Collapse, List, message, Spin } from 'antd';
@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import styles from './styles/GroupInfo.less';
 
 const GroupInfoPage = () => {
+  const intl = useIntl();
   const [searchParams] = useSearchParams();
   const groupId = searchParams.get('groupId') || '';
   const { userInfo } = useBearStore();
@@ -37,7 +38,7 @@ const GroupInfoPage = () => {
       }
     } catch (error) {
       console.error('获取群组信息失败', error);
-      message.error('获取群组信息失败');
+      message.error(intl.formatMessage({ id: 'groupInfo.loadError' }));
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ const GroupInfoPage = () => {
       history.push('/home/chats/group-chat?groupId=' + groupId);
     } catch (err) {
       console.log(err);
-      message.error('创建会话失败');
+      message.error(intl.formatMessage({ id: 'groupInfo.createSessionError' }));
     }
   };
 
@@ -78,11 +79,11 @@ const GroupInfoPage = () => {
   const getRoleName = (role: number) => {
     switch (role) {
       case 2:
-        return '群主';
+        return intl.formatMessage({ id: 'groupSettings.members.owner' });
       case 1:
-        return '管理员';
+        return intl.formatMessage({ id: 'groupSettings.members.admin' });
       default:
-        return '成员';
+        return intl.formatMessage({ id: 'groupSettings.members.member' });
     }
   };
 
@@ -106,21 +107,21 @@ const GroupInfoPage = () => {
               (e.target as HTMLImageElement).src = DEFAULT_ICON;
             }}
           />
-          <div className={styles.name}>{groupInfo?.group_name || '群组'}</div>
+          <div className={styles.name}>{groupInfo?.group_name || intl.formatMessage({ id: 'groupInfo.group' })}</div>
           <div className={styles.memberCount}>
             <TeamOutlined style={{ marginRight: 6 }} />
-            {groupInfo?.member_count || 0} 成员
+            {groupInfo?.member_count || 0} {intl.formatMessage({ id: 'groupInfo.members' })}
           </div>
         </div>
 
         <div className={styles.infoSection}>
           <div className={styles.infoItem}>
-            <span className={styles.label}>群 ID</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'groupInfo.groupId' })}</span>
             <span className={styles.value}>{groupInfo?.group_uuid || '-'}</span>
           </div>
 
           <div className={styles.infoItem}>
-            <span className={styles.label}>创建时间</span>
+            <span className={styles.label}>{intl.formatMessage({ id: 'groupInfo.createdAt' })}</span>
             <span className={styles.value}>
               {groupInfo?.created_at ? formatDate(groupInfo.created_at) : '-'}
             </span>
@@ -132,7 +133,7 @@ const GroupInfoPage = () => {
             items={[
               {
                 key: 'members',
-                label: `群成员 (${members.length})`,
+                label: `${intl.formatMessage({ id: 'groupSettings.groupMembers' })} (${members.length})`,
                 children: (
                   <List
                     dataSource={members}
@@ -174,13 +175,13 @@ const GroupInfoPage = () => {
               onClick={routeToChat}
               block
             >
-              发送消息
+              {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
             </Button>
           </div>
           {isOwner && (
             <div className={styles.button}>
               <Button variant="outlined" color="default" block onClick={() => history.push(`/home/chats/group-settings?groupId=${groupId}`)}>
-                群设置
+                {intl.formatMessage({ id: 'groupSettings.groupSettings' })}
               </Button>
             </div>
           )}

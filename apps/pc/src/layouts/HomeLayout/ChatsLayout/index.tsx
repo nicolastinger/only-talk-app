@@ -4,7 +4,7 @@ import Search from '@/pages/Home/Chats/components/Search';
 import { useBearStore } from '@/store/store';
 import { clearAllUnreadSessions } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
-import { history, Outlet, useLocation } from '@umijs/max';
+import { history, Outlet, useLocation, useIntl } from '@umijs/max';
 import { ChatSessionVo } from '@workspace/types';
 import { Button, Segmented, Splitter, Popconfirm } from 'antd';
 import { MessageOutlined, TeamOutlined } from '@ant-design/icons';
@@ -31,6 +31,7 @@ const ClearIcon = () => (
 );
 
 const ChatsLayout = () => {
+  const intl = useIntl();
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
     [],
   );
@@ -188,7 +189,7 @@ const ChatsLayout = () => {
       label: (
         <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <MessageOutlined />
-          <span>单聊</span>
+          <span>{intl.formatMessage({ id: 'chatsLayout.privateChat' })}</span>
         </div>
       ),
     },
@@ -197,7 +198,7 @@ const ChatsLayout = () => {
       label: (
         <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <TeamOutlined />
-          <span>群聊</span>
+          <span>{intl.formatMessage({ id: 'chatsLayout.groupChat' })}</span>
         </div>
       ),
     },
@@ -215,16 +216,16 @@ const ChatsLayout = () => {
         <div className={styles.header}>
           <Search onSelect={(item) => routeToChat(item)} />
           <Popconfirm
-            title="确定清空所有未读消息？"
+            title={intl.formatMessage({ id: 'chatsLayout.clearUnreadConfirm' })}
             onConfirm={handleClearAllUnread}
-            okText="确定"
-            cancelText="取消"
+            okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
+            cancelText={intl.formatMessage({ id: 'chatsLayout.cancel' })}
           >
             <Button
               type="text"
               icon={<ClearIcon />}
               className={styles.clearBtn}
-              title="清空未读"
+              title={intl.formatMessage({ id: 'chatsLayout.clearUnread' })}
             />
           </Popconfirm>
         </div>

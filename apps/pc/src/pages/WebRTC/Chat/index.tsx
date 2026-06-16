@@ -35,7 +35,7 @@ import {
 } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
 import { listen } from '@tauri-apps/api/event';
-import { useLocation } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
 import { WebRTCSignalMessage } from '@workspace/types';
 import { Button, Input, message, Spin, Tag, Tooltip } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
@@ -137,6 +137,7 @@ interface TextQuicMsgVo {
 }
 
 const WebRTCChat: React.FC = () => {
+  const intl = useIntl();
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<
@@ -197,7 +198,7 @@ const WebRTCChat: React.FC = () => {
         }
       } catch (error) {
         console.error(`[WebRTCChat] ❌ 初始化本地媒体流失败:`, error);
-        message.warning('无法访问摄像头或麦克风，视频聊天功能可能受限');
+        message.warning(intl.formatMessage({ id: 'webrtc.mediaAccessError' }));
       }
 
       service.setOnRemoteStreamCallback(
@@ -223,7 +224,7 @@ const WebRTCChat: React.FC = () => {
           text: msg,
           isMine: false,
           timestamp: Date.now(),
-          senderName: '对方',
+          senderName: intl.formatMessage({ id: 'webrtc.peer' }),
         };
         setMessages((prev) => [...prev, newMessage]);
       });
@@ -272,7 +273,7 @@ const WebRTCChat: React.FC = () => {
           );
         } catch (e) {
           console.error(`[WebRTCChat] ❌ 创建offer失败:`, e);
-          message.error('创建连接失败');
+          message.error(intl.formatMessage({ id: 'webrtc.connectionCreateFailed' }));
         }
       } else if (initialSignalData) {
         console.log(`[WebRTCChat] 本端为响应方，处理对端的offer...`);
@@ -308,7 +309,7 @@ const WebRTCChat: React.FC = () => {
           }
         } catch (e) {
           console.error(`[WebRTCChat] ❌ 处理初始信令失败:`, e);
-          message.error('处理初始信令失败');
+          message.error(intl.formatMessage({ id: 'webrtc.signalProcessFailed' }));
         }
       } else {
         console.log(
@@ -451,13 +452,13 @@ const WebRTCChat: React.FC = () => {
 
     if (!service) {
       console.error(`[WebRTCChat.sendMessage] ❌ WebRTCService不存在`);
-      message.error('连接未建立');
+      message.error(intl.formatMessage({ id: 'webrtc.connectionNotEstablished' }));
       return;
     }
 
     if (!service.isDataChannelOpen(friendId)) {
       console.error(`[WebRTCChat.sendMessage] ❌ DataChannel未打开`);
-      message.error('连接未建立');
+      message.error(intl.formatMessage({ id: 'webrtc.connectionNotEstablished' }));
       return;
     }
 
@@ -476,7 +477,7 @@ const WebRTCChat: React.FC = () => {
         text: inputText.trim(),
         isMine: true,
         timestamp: Date.now(),
-        senderName: '我',
+        senderName: intl.formatMessage({ id: 'webrtc.me' }),
       };
       setMessages((prev) => [...prev, newMessage]);
       console.log(
@@ -487,7 +488,7 @@ const WebRTCChat: React.FC = () => {
       setInputText('');
     } else {
       console.error(`[WebRTCChat.sendMessage] ❌ 消息发送失败`);
-      message.error('发送失败');
+      message.error(intl.formatMessage({ id: 'webrtc.sendFailed' }));
     }
   };
 
@@ -586,20 +587,20 @@ const WebRTCChat: React.FC = () => {
       console.log(`[WebRTCChat.handleExit] ✅ 窗口已关闭`);
     } catch (e) {
       console.error(`[WebRTCChat.handleExit] ❌ 退出失败:`, e);
-      message.error('退出失败');
+      message.error(intl.formatMessage({ id: 'webrtc.exitFailed' }));
     }
   };
 
   const getStatusTag = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <Tag color="success">已连接</Tag>;
+        return <Tag color="success">{intl.formatMessage({ id: 'webrtc.connected' })}</Tag>;
       case 'connecting':
-        return <Tag color="warning">连接中...</Tag>;
+        return <Tag color="warning">{intl.formatMessage({ id: 'webrtc.connecting' })}</Tag>;
       case 'disconnected':
-        return <Tag color="error">已断开</Tag>;
+        return <Tag color="error">{intl.formatMessage({ id: 'webrtc.disconnected' })}</Tag>;
       case 'failed':
-        return <Tag color="error">连接失败</Tag>;
+        return <Tag color="error">{intl.formatMessage({ id: 'webrtc.connectionFailed' })}</Tag>;
       default:
         return null;
     }
@@ -607,8 +608,8 @@ const WebRTCChat: React.FC = () => {
 
   const renderMessage = (msg: ChatMessageItem) => {
     const displayName = msg.isMine
-      ? `${msg.senderName || '我'}(我)`
-      : msg.senderName || '对方';
+      ? `${msg.senderName || intl.formatMessage({ id: 'webrtc.me' })}(${intl.formatMessage({ id: 'webrtc.me' })})`
+      : msg.senderName || intl.formatMessage({ id: 'webrtc.peer' });
 
     return (
       <div key={msg.id} className={styles.messageRow}>
@@ -636,7 +637,7 @@ const WebRTCChat: React.FC = () => {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <ApiOutlined className={styles.webrtcIcon} />
-          <span className={styles.title}>WebRTC 视频聊天</span>
+          <span className={styles.title}>{intl.formatMessage({ id: 'webrtc.videoChat' })}</span>
           {getStatusTag()}
         </div>
         <div className={styles.headerButtons}>
@@ -647,7 +648,7 @@ const WebRTCChat: React.FC = () => {
             icon={<LogoutOutlined />}
             onClick={handleExit}
           >
-            退出
+            {intl.formatMessage({ id: 'webrtc.exit' })}
           </Button>
         </div>
       </div>
@@ -662,7 +663,7 @@ const WebRTCChat: React.FC = () => {
                 playsInline
                 className={styles.remoteVideo}
               />
-              <div className={styles.videoLabel}>远程</div>
+              <div className={styles.videoLabel}>{intl.formatMessage({ id: 'webrtc.remote' })}</div>
             </div>
             <div className={styles.localVideoContainer}>
               <video
@@ -672,12 +673,12 @@ const WebRTCChat: React.FC = () => {
                 muted
                 className={styles.localVideo}
               />
-              <div className={styles.videoLabel}>本地</div>
+              <div className={styles.videoLabel}>{intl.formatMessage({ id: 'webrtc.local' })}</div>
             </div>
           </div>
 
           <div className={styles.mediaControls}>
-            <Tooltip title={isVideoEnabled ? '关闭摄像头' : '开启摄像头'}>
+            <Tooltip title={intl.formatMessage({ id: 'webrtc.closeCamera' })}>
               <Button
                 type={isVideoEnabled ? 'primary' : 'default'}
                 danger={!isVideoEnabled}
@@ -693,7 +694,35 @@ const WebRTCChat: React.FC = () => {
                 shape="circle"
               />
             </Tooltip>
-            <Tooltip title={isAudioEnabled ? '关闭麦克风' : '开启麦克风'}>
+            <Tooltip title={intl.formatMessage({ id: 'webrtc.openCamera' })}>
+              <Button
+                type={isVideoEnabled ? 'primary' : 'default'}
+                danger={!isVideoEnabled}
+                icon={
+                  isVideoEnabled ? (
+                    <VideoCameraOutlined />
+                  ) : (
+                    <VideoCameraAddOutlined />
+                  )
+                }
+                onClick={handleToggleVideo}
+                size="large"
+                shape="circle"
+              />
+            </Tooltip>
+            <Tooltip title={intl.formatMessage({ id: 'webrtc.closeMicrophone' })}>
+              <Button
+                type={isAudioEnabled ? 'primary' : 'default'}
+                danger={!isAudioEnabled}
+                icon={
+                  isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />
+                }
+                onClick={handleToggleAudio}
+                size="large"
+                shape="circle"
+              />
+            </Tooltip>
+            <Tooltip title={intl.formatMessage({ id: 'webrtc.openMicrophone' })}>
               <Button
                 type={isAudioEnabled ? 'primary' : 'default'}
                 danger={!isAudioEnabled}
@@ -710,25 +739,25 @@ const WebRTCChat: React.FC = () => {
 
         <div className={styles.chatPanel}>
           <div className={styles.hint}>
-            WebRTC P2P 直连聊天，消息不经过服务器，关闭窗口后消息将消失
+            {intl.formatMessage({ id: 'webrtc.p2pChatHint' })}
           </div>
           <div ref={messageContainerRef} className={styles.messageContainer}>
             {connectionStatus === 'failed' && (
               <div className={styles.retryContainer}>
-                <div className={styles.retryText}>连接失败</div>
+                <div className={styles.retryText}>{intl.formatMessage({ id: 'webrtc.connectionFailed' })}</div>
                 <Button
                   type="primary"
                   icon={<ReloadOutlined />}
                   loading={isRetrying}
                   onClick={handleRetry}
                 >
-                  重试连接
+                  {intl.formatMessage({ id: 'webrtc.retryConnection' })}
                 </Button>
               </div>
             )}
             {connectionStatus === 'connecting' && (
               <div className={styles.connectingContainer}>
-                <Spin tip="正在建立连接..." />
+                <Spin tip={intl.formatMessage({ id: 'webrtc.establishingConnection' })} />
               </div>
             )}
             {messages.map(renderMessage)}
@@ -736,7 +765,7 @@ const WebRTCChat: React.FC = () => {
           <div className={styles.footer}>
             <div className={styles.toolbar}>
               <div className={styles.emojiWrapper} ref={emojiPickerRef}>
-                <Tooltip title="表情">
+                <Tooltip title={intl.formatMessage({ id: 'webrtc.emoji' })}>
                   <Button
                     type="text"
                     icon={<SmileOutlined />}
@@ -767,7 +796,7 @@ const WebRTCChat: React.FC = () => {
                 value={inputText}
                 onChange={(e: any) => setInputText(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="输入消息..."
+                placeholder={intl.formatMessage({ id: 'webrtc.inputMessage' })}
                 autoSize={{ minRows: 1, maxRows: 3 }}
                 disabled={connectionStatus !== 'connected'}
               />

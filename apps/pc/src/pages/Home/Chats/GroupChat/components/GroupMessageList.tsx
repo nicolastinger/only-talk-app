@@ -1,5 +1,6 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { ChatMessage, MessageFrom, UserInfo } from '@workspace/types';
+import { useIntl } from '@umijs/max';
 import React from 'react';
 import GroupCustomerChatBox from './GroupCustomerChatBox';
 import GroupMineChatBox from './GroupMineChatBox';
@@ -28,6 +29,7 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
   loadedMessageIds,
   memberInfoMap,
 }) => {
+  const intl = useIntl();
   const getMessageAnimationClass = (nanoId: string): string => {
     if (newMessageIds?.has(nanoId)) {
       return styles.newMessageAnimation;
@@ -58,7 +60,7 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
         const isSystem = msg.from === MessageFrom.System || message.send_user === SYSTEM_ACCOUNT || message.text_type === MSG_TYPE_GROUP_NOTIFICATION;
 
         const memberInfo = memberInfoMap.get(msg.sender_uuid || message.send_user || '');
-        const senderName = memberInfo?.username || msg.sender_name || (isMine ? '我' : '群成员');
+        const senderName = memberInfo?.username || msg.sender_name || (isMine ? intl.formatMessage({ id: 'groupChat.me' }) : intl.formatMessage({ id: 'groupChat.groupMember' }));
         const senderIcon = memberInfo?.icon || msg.sender_icon || msg.img || '';
 
         if (isSystem || message.text_type === MSG_TYPE_GROUP_NOTIFICATION) {

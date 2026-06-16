@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { GroupVo } from '@workspace/types';
 import { create_group } from '@workspace/services';
 import { Modal, Input, InputNumber, message } from 'antd';
+import { useIntl } from '@umijs/max';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -14,6 +15,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const intl = useIntl();
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
   const [maxMembers, setMaxMembers] = useState(500);
@@ -29,7 +31,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   const handleCreate = async () => {
     if (!groupName.trim()) {
-      message.warning('请输入群名称');
+      message.warning(intl.formatMessage({ id: 'contacts.createGroup.nameRequired' }));
       return;
     }
     setLoading(true);
@@ -40,11 +42,11 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         description: description.trim() || undefined,
         max_members: maxMembers,
       });
-      message.success('群聊创建成功');
+      message.success(intl.formatMessage({ id: 'contacts.createGroup.success' }));
       onSuccess(group);
     } catch (err) {
       console.error('创建群聊失败', err);
-      message.error('创建群聊失败');
+      message.error(intl.formatMessage({ id: 'contacts.createGroup.failed' }));
     } finally {
       setLoading(false);
     }
@@ -52,31 +54,31 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   return (
     <Modal
-      title="创建群组"
+      title={intl.formatMessage({ id: 'contacts.createGroup.title' })}
       open={visible}
       onOk={handleCreate}
       onCancel={onCancel}
       confirmLoading={loading}
-      okText="创建"
-      cancelText="取消"
+      okText={intl.formatMessage({ id: 'contacts.createGroup.create' })}
+      cancelText={intl.formatMessage({ id: 'contacts.createGroup.cancel' })}
     >
       <div style={{ marginBottom: 16 }}>
-        <label>群名称 <span style={{ color: 'red' }}>*</span></label>
+        <label>{intl.formatMessage({ id: 'contacts.createGroup.nameLabel' })} <span style={{ color: 'red' }}>*</span></label>
         <Input
           value={groupName}
           onChange={(e) => setGroupName(e.target.value)}
-          placeholder="请输入群名称（1-100字）"
+          placeholder={intl.formatMessage({ id: 'contacts.createGroup.namePlaceholder' })}
           maxLength={100}
           showCount
           style={{ marginTop: 8 }}
         />
       </div>
       <div style={{ marginBottom: 16 }}>
-        <label>群描述</label>
+        <label>{intl.formatMessage({ id: 'contacts.createGroup.descLabel' })}</label>
         <Input.TextArea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="请输入群描述（选填，最多500字）"
+          placeholder={intl.formatMessage({ id: 'contacts.createGroup.descPlaceholder' })}
           maxLength={500}
           showCount
           rows={3}
@@ -84,7 +86,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         />
       </div>
       <div>
-        <label>最大成员数</label>
+        <label>{intl.formatMessage({ id: 'contacts.createGroup.maxMembersLabel' })}</label>
         <InputNumber
           value={maxMembers}
           onChange={(val) => setMaxMembers(val || 500)}

@@ -8,6 +8,7 @@ import { Avatar, Button, Dropdown, Input, List, MenuProps, Modal, Select, Space,
 import { UserOutlined, PlusOutlined, MoreOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useMemo, useState } from 'react';
+import { useIntl } from '@umijs/max';
 import styles from './index.module.less';
 
 interface Props {
@@ -16,10 +17,15 @@ interface Props {
   onUpdate: () => void;
 }
 
-const ROLE_TEXT: Record<number, string> = { 2: '群主', 1: '管理员', 0: '成员' };
-
 const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
+  const intl = useIntl();
   const { userInfo } = useBearStore();
+
+  const ROLE_TEXT: Record<number, string> = {
+    2: intl.formatMessage({ id: 'groupSettings.members.owner' }),
+    1: intl.formatMessage({ id: 'groupSettings.members.admin' }),
+    0: intl.formatMessage({ id: 'groupSettings.members.member' })
+  };
   const [searchText, setSearchText] = useState('');
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [friendList, setFriendList] = useState<FriendVo[]>([]);
@@ -61,23 +67,23 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
       setFriendList(friends.filter((f) => !memberIds.has(f.friend_id)));
       setSelectedFriends([]);
     } catch {
-      message.error('获取好友列表失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.members.getFriendListFailed' }));
     }
   };
 
   const handleInvite = async () => {
     if (selectedFriends.length === 0) {
-      message.warning('请选择要邀请的好友');
+      message.warning(intl.formatMessage({ id: 'groupSettings.members.selectFriendsToInvite' }));
       return;
     }
     setInviteLoading(true);
     try {
       const invited = await invite_group_members(groupInfo.group_uuid, selectedFriends);
-      message.success(`已向 ${invited.length} 位好友发送群邀请`);
+      message.success(intl.formatMessage({ id: 'groupSettings.members.inviteSent' }, { count: invited.length }));
       setInviteModalOpen(false);
       onUpdate();
     } catch {
-      message.error('邀请失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.members.inviteFailed' }));
     } finally {
       setInviteLoading(false);
     }
@@ -85,18 +91,18 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
 
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
-      title: '移出群聊',
-      content: `确定要将 "${member.username || member.user_uuid}" 移出群聊吗？`,
-      okText: '确定',
+      title: intl.formatMessage({ id: 'groupSettings.members.removeMember' }),
+      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: member.username || member.user_uuid }),
+      okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await remove_group_member(groupInfo.group_uuid, member.user_uuid);
-          message.success('已移出群聊');
+          message.success(intl.formatMessage({ id: 'groupSettings.members.removeMemberSuccess' }));
           onUpdate();
         } catch {
-          message.error('移出群聊失败');
+          message.error(intl.formatMessage({ id: 'groupSettings.members.removeMemberFailed' }));
         }
       },
     });
@@ -109,10 +115,12 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
         user_uuid: member.user_uuid,
         role,
       });
-      message.success(role === 1 ? '已设为管理员' : '已取消管理员');
+      message.success(role === 1
+        ? intl.formatMessage({ id: 'groupSettings.members.setAdminSuccess' })
+        : intl.formatMessage({ id: 'groupSettings.members.removeAdminSuccess' }));
       onUpdate();
     } catch {
-      message.error('设置失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.members.setRoleFailed' }));
     }
   };
 
@@ -128,26 +136,26 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
       if (member.role === 0) {
         items.push({
           key: 'admin',
-          label: '设为管理员',
+          label: intl.formatMessage({ id: 'groupSettings.members.setAdmin' }),
           onClick: () => handleSetRole(member, 1),
         });
       }
       if (member.role === 1) {
         items.push({
           key: 'member',
-          label: '取消管理员',
+          label: intl.formatMessage({ id: 'groupSettings.members.removeAdmin' }),
           onClick: () => handleSetRole(member, 0),
         });
       }
       items.push({
         key: 'kick',
-        label: <span style={{ color: 'var(--color-error)' }}>移出群聊</span>,
+        label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>,
         onClick: () => handleKick(member),
       });
     } else if (isAdmin && member.role === 0) {
       items.push({
         key: 'kick',
-        label: <span style={{ color: 'var(--color-error)' }}>移出群聊</span>,
+        label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>,
         onClick: () => handleKick(member),
       });
     }
@@ -168,16 +176,16 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   return (
     <div>
       <div className={styles.memberListHeader}>
-        <span>共 {members.length} 位成员</span>
+        <span>{intl.formatMessage({ id: 'groupSettings.members.memberCount' }, { count: members.length })}</span>
         {canManage && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setInviteModalOpen(true)}>
-            邀请成员
+            {intl.formatMessage({ id: 'groupSettings.members.inviteMember' })}
           </Button>
         )}
       </div>
 
       <Input.Search
-        placeholder="搜索成员"
+        placeholder={intl.formatMessage({ id: 'groupSettings.members.searchMember' })}
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
         style={{ marginBottom: 16 }}
@@ -206,7 +214,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
                     </span>
                   )}
                   {member.user_uuid === userInfo?.uuid && (
-                    <Tag style={{ marginLeft: 4 }} color="blue">我</Tag>
+                    <Tag style={{ marginLeft: 4 }} color="blue">{intl.formatMessage({ id: 'groupSettings.members.me' })}</Tag>
                   )}
                 </div>
                 <span className={styles.memberId}>{info?.account || member.user_uuid}</span>
@@ -223,21 +231,21 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
       />
 
       <Modal
-        title="邀请成员"
+        title={intl.formatMessage({ id: 'groupSettings.members.inviteMember' })}
         open={inviteModalOpen}
         onOk={handleInvite}
         onCancel={() => setInviteModalOpen(false)}
         confirmLoading={inviteLoading}
-        okText="邀请"
-        cancelText="取消"
+        okText={intl.formatMessage({ id: 'groupSettings.members.invite' })}
+        cancelText={intl.formatMessage({ id: 'groupSettings.members.cancel' })}
       >
         <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
-          选择要邀请入群的好友，被邀请方将收到通知并可选择接受或拒绝。
+          {intl.formatMessage({ id: 'groupSettings.members.inviteDesc' })}
         </div>
         <Select
           mode="multiple"
           style={{ width: '100%' }}
-          placeholder="选择好友"
+          placeholder={intl.formatMessage({ id: 'groupSettings.members.selectFriend' })}
           value={selectedFriends}
           onChange={setSelectedFriends}
           options={friendList.map((f) => ({

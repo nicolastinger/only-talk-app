@@ -5,7 +5,7 @@ import { useBearStore } from '@/store/store';
 import { GroupMemberVo, GroupVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
 import { convertPathToTauriUrl, getFiles, selectFile } from '@workspace/services';
-import { history, useSearchParams } from '@umijs/max';
+import { history, useSearchParams, useIntl } from '@umijs/max';
 import { Avatar, Button, Input, Modal, Select, Tag, message, Spin } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -24,12 +24,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './index.module.less';
 import { FriendVo } from '@workspace/types';
 
-const ROLE_TEXT: Record<number, string> = { 2: '群主', 1: '管理员', 0: '成员' };
-
 const GroupSettingsPage = () => {
+  const intl = useIntl();
   const [searchParams] = useSearchParams();
   const groupId = searchParams.get('groupId') || '';
   const { userInfo } = useBearStore();
+
+  const ROLE_TEXT: Record<number, string> = {
+    2: intl.formatMessage({ id: 'groupSettings.members.owner' }),
+    1: intl.formatMessage({ id: 'groupSettings.members.admin' }),
+    0: intl.formatMessage({ id: 'groupSettings.members.member' }),
+  };
 
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
   const [members, setMembers] = useState<GroupMemberVo[]>([]);
@@ -81,7 +86,7 @@ const GroupSettingsPage = () => {
         setMembers(memberList.value || []);
       }
     } catch (error) {
-      console.error('加载群设置失败', error);
+      console.error(intl.formatMessage({ id: 'groupSettings.loadFailed' }), error);
     } finally {
       setLoading(false);
     }
@@ -121,19 +126,19 @@ const GroupSettingsPage = () => {
           if (tauriFilePath) {
             setGroupInfo({ ...groupInfo!, avatar: bizId });
             setAvatarUrl(tauriFilePath);
-            message.success('群头像更新成功');
+            message.success(intl.formatMessage({ id: 'groupSettings.avatar.updateSuccess' }));
           } else {
-            message.error('获取群头像文件失败');
+            message.error(intl.formatMessage({ id: 'groupSettings.avatar.getFileFailed' }));
           }
         } else {
-          message.error(responseBody.msg || '群头像上传失败');
+          message.error(responseBody.msg || intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
         }
       } else {
-        message.error('群头像上传失败');
+        message.error(intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
       }
     } catch (error: any) {
-      console.error('群头像更新失败:', error);
-      message.error(error.message || '群头像更新失败');
+      console.error(intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }), error);
+      message.error(error.message || intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }));
     } finally {
       setAvatarUploading(false);
     }
@@ -174,7 +179,7 @@ const GroupSettingsPage = () => {
   // Basic settings handlers
   const handleSaveName = async () => {
     if (!groupName.trim()) {
-      message.warning('群名称不能为空');
+      message.warning(intl.formatMessage({ id: 'groupSettings.nameRequired' }));
       return;
     }
     setSaving(true);
@@ -184,11 +189,11 @@ const GroupSettingsPage = () => {
         group_name: groupName.trim(),
         description: groupDesc,
       });
-      message.success('保存成功');
+      message.success(intl.formatMessage({ id: 'groupSettings.saveSuccess' }));
       setEditingName(false);
       loadData();
     } catch {
-      message.error('保存失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.saveFailed' }));
     } finally {
       setSaving(false);
     }
@@ -202,11 +207,11 @@ const GroupSettingsPage = () => {
         group_name: groupName,
         description: groupDesc.trim(),
       });
-      message.success('保存成功');
+      message.success(intl.formatMessage({ id: 'groupSettings.saveSuccess' }));
       setEditingDesc(false);
       loadData();
     } catch {
-      message.error('保存失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.saveFailed' }));
     } finally {
       setSaving(false);
     }
@@ -220,23 +225,23 @@ const GroupSettingsPage = () => {
       setFriendList(friends.filter((f) => !memberIds.has(f.friend_id)));
       setSelectedFriends([]);
     } catch {
-      message.error('获取好友列表失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.members.getFriendListFailed' }));
     }
   };
 
   const handleInvite = async () => {
     if (selectedFriends.length === 0) {
-      message.warning('请选择要邀请的好友');
+      message.warning(intl.formatMessage({ id: 'groupSettings.members.selectFriendsToInvite' }));
       return;
     }
     setInviteLoading(true);
     try {
       const invited = await invite_group_members(groupInfo!.group_uuid, selectedFriends);
-      message.success(`已向 ${invited.length} 位好友发送群邀请`);
+      message.success(intl.formatMessage({ id: 'groupSettings.members.inviteSent' }, { count: invited.length }));
       setInviteModalOpen(false);
       loadData();
     } catch {
-      message.error('邀请失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.members.inviteFailed' }));
     } finally {
       setInviteLoading(false);
     }
@@ -244,18 +249,18 @@ const GroupSettingsPage = () => {
 
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
-      title: '移出群聊',
-      content: `确定要将 "${member.username || member.user_uuid}" 移出群聊吗？`,
-      okText: '确定',
+      title: intl.formatMessage({ id: 'groupSettings.members.removeMember' }),
+      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: member.username || member.user_uuid }),
+      okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await remove_group_member(groupInfo!.group_uuid, member.user_uuid);
-          message.success('已移出群聊');
+          message.success(intl.formatMessage({ id: 'groupSettings.members.removeMemberSuccess' }));
           loadData();
         } catch {
-          message.error('移出群聊失败');
+          message.error(intl.formatMessage({ id: 'groupSettings.members.removeMemberFailed' }));
         }
       },
     });
@@ -268,28 +273,28 @@ const GroupSettingsPage = () => {
         user_uuid: member.user_uuid,
         role,
       });
-      message.success(role === 1 ? '已设为管理员' : '已取消管理员');
+      message.success(role === 1 ? intl.formatMessage({ id: 'groupSettings.members.setAdminSuccess' }) : intl.formatMessage({ id: 'groupSettings.members.removeAdminSuccess' }));
       loadData();
     } catch {
-      message.error('设置失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.members.setRoleFailed' }));
     }
   };
 
   // Management handlers
   const handleLeaveGroup = () => {
     Modal.confirm({
-      title: '退出群聊',
-      content: '确定要退出该群聊吗？',
-      okText: '确定',
+      title: intl.formatMessage({ id: 'groupSettings.leaveGroup' }),
+      content: intl.formatMessage({ id: 'groupSettings.leaveGroupConfirm' }),
+      okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await quit_group(groupInfo!.group_uuid);
-          message.success('已退出群聊');
+          message.success(intl.formatMessage({ id: 'groupSettings.leaveGroupSuccess' }));
           history.push('/home/chats/dashboard');
         } catch {
-          message.error('退出群聊失败');
+          message.error(intl.formatMessage({ id: 'groupSettings.leaveGroupFailed' }));
         }
       },
     });
@@ -297,18 +302,18 @@ const GroupSettingsPage = () => {
 
   const handleDissolve = () => {
     Modal.confirm({
-      title: '解散群聊',
-      content: `确定要解散"${groupInfo?.group_name}"吗？此操作不可恢复。`,
-      okText: '确定解散',
+      title: intl.formatMessage({ id: 'groupSettings.dissolveGroup' }),
+      content: intl.formatMessage({ id: 'groupSettings.dissolveGroupConfirm' }, { name: groupInfo?.group_name }),
+      okText: intl.formatMessage({ id: 'groupSettings.dissolveGroupBtn' }),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await dissolve_group(groupInfo!.group_uuid);
-          message.success('群聊已解散');
+          message.success(intl.formatMessage({ id: 'groupSettings.dissolveGroupSuccess' }));
           history.push('/home/chats/dashboard');
         } catch {
-          message.error('解散群聊失败');
+          message.error(intl.formatMessage({ id: 'groupSettings.dissolveGroupFailed' }));
         }
       },
     });
@@ -317,22 +322,22 @@ const GroupSettingsPage = () => {
   const handleTransferOwnership = async () => {
     const membersToTransfer = members.filter((m) => m.user_uuid !== userInfo?.uuid);
     if (membersToTransfer.length === 0) {
-      message.warning('群内没有其他成员可转让');
+      message.warning(intl.formatMessage({ id: 'groupSettings.noMemberToTransfer' }));
       return;
     }
 
     let selectedUser: string | null = null;
 
     Modal.confirm({
-      title: '转让群主',
+      title: intl.formatMessage({ id: 'groupSettings.transferOwnership' }),
       content: (
         <div>
           <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>
-            选择要转让群主的成员：
+            {intl.formatMessage({ id: 'groupSettings.transferOwnershipDesc' })}
           </div>
           <Select
             style={{ width: '100%' }}
-            placeholder="选择成员"
+            placeholder={intl.formatMessage({ id: 'groupSettings.selectMember' })}
             onChange={(val) => {
               selectedUser = val;
             }}
@@ -343,12 +348,12 @@ const GroupSettingsPage = () => {
           />
         </div>
       ),
-      okText: '转让',
+      okText: intl.formatMessage({ id: 'groupSettings.transfer' }),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         if (!selectedUser) {
-          message.warning('请选择要转让的成员');
+          message.warning(intl.formatMessage({ id: 'groupSettings.selectMemberToTransfer' }));
           return Promise.reject();
         }
         try {
@@ -357,10 +362,10 @@ const GroupSettingsPage = () => {
             user_uuid: selectedUser,
             role: 2,
           });
-          message.success('群主已转让');
+          message.success(intl.formatMessage({ id: 'groupSettings.transferSuccess' }));
           loadData();
         } catch {
-          message.error('转让失败');
+          message.error(intl.formatMessage({ id: 'groupSettings.transferFailed' }));
           return Promise.reject();
         }
       },
@@ -370,9 +375,9 @@ const GroupSettingsPage = () => {
   const copyGroupId = () => {
     if (groupInfo?.group_uuid) {
       navigator.clipboard.writeText(groupInfo.group_uuid).then(() => {
-        message.success('群号已复制');
+        message.success(intl.formatMessage({ id: 'groupSettings.groupIdCopied' }));
       }).catch(() => {
-        message.error('复制失败');
+        message.error(intl.formatMessage({ id: 'groupSettings.copyFailed' }));
       });
     }
   };
@@ -380,7 +385,7 @@ const GroupSettingsPage = () => {
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
-        <div className={styles.loadingText}>加载中...</div>
+        <div className={styles.loadingText}>{intl.formatMessage({ id: 'groupSettings.loading' })}</div>
       </div>
     );
   }
@@ -395,12 +400,12 @@ const GroupSettingsPage = () => {
 
   // Management action items
   const managementItems = [
-    { label: '群号', value: groupInfo.group_uuid, icon: <CopyOutlined />, onClick: copyGroupId, showArrow: true },
-    { label: '群主', value: (() => {
+    { label: intl.formatMessage({ id: 'groupSettings.groupId' }), value: groupInfo.group_uuid, icon: <CopyOutlined />, onClick: copyGroupId, showArrow: true },
+    { label: intl.formatMessage({ id: 'groupSettings.members.owner' }), value: (() => {
       const owner = members.find((m) => m.role === 2);
       return owner ? (owner.username || owner.user_uuid) : '-';
     })(), icon: <SafetyCertificateOutlined /> },
-    { label: '创建时间', value: groupInfo.created_at ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN') : '-', icon: null },
+    { label: intl.formatMessage({ id: 'groupSettings.createdAt' }), value: groupInfo.created_at ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN') : '-', icon: null },
   ];
 
   return (
@@ -409,7 +414,7 @@ const GroupSettingsPage = () => {
         <span className={styles.backBtn} onClick={() => history.back()}>
           <ArrowLeftOutlined />
         </span>
-        <span className={styles.headerTitle}>群聊设置</span>
+        <span className={styles.headerTitle}>{intl.formatMessage({ id: 'groupSettings.title' })}</span>
         <span style={{ width: 32 }} />
       </div>
 
@@ -450,10 +455,10 @@ const GroupSettingsPage = () => {
                   className={styles.nameInput}
                 />
                 <Button type="primary" size="small" onClick={handleSaveName} loading={saving}>
-                  确定
+                  {intl.formatMessage({ id: 'groupSettings.members.confirm' })}
                 </Button>
                 <Button size="small" onClick={() => { setEditingName(false); setGroupName(groupInfo.group_name); }}>
-                  取消
+                  {intl.formatMessage({ id: 'groupSettings.members.cancel' })}
                 </Button>
               </div>
             ) : (
@@ -465,7 +470,7 @@ const GroupSettingsPage = () => {
               </div>
             )}
             <div className={styles.memberCount}>
-              <TeamOutlined /> {members.length} 位成员
+              <TeamOutlined /> {intl.formatMessage({ id: 'groupSettings.members.memberCount' }, { count: members.length })}
             </div>
           </div>
         </div>
@@ -483,10 +488,10 @@ const GroupSettingsPage = () => {
             />
             <div className={styles.descEditActions}>
               <Button type="primary" size="small" onClick={handleSaveDesc} loading={saving}>
-                确定
+                {intl.formatMessage({ id: 'groupSettings.members.confirm' })}
               </Button>
               <Button size="small" onClick={() => { setEditingDesc(false); setGroupDesc(groupInfo.description || ''); }}>
-                取消
+                {intl.formatMessage({ id: 'groupSettings.members.cancel' })}
               </Button>
             </div>
           </div>
@@ -497,26 +502,26 @@ const GroupSettingsPage = () => {
           </div>
         ) : canManage ? (
           <div className={styles.descEmpty} onClick={() => setEditingDesc(true)}>
-            <span>添加群简介</span>
+            <span>{intl.formatMessage({ id: 'groupSettings.addDescription' })}</span>
             <EditOutlined className={styles.descEditIcon} />
           </div>
         ) : null}
 
         {/* Members grid row - QQ style */}
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>群成员</div>
+          <div className={styles.sectionTitle}>{intl.formatMessage({ id: 'groupSettings.groupMembers' })}</div>
           <div className={styles.memberGrid}>
             {canManage && (
               <div key="add" className={styles.memberGridItem} onClick={() => { loadFriends(); setInviteModalOpen(true); }}>
                 <div className={styles.addMemberBtn}>
                   <UserAddOutlined className={styles.addIcon} />
                 </div>
-                <span className={styles.memberGridLabel}>添加</span>
+                <span className={styles.memberGridLabel}>{intl.formatMessage({ id: 'groupSettings.add' })}</span>
               </div>
             )}
             {displayMembers.map((member) => {
               const info = memberInfoMap.get(member.user_uuid);
-              const displayName = info?.username || member.username || '成员';
+              const displayName = info?.username || member.username || intl.formatMessage({ id: 'groupSettings.members.member' });
               const iconBizId = info?.icon || member.icon;
               const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
               return (
@@ -529,10 +534,10 @@ const GroupSettingsPage = () => {
                   className={styles.memberAvatar}
                 />
                 <span className={styles.memberGridLabel}>
-                  {member.role === 2 ? '群主' : displayName.slice(0, 4)}
+                  {member.role === 2 ? intl.formatMessage({ id: 'groupSettings.members.owner' }) : displayName.slice(0, 4)}
                 </span>
                 {member.user_uuid === userInfo?.uuid && (
-                  <Tag className={styles.meTag}>我</Tag>
+                  <Tag className={styles.meTag}>{intl.formatMessage({ id: 'groupSettings.members.me' })}</Tag>
                 )}
               </div>
               );
@@ -549,7 +554,7 @@ const GroupSettingsPage = () => {
                 <div className={styles.moreMembersBtn}>
                   <span className={styles.moreText}>+{members.length - 8}</span>
                 </div>
-                <span className={styles.memberGridLabel}>更多</span>
+                <span className={styles.memberGridLabel}>{intl.formatMessage({ id: 'groupSettings.more' })}</span>
               </div>
             )}
           </div>
@@ -557,7 +562,7 @@ const GroupSettingsPage = () => {
 
         {/* Group info items */}
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>群信息</div>
+          <div className={styles.sectionTitle}>{intl.formatMessage({ id: 'groupSettings.groupInfo' })}</div>
           <div className={styles.infoList}>
             {managementItems.map((item) => (
               <div key={item.label} className={styles.infoItem} onClick={item.onClick}>
@@ -572,9 +577,9 @@ const GroupSettingsPage = () => {
 
         {/* Full member list */}
         <div className={styles.section} id="memberListSection">
-          <div className={styles.sectionTitle}>全部成员</div>
+          <div className={styles.sectionTitle}>{intl.formatMessage({ id: 'groupSettings.allMembers' })}</div>
           <Input.Search
-            placeholder="搜索成员"
+            placeholder={intl.formatMessage({ id: 'groupSettings.members.searchMember' })}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             prefix={<SearchOutlined style={{ color: '#bbb' }} />}
@@ -591,14 +596,14 @@ const GroupSettingsPage = () => {
               const actions: { label: React.ReactNode; onClick: () => void }[] = [];
               if (!isSelf && isOwner) {
                 if (member.role === 0) {
-                  actions.push({ label: '设为管理员', onClick: () => handleSetRole(member, 1) });
+                  actions.push({ label: intl.formatMessage({ id: 'groupSettings.members.setAdmin' }), onClick: () => handleSetRole(member, 1) });
                 }
                 if (member.role === 1) {
-                  actions.push({ label: '取消管理员', onClick: () => handleSetRole(member, 0) });
+                  actions.push({ label: intl.formatMessage({ id: 'groupSettings.members.removeAdmin' }), onClick: () => handleSetRole(member, 0) });
                 }
-                actions.push({ label: <span style={{ color: 'var(--color-error)' }}>移出群聊</span>, onClick: () => handleKick(member) });
+                actions.push({ label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>, onClick: () => handleKick(member) });
               } else if (!isSelf && isAdmin && member.role === 0) {
-                actions.push({ label: <span style={{ color: 'var(--color-error)' }}>移出群聊</span>, onClick: () => handleKick(member) });
+                actions.push({ label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>, onClick: () => handleKick(member) });
               }
 
               return (
@@ -615,7 +620,7 @@ const GroupSettingsPage = () => {
                             {ROLE_TEXT[member.role]}
                           </span>
                         )}
-                        {isSelf && <Tag style={{ marginLeft: 4 }} color="blue">我</Tag>}
+                        {isSelf && <Tag style={{ marginLeft: 4 }} color="blue">{intl.formatMessage({ id: 'groupSettings.members.me' })}</Tag>}
                       </div>
                       <span className={styles.memberItemId}>{info?.account || member.user_uuid}</span>
                     </div>
@@ -639,17 +644,17 @@ const GroupSettingsPage = () => {
         <div className={styles.section}>
           {!isOwner && (
             <Button danger block className={styles.dangerBtn} onClick={handleLeaveGroup}>
-              退出群聊
+              {intl.formatMessage({ id: 'groupSettings.leaveGroup' })}
             </Button>
           )}
           {isOwner && (
             <>
               <Button block className={styles.transferBtn} onClick={handleTransferOwnership}>
-                转让群主
+                {intl.formatMessage({ id: 'groupSettings.transferOwnership' })}
               </Button>
               <div style={{ height: 12 }} />
               <Button danger block className={styles.dangerBtn} onClick={handleDissolve}>
-                解散群聊
+                {intl.formatMessage({ id: 'groupSettings.dissolveGroup' })}
               </Button>
             </>
           )}
@@ -660,21 +665,21 @@ const GroupSettingsPage = () => {
 
       {/* Invite Modal */}
       <Modal
-        title="邀请成员"
+        title={intl.formatMessage({ id: 'groupSettings.members.inviteMember' })}
         open={inviteModalOpen}
         onOk={handleInvite}
         onCancel={() => setInviteModalOpen(false)}
         confirmLoading={inviteLoading}
-        okText="邀请"
-        cancelText="取消"
+        okText={intl.formatMessage({ id: 'groupSettings.members.invite' })}
+        cancelText={intl.formatMessage({ id: 'groupSettings.members.cancel' })}
       >
         <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
-          选择要邀请入群的好友，被邀请方将收到通知并可选择接受或拒绝。
+          {intl.formatMessage({ id: 'groupSettings.members.inviteDesc' })}
         </div>
         <Select
           mode="multiple"
           style={{ width: '100%' }}
-          placeholder="选择好友"
+          placeholder={intl.formatMessage({ id: 'groupSettings.members.selectFriend' })}
           value={selectedFriends}
           onChange={setSelectedFriends}
           options={friendList.map((f) => ({

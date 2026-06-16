@@ -1,6 +1,6 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { history } from '@umijs/max';
+import { history, useIntl } from '@umijs/max';
 import { getFiles, getUnreadNotificationCounts } from '@workspace/services';
 import { get_group_list } from '@workspace/services';
 import { GroupVo } from '@workspace/types';
@@ -12,6 +12,7 @@ import InvitationManager from './InvitationManager';
 import styles from './styles/GroupList.less';
 
 const GroupList = () => {
+  const intl = useIntl();
   const [groups, setGroups] = useState<GroupVo[]>([]);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [invitationVisible, setInvitationVisible] = useState(false);
@@ -52,7 +53,7 @@ const GroupList = () => {
       setGroups(groupList || []);
     } catch (error) {
       console.error('获取群组列表失败', error);
-      message.error('获取群组列表失败');
+      message.error(intl.formatMessage({ id: 'contacts.groupList.fetchError' }));
     }
   };
 
@@ -85,7 +86,7 @@ const GroupList = () => {
             onClick={() => setInvitationVisible(true)}
           >
             <MailOutlined />
-            <span>邀请管理</span>
+            <span>{intl.formatMessage({ id: 'contacts.groupList.invitationManage' })}</span>
           </div>
         </Badge>
         <div
@@ -93,7 +94,7 @@ const GroupList = () => {
           onClick={() => setCreateModalVisible(true)}
         >
           <PlusOutlined />
-          <span>创建群组</span>
+          <span>{intl.formatMessage({ id: 'contacts.groupList.createGroup' })}</span>
         </div>
       </div>
       <CreateGroupModal
@@ -115,6 +116,7 @@ interface GroupBoxProps {
 }
 
 const GroupBox = ({ group, onClick }: GroupBoxProps) => {
+  const intl = useIntl();
   const [groupIcon, setGroupIcon] = useState<string | null>(null);
 
   const getGroupIcon = async (icon: string) => {
@@ -148,7 +150,7 @@ const GroupBox = ({ group, onClick }: GroupBoxProps) => {
       </div>
       <div className={styles.center}>
         <div className={styles.centerTitle}>{group.group_name}</div>
-        <div className={styles.centerText}>{group.member_count} 成员</div>
+        <div className={styles.centerText}>{group.member_count} {intl.formatMessage({ id: 'contacts.groupList.members' })}</div>
       </div>
     </div>
   );

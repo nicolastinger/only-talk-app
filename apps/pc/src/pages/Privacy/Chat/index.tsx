@@ -22,7 +22,7 @@ import {
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { useLocation } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
 import { VideoCallInvite } from '@workspace/types';
 import { Button, Input, message, Modal, Tooltip } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
@@ -113,6 +113,7 @@ const EMOJI_LIST = [
 ];
 
 const PrivacyChat: React.FC = () => {
+  const intl = useIntl();
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputText, setInputText] = useState('');
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
@@ -121,8 +122,8 @@ const PrivacyChat: React.FC = () => {
     useState<VideoCallInvite | null>(null);
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [friendName, setFriendName] = useState<string>('对方');
-  const [myName, setMyName] = useState<string>('我');
+  const [friendName, setFriendName] = useState<string>(intl.formatMessage({ id: 'privacyChat.other' }));
+  const [myName, setMyName] = useState<string>(intl.formatMessage({ id: 'privacyChat.me' }));
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -224,7 +225,7 @@ const PrivacyChat: React.FC = () => {
     }
 
     if (!friendId) {
-      message.error('无法获取好友ID');
+      message.error(intl.formatMessage({ id: 'privacyChat.errors.noFriendId' }));
       return;
     }
 
@@ -245,7 +246,7 @@ const PrivacyChat: React.FC = () => {
       setInputText('');
     } catch (e) {
       console.error('发送消息失败:', e);
-      message.error('发送消息失败');
+      message.error(intl.formatMessage({ id: 'privacyChat.errors.sendFailed' }));
     }
   };
 
@@ -267,7 +268,7 @@ const PrivacyChat: React.FC = () => {
       await currentWindow.close();
     } catch (e) {
       console.error('退出失败:', e);
-      message.error('退出失败');
+      message.error(intl.formatMessage({ id: 'privacyChat.errors.exitFailed' }));
     }
   };
 
@@ -289,7 +290,7 @@ const PrivacyChat: React.FC = () => {
       });
     } catch (e) {
       console.error('接受视频通话失败:', e);
-      message.error('接受视频通话失败');
+      message.error(intl.formatMessage({ id: 'privacyChat.errors.acceptCallFailed' }));
     }
   };
 
@@ -300,7 +301,7 @@ const PrivacyChat: React.FC = () => {
         targetUuid: friendId,
         accept: false,
         mediaConfig: null,
-        rejectReason: '用户拒绝',
+        rejectReason: intl.formatMessage({ id: 'privacyChat.userRejected' }),
       });
     } catch (e) {
       console.error('拒绝视频通话失败:', e);
@@ -325,9 +326,11 @@ const PrivacyChat: React.FC = () => {
   }, [isVideoCallActive]);
 
   const renderMessage = (msg: ChatMessageItem) => {
+    const meText = intl.formatMessage({ id: 'privacyChat.me' });
+    const otherText = intl.formatMessage({ id: 'privacyChat.other' });
     const displayName = msg.isMine
-      ? `${msg.senderName || '我'}(我)`
-      : msg.senderName || '对方';
+      ? `${msg.senderName || meText}(${meText})`
+      : msg.senderName || otherText;
 
     return (
       <div key={msg.id} className={styles.messageRow}>
@@ -364,7 +367,7 @@ const PrivacyChat: React.FC = () => {
           <div className={styles.videoPlaceholder}>
             <div className={styles.placeholderContent}>
               <VideoCameraOutlined className={styles.placeholderIcon} />
-              <p className={styles.placeholderText}>点击下方按钮发起视频通话</p>
+              <p className={styles.placeholderText}>{intl.formatMessage({ id: 'privacyChat.videoPlaceholder' })}</p>
               <Button
                 type="primary"
                 size="large"
@@ -372,7 +375,7 @@ const PrivacyChat: React.FC = () => {
                 onClick={startVideoCall}
                 className={styles.startVideoBtn}
               >
-                发起视频通话
+                {intl.formatMessage({ id: 'privacyChat.startVideoCall' })}
               </Button>
             </div>
           </div>
@@ -383,7 +386,7 @@ const PrivacyChat: React.FC = () => {
         <div className={styles.chatHeader}>
           <div className={styles.titleWrapper}>
             <LockOutlined className={styles.privacyIcon} />
-            <span className={styles.title}>隐私聊天</span>
+            <span className={styles.title}>{intl.formatMessage({ id: 'privacyChat.title' })}</span>
           </div>
           <Button
             className={styles.exitBtn}
@@ -395,12 +398,12 @@ const PrivacyChat: React.FC = () => {
           />
         </div>
 
-        <div className={styles.hint}>消息不保存，关闭后消失</div>
+        <div className={styles.hint}>{intl.formatMessage({ id: 'privacyChat.hint' })}</div>
 
         <div ref={messageContainerRef} className={styles.messageContainer}>
           {messages.length === 0 ? (
             <div className={styles.emptyMessage}>
-              <span>暂无消息</span>
+              <span>{intl.formatMessage({ id: 'privacyChat.noMessages' })}</span>
             </div>
           ) : (
             messages.map(renderMessage)
@@ -410,7 +413,7 @@ const PrivacyChat: React.FC = () => {
         <div className={styles.footer}>
           <div className={styles.toolbar}>
             <div className={styles.emojiWrapper} ref={emojiPickerRef}>
-              <Tooltip title="表情">
+              <Tooltip title={intl.formatMessage({ id: 'privacyChat.emoji' })}>
                 <Button
                   type="text"
                   icon={<SmileOutlined />}
@@ -441,7 +444,7 @@ const PrivacyChat: React.FC = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="输入消息..."
+              placeholder={intl.formatMessage({ id: 'privacyChat.inputPlaceholder' })}
               autoSize={{ minRows: 1, maxRows: 3 }}
             />
             <Button
@@ -455,14 +458,14 @@ const PrivacyChat: React.FC = () => {
       </div>
 
       <Modal
-        title="视频通话邀请"
+        title={intl.formatMessage({ id: 'privacyChat.videoCallInvite' })}
         open={showIncomingCallModal}
         onOk={acceptVideoCall}
         onCancel={rejectVideoCall}
-        okText="接受"
-        cancelText="拒绝"
+        okText={intl.formatMessage({ id: 'privacyChat.accept' })}
+        cancelText={intl.formatMessage({ id: 'privacyChat.reject' })}
       >
-        <p>{incomingCallInvite?.from_name || '对方'} 邀请您进行视频通话</p>
+        <p>{incomingCallInvite?.from_name || intl.formatMessage({ id: 'privacyChat.other' })} {intl.formatMessage({ id: 'privacyChat.inviteToVideoCall' })}</p>
       </Modal>
     </div>
   );

@@ -1,4 +1,5 @@
 import { ZoomInOutlined, ZoomOutOutlined } from '@ant-design/icons';
+import { useIntl } from '@umijs/max';
 import { Button, Image } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
@@ -14,6 +15,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   currentIndex = 0,
   onClose,
 }) => {
+  const intl = useIntl();
   const [current, setCurrent] = useState(currentIndex);
   const [scale, setScale] = useState(1);
 
@@ -76,7 +78,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
             icon={<ZoomOutOutlined />}
             onClick={handleZoomOut}
             className={styles.iconButton}
-            title="缩小"
+            title={intl.formatMessage({ id: 'imagePreview.zoomOut' })}
           />
           <span className={styles.scaleText}>{Math.round(scale * 100)}%</span>
           <Button
@@ -84,7 +86,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
             icon={<ZoomInOutlined />}
             onClick={handleZoomIn}
             className={styles.iconButton}
-            title="放大"
+            title={intl.formatMessage({ id: 'imagePreview.zoomIn' })}
           />
         </div>
       </div>

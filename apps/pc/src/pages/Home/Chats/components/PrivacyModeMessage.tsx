@@ -1,4 +1,5 @@
 import { LockOutlined } from '@ant-design/icons';
+import { useIntl } from '@umijs/max';
 import React from 'react';
 import styles from './styles/PrivacyModeMessage.less';
 
@@ -7,6 +8,7 @@ interface PrivacyModeMessageProps {
 }
 
 const PrivacyModeMessage: React.FC<PrivacyModeMessageProps> = ({ isMine }) => {
+  const intl = useIntl();
   return (
     <div
       className={`${styles.container} ${isMine ? styles.mine : styles.friend}`}
@@ -15,7 +17,7 @@ const PrivacyModeMessage: React.FC<PrivacyModeMessageProps> = ({ isMine }) => {
         <LockOutlined className={styles.icon} />
       </div>
       <div className={styles.text}>
-        {isMine ? '已发起隐私模式' : '对方发起了隐私模式'}
+        {isMine ? intl.formatMessage({ id: 'privacyModeMessage.started' }) : intl.formatMessage({ id: 'privacyModeMessage.otherStarted' })}
       </div>
     </div>
   );

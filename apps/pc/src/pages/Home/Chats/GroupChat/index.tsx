@@ -4,7 +4,7 @@ import { useMessageApi } from '@/hooks/useMessageApi';
 import { useGroupMessageAckApi } from '@/hooks/useGroupMessageAckApi';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { useLocation } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
 import {
   ChatMessage,
   GroupVo,
@@ -21,6 +21,7 @@ import styles from './index.less';
 const PAGE_SIZE = 20;
 
 const GroupChatPage: React.FC = () => {
+  const intl = useIntl();
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
   const [footerHeight, setFooterHeight] = useState(180);
@@ -355,11 +356,11 @@ const GroupChatPage: React.FC = () => {
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
               <div className={styles.loadingSpinner}></div>
-              <span>加载中...</span>
+              <span>{intl.formatMessage({ id: 'groupChat.loading' })}</span>
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>没有更多消息了</div>
+            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'groupChat.noMoreMessages' })}</div>
           )}
           <GroupMessageList
             messages={messageList}

@@ -1,5 +1,6 @@
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './style/CameraControl.module.css';
 
@@ -21,6 +22,7 @@ const CameraControl = React.forwardRef(
     }: CameraControlProps,
     ref,
   ) => {
+    const intl = useIntl();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string>('');
@@ -64,7 +66,7 @@ const CameraControl = React.forwardRef(
           setSelectedCamera(videoDevices[0].deviceId);
         }
       } catch (err) {
-        setError('无法获取摄像头列表');
+        setError(intl.formatMessage({ id: 'media.cameraListError' }));
         console.error('获取摄像头列表失败:', err);
       }
     };
@@ -106,7 +108,7 @@ const CameraControl = React.forwardRef(
           const mimeType = videoConfig.encode;
           if (!MediaRecorder.isTypeSupported(mimeType)) {
             console.error('当前浏览器不支持 VP8 编码');
-            setError('当前浏览器不支持 VP8 编码，请尝试使用其他浏览器');
+            setError(intl.formatMessage({ id: 'media.codecNotSupported' }));
             return;
           }
 
@@ -120,7 +122,7 @@ const CameraControl = React.forwardRef(
 
             mediaRecorder.onerror = (event) => {
               console.error('MediaRecorder 错误:', event);
-              setError('视频录制出现错误');
+              setError(intl.formatMessage({ id: 'media.recordingError' }));
             };
 
             mediaRecorder.ondataavailable = async (event) => {
@@ -146,11 +148,11 @@ const CameraControl = React.forwardRef(
             mediaRecorder.start(30);
           } catch (err) {
             console.error('创建 MediaRecorder 失败:', err);
-            setError('创建视频录制器失败');
+            setError(intl.formatMessage({ id: 'media.recorderCreateFailed' }));
           }
         }
       } catch (err) {
-        setError('无法访问摄像头');
+        setError(intl.formatMessage({ id: 'media.cameraAccessError' }));
         console.error('启动摄像头失败:', err);
       }
     };
@@ -233,13 +235,15 @@ const CameraControl = React.forwardRef(
                   onClick={isCameraOn ? stopCamera : startCamera}
                   className={styles.controlButton}
                 >
-                  {isCameraOn ? '关闭摄像头' : '开启摄像头'}
+                  {isCameraOn
+                    ? intl.formatMessage({ id: 'media.closeCamera' })
+                    : intl.formatMessage({ id: 'media.openCamera' })}
                 </button>
               )}
 
               {isCameraOn && availableCameras.length > 1 && (
                 <button onClick={switchCamera} className={styles.controlButton}>
-                  切换摄像头
+                  {intl.formatMessage({ id: 'media.switchCamera' })}
                 </button>
               )}
             </div>
@@ -252,7 +256,8 @@ const CameraControl = React.forwardRef(
               >
                 {availableCameras.map((camera) => (
                   <option key={camera.deviceId} value={camera.deviceId}>
-                    {camera.label || `摄像头 ${camera.deviceId.slice(0, 5)}`}
+                    {camera.label ||
+                      `${intl.formatMessage({ id: 'media.camera' })} ${camera.deviceId.slice(0, 5)}`}
                   </option>
                 ))}
               </select>
