@@ -9,6 +9,7 @@ import {
   SmileOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
 import { selectFile } from '@workspace/services';
 import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
 import { message } from 'antd';
@@ -98,6 +99,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
   onUploadStart,
   onUploadEnd,
 }) => {
+  const intl = useIntl();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const userInfo = useBearStore((state) => state.userInfo);
@@ -208,7 +210,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
     try {
       const localUserId = userInfo.uuid;
       if (!localUserId) {
-        message.error('无法获取用户信息');
+        message.error(intl.formatMessage({ id: 'chat.footer.userInfoError' }));
         return;
       }
 
@@ -220,7 +222,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
       await openWebRTCChatHandler(friendUuid, localUserId, true);
     } catch (e) {
       console.error('发起 WebRTC 聊天失败:', e);
-      message.error('发起 WebRTC 聊天失败');
+      message.error(intl.formatMessage({ id: 'chat.footer.webRTCFailed' }));
     }
   };
 
@@ -255,23 +257,23 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
           </div>
         )}
       </div>
-      <div className={styles.footerBtn} onClick={sendImage} title="发送图片">
+      <div className={styles.footerBtn} onClick={sendImage} title={intl.formatMessage({ id: 'chat.footer.sendImage' })}>
         <PictureOutlined />
       </div>
-      <div className={styles.footerBtn} onClick={sendFile} title="发送文件">
+      <div className={styles.footerBtn} onClick={sendFile} title={intl.formatMessage({ id: 'chat.footer.sendFile' })}>
         <FileOutlined />
       </div>
       <div
         className={styles.footerBtn}
         onClick={sendRequestToP2p}
-        title="隐私聊天"
+        title={intl.formatMessage({ id: 'chat.footer.privateChat' })}
       >
         <LockOutlined />
       </div>
       <div
         className={styles.footerBtn}
         onClick={startWebRTCChat}
-        title="发起 WebRTC 聊天"
+        title={intl.formatMessage({ id: 'chat.footer.startWebRTC' })}
       >
         <ApiOutlined />
       </div>

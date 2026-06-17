@@ -12,9 +12,10 @@ use tauri::{Manager, Wry};
 use crate::config::set_config;
 use crate::dao::init_common_db::init_common_sqlite;
 use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
+use crate::utils::dns::resolve_ipv6;
 use crate::utils::global_static_str::{
-    APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH, RESOURCE_PATH,
-    SQLITE_PATH, UDP_SOCKET_V6,
+    APP_PATH, DEFAULT_IMAGE, DOMAIN_NAME, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
+    RESOURCE_PATH, SQLITE_PATH, UDP_PORT_V6,
 };
 
 pub async fn init_app(
@@ -74,18 +75,29 @@ pub async fn init_app(
     // 初始化公共数据库
     init_common_sqlite(sqlite_path).await.expect("初始化公共数据库失败!");
 
-    // 复制打包的资源文件到可访问目录（移动平台需要）
-    if let Some(handle) = app_handle {
-        copy_resources_to_app_dir(&handle, &resource_path).await;
-    }
+    // // 复制打包的资源文件到可访问目录（移动平台需要）
+    // if let Some(handle) = app_handle {
+    //     copy_resources_to_app_dir(&handle, &resource_path).await;
+    // }
 
-    // 监测ipv6是否支持
-    let addr_v6 = "[::]:10086";
-    let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>().expect("解析ipv6地址失败");
-    let udp_socket_v6 = UDP_SOCKET_V6.parse::<SocketAddrV6>().expect("解析ipv6地址失败");
-    let addr_json = Vec::new();
-    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(|x| {
-        warn!("本机不支持ipv6传输 {}", x);
+    // 监测ipv6是否支持（通过DNS动态解析域名）
+    tokio::spawn(async move {
+        let addr_v6 = "[::]:10086";
+        let addr_v6_socket: SocketAddrV6 =
+            addr_v6.parse::<SocketAddrV6>().expect("解析ipv6地址失败");
+        let udp_socket_v6 = match resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6).await {
+            Ok(addr) => addr,
+            Err(e) => {
+                info!("域名无IPv6记录，跳过IPv6检测 {}", e);
+                return;
+            }
+        };
+        let addr_json = Vec::new();
+        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(
+            |x| {
+                warn!("本机不支持ipv6传输 {}", x);
+            },
+        );
     });
     info!("应用启动成功");
     Ok(())

@@ -1,9 +1,11 @@
 import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
 import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
 import React, { useState, useEffect } from 'react';
 import './QuicDisconnectAlert.less';
 
 const QuicDisconnectAlert: React.FC = () => {
+  const intl = useIntl();
   const { isConnected, connectionState, message, resetConnection } =
     useQuicDisconnect();
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -41,8 +43,8 @@ const QuicDisconnectAlert: React.FC = () => {
 
   const statusText =
     connectionState === 'disconnected'
-      ? '连接已断开'
-      : '正在重连...';
+      ? intl.formatMessage({ id: 'quicDisconnect.disconnected' })
+      : intl.formatMessage({ id: 'quicDisconnect.reconnecting' });
 
   return (
     <div className="quic-disconnect-alert">
@@ -51,7 +53,7 @@ const QuicDisconnectAlert: React.FC = () => {
         <button
           className="quic-disconnect-alert-close"
           onClick={handleClose}
-          title="关闭提示"
+          title={intl.formatMessage({ id: 'quicDisconnect.closeTip' })}
         >
           ✕
         </button>
@@ -72,15 +74,15 @@ const QuicDisconnectAlert: React.FC = () => {
         <h2 className="quic-disconnect-alert-title">{statusText}</h2>
 
         <p className="quic-disconnect-alert-message">
-          {message || 'QUIC连接已断开，请检查您的网络环境'}
+          {message || intl.formatMessage({ id: 'quicDisconnect.defaultMessage' })}
         </p>
 
         <div className="quic-disconnect-alert-tips">
-          <p>💡 建议操作：</p>
+          <p>{intl.formatMessage({ id: 'quicDisconnect.suggestions' })}</p>
           <ul>
-            <li>检查网络连接是否正常</li>
-            <li>确认防火墙未阻止应用</li>
-            <li>点击下方按钮重新连接</li>
+            <li>{intl.formatMessage({ id: 'quicDisconnect.checkNetwork' })}</li>
+            <li>{intl.formatMessage({ id: 'quicDisconnect.checkFirewall' })}</li>
+            <li>{intl.formatMessage({ id: 'quicDisconnect.clickReconnect' })}</li>
           </ul>
         </div>
 
@@ -94,12 +96,12 @@ const QuicDisconnectAlert: React.FC = () => {
           {isReconnecting ? (
             <>
               <span className="loading-spinner" />
-              正在重连...
+              {intl.formatMessage({ id: 'quicDisconnect.reconnecting' })}
             </>
           ) : (
             <>
               <span className="button-icon">🔄</span>
-              重新连接 QUIC
+              {intl.formatMessage({ id: 'quicDisconnect.reconnect' })}
             </>
           )}
         </button>

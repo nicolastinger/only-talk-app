@@ -1,5 +1,6 @@
 import { PictureOutlined, SmileOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
 import { selectFile } from '@workspace/services';
 import {
   ChatMessage,
@@ -95,6 +96,7 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
   selfUuid,
   onMessageSent,
 }) => {
+  const intl = useIntl();
   const [messageText, setMessageText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<TextAreaRef>(null);
@@ -143,7 +145,7 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
       setMessageText('');
     } catch (e) {
       console.log('发送失败', e);
-      message.error('发送失败');
+      message.error(intl.formatMessage({ id: 'chat.footer.sendFailed' }));
     }
   };
 
@@ -177,7 +179,7 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
       }
     } catch (e) {
       console.log('发送图片失败', e);
-      message.error('发送图片失败');
+      message.error(intl.formatMessage({ id: 'chat.footer.sendImageFailed' }));
     }
   };
 
@@ -212,7 +214,7 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
             </div>
           )}
         </div>
-        <div className={styles.footerBtn} onClick={sendImage} title="发送图片">
+        <div className={styles.footerBtn} onClick={sendImage} title={intl.formatMessage({ id: 'chat.footer.sendImage' })}>
           <PictureOutlined />
         </div>
       </div>
@@ -224,11 +226,11 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
             setMessageText(e.target.value)
           }
           className={styles.footerTextArea}
-          placeholder="记点什么..."
+          placeholder={intl.formatMessage({ id: 'chat.selfChat.placeholder' })}
         />
         <div className={styles.footerSendBtn}>
           <Button type="primary" variant="outlined" onClick={sendMessage}>
-            发送(S)
+            {intl.formatMessage({ id: 'chat.selfChat.send' })}
           </Button>
         </div>
       </div>

@@ -19,7 +19,8 @@ use crate::quic_service::p2p_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward, udp_port_forward_ipv6,
 };
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::{UDP_SOCKET, UDP_SOCKET_2, UDP_SOCKET_V6, UDP_SOCKET_V6_2};
+use crate::utils::global_static_str::{DOMAIN_NAME, UDP_PORT, UDP_PORT_2, UDP_PORT_V6, UDP_PORT_V6_2};
+use crate::utils::dns::{resolve_ipv4, resolve_ipv6};
 use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
     MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
@@ -177,9 +178,11 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     let mut result = get_user_address_info(addr.clone(), token).await?;
     let addr_json = serde_json::to_vec(&result)?;
     let addr_socket: SocketAddr = addr.parse()?;
-    // 发送udp消息给服务器
-    udp_port_forward(addr_socket, UDP_SOCKET.to_string().parse()?, &addr_json).await?;
-    udp_port_forward(addr_socket, UDP_SOCKET_2.to_string().parse()?, &addr_json).await?;
+    // 发送udp消息给服务器（通过DNS动态解析域名）
+    let udp_socket = resolve_ipv4(DOMAIN_NAME, UDP_PORT).await?;
+    let udp_socket_2 = resolve_ipv4(DOMAIN_NAME, UDP_PORT_2).await?;
+    udp_port_forward(addr_socket, udp_socket.into(), &addr_json).await?;
+    udp_port_forward(addr_socket, udp_socket_2.into(), &addr_json).await?;
 
     // ipv6连接
     let addr_v6 = format!("[::]:{}", udp_port_v6);
@@ -187,14 +190,24 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     result.address = addr_v6.clone();
     let addr_json = serde_json::to_vec(&result)?;
     let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>()?;
-    let udp_socket_v6 = UDP_SOCKET_V6.parse::<SocketAddrV6>()?;
-    let udp_socket_v6_2 = UDP_SOCKET_V6_2.parse::<SocketAddrV6>()?;
-    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(|x| {
-        warn!("本机不支持ipv6传输 {}", x);
-    });
-    udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json).await.unwrap_or_else(|x| {
-        warn!("本机不支持ipv6传输 {}", x);
-    });
+    // 尝试通过DNS解析IPv6地址，域名无AAAA记录时跳过（正常情况）
+    if let (Ok(udp_socket_v6), Ok(udp_socket_v6_2)) = (
+        resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6).await,
+        resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6_2).await,
+    ) {
+        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json)
+            .await
+            .unwrap_or_else(|x| {
+                warn!("本机不支持ipv6传输 {}", x);
+            });
+        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json)
+            .await
+            .unwrap_or_else(|x| {
+                warn!("本机不支持ipv6传输 {}", x);
+            });
+    } else {
+        info!("域名无IPv6记录，跳过IPv6连接");
+    }
     Ok(())
 }
 

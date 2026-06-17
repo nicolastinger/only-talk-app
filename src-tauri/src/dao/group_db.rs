@@ -12,6 +12,10 @@ pub async fn query_group_list(me: &str) -> Result<Vec<Group>, anyhow::Error> {
     Group::query_user_groups(me).await
 }
 
+pub async fn search_group_list(me: &str, keyword: &str) -> Result<Vec<Group>, anyhow::Error> {
+    Group::search_user_groups(me, keyword).await
+}
+
 pub async fn soft_delete_group(group_id: &str) -> Result<(), anyhow::Error> {
     Group::soft_delete(group_id).await
 }

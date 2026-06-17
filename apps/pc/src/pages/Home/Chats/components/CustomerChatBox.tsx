@@ -15,35 +15,22 @@ const imageCache = new Map<string, string>();
 
 interface CustomerChatBoxProps extends ChatMessage {
   friendUuid: string;
-  currentBizId?: string;
   senderName?: string;
 }
 
+// 私聊消息类型
 const MSG_TYPE_TEXT = 1;
 const MSG_TYPE_IMAGE = 2;
 const MSG_TYPE_FILE = 3;
 const MSG_TYPE_PRIVACY = 4;
-const MSG_TYPE_GROUP_TEXT = 2001;
-const MSG_TYPE_GROUP_IMAGE = 2002;
-const MSG_TYPE_GROUP_FILE = 2003;
-
-const isTextType = (text_type: number) => 
-  text_type === MSG_TYPE_TEXT || text_type === MSG_TYPE_GROUP_TEXT;
-
-const isImageType = (text_type: number) => 
-  text_type === MSG_TYPE_IMAGE || text_type === MSG_TYPE_GROUP_IMAGE;
-
-const isFileType = (text_type: number) => 
-  text_type === MSG_TYPE_FILE || text_type === MSG_TYPE_GROUP_FILE;
 
 const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   props: CustomerChatBoxProps,
 ) => {
   const {
-    text_msg_raw: { raw, text_type, timestamp, nano_id, send_user },
+    text_msg_raw: { raw, text_type, timestamp, nano_id },
     img,
     friendUuid,
-    currentBizId,
     senderName,
   } = props;
 
@@ -53,6 +40,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
 
+  // 加载好友头像
   useEffect(() => {
     if (!img) return;
 
@@ -62,9 +50,13 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
     }
 
     setLoading(true);
-    getUserIcon(img)
-      .then((icon) => {
-        setFriendIcon(icon);
+    getFiles(img)
+      .then((FileVos) => {
+        const tauriFilePath = FileVos?.[0]?.tauri_file_path || '';
+        if (tauriFilePath) {
+          imageCache.set(img, tauriFilePath);
+        }
+        setFriendIcon(tauriFilePath);
         setLoading(false);
       })
       .catch(() => {
@@ -72,15 +64,19 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
       });
   }, [img]);
 
+  // 处理图片消息（私聊：单层 JSON）
   useEffect(() => {
-    if (isImageType(text_type)) {
+    if (text_type === MSG_TYPE_IMAGE) {
       try {
         const imageRecord: ImageRecord = JSON.parse(raw);
         const bizId = imageRecord.biz_id;
-        console.log('CustomerChatBox - Loading image with bizId:', bizId);
+
+        if (!bizId) {
+          console.error('CustomerChatBox - No bizId found');
+          return;
+        }
 
         if (imageCache.has(bizId)) {
-          console.log('CustomerChatBox - Image found in cache');
           setImageUrl(imageCache.get(bizId)!);
           return;
         }
@@ -88,18 +84,12 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         setLoading(true);
         getChatFileByBizId(bizId, nano_id)
           .then((files) => {
-            console.log('CustomerChatBox - Files returned:', files);
             if (files && files.length > 0) {
               const tauriFilePath = files[0].tauri_file_path;
-              console.log('CustomerChatBox - Tauri file path:', tauriFilePath);
               if (tauriFilePath) {
                 imageCache.set(bizId, tauriFilePath);
                 setImageUrl(tauriFilePath);
-              } else {
-                console.error('CustomerChatBox - Tauri file path is empty');
               }
-            } else {
-              console.error('CustomerChatBox - No files returned');
             }
             setLoading(false);
           })
@@ -112,8 +102,8 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
       }
     }
 
-    // 处理文件消息
-    if (isFileType(text_type)) {
+    // 处理文件消息（私聊：单层 JSON）
+    if (text_type === MSG_TYPE_FILE) {
       try {
         const record: FileRecord = JSON.parse(raw);
         setFileRecord(record);
@@ -121,42 +111,25 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         console.error('CustomerChatBox - Error parsing file record:', error);
       }
     }
-  }, [raw, text_type]);
+  }, [raw, text_type, nano_id]);
 
-  const getUserIcon = async (icon: string): Promise<string> => {
-    try {
-      if (imageCache.has(icon)) {
-        return imageCache.get(icon)!;
-      }
-
-      const FileVos = await getFiles(icon);
-      const tauriFilePath = FileVos?.[0]?.tauri_file_path || '';
-
-      imageCache.set(icon, tauriFilePath);
-
-      return tauriFilePath;
-    } catch (error) {
-      console.log(error);
-      return '';
+  const renderMessage = () => {
+    if (text_type === MSG_TYPE_TEXT) {
+      return TextBox(raw);
     }
-  };
-
-  const renderMessage = (message: string) => {
-    if (isTextType(text_type)) {
-      return TextBox(message);
-    }
-    if (isImageType(text_type)) {
+    if (text_type === MSG_TYPE_IMAGE) {
+      const bizId = fileRecord?.biz_id || '';
       return (
         <ChatImage
           src={imageUrl}
           loading={loading}
           friendUuid={friendUuid}
-          currentBizId={currentBizId || ''}
+          currentBizId={bizId}
           meUuid={userInfo?.uuid || ''}
         />
       );
     }
-    if (isFileType(text_type)) {
+    if (text_type === MSG_TYPE_FILE) {
       if (fileRecord) {
         return (
           <ChatFile
@@ -182,12 +155,12 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
       case 100:
         return <WebRTCMessage textType={text_type} isMine={false} />;
       default:
-        return TextBox(message);
+        return TextBox(raw);
     }
   };
 
-  const isImageMessage = isImageType(text_type);
-  const isFileMessage = isFileType(text_type);
+  const isImageMessage = text_type === MSG_TYPE_IMAGE;
+  const isFileMessage = text_type === MSG_TYPE_FILE;
   const isSpecialMessage = [MSG_TYPE_PRIVACY, 5, 12, 13, 14, 15, 100].includes(text_type);
 
   return (
@@ -216,7 +189,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
             isSpecialMessage ? styles.specialMessage : ''
           }`}
         >
-          {renderMessage(raw)}
+          {renderMessage()}
         </div>
         <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
       </div>

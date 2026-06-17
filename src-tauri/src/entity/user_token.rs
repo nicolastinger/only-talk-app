@@ -70,23 +70,21 @@ impl UserToken {
 
     pub async fn query_by_user_id(user_id: &str) -> Result<Option<UserToken>, Error> {
         let pool_sqlite = get_common_db_client().await?;
-        let record = sqlx::query_as::<_, UserToken>(
-            r#"SELECT * FROM user_token WHERE user_id = ?1"#,
-        )
-        .bind(user_id)
-        .fetch_optional(&pool_sqlite)
-        .await?;
+        let record =
+            sqlx::query_as::<_, UserToken>(r#"SELECT * FROM user_token WHERE user_id = ?1"#)
+                .bind(user_id)
+                .fetch_optional(&pool_sqlite)
+                .await?;
         Ok(record)
     }
 
     pub async fn query_by_refresh_token(refresh_token: &str) -> Result<Option<UserToken>, Error> {
         let pool_sqlite = get_common_db_client().await?;
-        let record = sqlx::query_as::<_, UserToken>(
-            r#"SELECT * FROM user_token WHERE refresh_token = ?1"#,
-        )
-        .bind(refresh_token)
-        .fetch_optional(&pool_sqlite)
-        .await?;
+        let record =
+            sqlx::query_as::<_, UserToken>(r#"SELECT * FROM user_token WHERE refresh_token = ?1"#)
+                .bind(refresh_token)
+                .fetch_optional(&pool_sqlite)
+                .await?;
         Ok(record)
     }
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::dto::update_user_dto::UpdateUserDTO;
 use crate::dto::http_result::HttpResult;
+use crate::dto::update_user_dto::UpdateUserDTO;
 use crate::entity::user_info::UserInfo;
 use crate::quic_service::connection_state::GLOBAL_QUIC_STATE;
 use crate::service::api_service::{get_with_token, post_json};
@@ -79,53 +79,44 @@ pub async fn get_cached_user_info_by_account(account: String) -> Result<Option<U
 /// 返回用户信息和是否来自缓存的标志
 #[tauri::command]
 pub async fn get_user_info_with_cache(uuid: String) -> Result<UserInfoWithCache, String> {
-    let cached_user = UserInfo::query_by_uuid(&uuid)
-        .await
-        .map_err(|e| e.to_string())?;
-    
+    let cached_user = UserInfo::query_by_uuid(&uuid).await.map_err(|e| e.to_string())?;
+
     if let Some(user_info) = cached_user {
         info!("从本地缓存获取用户信息: uuid={}", uuid);
-        return Ok(UserInfoWithCache {
-            user_info,
-            from_cache: true,
-        });
+        return Ok(UserInfoWithCache { user_info, from_cache: true });
     }
-    
+
     info!("本地缓存未命中，从远程获取用户信息: uuid={}", uuid);
     let url = format!("{}/user/get_user_by_uuid/{}", TALK_API, uuid);
-    
+
     let response = get_with_token(url).await.map_err(|e| {
         warn!("远程获取用户信息失败: uuid={}, error={}", uuid, e);
         e.to_string()
     })?;
-    
+
     let status = response.status();
     let body = response.text().await.map_err(|e| e.to_string())?;
-    
+
     if !status.is_success() {
         return Err(format!("HTTP错误: {}", status));
     }
-    
+
     let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-    
+
     if http_result.code != 200 {
         return Err(http_result.message);
     }
-    
-    let remote_user: UserInfo = serde_json::from_value(
-        http_result.data
-    ).map_err(|e| e.to_string())?;
-    
+
+    let remote_user: UserInfo =
+        serde_json::from_value(http_result.data).map_err(|e| e.to_string())?;
+
     if let Err(e) = remote_user.upsert().await {
         warn!("缓存用户信息失败: uuid={}, error={}", uuid, e);
     } else {
         info!("用户信息已缓存: uuid={}", uuid);
     }
-    
-    Ok(UserInfoWithCache {
-        user_info: remote_user,
-        from_cache: false,
-    })
+
+    Ok(UserInfoWithCache { user_info: remote_user, from_cache: false })
 }
 
 /// 根据UUID刷新用户信息（强制从远程获取并更新缓存）
@@ -133,28 +124,27 @@ pub async fn get_user_info_with_cache(uuid: String) -> Result<UserInfoWithCache,
 pub async fn refresh_user_info(uuid: String) -> Result<UserInfo, String> {
     info!("强制刷新用户信息: uuid={}", uuid);
     let url = format!("{}/user/get_user_by_uuid/{}", TALK_API, uuid);
-    
+
     let response = get_with_token(url).await.map_err(|e| e.to_string())?;
     let status = response.status();
     let body = response.text().await.map_err(|e| e.to_string())?;
-    
+
     if !status.is_success() {
         return Err(format!("HTTP错误: {}", status));
     }
-    
+
     let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-    
+
     if http_result.code != 200 {
         return Err(http_result.message);
     }
-    
-    let remote_user: UserInfo = serde_json::from_value(
-        http_result.data
-    ).map_err(|e| e.to_string())?;
-    
+
+    let remote_user: UserInfo =
+        serde_json::from_value(http_result.data).map_err(|e| e.to_string())?;
+
     remote_user.upsert().await.map_err(|e| e.to_string())?;
     info!("用户信息已刷新并缓存: uuid={}", uuid);
-    
+
     Ok(remote_user)
 }
 
@@ -162,12 +152,12 @@ pub async fn refresh_user_info(uuid: String) -> Result<UserInfo, String> {
 #[tauri::command]
 pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<String, String> {
     let url = format!("{}/user/update", TALK_API);
-    
+
     let response = post_json(url, &update_dto).await.map_err(|e| e.to_string())?;
-    
+
     let status = response.status();
     let body = response.text().await.map_err(|e| e.to_string())?;
-    
+
     if status.is_success() {
         let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
         if http_result.code == 200 {

@@ -2,12 +2,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context};
-use log::{error, info, warn};
-use quinn::{Connection, Endpoint, SendStream};
-use tauri::Emitter;
-use tokio::sync::{watch, Mutex};
-use uuid::Uuid;
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
@@ -18,6 +12,12 @@ use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::MSG_TYPE_PING;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use anyhow::{anyhow, Context};
+use log::{error, info, warn};
+use quinn::{Connection, Endpoint, SendStream};
+use tauri::Emitter;
+use tokio::sync::{watch, Mutex};
+use uuid::Uuid;
 
 /// 重连间隔（秒）
 const RECONNECT_DELAY_SECS: u64 = 5;
@@ -130,7 +130,9 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
 }
 
 /// 单次连接尝试，成功则返回 disconnect 信号接收器和 Endpoint（必须保持存活）
-async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bool>, Endpoint), anyhow::Error> {
+async fn try_connect_once(
+    server_addr: SocketAddr,
+) -> Result<(watch::Receiver<bool>, Endpoint), anyhow::Error> {
     let mut endpoint = Endpoint::client("0.0.0.0:0".parse()?)?;
     endpoint.set_default_client_config(configure_client());
 
@@ -156,8 +158,11 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bo
                 match _recv_stream.read(&mut buffer).await {
                     Ok(Some(length)) => {
                         match process_rec_msg(
-                            &mut buffer, length, &ConnectionType::Text,
-                            Arc::new(Mutex::new(Vec::new())), head_length,
+                            &mut buffer,
+                            length,
+                            &ConnectionType::Text,
+                            Arc::new(Mutex::new(Vec::new())),
+                            head_length,
                         )
                         .await
                         {
@@ -173,7 +178,11 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bo
                         break;
                     }
                     Err(e) => {
-                        error!("[客户端] bidi recv 读取错误: {} (source: {:?})", e, std::error::Error::source(&e));
+                        error!(
+                            "[客户端] bidi recv 读取错误: {} (source: {:?})",
+                            e,
+                            std::error::Error::source(&e)
+                        );
                         let _ = tx.send(true);
                         break;
                     }
@@ -258,7 +267,10 @@ async fn try_connect_once(server_addr: SocketAddr) -> Result<(watch::Receiver<bo
 }
 
 /// 发送初始化消息给服务器
-async fn init_send_msg(send_stream: &mut SendStream, conn: Connection) -> Result<(), anyhow::Error> {
+async fn init_send_msg(
+    send_stream: &mut SendStream,
+    conn: Connection,
+) -> Result<(), anyhow::Error> {
     let mut first_quic_msg = FirstQuicMsg::new();
     let uuid = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").ok_or(anyhow!("uuid为空"))?.clone();
     let token =
@@ -293,7 +305,10 @@ async fn init_send_msg(send_stream: &mut SendStream, conn: Connection) -> Result
 }
 
 /// 发送心跳（按需开流），检测到断连时通知 disconnect_tx
-async fn send_ping_msg(conn: Connection, disconnect_tx: watch::Sender<bool>) -> Result<(), anyhow::Error> {
+async fn send_ping_msg(
+    conn: Connection,
+    disconnect_tx: watch::Sender<bool>,
+) -> Result<(), anyhow::Error> {
     let ping_uuid = Uuid::new_v4();
     let ping_uuid = ping_uuid.to_string();
     insert_user_info("ping_uuid", &ping_uuid).await?;
@@ -303,9 +318,13 @@ async fn send_ping_msg(conn: Connection, disconnect_tx: watch::Sender<bool>) -> 
     insert_user_info("ping_lost_count", "0").await?;
 
     // 立即发送一次心跳，确认连接正常
-    let ping_msg =
-        generate_text_msg(MSG_TYPE_PING, PING.as_bytes().to_vec(), SYSTEM.to_string(), sender.clone())
-            .expect("生成心跳消息失败");
+    let ping_msg = generate_text_msg(
+        MSG_TYPE_PING,
+        PING.as_bytes().to_vec(),
+        SYSTEM.to_string(),
+        sender.clone(),
+    )
+    .expect("生成心跳消息失败");
     match send_via_new_stream(&conn, &ping_msg).await {
         Ok(_) => {
             info!("初始心跳发送成功");
@@ -338,9 +357,13 @@ async fn send_ping_msg(conn: Connection, disconnect_tx: watch::Sender<bool>) -> 
         let ping_lost_count = get_user_info("ping_lost_count").await.unwrap_or("0".to_string());
         let mut ping_lost_count = ping_lost_count.parse::<u64>().unwrap_or(0);
 
-        let ping_msg =
-            generate_text_msg(MSG_TYPE_PING, PING.as_bytes().to_vec(), SYSTEM.to_string(), sender.clone())
-                .expect("生成心跳消息失败");
+        let ping_msg = generate_text_msg(
+            MSG_TYPE_PING,
+            PING.as_bytes().to_vec(),
+            SYSTEM.to_string(),
+            sender.clone(),
+        )
+        .expect("生成心跳消息失败");
 
         match send_via_new_stream(&conn, &ping_msg).await {
             Ok(_) => {

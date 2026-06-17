@@ -1,4 +1,4 @@
-pub static DOMAIN_NAME: &str = "onlytalk.local";
+pub static DOMAIN_NAME: &str = "onlytalk.cn";
 
 pub static REDIS_SPLIT: &str = ":";
 pub static REDIS_QUIC_SERVERS: &str = "QUIC:SERVER:";
@@ -7,14 +7,14 @@ pub static SYSTEM: &str = "system";
 pub static PING: &str = "ping";
 pub static PONG: &str = "pong";
 
-pub static TALK_API: &str = "https://onlytalk.local:8443";
+pub static TALK_API: &str = "https://onlytalk.cn:8443";
 
-pub static UDP_SOCKET: &str = "REDACTED_SERVER_IP_3:9562";
-pub static UDP_SOCKET_2: &str = "REDACTED_SERVER_IP_3:9564";
+// UDP端口配置（配合 DOMAIN_NAME 使用 DNS 动态解析）
+pub static UDP_PORT: u16 = 9562;
+pub static UDP_PORT_2: u16 = 9564;
 
-pub static UDP_SOCKET_V6: &str = "[REDACTED_IPV6]:9563";
-pub static UDP_SOCKET_V6_2: &str = "[REDACTED_IPV6]:9565";
-
+pub static UDP_PORT_V6: u16 = 9563;
+pub static UDP_PORT_V6_2: u16 = 9565;
 
 // 用户发起好友申请
 pub static USER_ADD_FRIEND: &str = "USER_ADD_FRIEND_REQUEST";
@@ -43,7 +43,7 @@ pub static COMMON_DB: &str = "common.db";
 // 加密数据库
 pub static PRIVATE_DB: &str = "private.db";
 // 加密key
-pub static PRIVATE_DB_KEY: &str = "REDACTED_DB_ENCRYPTION_KEY";
+pub static PRIVATE_DB_KEY: &str = "myJB18cm";
 // 默认图片
 pub static DEFAULT_IMAGE: &str = "default.jpg";
 // 消息链第一个节点

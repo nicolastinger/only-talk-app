@@ -14,13 +14,13 @@ interface NotificationPanelProps {
   onClose: () => void;
 }
 
-const NOTIFICATION_TYPE_MAP: Record<string, { text: string; color: string }> = {
-  '1-1-1': { text: '好友申请', color: 'blue' },
-  '1-1-2': { text: '好友处理', color: 'green' },
-  '1-3-1': { text: '群邀请', color: 'orange' },
-  '1-3-2': { text: '群信息更新', color: 'cyan' },
-  '1-3-3': { text: '群成员变动', color: 'purple' },
-  '1-3-4': { text: '邀请结果', color: 'volcano' },
+const NOTIFICATION_TYPE_COLORS: Record<string, string> = {
+  '1-1-1': 'blue',
+  '1-1-2': 'green',
+  '1-3-1': 'orange',
+  '1-3-2': 'cyan',
+  '1-3-3': 'purple',
+  '1-3-4': 'volcano',
 };
 
 const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
@@ -92,20 +92,35 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       const hours = Math.floor(diff / (1000 * 60 * 60));
       if (hours === 0) {
         const minutes = Math.floor(diff / (1000 * 60));
-        return minutes <= 1 ? '刚刚' : `${minutes}分钟前`;
+        return minutes <= 1
+          ? intl.formatMessage({ id: 'notification.justNow' })
+          : intl.formatMessage(
+              { id: 'notification.minutesAgo' },
+              { minutes },
+            );
       }
-      return `${hours}小时前`;
+      return intl.formatMessage({ id: 'notification.hoursAgo' }, { hours });
     } else if (days === 1) {
-      return '昨天';
+      return intl.formatMessage({ id: 'notification.yesterday' });
     } else if (days < 7) {
-      return `${days}天前`;
+      return intl.formatMessage({ id: 'notification.daysAgo' }, { days });
     }
     return date.toLocaleDateString();
   };
 
   const getNotificationType = (n: SystemNotification) => {
     const key = `${n.level1}-${n.level2}-${n.level3}`;
-    return NOTIFICATION_TYPE_MAP[key] || { text: '系统通知', color: 'default' };
+    const color = NOTIFICATION_TYPE_COLORS[key] || 'default';
+    const typeKeyMap: Record<string, string> = {
+      '1-1-1': 'notification.type.friendRequest',
+      '1-1-2': 'notification.type.friendProcess',
+      '1-3-1': 'notification.type.groupInvite',
+      '1-3-2': 'notification.type.groupInfoUpdate',
+      '1-3-3': 'notification.type.groupMemberChange',
+      '1-3-4': 'notification.type.inviteResult',
+    };
+    const textKey = typeKeyMap[key] || 'notification.type.system';
+    return { text: intl.formatMessage({ id: textKey }), color };
   };
 
   const renderNotificationItem = (n: SystemNotification) => {
@@ -136,7 +151,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
     ).length;
 
     if (list.length === 0) {
-      return <Empty description="暂无通知" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+      return <Empty description={intl.formatMessage({ id: 'notification.noNotifications' })} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
     }
 
     return (
@@ -145,7 +160,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
           <div className={styles.clearBar}>
             <span className={styles.unreadCount}>
               <Badge count={unreadCount} size="small" />
-              <span>条未读</span>
+              <span>{intl.formatMessage({ id: 'notification.unreadCount' })}</span>
             </span>
             <Button
               type="link"
@@ -153,7 +168,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
               icon={<CheckOutlined />}
               onClick={() => handleClearUnread(1, clearLevel2 ?? level2 ?? 0)}
             >
-              清空未读
+              {intl.formatMessage({ id: 'notification.clearUnread' })}
             </Button>
           </div>
         )}
@@ -167,7 +182,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
   const tabItems = [
     {
       key: 'all',
-      label: '全部',
+      label: intl.formatMessage({ id: 'notification.tab.all' }),
       children: (
         <div>
           {renderTabContent(1, undefined, -1)}
@@ -176,12 +191,12 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
     },
     {
       key: 'friend',
-      label: '好友通知',
+      label: intl.formatMessage({ id: 'notification.tab.friend' }),
       children: renderTabContent(1, 1, 1),
     },
     {
       key: 'group',
-      label: '群组通知',
+      label: intl.formatMessage({ id: 'notification.tab.group' }),
       children: renderTabContent(1, 3, 3),
     },
   ];
@@ -191,7 +206,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <BellOutlined />
-          <span>通知中心</span>
+          <span>{intl.formatMessage({ id: 'notification.title' })}</span>
         </div>
       }
       open={visible}
@@ -207,21 +222,21 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
           size="small"
           onClick={() => setFilter('all')}
         >
-          全部
+          {intl.formatMessage({ id: 'notification.filter.all' })}
         </Button>
         <Button
           type={filter === 'unread' ? 'primary' : 'default'}
           size="small"
           onClick={() => setFilter('unread')}
         >
-          未读
+          {intl.formatMessage({ id: 'notification.filter.unread' })}
         </Button>
         <Button
           type={filter === 'read' ? 'primary' : 'default'}
           size="small"
           onClick={() => setFilter('read')}
         >
-          已读
+          {intl.formatMessage({ id: 'notification.filter.read' })}
         </Button>
       </div>
       <Tabs items={tabItems} className={styles.tabs} />

@@ -147,4 +147,3 @@ pub const MSG_TYPE_GROUP_READ: u16 = 2005;
 
 /// 群消息接收成功回执
 pub const GROUP_MSG_TYPE_RECALL_SUCCESS: u16 = 2201;
-

@@ -45,6 +45,23 @@ pub async fn soft_delete_friend_db(me: &str, friend_id: &str) -> Result<(), anyh
     Ok(())
 }
 
+/// 模糊搜索好友（按好友名称、好友账号搜索）
+pub async fn search_friend_db(
+    uuid: &str,
+    keyword: &str,
+) -> Result<Vec<Friend>, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let pattern = format!("%{}%", keyword);
+    let record = sqlx::query_as::<_, Friend>(
+        r#"select * from friend where me = ?1 and is_del = 0 and is_block = 0 and (friend_name LIKE ?2 or friend_account LIKE ?2)"#,
+    )
+    .bind(uuid)
+    .bind(&pattern)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(record)
+}
+
 /// 更新好友信息表
 pub async fn update_friend_info_db(friend: &Friend) -> Result<(), anyhow::Error> {
     let res = sqlx::query(r#"UPDATE friend SET friend_id = ?1, friend_account = ?2, friend_name = ?3, friend_icon = ?4, friend_status = ?5, me = ?6, is_del = ?7, is_block = ?8, is_mute = ?9, is_top = ?10, is_show = ?11, created_at = ?12, updated_at = ?13, version = ?14, friend_info = ?15 WHERE friend_id = ?1 and me = ?6"#)

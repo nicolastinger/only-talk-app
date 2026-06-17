@@ -48,7 +48,5 @@ pub async fn clear_unread_by_level(
 #[tauri::command]
 pub async fn get_unread_notification_counts() -> Result<UnreadCounts, String> {
     let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
-    SystemNotification::get_unread_counts(&me)
-        .await
-        .map_err(|e| e.to_string())
+    SystemNotification::get_unread_counts(&me).await.map_err(|e| e.to_string())
 }

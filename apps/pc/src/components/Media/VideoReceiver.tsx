@@ -1,8 +1,10 @@
 import { listen } from '@tauri-apps/api/event';
+import { useIntl } from '@umijs/max';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './style/VideoReceiver.module.css';
 
 const VideoReceiver = () => {
+  const intl = useIntl();
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaSourceRef = useRef<MediaSource | null>(null);
   const sourceBufferRef = useRef<SourceBuffer | null>(null);
@@ -141,7 +143,7 @@ const VideoReceiver = () => {
         />
         {!isReceiving && (
           <div className={styles.statusOverlay}>
-            <span>等待视频信号...</span>
+            <span>{intl.formatMessage({ id: 'media.waitingVideoSignal' })}</span>
           </div>
         )}
       </div>

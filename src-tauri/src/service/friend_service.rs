@@ -5,13 +5,13 @@ use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::cmd::api_controller::post_request;
-use crate::dao::friend_db::{query_friend_info_db, soft_delete_friend_db, update_friend_info_db};
+use crate::dao::friend_db::{query_friend_info_db, search_friend_db, soft_delete_friend_db, update_friend_info_db};
 use crate::dao::session_db::hide_chat_session_db;
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::TALK_API;
-use crate::vo::friend_vo::FriendListVO;
+use crate::vo::friend_vo::{FriendListVO, FriendVo};
 use crate::vo::http_response::Response;
 use crate::APP_HANDLE;
 
@@ -121,4 +121,11 @@ pub async fn update_friend_list() -> Result<(), anyhow::Error> {
     }
 
     Ok(())
+}
+
+/// 模糊搜索好友列表
+pub async fn search_friend_list(keyword: String) -> Result<Vec<FriendVo>, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friends = search_friend_db(&me, &keyword).await?;
+    Ok(friends.into_iter().map(FriendVo::from).collect())
 }

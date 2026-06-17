@@ -5,6 +5,7 @@ import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
+import { useIntl } from '@umijs/max';
 import { FriendInfo, HttpResponse, P2pInitMsg } from '@workspace/types';
 import { Button } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -12,6 +13,7 @@ import styles from './index.less';
 
 //用户视频接收处理组件
 const MediaPage: React.FC = () => {
+  const intl = useIntl();
   const setRequestMediaMsg = useBearStore((state) => state.setRequestMediaMsg);
   const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);
 
@@ -93,7 +95,7 @@ const MediaPage: React.FC = () => {
     return (
       <div className={styles.container}>
         <div className={styles.content}>
-          <div>加载中...</div>
+          <div>{intl.formatMessage({ id: 'media.loading' })}</div>
         </div>
       </div>
     );
@@ -103,10 +105,10 @@ const MediaPage: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.content}>
         <div className={styles.left}>
-          <div>{userInfo?.account || '蔡徐坤'}</div>
+          <div>{userInfo?.account || intl.formatMessage({ id: 'media.defaultUserName' })}</div>
           <img
             src={userInfo?.icon || DEFAULT_ICON}
-            alt="用户头像"
+            alt={intl.formatMessage({ id: 'media.userAvatar' })}
             className={styles.imgItem}
             onError={(e) => {
               (e.target as HTMLImageElement).src = DEFAULT_ICON;
@@ -114,7 +116,7 @@ const MediaPage: React.FC = () => {
           />
         </div>
         <div className={styles.right}>
-          发起了隐私模式请求
+          {intl.formatMessage({ id: 'media.privacyModeRequest' })}
           <div className={styles.btn}>
             <div className={styles.cancelBtn}>
               <Button

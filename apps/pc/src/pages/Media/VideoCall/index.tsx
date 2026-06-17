@@ -2,13 +2,14 @@ import CameraControl from '@/components/Media/CameraControl';
 import VideoReceiver from '@/components/Media/VideoReceiver';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { useLocation } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
 import { VideoConfig } from '@workspace/types';
 import { Button } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
 
 const VideoCallPage: React.FC = () => {
+  const intl = useIntl();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendId = params.get('friendId') || '';
@@ -39,7 +40,7 @@ const VideoCallPage: React.FC = () => {
       }
     }
     if (!flag) {
-      alert('对方未开启视频');
+      alert(intl.formatMessage({ id: 'media.remoteVideoNotEnabled' }));
     }
   };
 
@@ -88,7 +89,7 @@ const VideoCallPage: React.FC = () => {
         onClick={() => setShowMe(!showMe)}
         className={showMe ? styles.mainVideo : styles.miniVideo}
       >
-        <div>捕获</div>
+        <div>{intl.formatMessage({ id: 'media.capture' })}</div>
         <CameraControl
           isReceiver={isReceiver}
           callType={callType}
@@ -107,7 +108,7 @@ const VideoCallPage: React.FC = () => {
               color="danger"
               icon={<CloseOutlined />}
             >
-              关闭摄像头
+              {intl.formatMessage({ id: 'media.closeCamera' })}
             </Button>
             <Button
               onClick={handleStartCamera}
@@ -115,7 +116,7 @@ const VideoCallPage: React.FC = () => {
               color="cyan"
               icon={<CheckOutlined />}
             >
-              开启摄像头
+              {intl.formatMessage({ id: 'media.openCamera' })}
             </Button>
           </div>
         </div>
@@ -125,7 +126,7 @@ const VideoCallPage: React.FC = () => {
         onClick={() => setShowMe(!showMe)}
         className={showMe ? styles.miniVideo : styles.mainVideo}
       >
-        <div>接收</div>
+        <div>{intl.formatMessage({ id: 'media.receive' })}</div>
         <VideoReceiver />
       </div>
     </div>

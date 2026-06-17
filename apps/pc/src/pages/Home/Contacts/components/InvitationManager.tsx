@@ -8,8 +8,9 @@ import {
   getUnreadNotificationCounts,
 } from '@workspace/services';
 import { Modal, Tabs, Tag, Empty, Button, message, Popconfirm } from 'antd';
-import { ClearOutlined } from '@ant-design/icons';
+import { ClearOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons';
 import { useBearStore } from '@/store/store';
+import { useIntl } from '@umijs/max';
 import { useEffect, useState } from 'react';
 import styles from './styles/InvitationManager.less';
 
@@ -17,12 +18,6 @@ interface InvitationManagerProps {
   visible: boolean;
   onCancel: () => void;
 }
-
-const INVITATION_STATUS_MAP: Record<number, { text: string; color: string }> = {
-  1: { text: '待处理', color: 'processing' },
-  2: { text: '已接受', color: 'success' },
-  3: { text: '已拒绝', color: 'error' },
-};
 
 const formatTime = (timestamp: number) => {
   if (!timestamp) return '';
@@ -34,9 +29,19 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
   visible,
   onCancel,
 }) => {
+  const intl = useIntl();
   const [receivedList, setReceivedList] = useState<GroupInvitationVo[]>([]);
   const [sentList, setSentList] = useState<GroupInvitationVo[]>([]);
   const setMenuUnread = useBearStore((state) => state.setMenuUnread);
+
+  const getStatusConfig = (status: number) => {
+    const statusMap: Record<number, { text: string; color: string }> = {
+      1: { text: intl.formatMessage({ id: 'contacts.invitation.statusPending' }), color: 'processing' },
+      2: { text: intl.formatMessage({ id: 'contacts.invitation.statusAccepted' }), color: 'success' },
+      3: { text: intl.formatMessage({ id: 'contacts.invitation.statusRejected' }), color: 'error' },
+    };
+    return statusMap[status] || { text: intl.formatMessage({ id: 'contacts.invitation.statusUnknown' }), color: 'default' };
+  };
 
   const refreshUnreadCounts = async () => {
     try {
@@ -69,27 +74,27 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
       setSentList(sent || []);
     } catch (err) {
       console.error('获取邀请列表失败', err);
-      message.error('获取邀请列表失败');
+      message.error(intl.formatMessage({ id: 'contacts.invitation.fetchError' }));
     }
   };
 
   const handleClearUnread = async () => {
     await clearUnreadByLevel(1, 3, -1, -1);
     refreshUnreadCounts();
-    message.success('已清空群组邀请未读');
+    message.success(intl.formatMessage({ id: 'contacts.invitation.clearUnreadSuccess' }));
   };
 
   const handleAccept = async (groupUuid: string) => {
     try {
       const ok = await accept_group_invitation(groupUuid);
       if (ok) {
-        message.success('已接受邀请');
+        message.success(intl.formatMessage({ id: 'contacts.invitation.acceptSuccess' }));
         loadAll();
       } else {
-        message.warning('接受邀请失败');
+        message.warning(intl.formatMessage({ id: 'contacts.invitation.acceptFailed' }));
       }
     } catch (err) {
-      message.error('接受邀请失败');
+      message.error(intl.formatMessage({ id: 'contacts.invitation.acceptFailed' }));
     }
   };
 
@@ -97,23 +102,31 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
     try {
       const ok = await decline_group_invitation(groupUuid);
       if (ok) {
-        message.success('已拒绝邀请');
+        message.success(intl.formatMessage({ id: 'contacts.invitation.rejectSuccess' }));
         loadAll();
       } else {
-        message.warning('拒绝邀请失败');
+        message.warning(intl.formatMessage({ id: 'contacts.invitation.rejectFailed' }));
       }
     } catch (err) {
-      message.error('拒绝邀请失败');
+      message.error(intl.formatMessage({ id: 'contacts.invitation.rejectFailed' }));
     }
   };
 
   const renderReceivedItem = (inv: GroupInvitationVo) => (
     <div key={inv.id} className={styles.invitationItem}>
+      <div className={styles.invitationLeft}>
+        <div className={`${styles.invitationAvatar} ${styles.avatarReceived}`}>
+          <UserSwitchOutlined />
+        </div>
+      </div>
       <div className={styles.invitationInfo}>
         <div className={styles.invitationGroup}>{inv.group_name}</div>
         <div className={styles.invitationMeta}>
-          <span>邀请人: {inv.inviter_uuid.slice(0, 8)}...</span>
-          <span style={{ marginLeft: 12 }}>{formatTime(inv.created_at)}</span>
+          <span>
+            <TeamOutlined style={{ marginRight: 4, fontSize: 11 }} />
+            {inv.inviter_uuid.slice(0, 8)}...
+          </span>
+          <span>{formatTime(inv.created_at)}</span>
         </div>
       </div>
       <div className={styles.invitationActions}>
@@ -124,20 +137,19 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
               size="small"
               onClick={() => handleAccept(inv.group_uuid)}
             >
-              接受
+              {intl.formatMessage({ id: 'contacts.invitation.accept' })}
             </Button>
             <Button
               size="small"
               danger
               onClick={() => handleDecline(inv.group_uuid)}
-              style={{ marginLeft: 8 }}
             >
-              拒绝
+              {intl.formatMessage({ id: 'contacts.invitation.reject' })}
             </Button>
           </>
         ) : (
-          <Tag color={INVITATION_STATUS_MAP[inv.status]?.color}>
-            {INVITATION_STATUS_MAP[inv.status]?.text || '未知'}
+          <Tag color={getStatusConfig(inv.status).color}>
+            {getStatusConfig(inv.status).text}
           </Tag>
         )}
       </div>
@@ -146,16 +158,24 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
 
   const renderSentItem = (inv: GroupInvitationVo) => (
     <div key={inv.id} className={styles.invitationItem}>
+      <div className={styles.invitationLeft}>
+        <div className={`${styles.invitationAvatar} ${styles.avatarSent}`}>
+          <TeamOutlined />
+        </div>
+      </div>
       <div className={styles.invitationInfo}>
         <div className={styles.invitationGroup}>{inv.group_name}</div>
         <div className={styles.invitationMeta}>
-          <span>被邀请人: {inv.invitee_uuid.slice(0, 8)}...</span>
-          <span style={{ marginLeft: 12 }}>{formatTime(inv.created_at)}</span>
+          <span>
+            <UserSwitchOutlined style={{ marginRight: 4, fontSize: 11 }} />
+            {inv.invitee_uuid.slice(0, 8)}...
+          </span>
+          <span>{formatTime(inv.created_at)}</span>
         </div>
       </div>
       <div className={styles.invitationActions}>
-        <Tag color={INVITATION_STATUS_MAP[inv.status]?.color}>
-          {INVITATION_STATUS_MAP[inv.status]?.text || '未知'}
+        <Tag color={getStatusConfig(inv.status).color}>
+          {getStatusConfig(inv.status).text}
         </Tag>
       </div>
     </div>
@@ -166,24 +186,29 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
   const tabItems = [
     {
       key: 'received',
-      label: `邀请我的${pendingCount > 0 ? ` (${pendingCount})` : ''}`,
+      label: (
+        <span className={styles.tabLabel}>
+          <span>{intl.formatMessage({ id: 'contacts.invitation.tabReceived' })}</span>
+          {pendingCount > 0 && <span className={styles.badge}>{pendingCount > 99 ? '99+' : pendingCount}</span>}
+        </span>
+      ),
       children: receivedList.length > 0 ? (
         <div className={styles.invitationList}>
           {receivedList.map(renderReceivedItem)}
         </div>
       ) : (
-        <Empty description="暂无收到的邀请" />
+        <Empty description={intl.formatMessage({ id: 'contacts.invitation.noReceived' })} />
       ),
     },
     {
       key: 'sent',
-      label: '我邀请的',
+      label: intl.formatMessage({ id: 'contacts.invitation.tabSent' }),
       children: sentList.length > 0 ? (
         <div className={styles.invitationList}>
           {sentList.map(renderSentItem)}
         </div>
       ) : (
-        <Empty description="暂无发出的邀请" />
+        <Empty description={intl.formatMessage({ id: 'contacts.invitation.noSent' })} />
       ),
     },
   ];
@@ -192,15 +217,15 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
     <Modal
       title={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>群聊邀请管理</span>
+          <span>{intl.formatMessage({ id: 'contacts.invitation.modalTitle' })}</span>
           <Popconfirm
-            title="确定清空所有群组邀请未读通知？"
+            title={intl.formatMessage({ id: 'contacts.invitation.clearUnreadConfirm' })}
             onConfirm={handleClearUnread}
-            okText="确定"
-            cancelText="取消"
+            okText={intl.formatMessage({ id: 'contacts.invitation.confirm' })}
+            cancelText={intl.formatMessage({ id: 'contacts.invitation.cancel' })}
           >
             <Button type="text" size="small" icon={<ClearOutlined />}>
-              清空未读
+              {intl.formatMessage({ id: 'contacts.invitation.clearUnread' })}
             </Button>
           </Popconfirm>
         </div>

@@ -22,7 +22,7 @@ import {
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { Window } from '@tauri-apps/api/window';
-import { Outlet } from '@umijs/max';
+import { Outlet, useIntl } from '@umijs/max';
 import { cache_user_info, get_cached_user_info } from '@workspace/services';
 import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
 import { Modal } from 'antd';
@@ -30,6 +30,7 @@ import { useEffect, useState } from 'react';
 import styles from './index.less';
 
 const HomeLayout = () => {
+  const intl = useIntl();
   const [isHovered, setIsHovered] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [closeModalVisible, setCloseModalVisible] = useState(false);
@@ -183,14 +184,14 @@ const HomeLayout = () => {
             <div className={styles.quicReconnectTip}>
               <span className={styles.tipIcon}>⚠️</span>
               <span className={styles.tipText}>
-                连接已断开
+                {intl.formatMessage({ id: 'homeLayout.connectionDisconnected' })}
               </span>
               <div
                 className={styles.tipReconnectButton}
                 onClick={handleReconnect}
               >
                 <ReloadOutlined spin={isReconnecting} />
-                <span>{isReconnecting ? '重连中...' : '重连'}</span>
+                <span>{isReconnecting ? intl.formatMessage({ id: 'homeLayout.reconnecting' }) : intl.formatMessage({ id: 'homeLayout.reconnect' })}</span>
               </div>
             </div>
           )}
@@ -225,14 +226,14 @@ const HomeLayout = () => {
         </div>
       </div>
       <Modal
-        title="关闭窗口"
+        title={intl.formatMessage({ id: 'homeLayout.closeWindow' })}
         open={closeModalVisible}
         onCancel={() => setCloseModalVisible(false)}
         footer={null}
         centered
       >
         <div style={{ padding: '16px 0' }}>
-          <p style={{ marginBottom: 16 }}>请选择关闭方式：</p>
+          <p style={{ marginBottom: 16 }}>{intl.formatMessage({ id: 'homeLayout.selectCloseMethod' })}</p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button
               onClick={hideToTray}
@@ -244,7 +245,7 @@ const HomeLayout = () => {
                 cursor: 'pointer',
               }}
             >
-              最小化到托盘
+              {intl.formatMessage({ id: 'homeLayout.minimizeToTray' })}
             </button>
             <button
               onClick={quitApp}
@@ -257,7 +258,7 @@ const HomeLayout = () => {
                 cursor: 'pointer',
               }}
             >
-              退出应用
+              {intl.formatMessage({ id: 'homeLayout.quitApp' })}
             </button>
           </div>
         </div>

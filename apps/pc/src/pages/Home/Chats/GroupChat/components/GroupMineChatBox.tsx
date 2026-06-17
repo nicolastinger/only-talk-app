@@ -6,29 +6,27 @@ import {
   getChatFileByBizId,
   getFiles,
 } from '@workspace/services';
-import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
+import { ChatMessage, GroupFileRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
-import ChatFile from './ChatFile';
-import ChatImage from './ChatImage';
-import PrivacyModeMessage from './PrivacyModeMessage';
-import styles from './styles/MineChatBox.less';
-import { TextBox } from './TextBox';
-import WebRTCMessage from './WebRTCMessage';
+import ChatFile from '../../components/ChatFile';
+import ChatImage from '../../components/ChatImage';
+import styles from '../../components/styles/MineChatBox.less';
+import { TextBox } from '../../components/TextBox';
 
 const imageCache = new Map<string, string>();
 
-type MineChatBoxProps = {
+type GroupMineChatBoxProps = {
   msg: ChatMessage;
   isAck: boolean | undefined;
   icon?: string;
-  friendUuid: string;
+  groupUuid: string;
+  currentBizId?: string;
 };
 
-// 私聊消息类型
-const MSG_TYPE_TEXT = 1;
-const MSG_TYPE_IMAGE = 2;
-const MSG_TYPE_FILE = 3;
-const MSG_TYPE_PRIVACY = 4;
+// 群聊消息类型
+const MSG_TYPE_GROUP_TEXT = 2001;
+const MSG_TYPE_GROUP_IMAGE = 2002;
+const MSG_TYPE_GROUP_FILE = 2003;
 
 const isLocalFilePath = (raw: string): boolean => {
   return (
@@ -36,19 +34,68 @@ const isLocalFilePath = (raw: string): boolean => {
   );
 };
 
-const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
+/**
+ * 解析群聊消息的 text 字段
+ * 文字消息: {"text":"消息内容","send_user":"..."}
+ * 图片/文件消息: {"text":"{\"biz_id\":\"...\"}","send_user":"..."}
+ */
+const parseGroupMessageText = (raw: string): string => {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed.text || raw;
+  } catch {
+    return raw;
+  }
+};
+
+/**
+ * 解析群聊图片消息的 bizId
+ * 群聊图片消息 raw 是双层 JSON: {"text":"{...GroupImageRecord...}","send_user":"..."}
+ */
+const parseGroupImageBizId = (raw: string): string | null => {
+  try {
+    let parsed = JSON.parse(raw);
+    if (parsed.text) {
+      parsed = JSON.parse(parsed.text);
+    }
+    return parsed.biz_id || parsed.url || null;
+  } catch (error) {
+    console.error('GroupMineChatBox - Error parsing image record:', error);
+    return null;
+  }
+};
+
+/**
+ * 解析群聊文件消息
+ * 群聊文件消息 raw 是双层 JSON: {"text":"{...GroupFileRecord...}","send_user":"..."}
+ */
+const parseGroupFileRecord = (raw: string): GroupFileRecord | null => {
+  try {
+    let parsed = JSON.parse(raw);
+    if (parsed.text) {
+      parsed = JSON.parse(parsed.text);
+    }
+    return parsed as GroupFileRecord;
+  } catch (error) {
+    console.error('GroupMineChatBox - Error parsing file record:', error);
+    return null;
+  }
+};
+
+const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
   const {
     msg: {
       text_msg_raw: { raw, text_type, timestamp, nano_id },
     },
     isAck = true,
     icon,
-    friendUuid,
+    groupUuid,
+    currentBizId,
   } = props;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
+  const [fileRecord, setFileRecord] = useState<GroupFileRecord | null>(null);
 
   const userInfo = useBearStore((state) => state.userInfo);
   const [ackFlag, setAckFlag] = React.useState(0);
@@ -106,93 +153,90 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     }
   }, [userInfo?.icon]);
 
-  // 处理图片消息（私聊：单层 JSON）
+  // 处理图片消息
   useEffect(() => {
-    if (text_type === MSG_TYPE_IMAGE) {
-      if (isLocalFilePath(raw)) {
-        const tauriUrl = convertPathToTauriUrl(raw);
-        if (tauriUrl) {
-          setImageUrl(tauriUrl);
+    if (text_type === MSG_TYPE_GROUP_IMAGE) {
+      let bizId = currentBizId;
+
+      // 如果没有传入 currentBizId，从 raw 解析
+      if (!bizId) {
+        // 本地文件路径（发送中的临时消息）
+        if (isLocalFilePath(raw)) {
+          const tauriUrl = convertPathToTauriUrl(raw);
+          if (tauriUrl) {
+            setImageUrl(tauriUrl);
+          }
+          return;
         }
+
+        bizId = parseGroupImageBizId(raw);
+      }
+
+      if (!bizId) {
+        console.error('GroupMineChatBox - No bizId found');
         return;
       }
 
-      try {
-        const imageRecord: ImageRecord = JSON.parse(raw);
-        const bizId = imageRecord.biz_id;
-
-        if (!bizId) {
-          console.error('MineChatBox - No bizId found');
-          return;
-        }
-
-        if (imageCache.has(bizId)) {
-          setImageUrl(imageCache.get(bizId)!);
-          return;
-        }
-
-        setLoading(true);
-        getChatFileByBizId(bizId, nano_id)
-          .then((files) => {
-            if (files && files.length > 0) {
-              const tauriFilePath = files[0].tauri_file_path;
-              if (tauriFilePath) {
-                imageCache.set(bizId, tauriFilePath);
-                setImageUrl(tauriFilePath);
-              }
-            }
-            setLoading(false);
-          })
-          .catch((error) => {
-            console.error('MineChatBox - Error loading image:', error);
-            setLoading(false);
-          });
-      } catch (error) {
-        console.error('MineChatBox - Error parsing image record:', error);
+      if (imageCache.has(bizId)) {
+        setImageUrl(imageCache.get(bizId)!);
+        return;
       }
+
+      setLoading(true);
+      getChatFileByBizId(bizId, nano_id)
+        .then((files) => {
+          if (files && files.length > 0) {
+            const tauriFilePath = files[0].tauri_file_path;
+            if (tauriFilePath) {
+              imageCache.set(bizId, tauriFilePath);
+              setImageUrl(tauriFilePath);
+            }
+          }
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('GroupMineChatBox - Error loading image:', error);
+          setLoading(false);
+        });
     }
 
-    // 处理文件消息（私聊：单层 JSON）
-    if (text_type === MSG_TYPE_FILE) {
+    // 处理文件消息
+    if (text_type === MSG_TYPE_GROUP_FILE) {
       if (isLocalFilePath(raw)) {
         const fileName = raw.split(/[/\\]/).pop() || 'unknown';
         setFileRecord({
-          prev_id: '',
           biz_id: '',
           file_name: fileName,
           file_size: 0,
           file_type: fileName.split('.').pop() || '',
-          platform: 0,
+          send_user: '',
         });
         return;
       }
 
-      try {
-        const record: FileRecord = JSON.parse(raw);
+      const record = parseGroupFileRecord(raw);
+      if (record) {
         setFileRecord(record);
-      } catch (error) {
-        console.error('MineChatBox - Error parsing file record:', error);
       }
     }
-  }, [raw, text_type, nano_id]);
+  }, [raw, text_type, currentBizId, nano_id]);
 
   const renderMessage = () => {
-    if (text_type === MSG_TYPE_TEXT) {
-      return TextBox(raw);
+    if (text_type === MSG_TYPE_GROUP_TEXT) {
+      return TextBox(parseGroupMessageText(raw));
     }
-    if (text_type === MSG_TYPE_IMAGE) {
-      const bizId = fileRecord?.biz_id || '';
+    if (text_type === MSG_TYPE_GROUP_IMAGE) {
       return (
         <ChatImage
           src={imageUrl}
           loading={loading}
-          friendUuid={friendUuid}
-          currentBizId={bizId}
+          friendUuid={groupUuid}
+          currentBizId={currentBizId || ''}
           meUuid={userInfo?.uuid || ''}
         />
       );
     }
-    if (text_type === MSG_TYPE_FILE) {
+    if (text_type === MSG_TYPE_GROUP_FILE) {
       if (fileRecord) {
         return (
           <ChatFile
@@ -207,19 +251,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       }
       return <div className={styles.container}>[文件]</div>;
     }
-    switch (text_type) {
-      case MSG_TYPE_PRIVACY:
-        return <PrivacyModeMessage isMine={true} />;
-      case 5:
-      case 12:
-      case 13:
-      case 14:
-      case 15:
-      case 100:
-        return <WebRTCMessage textType={text_type} isMine={true} />;
-      default:
-        return TextBox(raw);
-    }
+    return TextBox(raw);
   };
 
   const renderAck = () => {
@@ -236,9 +268,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     return null;
   };
 
-  const isImageMessage = text_type === MSG_TYPE_IMAGE;
-  const isFileMessage = text_type === MSG_TYPE_FILE;
-  const isSpecialMessage = [MSG_TYPE_PRIVACY, 5, 12, 13, 14, 15, 100].includes(text_type);
+  const isImageMessage = text_type === MSG_TYPE_GROUP_IMAGE;
+  const isFileMessage = text_type === MSG_TYPE_GROUP_FILE;
 
   return (
     <div className={styles.container}>
@@ -253,8 +284,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             className={`${styles.chatContainer} ${
               isImageMessage ? styles.imageMessage : ''
             } ${isFileMessage ? styles.fileMessage : ''} ${
-              isSpecialMessage ? styles.specialMessage : ''
-            } ${ackFlag === 101 ? styles.hasSentBubble : ''}`}
+              ackFlag === 101 ? styles.hasSentBubble : ''
+            }`}
           >
             {renderMessage()}
             {ackFlag === 101 && (
@@ -284,4 +315,4 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   );
 };
 
-export default React.memo(MineChatBox);
+export default React.memo(GroupMineChatBox);

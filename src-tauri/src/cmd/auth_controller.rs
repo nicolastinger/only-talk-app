@@ -43,14 +43,13 @@ pub async fn sign_in(
     let me_url = format!("https://{}:{}/user/me", &domain, &port);
 
     let data = sign_in_result.data.as_object().ok_or("sign_in data 不是 JSON 对象")?;
-    let access_token = data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
-    let refresh_token = data.get("refresh_token").and_then(|v| v.as_str()).ok_or("缺少 refresh_token")?;
+    let access_token =
+        data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
+    let refresh_token =
+        data.get("refresh_token").and_then(|v| v.as_str()).ok_or("缺少 refresh_token")?;
 
     {
-        GLOBAL_QUIC_USER_INFO
-            .write()
-            .await
-            .insert("token".to_string(), access_token.to_string());
+        GLOBAL_QUIC_USER_INFO.write().await.insert("token".to_string(), access_token.to_string());
         GLOBAL_QUIC_USER_INFO
             .write()
             .await
@@ -77,10 +76,8 @@ pub async fn sign_in(
 
     // 持久化 refresh_token 到 user_token 表
     if let Some(ref user_uuid) = uuid {
-        let local_credit = local_ip_address::local_ip()
-            .ok()
-            .map(|ip| ip.to_string())
-            .unwrap_or_default();
+        let local_credit =
+            local_ip_address::local_ip().ok().map(|ip| ip.to_string()).unwrap_or_default();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)
@@ -136,7 +133,8 @@ pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
     }
 
     let data = refresh_result.data.as_object().ok_or("refresh_token data 不是 JSON 对象")?;
-    let new_access_token = data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
+    let new_access_token =
+        data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
 
     {
         GLOBAL_QUIC_USER_INFO
@@ -229,7 +227,8 @@ pub async fn get_quick_login_users() -> Result<Vec<QuickLoginUser>, String> {
             continue;
         }
 
-        let user_info = UserInfo::query_by_uuid(token.user_id.as_deref().unwrap_or("")).await.ok().flatten();
+        let user_info =
+            UserInfo::query_by_uuid(token.user_id.as_deref().unwrap_or("")).await.ok().flatten();
 
         result.push(QuickLoginUser {
             user_id: token.user_id.unwrap_or_default(),
@@ -267,12 +266,17 @@ pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiRespon
     }
 
     let data = refresh_result.data.as_object().ok_or("refresh_token data 不是 JSON 对象")?;
-    let access_token = data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
-    let new_refresh_token = data.get("refresh_token").and_then(|v| v.as_str()).unwrap_or(&refresh_token);
+    let access_token =
+        data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
+    let new_refresh_token =
+        data.get("refresh_token").and_then(|v| v.as_str()).unwrap_or(&refresh_token);
 
     {
         GLOBAL_QUIC_USER_INFO.write().await.insert("token".to_string(), access_token.to_string());
-        GLOBAL_QUIC_USER_INFO.write().await.insert("refresh_token".to_string(), new_refresh_token.to_string());
+        GLOBAL_QUIC_USER_INFO
+            .write()
+            .await
+            .insert("refresh_token".to_string(), new_refresh_token.to_string());
     }
 
     let parsed = Url::parse(&url).map_err(|x| x.to_string())?;
@@ -295,10 +299,8 @@ pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiRespon
     user_login().await.map_err(|e| e.to_string())?;
 
     if let Some(ref user_uuid) = uuid {
-        let local_credit = local_ip_address::local_ip()
-            .ok()
-            .map(|ip| ip.to_string())
-            .unwrap_or_default();
+        let local_credit =
+            local_ip_address::local_ip().ok().map(|ip| ip.to_string()).unwrap_or_default();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)

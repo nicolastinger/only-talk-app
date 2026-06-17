@@ -14,7 +14,8 @@ use crate::service::p2p_service::{
     send_p2p_video_call_invite_service, send_p2p_video_call_response_service,
     send_p2p_video_config_service, send_p2p_video_frame_service,
 };
-use crate::utils::global_static_str::UDP_SOCKET;
+use crate::utils::dns::resolve_ipv4;
+use crate::utils::global_static_str::{DOMAIN_NAME, UDP_PORT};
 
 /// 发送p2p请求给好友
 /// 用于建立P2P连接
@@ -31,7 +32,12 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<String, String> {
 pub async fn send_init_p2p_udp() -> Result<String, String> {
     let udp_port = find_available_udp_port(10024).ok_or("no available UDP port")?;
     let addr = format!("0.0.0.0:{}", udp_port);
-    send_udp_ping_msg(addr, UDP_SOCKET.to_string()).await.map_err(|e| e.to_string())?;
+    let remote_addr = resolve_ipv4(DOMAIN_NAME, UDP_PORT)
+        .await
+        .map_err(|e| e.to_string())?;
+    send_udp_ping_msg(addr, remote_addr.to_string())
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(format!("127.0.0.1:{}", udp_port))
 }

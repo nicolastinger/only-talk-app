@@ -169,12 +169,10 @@ impl SystemNotification {
     pub async fn clear_all_unread(user_id: &str) -> Result<(), anyhow::Error> {
         info!("清空所有未读通知，user_id: {}", user_id);
         let pool_sqlite = get_db_client().await?;
-        sqlx::query(
-            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND is_read = 0",
-        )
-        .bind(user_id)
-        .execute(&pool_sqlite)
-        .await?;
+        sqlx::query("UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND is_read = 0")
+            .bind(user_id)
+            .execute(&pool_sqlite)
+            .await?;
         Ok(())
     }
 
@@ -198,10 +196,7 @@ impl SystemNotification {
         let contacts: i64 = row.try_get(0).unwrap_or(0);
         let groups: i64 = row.try_get(1).unwrap_or(0);
 
-        Ok(UnreadCounts {
-            contacts: contacts as i32,
-            groups: groups as i32,
-        })
+        Ok(UnreadCounts { contacts: contacts as i32, groups: groups as i32 })
     }
 }
 

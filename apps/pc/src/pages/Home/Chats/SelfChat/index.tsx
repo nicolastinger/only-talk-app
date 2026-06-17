@@ -1,6 +1,6 @@
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { useLocation } from '@umijs/max';
+import { useLocation, useIntl } from '@umijs/max';
 import {
   ChatMessage,
   MessageFrom,
@@ -24,6 +24,7 @@ const PAGE_SIZE = 20;
  * 3. TopBar 只显示标题，没有好友操作菜单
  */
 const SelfChatPage: React.FC = () => {
+  const intl = useIntl();
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [footerHeight, setFooterHeight] = useState(180);
   const [realFootHeight, setRealFooterHeight] = useState(186);
@@ -291,7 +292,7 @@ const SelfChatPage: React.FC = () => {
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           <span className={styles.selfChatIcon}>📝</span>
-          <span>{userInfo?.username || '我'} - 笔记</span>
+          <span>{userInfo?.username || intl.formatMessage({ id: 'chat.selfChat.me' })} - {intl.formatMessage({ id: 'chat.selfChat.notes' })}</span>
         </div>
       </div>
       <div className={styles.mainContainer}>
@@ -303,11 +304,11 @@ const SelfChatPage: React.FC = () => {
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
               <div className={styles.loadingSpinner}></div>
-              <span>加载中...</span>
+              <span>{intl.formatMessage({ id: 'chat.loading' })}</span>
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>没有更多消息了</div>
+            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'chat.noMoreMessages' })}</div>
           )}
           <MessageList
             messages={messageList}

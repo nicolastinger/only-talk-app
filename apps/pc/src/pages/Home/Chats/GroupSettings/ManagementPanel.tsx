@@ -55,7 +55,7 @@ const ManagementPanel: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   };
 
   const handleTransferOwnership = async () => {
-    const membersToTransfer = members.filter((m) => m.user_id !== userInfo?.uuid);
+    const membersToTransfer = members.filter((m) => m.user_uuid !== userInfo?.uuid);
     if (membersToTransfer.length === 0) {
       message.warning('群内没有其他成员可转让');
       return;
@@ -77,8 +77,8 @@ const ManagementPanel: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
               selectedUser = val;
             }}
             options={membersToTransfer.map((m) => ({
-              label: `${m.nickname || m.user_id} (${m.user_id})`,
-              value: m.user_id,
+              label: `${m.nickname || m.user_uuid} (${m.user_uuid})`,
+              value: m.user_uuid,
             }))}
           />
         </div>

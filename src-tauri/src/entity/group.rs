@@ -97,6 +97,20 @@ impl Group {
         .await?;
         Ok(result)
     }
+
+    /// 模糊搜索群聊（按群名称搜索）
+    pub async fn search_user_groups(me: &str, keyword: &str) -> Result<Vec<Group>, anyhow::Error> {
+        let pool_sqlite = get_db_client().await?;
+        let pattern = format!("%{}%", keyword);
+        let records = sqlx::query_as::<_, Group>(
+            r#"SELECT g.* FROM group_info g
+            WHERE g.group_name LIKE ?1"#,
+        )
+        .bind(&pattern)
+        .fetch_all(&pool_sqlite)
+        .await?;
+        Ok(records)
+    }
 }
 
 impl SqliteStore for Group {
@@ -123,9 +137,11 @@ impl SqliteStore for Group {
 
     async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
         // Add member_count column if it doesn't exist (migration from old schema)
-        let result = sqlx::query("ALTER TABLE group_info ADD COLUMN member_count INTEGER NOT NULL DEFAULT 0")
-            .execute(pool_sqlite)
-            .await;
+        let result = sqlx::query(
+            "ALTER TABLE group_info ADD COLUMN member_count INTEGER NOT NULL DEFAULT 0",
+        )
+        .execute(pool_sqlite)
+        .await;
         match result {
             Ok(_) => {}
             Err(_) => {} // Column already exists, ignore

@@ -2,6 +2,7 @@
   width: 100%;
   padding: 8px 12px;
   box-sizing: border-box;
+  position: relative;
 }
 
 .searchWrapper {
@@ -34,7 +35,7 @@
   height: 100%;
   border: none;
   background: transparent;
-  padding: 0 12px;
+  padding: 0 8px;
   color: var(--text-color);
   font-size: 13px;
   outline: none;
@@ -42,6 +43,133 @@
   &::placeholder {
     color: var(--color-gray-6);
   }
+}
+
+.clearBtn {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-gray-7);
+  background: var(--color-gray-4);
+
+  &:hover {
+    opacity: 1;
+    background: var(--color-gray-5);
+  }
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dropdownContainer {
+  position: fixed;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--color-gray-border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  z-index: 1001;
+  padding: 8px 0;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-gray-border);
+    border-radius: 4px;
+  }
+
+  scrollbar-width: thin;
+}
+
+.searchItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  margin: 2px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+
+  &:hover {
+    background: var(--hover-bg-primary-light);
+  }
+
+  &:active {
+    background: var(--hover-bg-primary);
+  }
+}
+
+.itemInfo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.itemName {
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.friendTag {
+  font-size: 11px;
+  font-weight: 400;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(64, 150, 255, 0.1);
+  color: var(--color-primary);
+}
+
+.groupTag {
+  font-size: 11px;
+  font-weight: 400;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(100, 100, 100, 0.1);
+  color: var(--color-gray-7);
+}
+
+.itemDesc {
+  color: var(--color-gray-6);
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.emptyTip {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--color-gray-6);
+  font-size: 13px;
+}
+
+.highlight {
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .actionBar {

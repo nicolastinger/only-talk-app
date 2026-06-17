@@ -4,6 +4,7 @@ import {
   PhoneOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
+import { useIntl } from '@umijs/max';
 import React from 'react';
 import styles from './styles/WebRTCMessage.less';
 
@@ -13,48 +14,49 @@ interface WebRTCMessageProps {
 }
 
 const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine }) => {
+  const intl = useIntl();
   const getMessageInfo = () => {
     switch (textType) {
       case 5:
         return {
           icon: <VideoCameraOutlined />,
-          text: isMine ? '已发起视频通话' : '对方发起了视频通话',
+          text: isMine ? intl.formatMessage({ id: 'webRTCMessage.started' }) : intl.formatMessage({ id: 'webRTCMessage.otherStarted' }),
           type: 'video-call',
         };
       case 12:
         return {
           icon: <VideoCameraOutlined />,
-          text: isMine ? '已发送视频通话邀请' : '收到视频通话邀请',
+          text: isMine ? intl.formatMessage({ id: 'webRTCMessage.inviteSent' }) : intl.formatMessage({ id: 'webRTCMessage.inviteReceived' }),
           type: 'invite',
         };
       case 13:
         return {
           icon: <CheckCircleOutlined />,
-          text: '视频通话已接听',
+          text: intl.formatMessage({ id: 'webRTCMessage.accepted' }),
           type: 'accept',
         };
       case 14:
         return {
           icon: <CloseCircleOutlined />,
-          text: '视频通话已拒绝',
+          text: intl.formatMessage({ id: 'webRTCMessage.rejected' }),
           type: 'reject',
         };
       case 15:
         return {
           icon: <PhoneOutlined />,
-          text: '视频通话已结束',
+          text: intl.formatMessage({ id: 'webRTCMessage.ended' }),
           type: 'end',
         };
       case 100:
         return {
           icon: <VideoCameraOutlined />,
-          text: 'WebRTC 信令消息',
+          text: intl.formatMessage({ id: 'webRTCMessage.signal' }),
           type: 'signal',
         };
       default:
         return {
           icon: <VideoCameraOutlined />,
-          text: '视频通话',
+          text: intl.formatMessage({ id: 'webRTCMessage.default' }),
           type: 'default',
         };
     }

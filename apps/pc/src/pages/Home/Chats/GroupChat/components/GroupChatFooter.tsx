@@ -88,7 +88,7 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
       setMsg('');
     } catch (e) {
       console.log(intl.formatMessage({ id: 'chat.footer.sendFailed' }), e);
-      message.error('发送失败');
+      message.error(intl.formatMessage({ id: 'groupChat.sendFailed' }));
     }
   };
 
@@ -130,7 +130,7 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
       }
     } catch (e) {
       console.log('发送图片失败', e);
-      message.error('发送图片失败');
+      message.error(intl.formatMessage({ id: 'groupChat.sendImageFailed' }));
       onUploadEnd?.();
     }
   };
@@ -166,7 +166,7 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
       }
     } catch (e) {
       console.log('发送文件失败', e);
-      message.error('发送文件失败');
+      message.error(intl.formatMessage({ id: 'groupChat.sendFileFailed' }));
       onUploadEnd?.();
     }
   };
@@ -197,10 +197,10 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
             </div>
           )}
         </div>
-        <div className={styles.footerBtn} onClick={sendImage} title="发送图片">
+        <div className={styles.footerBtn} onClick={sendImage} title={intl.formatMessage({ id: 'groupChat.sendImage' })}>
           <PictureOutlined />
         </div>
-        <div className={styles.footerBtn} onClick={sendFile} title="发送文件">
+        <div className={styles.footerBtn} onClick={sendFile} title={intl.formatMessage({ id: 'groupChat.sendFile' })}>
           <FileOutlined />
         </div>
       </div>
@@ -210,11 +210,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
           value={msg}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMsg(e.target.value)}
           className={styles.footerTextArea}
-          placeholder="输入群聊消息..."
+          placeholder={intl.formatMessage({ id: 'groupChat.inputPlaceholder' })}
         />
         <div className={styles.footerSendBtn}>
           <Button type="primary" variant="outlined" onClick={sendMessage}>
-            发送(S)
+            {intl.formatMessage({ id: 'groupChat.send' })}
           </Button>
         </div>
       </div>

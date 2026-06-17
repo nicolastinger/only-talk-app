@@ -1,6 +1,6 @@
 import { useBearStore } from '@/store/store';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
-import { history, useLocation } from '@umijs/max';
+import { history, useIntl, useLocation } from '@umijs/max';
 import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
 import { get_friend_list, invite_group_members } from '@workspace/services';
 import { Avatar, Button, List, Modal, Select, Spin, Typography, message } from 'antd';
@@ -9,6 +9,7 @@ import { invoke } from '@tauri-apps/api/core';
 import React, { useEffect, useMemo, useState } from 'react';
 
 const GroupInfoPage: React.FC = () => {
+  const intl = useIntl();
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
   const [members, setMembers] = useState<GroupMemberVo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,17 +63,17 @@ const GroupInfoPage: React.FC = () => {
 
   const handleLeaveGroup = () => {
     Modal.confirm({
-      title: '退出群聊',
-      content: '确定要退出该群聊吗？',
-      okText: '确定',
-      cancelText: '取消',
+      title: intl.formatMessage({ id: 'groupSettings.leaveGroup' }),
+      content: intl.formatMessage({ id: 'groupSettings.leaveGroupConfirm' }),
+      okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
+      cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await invoke('leave_group_command', { groupId });
-          message.success('已退出群聊');
+          message.success(intl.formatMessage({ id: 'groupSettings.leaveGroupSuccess' }));
           history.push('/home/chats/dashboard');
         } catch (e) {
-          message.error('退出群聊失败');
+          message.error(intl.formatMessage({ id: 'groupSettings.leaveGroupFailed' }));
         }
       },
     });
@@ -90,7 +91,7 @@ const GroupInfoPage: React.FC = () => {
   const openInviteModal = async () => {
     try {
       const friends = await get_friend_list();
-      const memberIds = new Set(members.map((m) => m.user_id));
+      const memberIds = new Set(members.map((m) => m.user_uuid));
       const nonMembers = friends.filter((f) => !memberIds.has(f.friend_id));
       setFriendList(nonMembers);
       setSelectedFriends([]);
@@ -102,27 +103,27 @@ const GroupInfoPage: React.FC = () => {
 
   const handleInvite = async () => {
     if (selectedFriends.length === 0) {
-      message.warning('请选择要邀请的好友');
+      message.warning(intl.formatMessage({ id: 'groupSettings.members.selectFriendsToInvite' }));
       return;
     }
     setInviteLoading(true);
     try {
       const invited = await invite_group_members(groupId, selectedFriends);
-      message.success(`已向 ${invited.length} 位好友发送群邀请`);
+      message.success(intl.formatMessage({ id: 'groupSettings.members.inviteSent' }, { count: invited.length }));
       setInviteModalOpen(false);
       loadMembers();
     } catch (err) {
-      message.error('邀请失败');
+      message.error(intl.formatMessage({ id: 'groupSettings.members.inviteFailed' }));
     } finally {
       setInviteLoading(false);
     }
   };
 
   const isOwner = groupInfo?.owner_uuid === meUuid;
-  const isAdmin = members.some((m) => m.user_id === meUuid && m.role >= 1);
+  const isAdmin = members.some((m) => m.user_uuid === meUuid && m.role >= 1);
 
   const memberUuids = useMemo(
-    () => members.map((m) => m.user_id).filter(Boolean),
+    () => members.map((m) => m.user_uuid).filter(Boolean),
     [members],
   );
   const { memberInfoMap } = useGroupMemberInfo(memberUuids);
@@ -136,40 +137,40 @@ const GroupInfoPage: React.FC = () => {
             {groupInfo.group_name}
           </Typography.Title>
           <Typography.Text type="secondary">
-            {groupInfo.member_count} 位成员
+            {intl.formatMessage({ id: 'groupInfo.memberCount' }, { count: groupInfo.member_count })}
           </Typography.Text>
           <div style={{ marginTop: 16, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button type="primary" onClick={handleStartChat}>
-              进入群聊
+              {intl.formatMessage({ id: 'groupInfo.enterGroupChat' })}
             </Button>
             {(isOwner || isAdmin) && (
               <Button onClick={openInviteModal}>
-                邀请成员
+                {intl.formatMessage({ id: 'groupSettings.members.inviteMember' })}
               </Button>
             )}
             {(isOwner || isAdmin) && (
               <Button onClick={() => history.push(`/home/chats/group-settings?groupId=${groupId}`)}>
-                群设置
+                {intl.formatMessage({ id: 'groupSettings.title' })}
               </Button>
             )}
             {!isOwner && (
               <Button danger onClick={handleLeaveGroup}>
-                退出群聊
+                {intl.formatMessage({ id: 'groupSettings.leaveGroup' })}
               </Button>
             )}
           </div>
         </div>
       )}
 
-      <Typography.Title level={5}>群成员 ({members.length})</Typography.Title>
+      <Typography.Title level={5}>{intl.formatMessage({ id: 'groupSettings.groupMembers' })} ({members.length})</Typography.Title>
       {loading ? (
         <Spin />
       ) : (
         <List
           dataSource={members}
           renderItem={(member: GroupMemberVo) => {
-            const info = memberInfoMap.get(member.user_id);
-            const displayName = info?.username || member.nickname || member.user_id;
+            const info = memberInfoMap.get(member.user_uuid);
+            const displayName = info?.username || member.nickname || member.user_uuid;
             return (
             <List.Item>
               <List.Item.Meta
@@ -179,17 +180,17 @@ const GroupInfoPage: React.FC = () => {
                     {displayName}
                     {member.role === 2 && (
                       <span style={{ color: '#faad14', fontSize: 12, marginLeft: 8 }}>
-                        群主
+                        {intl.formatMessage({ id: 'groupSettings.members.owner' })}
                       </span>
                     )}
                     {member.role === 1 && (
                       <span style={{ color: '#4096ff', fontSize: 12, marginLeft: 8 }}>
-                        管理员
+                        {intl.formatMessage({ id: 'groupSettings.members.admin' })}
                       </span>
                     )}
                   </span>
                 }
-                description={member.user_id === meUuid ? '我' : member.user_id}
+                description={member.user_uuid === meUuid ? intl.formatMessage({ id: 'groupSettings.members.me' }) : member.user_uuid}
               />
             </List.Item>
             );
@@ -198,21 +199,21 @@ const GroupInfoPage: React.FC = () => {
       )}
 
       <Modal
-        title="邀请成员"
+        title={intl.formatMessage({ id: 'groupSettings.members.inviteMember' })}
         open={inviteModalOpen}
         onOk={handleInvite}
         onCancel={() => setInviteModalOpen(false)}
         confirmLoading={inviteLoading}
-        okText="邀请"
-        cancelText="取消"
+        okText={intl.formatMessage({ id: 'groupSettings.members.invite' })}
+        cancelText={intl.formatMessage({ id: 'groupSettings.members.cancel' })}
       >
         <div style={{ marginBottom: 12, color: '#666' }}>
-          选择要邀请入群的好友，被邀请方将收到通知并可选择接受或拒绝。
+          {intl.formatMessage({ id: 'groupSettings.members.inviteDesc' })}
         </div>
         <Select
           mode="multiple"
           style={{ width: '100%' }}
-          placeholder="选择好友"
+          placeholder={intl.formatMessage({ id: 'groupSettings.members.selectFriend' })}
           value={selectedFriends}
           onChange={setSelectedFriends}
           options={friendList.map((f) => ({

@@ -47,13 +47,11 @@ impl GroupMember {
 
     pub async fn remove_member(group_id: &str, user_id: &str) -> Result<(), anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
-        sqlx::query(
-            "UPDATE group_member SET is_del = 1 WHERE group_id = ?1 AND user_id = ?2",
-        )
-        .bind(group_id)
-        .bind(user_id)
-        .execute(&pool_sqlite)
-        .await?;
+        sqlx::query("UPDATE group_member SET is_del = 1 WHERE group_id = ?1 AND user_id = ?2")
+            .bind(group_id)
+            .bind(user_id)
+            .execute(&pool_sqlite)
+            .await?;
         Ok(())
     }
 

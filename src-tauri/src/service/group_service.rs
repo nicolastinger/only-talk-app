@@ -5,7 +5,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::cmd::api_controller::{get_request, post_request};
-use crate::dao::group_db::{get_last_group, query_group_list, soft_delete_group, upsert_group};
+use crate::dao::group_db::{get_last_group, query_group_list, search_group_list, soft_delete_group, upsert_group};
 use crate::dao::group_member_db::{
     insert_group_member, query_group_members, remove_group_member, upsert_group_members,
 };
@@ -59,14 +59,10 @@ pub async fn sync_group_list() -> Result<(), anyhow::Error> {
 pub async fn create_group(request: CreateGroupRequest) -> Result<GroupVo, anyhow::Error> {
     let api_request = CreateGroupApiRequest {
         group_name: request.group_name,
-        avatar: if request.group_icon.is_empty() {
-            None
-        } else {
-            Some(request.group_icon)
-        },
+        avatar: if request.group_icon.is_empty() { None } else { Some(request.group_icon) },
         max_members: None,
     };
-    
+
     let url = format!("{}/group/chat/create", TALK_API);
     let body = serde_json::to_string(&api_request)?;
     info!("创建群聊请求: {}", body);
@@ -115,7 +111,8 @@ pub async fn invite_group_members(
     let body = serde_json::json!({
         "group_uuid": group_id,
         "user_uuids": user_ids
-    }).to_string();
+    })
+    .to_string();
     info!("邀请群成员请求: {}", body);
     let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
@@ -133,7 +130,8 @@ pub async fn accept_group_invitation(group_id: &str) -> Result<(), anyhow::Error
     let url = format!("{}/group/chat/member/invite/accept", TALK_API);
     let body = serde_json::json!({
         "group_uuid": group_id
-    }).to_string();
+    })
+    .to_string();
     let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
@@ -152,7 +150,8 @@ pub async fn decline_group_invitation(group_id: &str) -> Result<(), anyhow::Erro
     let url = format!("{}/group/chat/member/invite/decline", TALK_API);
     let body = serde_json::json!({
         "group_uuid": group_id
-    }).to_string();
+    })
+    .to_string();
     let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
@@ -265,6 +264,29 @@ pub async fn get_group_info(group_id: &str) -> Result<GroupVo, anyhow::Error> {
 pub async fn get_local_group_list() -> Result<Vec<GroupVo>, anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
     let groups = query_group_list(&uuid).await?;
+    Ok(groups
+        .into_iter()
+        .map(|g| GroupVo {
+            group_uuid: g.group_id,
+            group_name: g.group_name,
+            avatar: if g.group_icon.is_empty() { None } else { Some(g.group_icon) },
+            owner_uuid: g.owner_id,
+            description: None,
+            max_members: 500,
+            member_count: g.member_count,
+            created_at: g.created_at,
+            updated_at: g.updated_at,
+            status: 1,
+            last_msg_time: None,
+            unread_count: 0,
+        })
+        .collect())
+}
+
+/// 模糊搜索群聊列表
+pub async fn search_local_group_list(keyword: String) -> Result<Vec<GroupVo>, anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+    let groups = search_group_list(&uuid, &keyword).await?;
     Ok(groups
         .into_iter()
         .map(|g| GroupVo {
@@ -429,20 +451,21 @@ pub async fn pull_group_messages() -> Result<(), anyhow::Error> {
             }
 
             // 4. 更新会话
-            let session = session_map.entry(msg.group_uuid.clone()).or_insert_with(|| ChatSession {
-                id: 0,
-                nano_id: record.nano_id.clone(),
-                timestamp: record.timestamp,
-                text_type: record.text_type,
-                unread_count: 0,
-                last_message: record.raw.clone(),
-                recv_user: uuid.clone(),
-                send_user: msg.group_uuid.clone(),
-                session_type: 2,
-                is_show: 1,
-                is_top: 0,
-                group_id: Some(msg.group_uuid.clone()),
-            });
+            let session =
+                session_map.entry(msg.group_uuid.clone()).or_insert_with(|| ChatSession {
+                    id: 0,
+                    nano_id: record.nano_id.clone(),
+                    timestamp: record.timestamp,
+                    text_type: record.text_type,
+                    unread_count: 0,
+                    last_message: record.raw.clone(),
+                    recv_user: uuid.clone(),
+                    send_user: msg.group_uuid.clone(),
+                    session_type: 2,
+                    is_show: 1,
+                    is_top: 0,
+                    group_id: Some(msg.group_uuid.clone()),
+                });
 
             session.unread_count += 1;
             if session.timestamp < record.timestamp {

@@ -2,7 +2,7 @@ import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { useLocation } from '@umijs/max';
+import { useLocation, useIntl } from '@umijs/max';
 import {
   ChatMessage,
   FriendVo,
@@ -21,6 +21,7 @@ import styles from './index.less';
 const PAGE_SIZE = 20;
 
 const ChatPage: React.FC = () => {
+  const intl = useIntl();
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
   const [footerHeight, setFooterHeight] = useState(180);
@@ -358,11 +359,11 @@ const ChatPage: React.FC = () => {
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
               <div className={styles.loadingSpinner}></div>
-              <span>加载中...</span>
+              <span>{intl.formatMessage({ id: 'chat.loading' })}</span>
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>没有更多消息了</div>
+            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'chat.noMoreMessages' })}</div>
           )}
           <MessageList
             messages={messageList}

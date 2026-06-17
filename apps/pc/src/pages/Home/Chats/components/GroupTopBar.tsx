@@ -1,4 +1,4 @@
-import { history } from '@umijs/max';
+import { history, useIntl } from '@umijs/max';
 import { Avatar, Dropdown, Modal, Typography } from 'antd';
 import { UserOutlined, MoreOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
@@ -16,12 +16,13 @@ const GroupTopBar: React.FC<GroupTopBarProps> = ({
   groupId,
   memberCount,
 }) => {
+  const intl = useIntl();
   const handleLeaveGroup = () => {
     Modal.confirm({
-      title: '退出群聊',
-      content: '确定要退出该群聊吗？',
-      okText: '确定',
-      cancelText: '取消',
+      title: intl.formatMessage({ id: 'chat.group.leaveGroup' }),
+      content: intl.formatMessage({ id: 'chat.group.leaveGroupConfirm' }),
+      okText: intl.formatMessage({ id: 'chat.group.confirm' }),
+      cancelText: intl.formatMessage({ id: 'chat.group.cancel' }),
       onOk: async () => {
         try {
           await invoke('leave_group_command', { groupId });
@@ -40,12 +41,12 @@ const GroupTopBar: React.FC<GroupTopBarProps> = ({
   const items: MenuProps['items'] = [
     {
       key: 'info',
-      label: '群聊信息',
+      label: intl.formatMessage({ id: 'chat.group.groupInfo' }),
       onClick: handleViewGroupInfo,
     },
     {
       key: 'settings',
-      label: '群设置',
+      label: intl.formatMessage({ id: 'chat.group.groupSettings' }),
       onClick: () => history.push(`/home/chats/group-settings?groupId=${groupId}`),
     },
     {
@@ -53,7 +54,7 @@ const GroupTopBar: React.FC<GroupTopBarProps> = ({
     },
     {
       key: 'leave',
-      label: '退出群聊',
+      label: intl.formatMessage({ id: 'chat.group.leaveGroup' }),
       danger: true,
       onClick: handleLeaveGroup,
     },

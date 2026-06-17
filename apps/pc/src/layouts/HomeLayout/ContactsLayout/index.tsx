@@ -1,7 +1,7 @@
 import SearchBar from '@/components/SearchBar';
 import FriendList from '@/pages/Home/Contacts/components/FriendList';
 import GroupList from '@/pages/Home/Contacts/components/GroupList';
-import { Outlet } from '@umijs/max';
+import { history, Outlet } from '@umijs/max';
 import { Segmented, Splitter } from 'antd';
 import { UserOutlined, TeamOutlined } from '@ant-design/icons';
 import { useState } from 'react';
@@ -9,8 +9,23 @@ import styles from './index.less';
 
 type ContactsTabType = 'friends' | 'groups';
 
+interface SearchResultItem {
+  id: string;
+  name: string;
+  type: 'friend' | 'group';
+  data: any;
+}
+
 const ContactsLayout = () => {
   const [activeTab, setActiveTab] = useState<ContactsTabType>('friends');
+
+  const handleSearchSelect = (item: SearchResultItem) => {
+    if (item.type === 'friend') {
+      history.push('/home/contacts/friend?friendId=' + item.id);
+    } else {
+      history.push('/home/contacts/group?groupId=' + item.id);
+    }
+  };
 
   const tabOptions = [
     {
@@ -42,7 +57,7 @@ const ContactsLayout = () => {
         className={styles.left}
       >
         <div className={styles.header}>
-          <SearchBar />
+          <SearchBar onSearchSelect={handleSearchSelect} />
         </div>
         <div className={styles.tabContainer}>
           <Segmented

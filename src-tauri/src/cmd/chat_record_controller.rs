@@ -9,7 +9,7 @@ use crate::service::chat_service::{
     get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
     send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
     send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
-    update_last_read_msg_from_db, update_group_last_read_msg_service,
+    update_group_last_read_msg_service, update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -41,25 +41,19 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
 /// 发送群聊文本消息（无锁机制）
 #[tauri::command]
 pub async fn send_group_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
-    send_group_text_msg_service(text_quic_msg)
-        .await
-        .map_err(|e| e.to_string())
+    send_group_text_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
 /// 发送群聊图片消息（无锁机制）
 #[tauri::command]
 pub async fn send_group_image_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
-    send_group_image_msg_service(text_quic_msg)
-        .await
-        .map_err(|e| e.to_string())
+    send_group_image_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
 /// 发送群聊文件消息（无锁机制）
 #[tauri::command]
 pub async fn send_group_file_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
-    send_group_file_msg_service(text_quic_msg)
-        .await
-        .map_err(|e| e.to_string())
+    send_group_file_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
 // 发送图片数据
