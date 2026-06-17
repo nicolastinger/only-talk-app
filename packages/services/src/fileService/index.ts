@@ -207,3 +207,59 @@ export const getFriendImageMessages = async (
     return { imageUrls: [], currentIndex: 0 };
   }
 };
+
+/**
+ * 获取群聊的所有图片消息并转换为可预览的URL列表
+ * 群聊图片消息 raw 是双层 JSON: {"text":"{...GroupImageRecord...}","send_user":"..."}
+ * @param groupUuid 群UUID
+ * @param currentBizId 当前点击的图片bizId
+ * @param currentNanoId 可选的当前消息nano_id，用于获取原始文件名
+ * @returns 图片URL列表和当前索引
+ */
+export const getGroupImageMessages = async (
+  groupUuid: string,
+  currentBizId: string,
+  currentNanoId?: string
+): Promise<{ imageUrls: string[]; currentIndex: number }> => {
+  try {
+    const page: Page = { size: 1000, current: 1, total: 0 };
+    // 群聊记录接口返回所有类型，需要在前端过滤 text_type === 2002
+    const allRecords: TextQuicMsgVo[] = await invoke(
+      "get_group_chat_record_from_store",
+      { groupId: groupUuid, page }
+    );
+
+    const imageUrls: string[] = [];
+    let currentIndex = 0;
+
+    for (const record of allRecords) {
+      if (record.text_type !== 2002) continue;
+      try {
+        // 群聊图片消息需要双层解析
+        let parsed = JSON.parse(record.raw);
+        if (parsed.text) {
+          parsed = JSON.parse(parsed.text);
+        }
+        const bizId = parsed.biz_id;
+        if (!bizId) continue;
+
+        if (bizId === currentBizId) {
+          currentIndex = imageUrls.length;
+        }
+
+        const nanoId = bizId === currentBizId ? currentNanoId : record.nano_id;
+        const files = await getChatFileByBizId(bizId, nanoId);
+        if (files && files.length > 0 && files[0].tauri_file_path) {
+          imageUrls.push(files[0].tauri_file_path);
+        }
+      } catch (e) {
+        console.error("Failed to parse group image record:", e);
+      }
+    }
+
+    return { imageUrls, currentIndex };
+  } catch (error: any) {
+    console.error("Get group image messages failed:", error);
+    return { imageUrls: [], currentIndex: 0 };
+  }
+};

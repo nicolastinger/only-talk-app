@@ -88,6 +88,7 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<GroupFileRecord | null>(null);
+  const [imageBizId, setImageBizId] = useState<string>('');
 
   // 加载发送者头像
   useEffect(() => {
@@ -128,6 +129,8 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
         console.error('GroupCustomerChatBox - No bizId found');
         return;
       }
+
+      setImageBizId(bizId);
 
       if (imageCache.has(bizId)) {
         setImageUrl(imageCache.get(bizId)!);
@@ -171,8 +174,10 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
           src={imageUrl}
           loading={loading}
           friendUuid={groupUuid}
-          currentBizId={currentBizId || ''}
+          currentBizId={imageBizId || currentBizId || ''}
           meUuid={userInfo?.uuid || ''}
+          isGroup={true}
+          nanoId={nano_id}
         />
       );
     }

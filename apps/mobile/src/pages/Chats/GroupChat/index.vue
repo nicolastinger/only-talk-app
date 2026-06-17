@@ -289,9 +289,8 @@ const getMessageText = (msg: TextQuicMsgVo): string => {
     case 1: // 单聊文本
     case 2001: // 群聊文本
       try {
-        // 群聊文本消息 raw 直接是文本内容
-        if (msg.text_type === 2001) return msg.raw || "";
-        return JSON.parse(msg.raw).text || "";
+        // 群聊文本消息 raw 是双层 JSON: {"text":"消息内容","send_user":"..."}
+        return JSON.parse(msg.raw).text || msg.raw || "";
       } catch {
         return msg.raw || "";
       }

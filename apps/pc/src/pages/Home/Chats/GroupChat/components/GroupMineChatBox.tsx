@@ -29,6 +29,8 @@ const MSG_TYPE_GROUP_IMAGE = 2002;
 const MSG_TYPE_GROUP_FILE = 2003;
 
 const isLocalFilePath = (raw: string): boolean => {
+  // JSON 格式的 raw 不是本地文件路径（群聊消息 raw 始终是 JSON）
+  if (raw.startsWith('{') || raw.startsWith('[')) return false;
   return (
     raw.includes(':\\') || raw.startsWith('/') || raw.startsWith('file://')
   );
@@ -96,6 +98,7 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<GroupFileRecord | null>(null);
+  const [imageBizId, setImageBizId] = useState<string>('');
 
   const userInfo = useBearStore((state) => state.userInfo);
   const [ackFlag, setAckFlag] = React.useState(0);
@@ -177,6 +180,8 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
         return;
       }
 
+      setImageBizId(bizId);
+
       if (imageCache.has(bizId)) {
         setImageUrl(imageCache.get(bizId)!);
         return;
@@ -231,8 +236,10 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           src={imageUrl}
           loading={loading}
           friendUuid={groupUuid}
-          currentBizId={currentBizId || ''}
+          currentBizId={imageBizId || currentBizId || ''}
           meUuid={userInfo?.uuid || ''}
+          isGroup={true}
+          nanoId={nano_id}
         />
       );
     }

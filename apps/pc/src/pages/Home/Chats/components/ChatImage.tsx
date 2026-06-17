@@ -1,5 +1,6 @@
 import {
   getFriendImageMessages,
+  getGroupImageMessages,
   openImagePreviewWindow,
 } from '@workspace/services';
 import React from 'react';
@@ -16,6 +17,8 @@ interface ChatImageProps {
   friendUuid: string;
   currentBizId: string;
   meUuid: string;
+  isGroup?: boolean;
+  nanoId?: string;
 }
 
 const ChatImage: React.FC<ChatImageProps> = ({
@@ -30,19 +33,47 @@ const ChatImage: React.FC<ChatImageProps> = ({
   friendUuid,
   currentBizId,
   meUuid,
+  isGroup = false,
+  nanoId,
 }) => {
   const [isOpening, setIsOpening] = React.useState(false);
+  const [imgError, setImgError] = React.useState(false);
+  const imgRef = React.useRef<HTMLImageElement>(null);
+
+  // 检查图片是否已经缓存加载完成（onLoad可能在handler挂载前触发）
+  React.useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      // 图片已缓存，无需特殊处理
+    }
+  }, [src]);
 
   const handleClick = async () => {
     if (!src || isOpening) return;
 
     setIsOpening(true);
     try {
-      const { imageUrls, currentIndex } = await getFriendImageMessages(
-        meUuid,
-        friendUuid,
-        currentBizId,
-      );
+      let imageUrls: string[] = [];
+      let currentIndex = 0;
+
+      if (isGroup) {
+        // 群聊图片预览：使用群聊记录接口，双层JSON解析
+        const result = await getGroupImageMessages(
+          friendUuid,
+          currentBizId,
+          nanoId,
+        );
+        imageUrls = result.imageUrls;
+        currentIndex = result.currentIndex;
+      } else {
+        // 单聊图片预览
+        const result = await getFriendImageMessages(
+          meUuid,
+          friendUuid,
+          currentBizId,
+        );
+        imageUrls = result.imageUrls;
+        currentIndex = result.currentIndex;
+      }
 
       if (imageUrls.length > 0) {
         openImagePreviewWindow(imageUrls, currentIndex);
@@ -54,9 +85,10 @@ const ChatImage: React.FC<ChatImageProps> = ({
     }
   };
 
-  if (src) {
+  if (src && !imgError) {
     return (
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
         className={className}
@@ -64,23 +96,19 @@ const ChatImage: React.FC<ChatImageProps> = ({
           maxWidth,
           maxHeight,
           borderRadius,
-          display: 'none',
           cursor: 'pointer',
           ...style,
         }}
         onClick={handleClick}
-        onLoad={(e) => {
-          const target = e.target as HTMLImageElement;
-          target.style.display = 'block';
-        }}
         onError={(e) => {
           console.error('图片加载失败', e);
+          setImgError(true);
         }}
       />
     );
   }
 
-  if (loading) {
+  if (loading && !imgError) {
     return (
       <div
         className={className}
