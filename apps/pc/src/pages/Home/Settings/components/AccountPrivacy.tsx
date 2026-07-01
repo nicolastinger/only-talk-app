@@ -14,6 +14,7 @@ const AccountPrivacy = () => {
   const intl = useIntl();
   const setIsLogin = useBearStore((state) => state.setIsLogin);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
+  const userInfo = useBearStore((state) => state.userInfo);
 
   const handleLogout = async () => {
     try {
@@ -74,13 +75,15 @@ const AccountPrivacy = () => {
           <Text type="secondary">
             {intl.formatMessage({ id: 'settings.accountPrivacy.loginAccount' })}
           </Text>
-          <Text className={styles.accountValue}>user@example.com</Text>
+          <Text className={styles.accountValue}>{userInfo?.account || '-'}</Text>
         </div>
         <div className={styles.accountInfo}>
           <Text type="secondary">
             {intl.formatMessage({ id: 'settings.accountPrivacy.phoneNumber' })}
           </Text>
-          <Text className={styles.accountValue}>138****1234</Text>
+          <Text className={styles.accountValue}>
+            {userInfo?.phone ? `${userInfo.phone.slice(0, 3)}****${userInfo.phone.slice(-4)}` : '-'}
+          </Text>
         </div>
       </Card>
 
@@ -119,15 +122,6 @@ const AccountPrivacy = () => {
         <Divider className={styles.divider} />
         <Button type="primary">
           {intl.formatMessage({ id: 'settings.accountPrivacy.changePassword' })}
-        </Button>
-        <Button
-          type="primary"
-          danger
-          icon={<LogoutOutlined />}
-          onClick={handleLogout}
-          style={{ marginTop: '10px' }}
-        >
-          {intl.formatMessage({ id: 'settings.accountPrivacy.logout' })}
         </Button>
         <Text type="secondary" className={styles.description}>
           {intl.formatMessage({ id: 'settings.accountPrivacy.securityDesc' })}

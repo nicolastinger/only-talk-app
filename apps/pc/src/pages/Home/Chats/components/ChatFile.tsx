@@ -1,8 +1,8 @@
 import {
   DownloadOutlined,
-  FileOutlined,
   FolderOpenOutlined,
   LoadingOutlined,
+  PaperClipOutlined,
 } from '@ant-design/icons';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { getChatFileByBizId } from '@workspace/services';
@@ -168,7 +168,7 @@ const ChatFile: React.FC<ChatFileProps> = ({
         className={styles.fileIcon}
         style={{ color: getFileTypeColor(fileType) }}
       >
-        <FileOutlined />
+        <PaperClipOutlined />
       </div>
       <div className={styles.fileInfo}>
         <div className={styles.fileName} title={fileName}>

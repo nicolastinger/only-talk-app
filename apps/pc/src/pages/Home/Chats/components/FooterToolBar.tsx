@@ -3,8 +3,8 @@ import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
 import { useBearStore } from '@/store/store';
 import {
   ApiOutlined,
-  FileOutlined,
   LockOutlined,
+  PaperClipOutlined,
   PictureOutlined,
   SmileOutlined,
 } from '@ant-design/icons';
@@ -261,7 +261,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
         <PictureOutlined />
       </div>
       <div className={styles.footerBtn} onClick={sendFile} title={intl.formatMessage({ id: 'chat.footer.sendFile' })}>
-        <FileOutlined />
+        <PaperClipOutlined />
       </div>
       <div
         className={styles.footerBtn}

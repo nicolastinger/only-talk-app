@@ -12,6 +12,10 @@
     "value": "linear-gradient(180deg, #1E3A8A 0%, #000000 100%)"
   },
   {
+    "name": "--sidebar-bg",
+    "value": "rgb(40, 44, 52)"
+  },
+  {
     "name": "--glass-bg",
     "value": "rgba(30, 30, 30, 0.8)"
   },
@@ -22,6 +26,126 @@
   {
     "name": "--glass-bg-dark",
     "value": "rgba(40, 40, 40, 0.95)"
+  },
+  {
+    "name": "--input-bg",
+    "value": "rgba(40, 40, 40, 0.8)"
+  },
+  {
+    "name": "--input-bg-focus",
+    "value": "rgba(50, 50, 50, 0.95)"
+  },
+  {
+    "name": "--input-border",
+    "value": "rgba(255, 255, 255, 0.1)"
+  },
+  {
+    "name": "--search-bg",
+    "value": "rgba(50, 50, 50, 0.6)"
+  },
+  {
+    "name": "--search-bg-focus",
+    "value": "rgba(60, 60, 60, 0.8)"
+  },
+  {
+    "name": "--dropdown-bg",
+    "value": "rgb(40, 44, 52)"
+  },
+  {
+    "name": "--border-light",
+    "value": "rgba(255, 255, 255, 0.1)"
+  },
+  {
+    "name": "--scrollbar-bg",
+    "value": "rgba(255, 255, 255, 0.2)"
+  },
+  {
+    "name": "--scrollbar-bg-hover",
+    "value": "rgba(255, 255, 255, 0.3)"
+  },
+  {
+    "name": "--item-hover-bg",
+    "value": "rgba(64, 150, 255, 0.1)"
+  },
+  {
+    "name": "--segmented-bg",
+    "value": "rgba(255, 255, 255, 0.1)"
+  },
+  {
+    "name": "--text-primary",
+    "value": "#e6e6e6"
+  },
+  {
+    "name": "--text-secondary",
+    "value": "#b3b3b3"
+  },
+  {
+    "name": "--text-tertiary",
+    "value": "#808080"
+  },
+  {
+    "name": "--timestamp-text",
+    "value": "#b3b3b3"
+  },
+  {
+    "name": "--timestamp-bg",
+    "value": "rgba(40, 40, 40, 0.8)"
+  },
+  {
+    "name": "--color-white-bg",
+    "value": "rgb(40, 44, 52)"
+  },
+  {
+    "name": "--color-white-01",
+    "value": "#e6e6e6"
+  },
+  {
+    "name": "--color-gray-border-light",
+    "value": "rgba(255, 255, 255, 0.1)"
+  },
+  {
+    "name": "--scrollbar-thumb",
+    "value": "rgba(255, 255, 255, 0.3)"
+  },
+  {
+    "name": "--scrollbar-thumb-light",
+    "value": "rgba(255, 255, 255, 0.2)"
+  },
+  {
+    "name": "--scrollbar-thumb-hover",
+    "value": "rgba(255, 255, 255, 0.4)"
+  },
+  {
+    "name": "--color-info-bg",
+    "value": "rgba(64, 150, 255, 0.15)"
+  },
+  {
+    "name": "--shadow-sm",
+    "value": "0 2px 8px rgba(0, 0, 0, 0.3)"
+  },
+  {
+    "name": "--card-bg",
+    "value": "rgb(50, 54, 62)"
+  },
+  {
+    "name": "--card-border",
+    "value": "rgba(255, 255, 255, 0.1)"
+  },
+  {
+    "name": "--divider-bg",
+    "value": "rgba(255, 255, 255, 0.08)"
+  },
+  {
+    "name": "--menu-hover-bg",
+    "value": "rgba(255, 255, 255, 0.08)"
+  },
+  {
+    "name": "--chat-bg-gradient",
+    "value": "linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)"
+  },
+  {
+    "name": "--chat-bg-overlay",
+    "value": "radial-gradient(ellipse at 10% 20%, rgba(102, 126, 234, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(118, 75, 162, 0.08) 0%, transparent 50%)"
   },
   {
     "name": "--markdown-text",

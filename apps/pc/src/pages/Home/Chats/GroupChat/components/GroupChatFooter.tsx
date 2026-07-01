@@ -5,7 +5,7 @@ import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
 import { Button, Input, message } from 'antd';
 import { TextAreaRef } from 'antd/es/input/TextArea';
 import {
-  FileOutlined,
+  PaperClipOutlined,
   PictureOutlined,
   SmileOutlined,
 } from '@ant-design/icons';
@@ -201,7 +201,7 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
           <PictureOutlined />
         </div>
         <div className={styles.footerBtn} onClick={sendFile} title={intl.formatMessage({ id: 'groupChat.sendFile' })}>
-          <FileOutlined />
+          <PaperClipOutlined />
         </div>
       </div>
       <div className={styles.footerMessage}>
