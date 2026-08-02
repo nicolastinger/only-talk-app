@@ -21,6 +21,7 @@ use crate::service::friend_service::update_friend_list;
 use crate::service::group_service::{pull_group_messages, sync_group_list};
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
+use crate::utils::message_types::MSG_TYPE_WEBRTC_SIGNAL;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use anyhow::anyhow;
@@ -108,6 +109,10 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
                 continue;
             }
         };
+        // WebRTC信令消息仅同步历史入库，不参与会话与未读计数
+        if text_quic_msg.text_type == MSG_TYPE_WEBRTC_SIGNAL {
+            continue;
+        }
         // 只有我收到的消息才算未读，自己发的消息只同步展示不计角标
         let is_received = text_quic_msg.recv_user == uuid;
         let user = match is_received {

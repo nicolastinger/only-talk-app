@@ -9,6 +9,7 @@ use crate::dao::group_message_ack::{
 };
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
+use crate::entity::chat_record_raw::{ChatRecordRaw, WebRTCSignalRecord};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::p2p_models::P2pInitMsg;
@@ -46,6 +47,10 @@ struct WebRTCSignalMessage {
     msg_type: String,
     sender: String,
     receiver: String,
+    #[serde(rename = "sessionId")]
+    session_id: Option<String>,
+    #[serde(default)]
+    prev_id: Option<String>,
     data: serde_json::Value,
     timestamp: i64,
 }
@@ -472,7 +477,7 @@ async fn process_local_notify_message(
 }
 
 async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
-    let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let mut msg = TextQuicMsgVo::from(text_quic_msg)?;
     let signal: WebRTCSignalMessage = serde_json::from_str(&msg.raw)?;
 
     info!(
@@ -510,8 +515,22 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
         }
     }
 
+    // 转发给前端（保持原始信令格式）
     let payload = serde_json::to_string(&msg)?;
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("webrtc_signal", payload)?;
+
+    // 参考text消息格式，包装为 WebRTCSignalRecord 后保存到本地聊天记录
+    let webrtc_record = WebRTCSignalRecord {
+        prev_id: signal.prev_id.unwrap_or_default(),
+        signal_type: signal.msg_type,
+        sender: signal.sender,
+        receiver: signal.receiver,
+        session_id: signal.session_id.unwrap_or_default(),
+        data: signal.data,
+        timestamp: signal.timestamp,
+    };
+    msg.raw = webrtc_record.json_serialize()?;
+    insert_chat_record(&msg).await?;
 
     Ok(())
 }
