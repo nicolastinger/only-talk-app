@@ -14,7 +14,6 @@ export default defineConfig({
     title: true,
     baseNavigator: true,
     useLocalStorage: true,
-    locales: ['zh-CN', 'zh-TW', 'en-US'],
   },
   routes,
   npmClient: 'pnpm',

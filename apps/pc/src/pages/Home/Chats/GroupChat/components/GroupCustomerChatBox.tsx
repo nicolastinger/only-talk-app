@@ -122,7 +122,7 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
       // 如果没有传入 currentBizId，从 raw 解析
       if (!bizId) {
         const record = parseGroupImageRecord(raw);
-        bizId = record?.biz_id || null;
+        bizId = record?.biz_id || undefined;
       }
 
       if (!bizId) {

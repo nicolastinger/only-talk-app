@@ -172,7 +172,7 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           return;
         }
 
-        bizId = parseGroupImageBizId(raw);
+        bizId = parseGroupImageBizId(raw) || undefined;
       }
 
       if (!bizId) {

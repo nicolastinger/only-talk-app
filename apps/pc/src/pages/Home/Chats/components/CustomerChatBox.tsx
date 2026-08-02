@@ -16,6 +16,7 @@ const imageCache = new Map<string, string>();
 interface CustomerChatBoxProps extends ChatMessage {
   friendUuid: string;
   senderName?: string;
+  currentBizId?: string;
 }
 
 // 私聊消息类型

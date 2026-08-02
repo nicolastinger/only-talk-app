@@ -22,6 +22,7 @@ type MineChatBoxProps = {
   isAck: boolean | undefined;
   icon?: string;
   friendUuid: string;
+  currentBizId?: string;
 };
 
 // 私聊消息类型
