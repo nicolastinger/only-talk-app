@@ -39,10 +39,10 @@ pub async fn query_chat_record_by_id_from_db(
     Ok(record)
 }
 
-/// 插入聊天记录
-pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), anyhow::Error> {
+/// 插入聊天记录，返回是否真正新增（本地已有同 nano_id 的消息则返回 false）
+pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<bool, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    sqlx::query(r#"INSERT OR IGNORE INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
+    let res = sqlx::query(r#"INSERT OR IGNORE INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
         .bind(&text_quic_msg.nano_id)
         .bind(&text_quic_msg.raw)
         .bind(text_quic_msg.timestamp)
@@ -51,7 +51,7 @@ pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), any
         .bind(text_quic_msg.text_type)
         .execute(&pool_sqlite)
         .await?;
-    Ok(())
+    Ok(res.rows_affected() > 0)
 }
 
 /// 获取已读消息

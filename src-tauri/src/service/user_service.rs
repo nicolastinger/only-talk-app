@@ -4,11 +4,13 @@ use std::time::Duration;
 
 use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
+use crate::dao::group_message_read::query_group_last_read_msg;
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
 use crate::dto::add_read_chat_record::AddReadChatRecord;
 use crate::dto::http_result::HttpResult;
+use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
@@ -99,14 +101,16 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
     for text_quic_msg in text_quic_msg_vec {
-        //保存未读消息
-        match insert_chat_record(&text_quic_msg).await {
-            Ok(_) => {}
+        // 保存消息，返回是否真正新增（本地已存在则说明之前拉过/在线收过，不再计入未读）
+        let is_new = match insert_chat_record(&text_quic_msg).await {
+            Ok(v) => v,
             Err(_) => {
                 continue;
             }
-        }
-        let user = match text_quic_msg.recv_user == uuid {
+        };
+        // 只有我收到的消息才算未读，自己发的消息只同步展示不计角标
+        let is_received = text_quic_msg.recv_user == uuid;
+        let user = match is_received {
             true => text_quic_msg.send_user.clone(),
             false => text_quic_msg.recv_user.clone(),
         };
@@ -117,7 +121,7 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
                 nano_id: text_quic_msg.nano_id,
                 timestamp: text_quic_msg.timestamp,
                 text_type: text_quic_msg.text_type,
-                unread_count: 1,
+                unread_count: if is_new && is_received { 1 } else { 0 },
                 last_message: text_quic_msg.raw,
                 recv_user: uuid.clone(),
                 send_user: user.clone(),
@@ -129,7 +133,9 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
             unread_count_map.insert(user, chat_session);
         } else {
             let chat_session = chat_session.ok_or(anyhow!("未读消息计数失败"))?;
-            chat_session.unread_count += 1;
+            if is_new && is_received {
+                chat_session.unread_count += 1;
+            }
             if chat_session.timestamp < text_quic_msg.timestamp {
                 chat_session.timestamp = text_quic_msg.timestamp;
                 chat_session.last_message = text_quic_msg.raw;
@@ -217,7 +223,8 @@ pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
 pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
-    let mut timestamp = 0;
+    let mut timestamp = 0; // 单聊已读时间戳
+    let mut group_timestamp = 0; // 群聊已读时间戳
     let mut count = 0;
     while count < 1000000 {
         // 校验定时任务key
@@ -233,22 +240,39 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
             }
         }
 
-        let last_chat_record = query_last_read_msg(&uuid, timestamp).await?;
-        if !last_chat_record.is_empty() {
-            let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
-            for item in last_chat_record {
-                if item.timestamp > timestamp {
-                    timestamp = item.timestamp;
-                }
-                let read_record = AddReadChatRecord {
-                    nano_id: item.nano_id,
-                    timestamp: item.timestamp,
-                    send_user: item.send_user,
-                    recv_user: item.recv_user,
-                };
-                read_record_vec.push(read_record);
-            }
+        let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
 
+        // 单聊已读消息
+        let last_chat_record = query_last_read_msg(&uuid, timestamp).await?;
+        for item in last_chat_record {
+            if item.timestamp > timestamp {
+                timestamp = item.timestamp;
+            }
+            read_record_vec.push(AddReadChatRecord {
+                nano_id: item.nano_id,
+                timestamp: item.timestamp,
+                send_user: item.send_user,
+                recv_user: item.recv_user,
+                chat_type: Some(CHAT_TYPE_SINGLE),
+            });
+        }
+
+        // 群聊已读消息
+        let last_group_record = query_group_last_read_msg(&uuid, group_timestamp).await?;
+        for item in last_group_record {
+            if item.timestamp > group_timestamp {
+                group_timestamp = item.timestamp;
+            }
+            read_record_vec.push(AddReadChatRecord {
+                nano_id: item.nano_id,
+                timestamp: item.timestamp,
+                send_user: item.group_uuid,
+                recv_user: item.user_uuid,
+                chat_type: Some(CHAT_TYPE_GROUP),
+            });
+        }
+
+        if !read_record_vec.is_empty() {
             info!("发送已读消息 {:?}", read_record_vec);
 
             match post_request(

@@ -44,9 +44,10 @@ impl SqliteStore for GroupChatRecord {
 }
 
 impl GroupChatRecord {
-    pub async fn insert(record: &GroupChatRecord) -> Result<(), anyhow::Error> {
+    /// 插入群聊消息，返回是否真正新增（本地已有同 nano_id 的消息则返回 false）
+    pub async fn insert(record: &GroupChatRecord) -> Result<bool, anyhow::Error> {
         let pool_sqlite = get_private_db_client().await?;
-        sqlx::query(
+        let res = sqlx::query(
             r#"INSERT OR IGNORE INTO group_chat_record (nano_id, raw, timestamp, send_user, group_id, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#
         )
         .bind(&record.nano_id)
@@ -57,7 +58,7 @@ impl GroupChatRecord {
         .bind(record.text_type)
         .execute(&pool_sqlite)
         .await?;
-        Ok(())
+        Ok(res.rows_affected() > 0)
     }
 
     pub async fn query_by_group_id(

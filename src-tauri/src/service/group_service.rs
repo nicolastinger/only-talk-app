@@ -373,7 +373,8 @@ struct GroupMessageVO {
 #[derive(Debug, Deserialize, Serialize)]
 struct UnreadCountVO {
     group_uuid: String,
-    unread_count: i64,
+    /// 群成员已读游标，用于按游标拉取未读消息
+    last_read_msg_id: i64,
 }
 
 /// 拉取群聊离线消息
@@ -400,10 +401,11 @@ pub async fn pull_group_messages() -> Result<(), anyhow::Error> {
     let mut session_map: HashMap<String, ChatSession> = HashMap::new();
 
     for group in unread_groups {
-        // 2. 拉取该群的历史消息（最多 50 条）
+        // 2. 按群成员已读游标拉取该群的未读消息
         let url = format!("{}/group/chat/message/history", TALK_API);
         let dto = serde_json::json!({
             "group_uuid": group.group_uuid,
+            "last_read_msg_id": group.last_read_msg_id,
             "start": 0,
             "size": 50
         });
@@ -445,10 +447,14 @@ pub async fn pull_group_messages() -> Result<(), anyhow::Error> {
                 timestamp: msg.timestamp,
             };
 
-            if let Err(e) = GroupChatRecord::insert(&record).await {
-                error!("插入群聊消息失败: {}", e);
-                continue;
-            }
+            // 是否真正新增（本地已有同 nano_id 的消息则忽略，不计入未读，避免重连重复拉取叠加角标）
+            let is_new = match GroupChatRecord::insert(&record).await {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("插入群聊消息失败: {}", e);
+                    continue;
+                }
+            };
 
             // 4. 更新会话
             let session =
@@ -467,7 +473,10 @@ pub async fn pull_group_messages() -> Result<(), anyhow::Error> {
                     group_id: Some(msg.group_uuid.clone()),
                 });
 
-            session.unread_count += 1;
+            // 只把本次真正新增的消息计入未读（重复拉取不叠加）
+            if is_new {
+                session.unread_count += 1;
+            }
             if session.timestamp < record.timestamp {
                 session.timestamp = record.timestamp;
                 session.last_message = record.raw;

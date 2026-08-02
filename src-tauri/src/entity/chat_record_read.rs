@@ -4,6 +4,11 @@ use sqlx::{FromRow, SqlitePool};
 
 use crate::dao::store::SqliteStore;
 
+/// 会话类型: 单聊
+pub const CHAT_TYPE_SINGLE: u32 = 1;
+/// 会话类型: 群聊
+pub const CHAT_TYPE_GROUP: u32 = 2;
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatRecordRead {
     pub id: i64,

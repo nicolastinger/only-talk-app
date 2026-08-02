@@ -41,3 +41,19 @@ pub async fn query_group_message_read(
     .await?;
     Ok(record)
 }
+
+/// 获取群聊已读消息（定时任务上报用）
+pub async fn query_group_last_read_msg(
+    uuid: &str,
+    timestamp: i64,
+) -> Result<Vec<GroupMessageRead>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let record = sqlx::query_as::<_, GroupMessageRead>(
+        r#"select * from group_message_read where user_uuid = ?1 and timestamp > ?2"#,
+    )
+    .bind(uuid)
+    .bind(timestamp)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(record)
+}

@@ -3,7 +3,7 @@ use crate::entity::group_chat_record::GroupChatRecord;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 pub async fn insert_group_chat_record(record: &GroupChatRecord) -> Result<(), anyhow::Error> {
-    GroupChatRecord::insert(record).await
+    GroupChatRecord::insert(record).await.map(|_| ())
 }
 
 pub async fn query_group_chat_record_from_db(
