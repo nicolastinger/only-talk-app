@@ -153,7 +153,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
       case 14:
       case 15:
       case 100:
-        return <WebRTCMessage textType={text_type} isMine={false} />;
+        return <WebRTCMessage textType={text_type} isMine={false} raw={raw} />;
       default:
         return TextBox(raw);
     }

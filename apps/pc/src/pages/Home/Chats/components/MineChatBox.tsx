@@ -216,7 +216,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       case 14:
       case 15:
       case 100:
-        return <WebRTCMessage textType={text_type} isMine={true} />;
+        return <WebRTCMessage textType={text_type} isMine={true} raw={raw} />;
       default:
         return TextBox(raw);
     }

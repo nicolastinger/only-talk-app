@@ -33,9 +33,62 @@
 }
 
 .text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.title {
+  display: flex;
+  align-items: center;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.85;
+  word-break: break-all;
+  white-space: normal;
+}
+
+.session {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.detail {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.6;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.detailContent {
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  max-height: 160px;
+  overflow: auto;
+  font-size: 11px;
+  font-weight: 400;
+  font-family: 'Consolas', 'Menlo', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .video-call {
