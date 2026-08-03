@@ -4,7 +4,14 @@
       "Bash(pnpm add *)",
       "Bash(cargo check *)",
       "Bash(npx tsc *)",
-      "Bash(npx umi *)"
+      "Bash(npx umi *)",
+      "Bash(pnpm run *)",
+      "Bash(npx prettier *)",
+      "Read(//c/Users/nico/.cargo/registry/src/**)",
+      "Bash(python -c \"import json; json.load\\(open\\('src-tauri/capabilities/pc-default.json'\\)\\); print\\('JSON valid'\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('src-tauri/capabilities/pc-default.json'\\)\\); console.log\\('JSON valid'\\)\")",
+      "WebFetch(domain:tauri.app)",
+      "WebSearch"
     ]
   }
 }

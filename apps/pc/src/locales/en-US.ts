@@ -146,6 +146,9 @@ export default {
       autoDownload: 'Auto Download',
       autoDownloadWifi: 'Auto download images and videos on WiFi',
       autoDownloadDesc: 'Data saving settings',
+      autoStart: 'Launch on Startup',
+      autoStartDesc: 'Automatically launch the app after system login',
+      autoStartFailed: 'Failed to change launch on startup setting',
       themeModes: {
         light: 'Light Mode',
         dark: 'Dark Mode',
@@ -345,7 +348,8 @@ export default {
     leaveGroupSuccess: 'Left the group',
     leaveGroupFailed: 'Failed to leave group',
     dissolveGroup: 'Dissolve Group',
-    dissolveGroupConfirm: 'Are you sure you want to dissolve "{name}"? This action cannot be undone.',
+    dissolveGroupConfirm:
+      'Are you sure you want to dissolve "{name}"? This action cannot be undone.',
     dissolveGroupBtn: 'Confirm Dissolve',
     dissolveGroupSuccess: 'Group dissolved',
     dissolveGroupFailed: 'Failed to dissolve group',
@@ -377,13 +381,15 @@ export default {
       invite: 'Invite',
       cancel: 'Cancel',
       confirm: 'Confirm',
-      inviteDesc: 'Select friends to invite to the group. They will receive a notification and can choose to accept or reject.',
+      inviteDesc:
+        'Select friends to invite to the group. They will receive a notification and can choose to accept or reject.',
       getFriendListFailed: 'Failed to get friend list',
       selectFriendsToInvite: 'Please select friends to invite',
       inviteSent: 'Group invitation sent to {count} friends',
       inviteFailed: 'Invitation failed',
       removeMember: 'Remove from Group',
-      removeMemberConfirm: 'Are you sure you want to remove "{name}" from the group?',
+      removeMemberConfirm:
+        'Are you sure you want to remove "{name}" from the group?',
       removeMemberSuccess: 'Member removed from group',
       removeMemberFailed: 'Failed to remove member',
       setAdmin: 'Set as Admin',
@@ -484,7 +490,8 @@ export default {
     disconnected: 'Connection disconnected',
     reconnecting: 'Reconnecting...',
     closeTip: 'Close tip',
-    defaultMessage: 'QUIC connection has been disconnected, please check your network environment',
+    defaultMessage:
+      'QUIC connection has been disconnected, please check your network environment',
     suggestions: '💡 Suggestions:',
     checkNetwork: 'Check if network connection is normal',
     checkFirewall: 'Confirm firewall is not blocking the app',
@@ -571,7 +578,8 @@ export default {
   },
   media: {
     cameraListError: 'Unable to get camera list',
-    codecNotSupported: 'Current browser does not support this codec format, please try another browser',
+    codecNotSupported:
+      'Current browser does not support this codec format, please try another browser',
     recordingError: 'Video recording error',
     recorderCreateFailed: 'Failed to create video recorder',
     cameraAccessError: 'Unable to access camera',
@@ -589,7 +597,8 @@ export default {
     privacyModeRequest: 'Started a private mode request',
   },
   webrtc: {
-    mediaAccessError: 'Unable to access camera or microphone, video chat may be limited',
+    mediaAccessError:
+      'Unable to access camera or microphone, video chat may be limited',
     peer: 'Peer',
     me: 'Me',
     connectionCreateFailed: 'Failed to create connection',
@@ -609,7 +618,8 @@ export default {
     openCamera: 'Open Camera',
     closeMicrophone: 'Close Microphone',
     openMicrophone: 'Open Microphone',
-    p2pChatHint: 'WebRTC P2P direct chat, messages do not go through server, messages will disappear after closing window',
+    p2pChatHint:
+      'WebRTC P2P direct chat, messages do not go through server, messages will disappear after closing window',
     retryConnection: 'Retry Connection',
     establishingConnection: 'Establishing connection...',
     emoji: 'Emoji',

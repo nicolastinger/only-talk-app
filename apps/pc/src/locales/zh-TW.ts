@@ -142,6 +142,9 @@ export default {
       autoDownload: '自動下載',
       autoDownloadWifi: 'WiFi環境下自動下載圖片和視頻',
       autoDownloadDesc: '節省流量設置',
+      autoStart: '開機自動啟動',
+      autoStartDesc: '登錄系統後自動啟動應用',
+      autoStartFailed: '修改開機自啟設置失敗',
       themeModes: {
         light: '淺色模式',
         dark: '深色模式',
@@ -370,7 +373,8 @@ export default {
       invite: '邀請',
       cancel: '取消',
       confirm: '確定',
-      inviteDesc: '選擇要邀請入群的好友，被邀請方將收到通知並可選擇接受或拒絕。',
+      inviteDesc:
+        '選擇要邀請入群的好友，被邀請方將收到通知並可選擇接受或拒絕。',
       getFriendListFailed: '獲取好友列表失敗',
       selectFriendsToInvite: '請選擇要邀請的好友',
       inviteSent: '已向 {count} 位好友發送群邀請',

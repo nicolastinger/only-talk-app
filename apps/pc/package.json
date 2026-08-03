@@ -19,6 +19,7 @@
     "@ant-design/icons": "5.x",
     "@ant-design/pro-components": "^2.4.4",
     "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-autostart": "~2.0.0",
     "@tauri-apps/plugin-dialog": "^2.4.2",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@umijs/max": "^4.4.11",

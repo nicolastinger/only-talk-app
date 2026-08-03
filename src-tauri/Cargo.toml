@@ -65,3 +65,6 @@ tauri = { version = "2.5.1", features = ["protocol-asset", "unstable", "tray-ico
 
 [target.'cfg(not(desktop))'.dependencies]
 tauri = { version = "2.5.1", features = [ "image-ico", "tray-icon", "protocol-asset", "unstable"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-autostart = "2.0.0-rc"
