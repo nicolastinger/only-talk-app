@@ -140,6 +140,18 @@ pub fn run() {
                 }
             }
 
+            // 窗口初始为隐藏(visible:false)，由前端首帧渲染后调用 show()
+            // 兜底：5 秒后若前端仍未显示（如 JS 异常），强制显示，避免窗口永久不可见
+            {
+                let win = app.get_webview_window("main");
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                    if let Some(win) = win {
+                        let _ = win.show();
+                    }
+                });
+            }
+
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = init_app(root_path, Some(handle)).await {
                     eprintln!("初始化失败: {}", e);

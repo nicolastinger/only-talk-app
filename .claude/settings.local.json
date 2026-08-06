@@ -11,7 +11,15 @@
       "Bash(python -c \"import json; json.load\\(open\\('src-tauri/capabilities/pc-default.json'\\)\\); print\\('JSON valid'\\)\")",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('src-tauri/capabilities/pc-default.json'\\)\\); console.log\\('JSON valid'\\)\")",
       "WebFetch(domain:tauri.app)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(sort -k5 -rn)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@umijs/max/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\('../../node_modules/@umijs/max/package.json'\\).version\\)\")",
+      "WebFetch(domain:umijs.org)",
+      "WebFetch(domain:github.com)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/Microsoft/Edge/Application/**)",
+      "Read(//c/Program Files/Microsoft/Edge/Application/**)",
+      "Bash(node .claude/tmp-serve-dist.mjs apps/pc/dist 8899)"
     ]
   }
 }

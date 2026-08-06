@@ -1,6 +1,5 @@
 import LanguageSwitcher from '@/components/LanguageSwitch';
 import LocalImage from '@/components/LocalImage';
-import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { FormattedMessage } from '@@/exports';
@@ -11,9 +10,12 @@ import { Window } from '@tauri-apps/api/window';
 import { history, useIntl } from '@umijs/max';
 import { getFiles } from '@workspace/services';
 import { HttpResponse, ResponseData } from '@workspace/types';
-import { Avatar, Button, Checkbox, message, Modal } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { Avatar, Button, Checkbox, message, Modal, Spin } from 'antd';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import styles from './index.less';
+
+// 懒加载 markdown 渲染器（react-markdown 体积较大），仅在打开隐私协议弹窗时加载
+const MarkdownRenderer = lazy(() => import('@/components/MarkdownRenderer'));
 
 interface QuickLoginUser {
   user_id: string;
@@ -469,7 +471,9 @@ const LoginPage: React.FC = () => {
         width={'100%'}
         height={'60vh'}
       >
-        <MarkdownRenderer content={privacyContent} />
+        <Suspense fallback={<Spin style={{ display: 'block', margin: '24px auto' }} />}>
+          <MarkdownRenderer content={privacyContent} />
+        </Suspense>
       </Modal>
     </div>
   );
