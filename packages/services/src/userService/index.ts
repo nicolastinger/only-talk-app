@@ -2,13 +2,14 @@ import {
   HTTP_METHOD,
   TALK_API,
   FriendRequestInfoDTO,
-  BasicUser,
   UserInfo,
   UserInfoWithCache,
   QuicServerInfo,
   HttpResponse,
   UpdateUserDTO,
   FriendVo,
+  SignUpRequest,
+  SendVerifyCodeRequest,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -39,11 +40,19 @@ export const process_friend = async (friend: FriendRequestInfoDTO) => {
   );
 };
 
-export const sign_up = async (basic_user: BasicUser) => {
+export const sign_up = async (signUpRequest: SignUpRequest) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
     TALK_API + "/user/sign_up",
-    JSON.stringify(basic_user)
+    JSON.stringify(signUpRequest)
+  );
+};
+
+export const send_verify_code = async (request: SendVerifyCodeRequest) => {
+  return await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/user/send_verify_code",
+    JSON.stringify(request)
   );
 };
 

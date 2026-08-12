@@ -57,7 +57,22 @@ interface BasicUser {
   username?: string;
   account?: string;
   icon?: string;
+  email?: string;
   password?: string;
+}
+
+/** 注册请求体(account/username/password/email/verification_code) */
+interface SignUpRequest {
+  account: string;
+  username: string;
+  password: string;
+  email: string;
+  verification_code: string;
+}
+
+/** 发送邮箱验证码请求体 */
+interface SendVerifyCodeRequest {
+  email: string;
 }
 
 interface UserInfo {
@@ -129,4 +144,6 @@ export type {
   UserInfo,
   UserInfoWithCache,
   BasicUser,
+  SignUpRequest,
+  SendVerifyCodeRequest,
 };
