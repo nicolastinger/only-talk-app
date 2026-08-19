@@ -23,9 +23,10 @@ use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::utils::message_types::MSG_TYPE_WEBRTC_SIGNAL;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 use anyhow::anyhow;
 use log::{error, info, warn};
+use tauri::Emitter;
 use tokio::time::timeout;
 use uuid::Uuid;
 
@@ -364,6 +365,12 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
 
     // 设置状态为 Idle，停止 run_client 重连循环
     *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Idle;
+
+    // 手动断开时主动通知前端，触发 topbar 断连提示
+    // （run_client 检测到 Idle 会直接返回，不会进入 Disconnected 广播 quic_disconnected）
+    if let Some(handle) = APP_HANDLE.get() {
+        let _ = handle.emit("quic_disconnected", "QUIC 连接已手动断开");
+    }
 
     // 清除服务器连接列表
     {
