@@ -1,5 +1,4 @@
 import DevAssistant from '@/components/DevAssistant';
-import { QuicDisconnectAlert } from '@/components/QuicDisconnectAlert';
 import SyncLoadingOverlay from '@/components/SyncLoadingOverlay';
 import { useP2pMessageApi, useWebRTCSignalApi } from '@/hooks';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -27,7 +26,6 @@ const RootLayout: React.FC = () => {
     <div className={styles.container}>
       <Outlet />
       <DevAssistant />
-      <QuicDisconnectAlert />
       <SyncLoadingOverlay />
     </div>
   );

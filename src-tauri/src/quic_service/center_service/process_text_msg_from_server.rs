@@ -31,6 +31,7 @@ use crate::utils::message_types::{
     MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL,
     NOTIFY_TYPE_MSG,
 };
+use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
@@ -556,5 +557,7 @@ fn parse_ice_candidate(candidate_str: &str) -> Option<ParsedCandidate> {
 async fn process_ping_msg(msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     info!("{:?} 收到quic服务器的ping消息", msg.recv_user);
     insert_user_info("ping_lost_count", "0").await?;
+    let now = get_now_time_stamp_as_millis().unwrap_or(0).to_string();
+    insert_user_info("last_pong_time", &now).await?;
     Ok(())
 }

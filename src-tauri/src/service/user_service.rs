@@ -376,6 +376,7 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     {
         insert_user_info("quic_disconnected", "true").await?;
         insert_user_info("ping_lost_count", "0").await?;
+        insert_user_info("last_pong_time", "0").await?;
         let ping_uuid = Uuid::new_v4();
         let ping_uuid = ping_uuid.to_string();
         insert_user_info("ping_uuid", &ping_uuid).await?;

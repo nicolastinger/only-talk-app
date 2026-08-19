@@ -23,6 +23,8 @@ use uuid::Uuid;
 const RECONNECT_DELAY_SECS: u64 = 5;
 /// 断开广播间隔（秒）
 const DISCONNECT_BROADCAST_SECS: u64 = 3;
+/// PONG 超时（毫秒）：超过该时长未收到服务端 PONG 判定连接异常
+const PONG_TIMEOUT_MS: i64 = 50_000;
 
 /// 客户端连接主循环（带状态机 + 自动重连）
 /// 该函数不返回，持续维护连接
@@ -95,6 +97,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             {
                 let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
                 user_info.insert("ping_lost_count".to_string(), "0".to_string());
+                user_info.insert("last_pong_time".to_string(), "0".to_string());
             }
 
             let mut state = GLOBAL_QUIC_STATE.write().await;
@@ -328,6 +331,9 @@ async fn send_ping_msg(
     match send_via_new_stream(&conn, &ping_msg).await {
         Ok(_) => {
             info!("初始心跳发送成功");
+            // 初始心跳成功即开始 PONG 超时计时，无需等待首个 PONG 返回
+            let now = get_now_time_stamp_as_millis().unwrap_or(0).to_string();
+            insert_user_info("last_pong_time", &now).await?;
         }
         Err(e) => {
             error!("初始心跳发送失败: {}", e);
@@ -351,6 +357,17 @@ async fn send_ping_msg(
         let state = *GLOBAL_QUIC_STATE.read().await;
         if state != QuicConnectionState::Connected {
             info!("连接状态已变更({:?})，心跳任务退出", state);
+            break;
+        }
+
+        // 检查是否长时间未收到服务端 PONG（覆盖单向丢包/服务端应用卡死场景）
+        let last_pong = get_user_info("last_pong_time").await.unwrap_or_default();
+        let last_pong = last_pong.parse::<i64>().unwrap_or(0);
+        let now = get_now_time_stamp_as_millis().unwrap_or(0);
+        if last_pong > 0 && now - last_pong > PONG_TIMEOUT_MS {
+            error!("超过{}秒未收到服务端PONG，判定连接异常", PONG_TIMEOUT_MS / 1000);
+            let _ = disconnect_tx.send(true);
+            insert_user_info("quic_disconnected", "true").await?;
             break;
         }
 
