@@ -54,6 +54,20 @@ interface GroupFileRecord {
   send_user: string;
 }
 
+interface ChatRecordSend {
+  id: number;
+  send_id: string;
+  msg_id: string;
+  text_type: number;
+  platform: number;
+  recv_user: string;
+  send_user: string;
+  timestamp: number;
+  raw: string; // JSON 字符串
+  send_status: number; // -1-已忽略，0-排队中，1-发送中，2-发送失败，3-发送成功
+  retry_count: number;
+}
+
 export type {
   TextMsgRaw,
   TextQuicMsgVo,
@@ -62,4 +76,5 @@ export type {
   GroupTextRecord,
   GroupImageRecord,
   GroupFileRecord,
+  ChatRecordSend,
 };

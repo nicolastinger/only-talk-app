@@ -4,12 +4,15 @@ use log::error;
 use tokio::time::timeout;
 
 use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
+use crate::dao::chat_record_send::query_chat_record_send_by_user;
+use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::Page;
 use crate::service::chat_service::{
     get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
-    send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
-    send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
-    update_group_last_read_msg_service, update_last_read_msg_from_db,
+    ignore_send_msg_service, retry_send_msg_service, send_file_msg_service,
+    send_group_file_msg_service, send_group_image_msg_service, send_group_text_msg_service,
+    send_image_msg_service, send_text_msg_service, update_group_last_read_msg_service,
+    update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -121,4 +124,55 @@ pub async fn mark_group_read(
     update_group_last_read_msg_service(group_uuid, nano_id, timestamp)
         .await
         .map_err(|e| e.to_string())
+}
+
+/// 获取某好友的待发送记录（0-排队中，1-发送中，2-发送失败）
+#[tauri::command]
+pub async fn get_pending_send_records(recv_user: String) -> Result<Vec<ChatRecordSend>, String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    query_chat_record_send_by_user(&me, &recv_user, vec![0, 1, 2], true)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 手动重发失败消息（重置为排队并触发补发，加锁防并发）
+#[tauri::command]
+pub async fn retry_send_msg(send_id: String) -> Result<(), String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        retry_send_msg_service(&send_id).await
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            error!("重发消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("重发消息超时：10秒内未能获取锁 {}", elapsed);
+            Err("获取锁超时".to_string())
+        }
+    }
+}
+
+/// 忽略失败消息（状态置 -1，查询 IN(0,1,2) 不再返回，加锁防并发）
+#[tauri::command]
+pub async fn ignore_send_msg(send_id: String) -> Result<(), String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        ignore_send_msg_service(&send_id).await
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            error!("忽略消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("忽略消息超时：10秒内未能获取锁 {}", elapsed);
+            Err("获取锁超时".to_string())
+        }
+    }
 }

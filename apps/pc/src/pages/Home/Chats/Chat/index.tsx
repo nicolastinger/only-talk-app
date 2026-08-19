@@ -14,6 +14,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ChatFooter from '../components/Footer';
 import MessageList from '../components/MessageList';
+import PendingSendBar, { PENDING_BAR_HEIGHT } from '../components/PendingSendBar';
 import Splitter from '../components/Splitter';
 import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
@@ -35,6 +36,9 @@ const ChatPage: React.FC = () => {
     new Set(),
   );
   const [isUploading, setIsUploading] = useState(false);
+  const [pendingBarVisible, setPendingBarVisible] = useState(false);
+  const [pendingRefreshSignal, setPendingRefreshSignal] = useState(0);
+  const [pendingBarHeight, setPendingBarHeight] = useState(PENDING_BAR_HEIGHT);
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -56,8 +60,9 @@ const ChatPage: React.FC = () => {
   };
 
   useEffect(() => {
-    setRealFooterHeight(footerHeight + 6);
-  }, [footerHeight]);
+    // 待发送记录条可见时，footer 高度联动上移（messageContainer 高度自动让位）
+    setRealFooterHeight(footerHeight + 6 + (pendingBarVisible ? pendingBarHeight : 0));
+  }, [footerHeight, pendingBarVisible, pendingBarHeight]);
 
   useEffect(() => {
     if (messageList.length > 1) {
@@ -294,9 +299,21 @@ const ChatPage: React.FC = () => {
               setIsInitialLoad(true);
               loadChatRecordFromStore(meUuid, friendUuid, 1, true);
             }
+          } else {
+            // 列表中没有该消息：重发/补发成功的消息此前从未落库渲染过，
+            // 重新加载最新聊天记录让新落库的气泡出现（否则需重进会话才可见）
+            console.log(
+              'ACK 消息不在列表中（重发/补发成功），重新加载聊天记录',
+            );
+            setCurrentPage(1);
+            setHasMore(true);
+            setIsInitialLoad(true);
+            loadChatRecordFromStore(meUuid, friendUuid, 1, true);
           }
           return [...prevState, temp];
         });
+        // 201 ACK 到达，send 表对应记录状态置 3，刷新待发送记录条
+        setPendingRefreshSignal((s) => s + 1);
       } else {
         setNewMessageIds(new Set([textMessage.nano_id]));
         setMessageList((prevState) => [...prevState, temp]);
@@ -321,6 +338,8 @@ const ChatPage: React.FC = () => {
     const temp: ChatMessage = JSON.parse(message);
     setNewMessageIds(new Set([temp.text_msg_raw.nano_id]));
     setMessageList((prev) => [...prev, temp]);
+    // 新消息已入 send 队列，刷新待发送记录条
+    setPendingRefreshSignal((s) => s + 1);
     setTimeout(() => {
       scrollToBottom();
     }, 100);
@@ -378,6 +397,12 @@ const ChatPage: React.FC = () => {
           onHeightChange={handleHeightChange}
           minHeight={20}
           maxHeight={80}
+        />
+        <PendingSendBar
+          friendUuid={friendUuid}
+          refreshSignal={pendingRefreshSignal}
+          onVisibleChange={setPendingBarVisible}
+          onHeightChange={setPendingBarHeight}
         />
         <div style={{ height: `${footerHeight}px` }}>
           <ChatFooter

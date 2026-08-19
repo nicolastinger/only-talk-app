@@ -253,6 +253,18 @@ export default {
       userInfoError: '无法获取用户信息',
       webRTCFailed: '发起 WebRTC 聊天失败',
     },
+    pendingBar: {
+      title: '待发送记录',
+      sending: '发送中',
+      failed: '发送失败',
+      queued: '排队中',
+      resend: '重发',
+      ignore: '忽略',
+      resendFailed: '重发失败',
+      ignoreFailed: '忽略失败',
+      expand: '展开',
+      collapse: '收起',
+    },
     group: {
       leaveGroup: '退出群聊',
       leaveGroupConfirm: '确定要退出该群聊吗？',

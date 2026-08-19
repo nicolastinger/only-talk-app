@@ -40,16 +40,18 @@ pub async fn update_chat_record_send_success(
 pub async fn update_chat_record_send(
     send_id: &str,
     msg_id: &str,
-    send_status: u16,
+    send_status: i16,
     retry_count: i32,
     timestamp: i64,
+    raw: &str,
 ) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    sqlx::query(r#"UPDATE chat_record_send SET send_status = ?1, msg_id = ?2, retry_count = ?3, timestamp = ?4 WHERE send_id = ?5"#)
+    sqlx::query(r#"UPDATE chat_record_send SET send_status = ?1, msg_id = ?2, retry_count = ?3, timestamp = ?4, raw = ?5 WHERE send_id = ?6"#)
         .bind(send_status)
         .bind(msg_id)
         .bind(retry_count)
         .bind(timestamp)
+        .bind(raw)
         .bind(send_id)
         .execute(&pool_sqlite)
         .await?;
@@ -60,7 +62,7 @@ pub async fn update_chat_record_send(
 pub async fn query_chat_record_send_by_user(
     uuid: &str,
     recv_user: &str,
-    send_status: Vec<u16>,
+    send_status: Vec<i16>,
     asc: bool,
 ) -> Result<Vec<ChatRecordSend>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
@@ -100,4 +102,18 @@ pub async fn query_record_send_from_db(send_id: &str) -> Result<ChatRecordSend, 
             .fetch_one(&pool_sqlite)
             .await?;
     Ok(record)
+}
+
+/// 仅更新发送状态（忽略操作：置为 -1 已忽略）
+pub async fn update_chat_record_send_status(
+    send_id: &str,
+    send_status: i16,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query(r#"UPDATE chat_record_send SET send_status = ?1 WHERE send_id = ?2"#)
+        .bind(send_status)
+        .bind(send_id)
+        .execute(&pool_sqlite)
+        .await?;
+    Ok(())
 }

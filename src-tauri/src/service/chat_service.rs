@@ -18,7 +18,8 @@ use crate::dao::chat_record_db::{
 };
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
-    insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
+    insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
+    update_chat_record_send, update_chat_record_send_status,
 };
 use crate::dao::group_chat_record_db::query_group_chat_record_from_db;
 use crate::dao::group_db::{query_group_by_id, upsert_group};
@@ -195,10 +196,18 @@ pub async fn update_group_last_read_msg_service(
 
 /// 按需开流发送文本信息
 pub async fn send_msg(text_msg: Vec<u8>, conn: &Connection) -> Result<String, anyhow::Error> {
-    let mut send = conn.open_uni().await?;
-    send.write_all(&text_msg).await?;
-    send.finish().await?;
-    Ok("success".to_string())
+    // 整体 5 秒超时：断网/连接异常时 quinn 的 open_uni/write_all/finish 可能长时间挂起，
+    // 会卡住 GLOBAL_MSG_SEND_LOCK 导致其他命令（重发/忽略）获取锁超时
+    let send_future = async {
+        let mut send = conn.open_uni().await?;
+        send.write_all(&text_msg).await?;
+        send.finish().await?;
+        Ok("success".to_string())
+    };
+    match tokio::time::timeout(Duration::from_secs(5), send_future).await {
+        Ok(result) => result,
+        Err(_) => Err(anyhow!("发送消息超时")),
+    }
 }
 
 /// 已读目标用户的所有聊天消息
@@ -839,6 +848,75 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
     }
 }
 
+/// 重算 prev_id 并持久化：更新 ack 表 prev_id、重写 send 表 raw/状态/时间
+/// 返回更新后的记录（含新 raw），供调用方直接发送
+pub async fn prepare_pending_msg_for_send(
+    item: &ChatRecordSend,
+    new_status: i16,
+    new_retry_count: i32,
+) -> Result<ChatRecordSend, anyhow::Error> {
+    let mut prev_id = ZERO_UUID.to_string();
+    let sender = &item.send_user;
+    let recv_user = &item.recv_user;
+    // 查询本地最新一条已发送成功的消息
+    let last_send_success_msg =
+        query_chat_record_send_by_user(sender, recv_user, vec![3], false).await?;
+    if !last_send_success_msg.is_empty() {
+        let send_id = &last_send_success_msg
+            .first()
+            .ok_or(anyhow!("last_send_success_msg is empty"))?
+            .send_id;
+        if let Some(prev_ack) = query_chat_record_by_send_id(send_id, recv_user).await? {
+            prev_id = prev_ack.msg_id;
+        }
+    }
+    // 更新ack的prev_id
+    update_chat_record_ack_prev_id(&item.send_id, &prev_id).await?;
+    let msg_raw = set_prev_id(&item.raw, item.text_type, prev_id)?;
+    let now = get_now_time_stamp_as_millis()?;
+    // 持久化：raw 同步写回（修复重发后落库 prev_id 与线上不一致的 bug）
+    update_chat_record_send(&item.send_id, "", new_status, new_retry_count, now, &msg_raw).await?;
+
+    let mut updated = item.clone();
+    updated.raw = msg_raw;
+    updated.send_status = new_status;
+    updated.retry_count = new_retry_count;
+    updated.timestamp = now;
+    Ok(updated)
+}
+
+/// 手动重发失败消息：重置为排队(0)，重算 prev_id/raw，触发补发
+/// 调用方需持有 GLOBAL_MSG_SEND_LOCK
+pub async fn retry_send_msg_service(send_id: &str) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let record = query_record_send_from_db(send_id).await?;
+    if record.send_user != me {
+        return Err(anyhow!("无权操作该消息"));
+    }
+    if record.send_status != 2 {
+        return Err(anyhow!("消息状态已变化，无法重发"));
+    }
+    // 重入队：status=0, retry_count 清零（重发后重试机会从满额重新计算），raw 同步写回
+    prepare_pending_msg_for_send(&record, 0, 0).await?;
+    // 触发补发（内部裁决：同一接收方仅一条在途；未被选中则由定时任务兜底补发）
+    process_no_send_success_msg().await?;
+    Ok(())
+}
+
+/// 忽略失败消息：状态置 -1（已忽略），查询 IN(0,1,2) 不再返回
+pub async fn ignore_send_msg_service(send_id: &str) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let record = query_record_send_from_db(send_id).await?;
+    if record.send_user != me {
+        return Err(anyhow!("无权操作该消息"));
+    }
+    if record.send_status != 2 {
+        return Err(anyhow!("消息状态已变化，无法忽略"));
+    }
+    update_chat_record_send_status(send_id, -1).await?;
+    Ok(())
+}
+
 // 处理本地未发送完成的消息
 pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
     let me = get_user_info("uuid").await?;
@@ -885,43 +963,22 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             }
             if status == 1 && retry_count >= 3 {
                 item.send_status = 2;
-                update_chat_record_send(&item.send_id, "", 2, 3, now).await?;
+                update_chat_record_send(&item.send_id, "", 2, 3, now, &item.raw).await?;
             }
         }
-        if let Some(mut item) = no_send_success_msg_option {
+        if let Some(item) = no_send_success_msg_option {
             info!("存在未发送完成的消息, 发送消息: {}", item.send_id);
             let retry_count = item.retry_count + 1;
-            let mut prev_id = ZERO_UUID.to_string();
-            let sender = &item.send_user;
-            let recv_user = &item.recv_user;
-            // 查询本地最新一条已发送成功的消息
-            let last_send_success_msg =
-                query_chat_record_send_by_user(&sender, &recv_user, vec![3], false).await?;
-            if !last_send_success_msg.is_empty() {
-                let send_id = &last_send_success_msg
-                    .first()
-                    .ok_or(anyhow!("last_send_success_msg is empty"))?
-                    .send_id;
-                if let Some(prev_ack) = query_chat_record_by_send_id(send_id, &recv_user).await? {
-                    prev_id = prev_ack.msg_id;
-                }
-            }
-            let raw = &item.raw;
-            let text_type = item.text_type;
-            // 更新ack的prev_id
-            update_chat_record_ack_prev_id(&item.send_id, &prev_id).await?;
-            let msg_raw = set_prev_id(&raw, text_type, prev_id)?;
-            item.raw = msg_raw;
-            // 更新消息状态为发送中
-            update_chat_record_send(&item.send_id, "", 1, retry_count, now).await?;
+            // 重算 prev_id、重写 raw 并持久化（raw 同步修复）
+            let updated = prepare_pending_msg_for_send(&item, 1, retry_count).await?;
 
-            let raw: Vec<u8> = Vec::from(item.raw);
+            let raw: Vec<u8> = Vec::from(updated.raw);
             let test_msg = generate_text_msg_without_nano(
-                item.text_type,
+                updated.text_type,
                 raw,
-                item.recv_user,
-                item.send_user,
-                item.send_id,
+                updated.recv_user,
+                updated.send_user,
+                updated.send_id,
             )?;
             let conn = {
                 let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;

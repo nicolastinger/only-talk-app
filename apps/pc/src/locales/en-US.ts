@@ -257,6 +257,18 @@ export default {
       userInfoError: 'Unable to get user info',
       webRTCFailed: 'Failed to start WebRTC chat',
     },
+    pendingBar: {
+      title: 'Pending messages',
+      sending: 'Sending',
+      failed: 'Failed',
+      queued: 'Queued',
+      resend: 'Resend',
+      ignore: 'Ignore',
+      resendFailed: 'Resend failed',
+      ignoreFailed: 'Ignore failed',
+      expand: 'Expand',
+      collapse: 'Collapse',
+    },
     group: {
       leaveGroup: 'Leave Group',
       leaveGroupConfirm: 'Are you sure you want to leave this group?',
