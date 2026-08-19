@@ -14,7 +14,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ChatFooter from '../components/Footer';
 import MessageList from '../components/MessageList';
-import PendingSendBar, { PENDING_BAR_HEIGHT } from '../components/PendingSendBar';
+import PendingSendBar from '../components/PendingSendBar';
 import Splitter from '../components/Splitter';
 import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
@@ -26,7 +26,6 @@ const ChatPage: React.FC = () => {
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
   const [footerHeight, setFooterHeight] = useState(180);
-  const [realFootHeight, setRealFooterHeight] = useState(186);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +37,6 @@ const ChatPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [pendingBarVisible, setPendingBarVisible] = useState(false);
   const [pendingRefreshSignal, setPendingRefreshSignal] = useState(0);
-  const [pendingBarHeight, setPendingBarHeight] = useState(PENDING_BAR_HEIGHT);
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -58,11 +56,6 @@ const ChatPage: React.FC = () => {
     );
     setFooterHeight(heightPx);
   };
-
-  useEffect(() => {
-    // 待发送记录条可见时，footer 高度联动上移（messageContainer 高度自动让位）
-    setRealFooterHeight(footerHeight + 6 + (pendingBarVisible ? pendingBarHeight : 0));
-  }, [footerHeight, pendingBarVisible, pendingBarHeight]);
 
   useEffect(() => {
     if (messageList.length > 1) {
@@ -373,7 +366,7 @@ const ChatPage: React.FC = () => {
         <div
           ref={messageContainerRef}
           className={styles.messageContainer}
-          style={{ height: `calc(100% - ${realFootHeight}px)` }}
+          style={{ height: `calc(100% - ${footerHeight + 6}px)` }}
         >
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
@@ -401,8 +394,8 @@ const ChatPage: React.FC = () => {
         <PendingSendBar
           friendUuid={friendUuid}
           refreshSignal={pendingRefreshSignal}
+          bottom={footerHeight}
           onVisibleChange={setPendingBarVisible}
-          onHeightChange={setPendingBarHeight}
         />
         <div style={{ height: `${footerHeight}px` }}>
           <ChatFooter

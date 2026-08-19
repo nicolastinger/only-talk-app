@@ -23,10 +23,10 @@ interface PendingSendBarProps {
   friendUuid: string;
   /** 父页面自增信号，变化时重新拉取（201 ACK / 发送新消息后触发） */
   refreshSignal: number;
+  /** 绝对定位：距父容器底部偏移（即 footer 高度），使待发送条悬浮在 footer 顶部、不挤压布局 */
+  bottom?: number;
   /** 可见性变化通知（记录清空时父页面回收高度） */
   onVisibleChange: (visible: boolean) => void;
-  /** 高度变化通知（拖拽拉伸 / 折叠展开），父页面联动消息区高度 */
-  onHeightChange: (height: number) => void;
 }
 
 /** 将 send 表 raw 解析为可展示的摘要文本 */
@@ -56,8 +56,8 @@ const formatRaw = (record: ChatRecordSend): string => {
 const PendingSendBar: React.FC<PendingSendBarProps> = ({
   friendUuid,
   refreshSignal,
+  bottom = 0,
   onVisibleChange,
-  onHeightChange,
 }) => {
   const intl = useIntl();
   const [pendingList, setPendingList] = useState<ChatRecordSend[]>([]);
@@ -115,15 +115,6 @@ const PendingSendBar: React.FC<PendingSendBarProps> = ({
     return () => clearInterval(timer);
   }, [pendingList.length, fetchList]);
 
-  useEffect(() => {
-    onVisibleChange(pendingList.length > 0);
-  }, [pendingList, onVisibleChange]);
-
-  // 折叠/拉伸后的实际占位高度通知父页面
-  useEffect(() => {
-    onHeightChange(collapsed ? PENDING_BAR_COLLAPSED_HEIGHT : height);
-  }, [collapsed, height, onHeightChange]);
-
   const sendingList = useMemo(
     () => pendingList.filter((r) => r.send_status === 0 || r.send_status === 1),
     [pendingList],
@@ -132,6 +123,28 @@ const PendingSendBar: React.FC<PendingSendBarProps> = ({
     () => pendingList.filter((r) => r.send_status === 2),
     [pendingList],
   );
+
+  // 可见性控制：避免对纯待发送列表过于敏感。
+  // 只有待发送（排队/发送中）记录时，需等重试次数超过 1 次才显示；
+  // 一旦出现明确失败记录则立即显示。
+  const shouldShow = useMemo(() => {
+    const hasFailed = failedList.length > 0;
+    const hasRetriedSending = sendingList.some((r) => r.retry_count > 1);
+    return hasFailed || hasRetriedSending;
+  }, [sendingList, failedList]);
+
+  useEffect(() => {
+    onVisibleChange(shouldShow);
+  }, [shouldShow, onVisibleChange]);
+
+  // 绝对定位：悬浮在 footer 顶部，不参与文档流、不挤压布局
+  const positionStyle: React.CSSProperties = {
+    position: 'absolute',
+    bottom,
+    left: 0,
+    right: 0,
+    zIndex: 3,
+  };
 
   // 顶部拖拽手柄：向上拖变高，向下拖变矮，window 级监听保证拖出组件也不断
   const handleDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -155,13 +168,14 @@ const PendingSendBar: React.FC<PendingSendBarProps> = ({
     window.addEventListener('pointerup', onUp);
   };
 
-  if (pendingList.length === 0) return null;
+  if (!shouldShow) return null;
 
   // 折叠态：窄条 + 失败计数徽标，点击整条展开
   if (collapsed) {
     return (
       <div
         className={styles.collapsedBar}
+        style={positionStyle}
         onClick={() => setCollapsed(false)}
         title={intl.formatMessage({ id: 'chat.pendingBar.expand' })}
       >
@@ -213,7 +227,7 @@ const PendingSendBar: React.FC<PendingSendBarProps> = ({
   return (
     <div
       className={`${styles.pendingBar}${dragging ? ` ${styles.dragging}` : ''}`}
-      style={{ height }}
+      style={{ ...positionStyle, height }}
     >
       <div className={styles.dragHandle} onPointerDown={handleDragStart} />
       <div className={`${styles.pane} ${styles.paneSending}`}>
