@@ -15,6 +15,8 @@
  *   onClose={() => {}} // 通话结束回调
  * />
  */
+import { DEFAULT_ICON } from '@/constants';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
 import {
   AudioMutedOutlined,
   AudioOutlined,
@@ -26,11 +28,13 @@ import {
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { get_user_info_with_cache } from '@workspace/services';
 import {
   MediaConfig,
   MediaControl,
   MediaControlState,
   MediaInfo,
+  UserInfo,
   VideoCallInvite,
 } from '@workspace/types';
 import { Button, message, Spin, Tooltip } from 'antd';
@@ -49,6 +53,28 @@ interface PrivacyVideoCallProps {
   /** 邀请信息 (被邀请方接收到的) */
   inviteInfo?: VideoCallInvite | null;
 }
+
+// ==================== 通话生命周期状态机 ====================
+
+/**
+ * 通话生命周期阶段
+ *
+ * Idle        空闲（发起方初始）
+ * Calling     发起方：已发送邀请，等待对方接受
+ * Ringing     被邀请方：收到邀请，等待用户响应（本组件内保持，实际在 PrivacyChat 弹窗响应）
+ * Connecting  接受后初始化本地媒体、建立连接
+ * InCall      通话中（媒体收发进行中）
+ * Restarting  重启媒体接收器中
+ * Ended       通话已结束（清理完成，终结态）
+ */
+type CallPhase =
+  | 'Idle'
+  | 'Calling'
+  | 'Ringing'
+  | 'Connecting'
+  | 'InCall'
+  | 'Restarting'
+  | 'Ended';
 
 // ==================== WebCodecs 常量与能力检测 ====================
 
@@ -343,14 +369,34 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
   // ==================== 组件状态 ====================
 
-  /** 加载状态 - 显示加载动画 */
-  const [isLoading, setIsLoading] = useState(true);
+  /**
+   * 通话生命周期状态机
+   * 统一管理此前分散的 isLoading / isConnected / isWaitingResponse /
+   * isInCall / isRestarting / isCallEndedRef 等布尔状态，提升可读性与合法性
+   */
+  const [callPhase, setCallPhase] = useState<CallPhase>(
+    isInitiator ? 'Idle' : 'Ringing',
+  );
 
-  /** 连接状态 - 是否已建立连接 */
-  const [isConnected, setIsConnected] = useState(false);
+  /** 同步 ref，供事件监听器读取最新状态，避免闭包陷阱 */
+  const callPhaseRef = useRef<CallPhase>(callPhase);
 
-  /** 等待响应状态 - 发起方等待对方接受 */
-  const [isWaitingResponse, setIsWaitingResponse] = useState(isInitiator);
+  /**
+   * 状态机转换动作
+   * 更新 React 状态并同步 ref，供事件监听器读取最新值
+   *
+   * @param next - 目标状态
+   */
+  const transition = useCallback((next: CallPhase) => {
+    setCallPhase(next);
+    callPhaseRef.current = next;
+  }, []);
+
+  /** 派生：发起方是否在呼叫中（等待对方接受） */
+  const isWaitingResponse = callPhase === 'Calling';
+
+  /** 派生：是否处于通话中（含重启） */
+  const isInCall = callPhase === 'InCall' || callPhase === 'Restarting';
 
   /** 媒体控制状态 - 视频/音频开关状态 */
   const [mediaState, setMediaState] = useState<MediaControlState>({
@@ -369,8 +415,40 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 等待本地接收器就绪的Promise resolve函数 */
   const localReceiverReadyResolveRef = useRef<(() => void) | null>(null);
 
-  /** 重启媒体按钮的状态 */
-  const [isRestarting, setIsRestarting] = useState(false);
+  // ==================== 好友信息（用于响铃/呼叫界面展示） ====================
+
+  /** 对方用户信息（昵称、头像等） */
+  const [friendUserInfo, setFriendUserInfo] = useState<UserInfo | null>(null);
+
+  /** 加载对方用户信息（优先本地缓存，未命中再请求接口） */
+  useEffect(() => {
+    let cancelled = false;
+    if (!friendId) return;
+    (async () => {
+      try {
+        const result = await get_user_info_with_cache(friendId);
+        if (!cancelled) {
+          setFriendUserInfo(result.user_info);
+        }
+      } catch (error) {
+        console.error('[PrivacyVideoCall] 获取对方用户信息失败:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [friendId]);
+
+  /** 对方头像地址（通过 avatarMap 将 icon bizId 转换为可显示的本地文件路径） */
+  const { avatarMap } = useAvatarMap([friendUserInfo?.icon]);
+  const friendAvatar = avatarMap.get(friendUserInfo?.icon || '') || '';
+
+  /** 对方显示名称：优先邀请信息里的名字，其次用户信息昵称，最后兜底 */
+  const friendName =
+    inviteInfo?.from_name || friendUserInfo?.username || '对方';
+
+  /** 派生：是否正在重启媒体接收器 */
+  const isRestarting = callPhase === 'Restarting';
 
   /** 跟踪组件是否真正挂载（用于避免 useEffect cleanup 在依赖变化时误触发） */
   const isMountedRef = useRef<boolean>(false);
@@ -465,11 +543,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       });
       dlog('媒体配置已发送');
 
-      // 更新状态
-      setIsConnected(true);
+      // 更新状态：进入通话阶段
+      transition('InCall');
       setMediaState((prev) => ({ ...prev, isInCall: true }));
-      setIsLoading(false);
-      setIsWaitingResponse(false);
 
       // 重要：发送媒体接收就绪信号，通知对方可以开始发送媒体数据
       // 这是解决视频黑屏问题的关键：确保双方都准备好后再开始传输
@@ -486,9 +562,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     } catch (error) {
       console.error('初始化本地媒体失败:', error);
       message.error('无法访问摄像头或麦克风');
-      setIsLoading(false);
+      transition('Ended');
     }
-  }, [friendId, isRemoteReceiverReady, sendMediaReady]);
+  }, [friendId, isRemoteReceiverReady, sendMediaReady, transition]);
 
   // 同步 ref，确保事件监听器始终调用最新版本
   initLocalMediaRef.current = initLocalMedia;
@@ -1755,7 +1831,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         'video_call_accept',
         (event) => {
           console.log('对方接受了视频通话:', event.payload);
-          setIsWaitingResponse(false);
+          transition('Connecting');
           message.success('对方已接受视频通话');
           // 通过 ref 调用最新版本的 initLocalMedia，避免闭包陷阱
           initLocalMediaRef.current();
@@ -1767,7 +1843,6 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         'video_call_reject',
         (event) => {
           console.log('对方拒绝了视频通话:', event.payload);
-          setIsWaitingResponse(false);
           message.info('对方拒绝了视频通话');
           // 关闭视频通话（本方主动结束，通知对方）
           handleEndCall(true);
@@ -2091,6 +2166,8 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         return;
       }
       isCallEndedRef.current = true;
+      // 状态机：进入结束阶段（终结态，不再接受其他转换）
+      transition('Ended');
       dlog(
         `结束通话: 通知对方=${notifyOtherParty} 视频编码器=${
           videoEncoderRef.current ? '运行中' : '无'
@@ -2271,7 +2348,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       // 调用关闭回调
       onClose?.();
     },
-    [friendId, onClose, stopMediaInfoReporting],
+    [friendId, onClose, stopMediaInfoReporting, transition],
   );
 
   // ==================== 退出隐私聊天 ====================
@@ -2324,7 +2401,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       return;
     }
 
-    setIsRestarting(true);
+    transition('Restarting');
     console.log('[PrivacyVideoCall] 开始重启媒体接收器...');
     dlog('开始重启媒体接收器');
 
@@ -2471,7 +2548,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       console.error('重启媒体接收器失败:', error);
       message.error('重启媒体接收器失败');
     } finally {
-      setIsRestarting(false);
+      // 状态机：恢复通话阶段（仅当未结束通话时）
+      if (!isCallEndedRef.current) {
+        transition('InCall');
+      }
     }
   }, [
     isRestarting,
@@ -2479,6 +2559,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     sendMediaReady,
     isRemoteReceiverReady,
     startSendingMedia,
+    transition,
   ]);
 
   // ==================== 发送视频通话邀请 ====================
@@ -2493,13 +2574,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         targetUuid: friendId,
         fromName: null, // 可以传入当前用户昵称
       });
-      setIsWaitingResponse(true);
+      transition('Calling');
     } catch (error) {
       console.error('发送视频通话邀请失败:', error);
       message.error('发送视频通话邀请失败');
       handleEndCall(true);
     }
-  }, [friendId, handleEndCall]);
+  }, [friendId, handleEndCall, transition]);
 
   // ==================== 发送视频通话响应 ====================
 
@@ -2607,13 +2688,45 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
   return (
     <div className={styles.videoCallContainer}>
-      {/* 加载状态遮罩 */}
-      {isLoading && (
+      {/* 响铃/呼叫遮罩 - 等待对方接听 */}
+      {(callPhase === 'Calling' || callPhase === 'Ringing') && (
+        <div className={styles.ringOverlay}>
+          <div className={styles.ringContent}>
+            <div className={styles.ringAvatarWrap}>
+              <img
+                className={styles.ringAvatar}
+                src={friendAvatar || DEFAULT_ICON}
+                alt="avatar"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_ICON;
+                }}
+              />
+            </div>
+            <div className={styles.ringName}>{friendName}</div>
+            <div className={styles.ringStatus}>
+              {isWaitingResponse ? '正在呼叫对方...' : '等待对方接听...'}
+            </div>
+            <div className={styles.ringActions}>
+              <Tooltip title="取消通话">
+                <Button
+                  type="primary"
+                  danger
+                  shape="circle"
+                  size="large"
+                  icon={<PhoneOutlined />}
+                  onClick={() => handleEndCall(true)}
+                  className={styles.ringCancelBtn}
+                />
+              </Tooltip>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 加载状态遮罩 - 建立连接中 */}
+      {callPhase === 'Connecting' && (
         <div className={styles.loadingOverlay}>
-          <Spin
-            size="large"
-            tip={isWaitingResponse ? '等待对方接受...' : '正在建立视频连接...'}
-          />
+          <Spin size="large" tip="正在建立视频连接..." />
         </div>
       )}
 
@@ -2630,11 +2743,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
           {/* 远程音频 - 对方音频 */}
           <audio ref={remoteAudioRef} autoPlay />
           {/* 等待连接提示 */}
-          {!isConnected && (
+          {!isInCall && callPhase !== 'Calling' && callPhase !== 'Ringing' && (
             <div className={styles.waitingOverlay}>
-              <span>
-                {isWaitingResponse ? '等待对方接受...' : '等待对方连接...'}
-              </span>
+              <span>等待对方连接...</span>
             </div>
           )}
         </div>
@@ -2697,7 +2808,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
             size="large"
             icon={<ReloadOutlined spin={isRestarting} />}
             onClick={handleRestartMedia}
-            disabled={isRestarting || !isConnected}
+            disabled={isRestarting || !isInCall}
             className={styles.controlButton}
           />
         </Tooltip>

@@ -1,12 +1,18 @@
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { DEFAULT_ICON } from '@/constants';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { useBearStore } from '@/store/store';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  VideoCameraOutlined,
+} from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { useIntl } from '@umijs/max';
-import { FriendInfo, HttpResponse, P2pInitMsg } from '@workspace/types';
+import { get_user_info_with_cache } from '@workspace/services';
+import { HttpResponse, P2pInitMsg, UserInfo } from '@workspace/types';
 import { Button } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
@@ -18,13 +24,42 @@ const MediaPage: React.FC = () => {
   const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);
 
   console.log('requestMediaMsg', requestMediaMsg);
-  const [userInfo, setUserInfo] = useState<FriendInfo>();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [localP2pInitMsg, setLocalP2pInitMsg] = useState<P2pInitMsg | null>(
     null,
   );
   const [localMediaType, setLocalMediaType] = useState<number>(0);
 
   const currentWindow = window.getCurrentWindow();
+
+  // 请求方 UUID（优先 URL 参数，其次 store）
+  const requestUuid =
+    localP2pInitMsg?.request_uuid ||
+    requestMediaMsg?.p2pInitMsg?.request_uuid ||
+    '';
+
+  // 加载请求方用户信息（昵称、头像）
+  useEffect(() => {
+    let cancelled = false;
+    if (!requestUuid) return;
+    (async () => {
+      try {
+        const result = await get_user_info_with_cache(requestUuid);
+        if (!cancelled) {
+          setUserInfo(result.user_info);
+        }
+      } catch (e) {
+        console.error('[Handler] 获取请求方用户信息失败:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestUuid]);
+
+  // 请求方头像地址（icon bizId → 可显示文件路径）
+  const { avatarMap } = useAvatarMap([userInfo?.icon]);
+  const friendAvatar = avatarMap.get(userInfo?.icon || '') || '';
 
   // 从URL参数读取数据
   useEffect(() => {
@@ -105,18 +140,26 @@ const MediaPage: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.content}>
         <div className={styles.left}>
-          <div>{userInfo?.account || intl.formatMessage({ id: 'media.defaultUserName' })}</div>
-          <img
-            src={userInfo?.icon || DEFAULT_ICON}
-            alt={intl.formatMessage({ id: 'media.userAvatar' })}
-            className={styles.imgItem}
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = DEFAULT_ICON;
-            }}
-          />
+          <div className={styles.avatarWrap}>
+            <img
+              src={friendAvatar || DEFAULT_ICON}
+              alt={intl.formatMessage({ id: 'media.userAvatar' })}
+              className={styles.imgItem}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = DEFAULT_ICON;
+              }}
+            />
+          </div>
         </div>
         <div className={styles.right}>
-          {intl.formatMessage({ id: 'media.privacyModeRequest' })}
+          <div className={styles.name}>
+            {userInfo?.username ||
+              intl.formatMessage({ id: 'media.defaultUserName' })}
+          </div>
+          <div className={styles.text}>
+            <VideoCameraOutlined className={styles.textIcon} />
+            {intl.formatMessage({ id: 'media.privacyModeRequest' })}
+          </div>
           <div className={styles.btn}>
             <div className={styles.cancelBtn}>
               <Button
