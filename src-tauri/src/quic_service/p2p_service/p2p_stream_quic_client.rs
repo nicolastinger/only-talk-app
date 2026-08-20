@@ -9,6 +9,8 @@ use quinn::{ClientConfig, Endpoint};
 use rustls::ClientConfig as RustlsClientConfig;
 use tokio::sync::Mutex;
 
+use crate::dao::app_log_db::log_quic_event;
+use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO};
 use crate::entity::p2p_models::P2pChannelType;
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
@@ -39,9 +41,24 @@ pub async fn run_client(
     endpoint.set_default_client_config(config);
 
     info!("Connecting to server at {} from local {}", server_addr, local_addr);
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_client",
+        &format!("Connecting to server at {} from local {}", server_addr, local_addr),
+        &server_addr.to_string(),
+    )
+    .await;
     // 连接到服务器
     let connection = endpoint.connect(server_addr, "localhost")?.await?;
-    info!("Connected to server at {}", connection.remote_address());
+    let remote_addr = connection.remote_address().to_string();
+    info!("Connected to server at {}", remote_addr);
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_client",
+        &format!("Connected to server at {}", remote_addr),
+        &remote_addr,
+    )
+    .await;
 
     let (p2p_request_token, target_uuid) = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
@@ -77,6 +94,13 @@ pub async fn run_client(
                 channel_type: P2pChannelType::Default,
             };
             info!("[p2p客户端]添加连接 {} channel: default", target_uuid);
+            let _ = log_quic_event(
+                LOG_LEVEL_INFO,
+                "p2p_client",
+                &format!("[p2p客户端]添加连接 {} channel: default", target_uuid),
+                &remote_addr,
+            )
+            .await;
             user_channels.insert("default".to_string(), target_send_stream);
         }
     }
@@ -94,6 +118,13 @@ pub async fn run_client(
                 channel_type: P2pChannelType::MediaInfo,
             };
             info!("[p2p客户端]添加连接 {} channel: media_info", target_uuid);
+            let _ = log_quic_event(
+                LOG_LEVEL_INFO,
+                "p2p_client",
+                &format!("[p2p客户端]添加连接 {} channel: media_info", target_uuid),
+                &remote_addr,
+            )
+            .await;
             user_channels.insert("media_info".to_string(), target_send_stream);
         }
     }
@@ -113,6 +144,13 @@ pub async fn run_client(
                 channel_type: P2pChannelType::MediaData,
             };
             info!("[p2p客户端]添加连接 {} channel: media_data", target_uuid);
+            let _ = log_quic_event(
+                LOG_LEVEL_INFO,
+                "p2p_client",
+                &format!("[p2p客户端]添加连接 {} channel: media_data", target_uuid),
+                &remote_addr,
+            )
+            .await;
             user_channels.insert("media_data".to_string(), target_send_stream);
         }
     }
@@ -130,11 +168,25 @@ pub async fn run_client(
                 channel_type: P2pChannelType::File,
             };
             info!("[p2p客户端]添加连接 {} channel: file", target_uuid);
+            let _ = log_quic_event(
+                LOG_LEVEL_INFO,
+                "p2p_client",
+                &format!("[p2p客户端]添加连接 {} channel: file", target_uuid),
+                &remote_addr,
+            )
+            .await;
             user_channels.insert("file".to_string(), target_send_stream);
         }
     }
 
     info!("建立p2p客户端成功! 已建立Default、MediaInfo、MediaData、File四个通道");
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_client",
+        "建立p2p客户端成功! 已建立Default、MediaInfo、MediaData、File四个通道",
+        &remote_addr,
+    )
+    .await;
 
     // 设置p2p连接活跃状态
     {
@@ -147,6 +199,7 @@ pub async fn run_client(
     // ==================== 接收Default通道消息 ====================
     let head_length = 9;
     let buffer_msg_default: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    let remote_addr_for_default = remote_addr.clone();
     tokio::spawn(async move {
         loop {
             // 接收响应 - 使用10MB缓冲区以容纳视频帧数据
@@ -164,14 +217,35 @@ pub async fn run_client(
                     .await
                     {
                         error!("处理default通道消息失败: {}", e);
+                        let _ = log_quic_event(
+                            LOG_LEVEL_ERROR,
+                            "p2p_client",
+                            &format!("处理default通道消息失败: {}", e),
+                            &remote_addr_for_default,
+                        )
+                        .await;
                     }
                 }
                 Ok(None) => {
                     info!("Default channel stream closed");
+                    let _ = log_quic_event(
+                        LOG_LEVEL_INFO,
+                        "p2p_client",
+                        "Default channel stream closed",
+                        &remote_addr_for_default,
+                    )
+                    .await;
                     break;
                 }
                 Err(e) => {
                     error!("Failed to read from default channel stream: {}", e);
+                    let _ = log_quic_event(
+                        LOG_LEVEL_ERROR,
+                        "p2p_client",
+                        &format!("Failed to read from default channel stream: {}", e),
+                        &remote_addr_for_default,
+                    )
+                    .await;
                     break;
                 }
             }
@@ -180,6 +254,7 @@ pub async fn run_client(
 
     // ==================== 接收MediaInfo通道消息 ====================
     let buffer_msg_media: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    let remote_addr_for_media = remote_addr.clone();
     tokio::spawn(async move {
         loop {
             let mut buf = vec![0u8; 1024 * 1024]; // 媒体信息通常较小，1MB足够
@@ -196,14 +271,35 @@ pub async fn run_client(
                     .await
                     {
                         error!("处理media_info通道消息失败: {}", e);
+                        let _ = log_quic_event(
+                            LOG_LEVEL_ERROR,
+                            "p2p_client",
+                            &format!("处理media_info通道消息失败: {}", e),
+                            &remote_addr_for_media,
+                        )
+                        .await;
                     }
                 }
                 Ok(None) => {
                     info!("Media_info channel stream closed");
+                    let _ = log_quic_event(
+                        LOG_LEVEL_INFO,
+                        "p2p_client",
+                        "Media_info channel stream closed",
+                        &remote_addr_for_media,
+                    )
+                    .await;
                     break;
                 }
                 Err(e) => {
                     error!("Failed to read from media_info channel stream: {}", e);
+                    let _ = log_quic_event(
+                        LOG_LEVEL_ERROR,
+                        "p2p_client",
+                        &format!("Failed to read from media_info channel stream: {}", e),
+                        &remote_addr_for_media,
+                    )
+                    .await;
                     break;
                 }
             }
@@ -218,6 +314,7 @@ pub async fn run_client(
 
     // ==================== 接收File通道消息 ====================
     let buffer_msg_file: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    let remote_addr_for_file = remote_addr.clone();
     tokio::spawn(async move {
         loop {
             let mut buf = vec![0u8; 1024 * 1024 * 10]; // 文件分片数据较大，10MB缓冲
@@ -234,14 +331,35 @@ pub async fn run_client(
                     .await
                     {
                         error!("处理file通道消息失败: {}", e);
+                        let _ = log_quic_event(
+                            LOG_LEVEL_ERROR,
+                            "p2p_client",
+                            &format!("处理file通道消息失败: {}", e),
+                            &remote_addr_for_file,
+                        )
+                        .await;
                     }
                 }
                 Ok(None) => {
                     info!("File channel stream closed");
+                    let _ = log_quic_event(
+                        LOG_LEVEL_INFO,
+                        "p2p_client",
+                        "File channel stream closed",
+                        &remote_addr_for_file,
+                    )
+                    .await;
                     break;
                 }
                 Err(e) => {
                     error!("Failed to read from file channel stream: {}", e);
+                    let _ = log_quic_event(
+                        LOG_LEVEL_ERROR,
+                        "p2p_client",
+                        &format!("Failed to read from file channel stream: {}", e),
+                        &remote_addr_for_file,
+                    )
+                    .await;
                     break;
                 }
             }

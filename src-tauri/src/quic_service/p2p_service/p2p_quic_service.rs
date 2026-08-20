@@ -7,6 +7,8 @@ use quinn::{RecvStream, SendStream};
 use tauri::Emitter;
 use tokio::sync::Mutex;
 
+use crate::dao::app_log_db::log_quic_event;
+use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
 use crate::entity::p2p_models::{
     MediaFrameHeader, MediaFrameType, P2pChannelType, P2pFileTransferRequest,
     P2pFileTransferResponse, P2pMediaConfig, P2pMediaControl, P2pMediaInfo, P2pVideoConfig,
@@ -386,6 +388,13 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
 /// - `recv_stream`: QUIC接收流
 pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
     info!("MediaData通道接收循环启动（轻量级帧格式）");
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_service",
+        "MediaData通道接收循环启动（轻量级帧格式）",
+        "",
+    )
+    .await;
 
     // 创建取消令牌并注册到全局，允许外部停止此接收循环
     let cancel_token = tokio_util::sync::CancellationToken::new();
@@ -405,16 +414,37 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
                     Ok(()) => {}
                     Err(quinn::ReadExactError::FinishedEarly) => {
                         info!("MediaData通道流提前关闭");
+                        let _ = log_quic_event(
+                            LOG_LEVEL_INFO,
+                            "p2p_service",
+                            "MediaData通道流提前关闭",
+                            "",
+                        )
+                        .await;
                         break;
                     }
                     Err(quinn::ReadExactError::ReadError(e)) => {
                         error!("MediaData通道读取头部失败: {}", e);
+                        let _ = log_quic_event(
+                            LOG_LEVEL_ERROR,
+                            "p2p_service",
+                            &format!("MediaData通道读取头部失败: {}", e),
+                            "",
+                        )
+                        .await;
                         break;
                     }
                 }
             }
             _ = cancel_token.cancelled() => {
                 info!("MediaData通道收到取消信号，停止接收循环");
+                let _ = log_quic_event(
+                    LOG_LEVEL_INFO,
+                    "p2p_service",
+                    "MediaData通道收到取消信号，停止接收循环",
+                    "",
+                )
+                .await;
                 break;
             }
         }
@@ -424,6 +454,13 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
             Ok(h) => h,
             Err(e) => {
                 error!("MediaData通道解析帧头失败: {}", e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "p2p_service",
+                    &format!("MediaData通道解析帧头失败: {}", e),
+                    "",
+                )
+                .await;
                 break;
             }
         };
@@ -434,6 +471,13 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
             Ok(()) => {}
             Err(e) => {
                 error!("MediaData通道读取帧体失败 (期望{}字节): {}", header.data_len, e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "p2p_service",
+                    &format!("MediaData通道读取帧体失败 (期望{}字节): {}", header.data_len, e),
+                    "",
+                )
+                .await;
                 break;
             }
         }
@@ -465,6 +509,13 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
     }
 
     info!("MediaData通道接收循环结束");
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_service",
+        "MediaData通道接收循环结束",
+        "",
+    )
+    .await;
 }
 
 /// 发送媒体帧到MediaData通道（轻量级格式）
@@ -500,5 +551,12 @@ pub async fn send_media_frame(
 
     // 如果重试后仍然失败，返回错误（但不阻塞调用方）
     warn!("MediaData通道未就绪，丢弃媒体帧: type={:?}, size={}", frame_type, data.len());
+    let _ = log_quic_event(
+        LOG_LEVEL_WARN,
+        "p2p_service",
+        &format!("MediaData通道未就绪，丢弃媒体帧: type={:?}, size={}", frame_type, data.len()),
+        "",
+    )
+    .await;
     Ok(())
 }

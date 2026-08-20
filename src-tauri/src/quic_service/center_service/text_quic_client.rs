@@ -2,6 +2,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::dao::app_log_db::log_quic_event;
+use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
@@ -48,6 +50,13 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             }
             *state = QuicConnectionState::Connecting;
             info!("QUIC 状态: Idle/Disconnected → Connecting");
+            let _ = log_quic_event(
+                LOG_LEVEL_INFO,
+                "center_client",
+                "QUIC 状态: Idle/Disconnected → Connecting",
+                &server_addr.to_string(),
+            )
+            .await;
         }
 
         // 尝试连接
@@ -58,6 +67,13 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
                     let mut state = GLOBAL_QUIC_STATE.write().await;
                     *state = QuicConnectionState::Connected;
                     info!("QUIC 状态: Connecting → Connected");
+                    let _ = log_quic_event(
+                        LOG_LEVEL_INFO,
+                        "center_client",
+                        "QUIC 状态: Connecting → Connected",
+                        &server_addr.to_string(),
+                    )
+                    .await;
                     // 发送已连接事件到前端
                     if let Some(handle) = APP_HANDLE.get() {
                         let _ = handle.emit("quic_connected", "QUIC 连接已恢复");
@@ -84,6 +100,13 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             }
             Err(e) => {
                 error!("QUIC 连接失败: {}", e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "center_client",
+                    &format!("QUIC 连接失败: {}", e),
+                    &server_addr.to_string(),
+                )
+                .await;
             }
         }
 
@@ -106,6 +129,13 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             }
             *state = QuicConnectionState::Disconnected;
             info!("QUIC 状态 → Disconnected，{} 秒后重试", RECONNECT_DELAY_SECS);
+            let _ = log_quic_event(
+                LOG_LEVEL_INFO,
+                "center_client",
+                &format!("QUIC 状态 → Disconnected，{} 秒后重试", RECONNECT_DELAY_SECS),
+                &server_addr.to_string(),
+            )
+            .await;
         }
 
         // 持续发送断开通知到 React（每 DISCONNECT_BROADCAST_SECS 秒一次）
@@ -155,6 +185,7 @@ async fn try_connect_once(
     // bidi recv loop
     {
         let tx = disconnect_tx.clone();
+        let server_addr = server_addr;
         tokio::spawn(async move {
             let mut buffer = vec![0u8; 1024 * 8];
             loop {
@@ -177,6 +208,13 @@ async fn try_connect_once(
                     }
                     Ok(None) => {
                         info!("[客户端] bidi recv 流关闭");
+                        let _ = log_quic_event(
+                            LOG_LEVEL_INFO,
+                            "center_client",
+                            "[客户端] bidi recv 流关闭",
+                            &server_addr.to_string(),
+                        )
+                        .await;
                         let _ = tx.send(true);
                         break;
                     }
@@ -186,6 +224,17 @@ async fn try_connect_once(
                             e,
                             std::error::Error::source(&e)
                         );
+                        let _ = log_quic_event(
+                            LOG_LEVEL_ERROR,
+                            "center_client",
+                            &format!(
+                                "[客户端] bidi recv 读取错误: {} (source: {:?})",
+                                e,
+                                std::error::Error::source(&e)
+                            ),
+                            &server_addr.to_string(),
+                        )
+                        .await;
                         let _ = tx.send(true);
                         break;
                     }
@@ -198,6 +247,7 @@ async fn try_connect_once(
     {
         let conn_for_uni = connection.clone();
         let tx = disconnect_tx.clone();
+        let server_addr = server_addr;
         tokio::spawn(async move {
             let uni_buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
             let mut disconnect_rx = tx.subscribe();
@@ -224,6 +274,13 @@ async fn try_connect_once(
                                     Ok(None) => {}
                                     Err(e) => {
                                         error!("[客户端] uni流读取错误: {}", e);
+                                        let _ = log_quic_event(
+                                            LOG_LEVEL_ERROR,
+                                            "center_client",
+                                            &format!("[客户端] uni流读取错误: {}", e),
+                                            &server_addr.to_string(),
+                                        )
+                                        .await;
                                     }
                                 }
                             }
@@ -231,6 +288,13 @@ async fn try_connect_once(
                                 // 瞬时错误不退出，等1秒后继续接收
                                 // 真正的断连由 bidi recv 或心跳检测 → disconnect_tx 通知退出
                                 warn!("[客户端] uni accept 错误: {}, 1秒后重试", e);
+                                let _ = log_quic_event(
+                                    LOG_LEVEL_WARN,
+                                    "center_client",
+                                    &format!("[客户端] uni accept 错误: {}, 1秒后重试", e),
+                                    &server_addr.to_string(),
+                                )
+                                .await;
                                 tokio::time::sleep(Duration::from_secs(1)).await;
                             }
                         }
@@ -258,8 +322,9 @@ async fn try_connect_once(
     {
         let conn = connection.clone();
         let tx = disconnect_tx.clone();
+        let server_addr = server_addr;
         tokio::spawn(async move {
-            let ping_result = send_ping_msg(conn, tx).await;
+            let ping_result = send_ping_msg(conn, tx, server_addr).await;
             if ping_result.is_err() {
                 error!("心跳任务异常退出: {}", ping_result.unwrap_err());
             }
@@ -311,7 +376,9 @@ async fn init_send_msg(
 async fn send_ping_msg(
     conn: Connection,
     disconnect_tx: watch::Sender<bool>,
+    server_addr: SocketAddr,
 ) -> Result<(), anyhow::Error> {
+    let remote_addr = server_addr.to_string();
     let ping_uuid = Uuid::new_v4();
     let ping_uuid = ping_uuid.to_string();
     insert_user_info("ping_uuid", &ping_uuid).await?;
@@ -331,12 +398,26 @@ async fn send_ping_msg(
     match send_via_new_stream(&conn, &ping_msg).await {
         Ok(_) => {
             info!("初始心跳发送成功");
+            let _ = log_quic_event(
+                LOG_LEVEL_INFO,
+                "center_client",
+                "初始心跳发送成功",
+                &remote_addr,
+            )
+            .await;
             // 初始心跳成功即开始 PONG 超时计时，无需等待首个 PONG 返回
             let now = get_now_time_stamp_as_millis().unwrap_or(0).to_string();
             insert_user_info("last_pong_time", &now).await?;
         }
         Err(e) => {
             error!("初始心跳发送失败: {}", e);
+            let _ = log_quic_event(
+                LOG_LEVEL_ERROR,
+                "center_client",
+                &format!("初始心跳发送失败: {}", e),
+                &remote_addr,
+            )
+            .await;
             let _ = disconnect_tx.send(true);
             return Err(anyhow!("初始心跳发送失败: {}", e));
         }
@@ -345,6 +426,13 @@ async fn send_ping_msg(
     loop {
         tokio::time::sleep(Duration::from_secs(10)).await;
         info!("发送quic客户端心跳");
+        let _ = log_quic_event(
+            LOG_LEVEL_INFO,
+            "center_client",
+            "发送quic客户端心跳",
+            &remote_addr,
+        )
+        .await;
 
         // 检查心跳实例是否一致
         let current_ping_uuid = get_user_info("ping_uuid").await.unwrap_or_default();
@@ -366,6 +454,13 @@ async fn send_ping_msg(
         let now = get_now_time_stamp_as_millis().unwrap_or(0);
         if last_pong > 0 && now - last_pong > PONG_TIMEOUT_MS {
             error!("超过{}秒未收到服务端PONG，判定连接异常", PONG_TIMEOUT_MS / 1000);
+            let _ = log_quic_event(
+                LOG_LEVEL_ERROR,
+                "center_client",
+                &format!("超过{}秒未收到服务端PONG，判定连接异常", PONG_TIMEOUT_MS / 1000),
+                &remote_addr,
+            )
+            .await;
             let _ = disconnect_tx.send(true);
             insert_user_info("quic_disconnected", "true").await?;
             break;
@@ -393,10 +488,24 @@ async fn send_ping_msg(
             Err(e) => {
                 ping_lost_count += 1;
                 error!("心跳发送失败 (第{}次): {}", ping_lost_count, e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "center_client",
+                    &format!("心跳发送失败 (第{}次): {}", ping_lost_count, e),
+                    &remote_addr,
+                )
+                .await;
                 insert_user_info("ping_lost_count", &ping_lost_count.to_string()).await?;
 
                 if ping_lost_count > 3 {
                     error!("心跳连续失败超过3次，触发断连");
+                    let _ = log_quic_event(
+                        LOG_LEVEL_ERROR,
+                        "center_client",
+                        "心跳连续失败超过3次，触发断连",
+                        &remote_addr,
+                    )
+                    .await;
                     // 通知主循环断开
                     let _ = disconnect_tx.send(true);
                     // 标记用户离线

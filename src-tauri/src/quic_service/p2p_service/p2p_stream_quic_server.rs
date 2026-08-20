@@ -7,6 +7,8 @@ use log::{error, info};
 use quinn::Endpoint;
 use tokio::sync::Mutex;
 
+use crate::dao::app_log_db::log_quic_event;
+use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO};
 use crate::entity::p2p_models::{P2pChannelType, UserAddressInfo};
 use crate::entity::quic_connection::ConnectionType;
 use crate::quic_service::dangerous_configuration::configure_server;
@@ -94,16 +96,38 @@ pub async fn run_server(addr: SocketAddr) -> Result<(), anyhow::Error> {
     let endpoint = Endpoint::server(configure_server(), addr)?;
 
     info!("quic服务器启动 {}", addr);
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_server",
+        &format!("quic服务器启动 {}", addr),
+        &addr.to_string(),
+    )
+    .await;
 
     // 接受连接
     while let Some(conn) = endpoint.accept().await {
         let connection = conn.await?;
-        info!("接收连接来源于 {}", connection.remote_address());
+        let remote_addr = connection.remote_address().to_string();
+        info!("接收连接来源于 {}", remote_addr);
+        let _ = log_quic_event(
+            LOG_LEVEL_INFO,
+            "p2p_server",
+            &format!("接收连接来源于 {}", remote_addr),
+            &remote_addr,
+        )
+        .await;
 
         // 处理连接
         tokio::spawn(async move {
             if let Err(e) = handle_connection(connection).await {
                 error!("Connection error: {}", e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "p2p_server",
+                    &format!("Connection error: {}", e),
+                    &remote_addr,
+                )
+                .await;
             }
         });
     }
@@ -112,6 +136,7 @@ pub async fn run_server(addr: SocketAddr) -> Result<(), anyhow::Error> {
 }
 
 async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::Error> {
+    let remote_addr = connection.remote_address().to_string();
     let target_uuid = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
         let target_uuid = guard.get("target_uuid").ok_or(anyhow!("no target uuid"))?;
@@ -157,6 +182,13 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
                     channel_type: channel_type.clone(),
                 };
                 info!("添加p2p连接 {} channel: {}", target_uuid, channel_key);
+                let _ = log_quic_event(
+                    LOG_LEVEL_INFO,
+                    "p2p_server",
+                    &format!("添加p2p连接 {} channel: {}", target_uuid, channel_key),
+                    &remote_addr,
+                )
+                .await;
                 user_channels.insert(channel_key.clone(), target_send_stream);
             }
         }
@@ -173,6 +205,7 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
             });
         } else {
             // 其他通道仍使用通用的HeadMsg + TextQuicMsg协议
+            let remote_addr_for_stream = remote_addr.clone();
             tokio::spawn(async move {
                 loop {
                     let mut buf = vec![0u8; 1024 * 1024 * 10];
@@ -188,10 +221,24 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
                             .await
                             {
                                 error!("处理{}通道消息失败: {}", recv_channel_key, e);
+                                let _ = log_quic_event(
+                                    LOG_LEVEL_ERROR,
+                                    "p2p_server",
+                                    &format!("处理{}通道消息失败: {}", recv_channel_key, e),
+                                    &remote_addr_for_stream,
+                                )
+                                .await;
                             }
                         }
                         Ok(None) => {
                             info!("Stream closed on channel {}", recv_channel_key);
+                            let _ = log_quic_event(
+                                LOG_LEVEL_INFO,
+                                "p2p_server",
+                                &format!("Stream closed on channel {}", recv_channel_key),
+                                &remote_addr_for_stream,
+                            )
+                            .await;
                             break;
                         }
                         Err(e) => {
@@ -199,6 +246,16 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
                                 "Failed to read from stream on channel {}: {}",
                                 recv_channel_key, e
                             );
+                            let _ = log_quic_event(
+                                LOG_LEVEL_ERROR,
+                                "p2p_server",
+                                &format!(
+                                    "Failed to read from stream on channel {}: {}",
+                                    recv_channel_key, e
+                                ),
+                                &remote_addr_for_stream,
+                            )
+                            .await;
                             break;
                         }
                     }
@@ -212,5 +269,12 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
     // 连接结束后清理该用户的所有channel
     P2P_STREAM_SENDER.remove(&target_uuid);
     info!("结束p2p服务端连接，已清理用户 {} 的所有channel", target_uuid);
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_server",
+        &format!("结束p2p服务端连接，已清理用户 {} 的所有channel", target_uuid),
+        &remote_addr,
+    )
+    .await;
     Ok(())
 }

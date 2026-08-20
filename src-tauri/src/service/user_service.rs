@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 
 use crate::cmd::api_controller::{get_request, post_request};
+use crate::dao::app_log_db::log_quic_event;
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
 use crate::dao::group_message_read::query_group_last_read_msg;
 use crate::dao::init_db::init_sqlite;
@@ -10,6 +11,7 @@ use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
 use crate::dto::add_read_chat_record::AddReadChatRecord;
 use crate::dto::http_result::HttpResult;
+use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO};
 use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::system_notification::SystemNotification;
@@ -362,6 +364,7 @@ pub async fn add_user_map(key: &str, value: &str) -> Result<(), String> {
 /// 设置状态为 Idle 停止重连循环，清理连接资源
 pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始断开QUIC连接");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "开始断开QUIC连接", "").await;
 
     // 设置状态为 Idle，停止 run_client 重连循环
     *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Idle;
@@ -377,6 +380,7 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
         let mut server_list = GLOBAL_QUIC_SERVER_LIST.write().await;
         server_list.clear();
         info!("已清理QUIC服务器连接列表");
+        let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "已清理QUIC服务器连接列表", "").await;
     }
 
     // 标记用户离线状态
@@ -391,6 +395,7 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     }
 
     info!("QUIC连接已断开（状态: Idle）");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC连接已断开（状态: Idle）", "").await;
     Ok(())
 }
 
@@ -398,6 +403,7 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
 /// 如果 run_client 循环仍在运行，先停止再重启
 pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始重新连接QUIC服务");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "开始重新连接QUIC服务", "").await;
 
     // 先断开现有连接（设 Idle 会停止当前循环）
     disconnect_quic().await?;
@@ -413,12 +419,31 @@ pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
     tokio::spawn(async move {
         let addr = discover_quic_server_addr().await;
         match run_client(addr).await {
-            Ok(_) => info!("QUIC连接循环正常退出"),
-            Err(e) => error!("QUIC连接循环异常退出: {}", e),
+            Ok(_) => {
+                info!("QUIC连接循环正常退出");
+                let _ = log_quic_event(
+                    LOG_LEVEL_INFO,
+                    "user_service",
+                    "QUIC连接循环正常退出",
+                    &addr.to_string(),
+                )
+                .await;
+            }
+            Err(e) => {
+                error!("QUIC连接循环异常退出: {}", e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "user_service",
+                    &format!("QUIC连接循环异常退出: {}", e),
+                    &addr.to_string(),
+                )
+                .await;
+            }
         }
     });
 
     info!("QUIC重连请求已发送");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC重连请求已发送", "").await;
     Ok(())
 }
 

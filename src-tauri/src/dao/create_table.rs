@@ -1,6 +1,7 @@
 use sqlx::SqlitePool;
 
 use crate::dao::store::init_sqlite;
+use crate::entity::app_log::AppLog;
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::entity::chat_record_read::ChatRecordRead;
@@ -33,6 +34,7 @@ pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Err
 
 /// 初始化数据库
 pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
+    init_sqlite::<AppLog>(pool_sqlite).await?;
     init_sqlite::<ChatRecordRead>(pool_sqlite).await?;
     init_sqlite::<ChatSession>(pool_sqlite).await?;
     init_sqlite::<Friend>(pool_sqlite).await?;
