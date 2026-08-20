@@ -223,6 +223,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 媒体发送是否已启动 - 防止 initLocalMedia 与 media_receiver_ready 双重启动 */
   const isMediaSendingRef = useRef<boolean>(false);
 
+  /** 媒体发送延迟启动定时器 - 建立通话后延迟 1s 再开始采集发送，保证对端接收器先就绪 */
+  const mediaSendDelayTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   /** 待解码视频数据帧缓冲 - 解码器配置完成前暂存，配置好后按序刷新 */
   const pendingVideoFramesRef = useRef<EncodedVideoChunk[]>([]);
 
@@ -495,11 +498,19 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 只有在对方媒体接收器准备好后才能调用
    */
   const startSendingMedia = useCallback(() => {
-    if (localStreamRef.current) {
-      console.log('[PrivacyVideoCall] 开始发送媒体数据');
-      startMediaRecording(localStreamRef.current);
-      startMediaInfoReporting();
+    if (!localStreamRef.current) return;
+
+    // 建立通话后延迟 1s 再开始采集发送视频/音频数据，
+    // 确保对端媒体接收器已充分就绪（接收器注册、解码器配置等），
+    // 避免首帧/配置帧在对端未就绪时丢失导致黑屏。
+    if (mediaSendDelayTimerRef.current) {
+      clearTimeout(mediaSendDelayTimerRef.current);
     }
+    mediaSendDelayTimerRef.current = setTimeout(() => {
+      console.log('[PrivacyVideoCall] 开始发送媒体数据');
+      startMediaRecording(localStreamRef.current!);
+      startMediaInfoReporting();
+    }, 1000);
   }, []);
 
   // 同步 ref
@@ -2160,6 +2171,12 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       }
       requestKeyframeRef.current = false;
 
+      // 清除媒体延迟发送定时器（通话已结束，不再延迟启动）
+      if (mediaSendDelayTimerRef.current) {
+        clearTimeout(mediaSendDelayTimerRef.current);
+        mediaSendDelayTimerRef.current = null;
+      }
+
       // 停止所有媒体轨道并释放硬件设备（摄像头/麦克风）
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -2349,6 +2366,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       if (keyframeTimerRef.current) {
         clearInterval(keyframeTimerRef.current);
         keyframeTimerRef.current = null;
+      }
+      // 清除媒体延迟发送定时器（重启后会重新设置）
+      if (mediaSendDelayTimerRef.current) {
+        clearTimeout(mediaSendDelayTimerRef.current);
+        mediaSendDelayTimerRef.current = null;
       }
 
       // 1.2 停止 WebCodecs 音频编码器
