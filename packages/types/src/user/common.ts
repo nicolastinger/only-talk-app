@@ -61,13 +61,25 @@ interface BasicUser {
   password?: string;
 }
 
-/** 注册请求体(account/username/password/email/verification_code) */
-interface SignUpRequest {
-  account: string;
-  username: string;
-  password: string;
+/** 两步注册第一步请求体(email + verification_code 创建占位用户) */
+interface SignUpStep1Request {
   email: string;
   verification_code: string;
+}
+
+/** 两步注册第一步响应(注册会话 token + 占位用户 uuid) */
+interface SignUpStep1Response {
+  reg_token: string;
+  uuid: string;
+}
+
+/** 两步注册第二步请求体(凭 reg_token 补全资料完成注册) */
+interface CompleteProfileRequest {
+  reg_token: string;
+  email: string;
+  account: string;
+  password: string;
+  username: string;
 }
 
 /** 发送邮箱验证码请求体 */
@@ -144,6 +156,8 @@ export type {
   UserInfo,
   UserInfoWithCache,
   BasicUser,
-  SignUpRequest,
+  SignUpStep1Request,
+  SignUpStep1Response,
+  CompleteProfileRequest,
   SendVerifyCodeRequest,
 };

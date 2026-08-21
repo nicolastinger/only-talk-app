@@ -8,8 +8,9 @@ import {
   HttpResponse,
   UpdateUserDTO,
   FriendVo,
-  SignUpRequest,
+  SignUpStep1Request,
   SendVerifyCodeRequest,
+  CompleteProfileRequest,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -40,11 +41,19 @@ export const process_friend = async (friend: FriendRequestInfoDTO) => {
   );
 };
 
-export const sign_up = async (signUpRequest: SignUpRequest) => {
+export const sign_up_step1 = async (request: SignUpStep1Request) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/user/sign_up",
-    JSON.stringify(signUpRequest)
+    TALK_API + "/user/sign_up_step1",
+    JSON.stringify(request)
+  );
+};
+
+export const complete_profile = async (request: CompleteProfileRequest) => {
+  return await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/user/complete_profile",
+    JSON.stringify(request)
   );
 };
 
