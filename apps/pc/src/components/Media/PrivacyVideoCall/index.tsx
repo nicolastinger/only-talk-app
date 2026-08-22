@@ -258,6 +258,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 视频数据帧是否已开始正常流转（首次收到关键帧后置 true，用于诊断） */
   const videoFirstKeyframeReceivedRef = useRef<boolean>(false);
 
+  /** 黑屏恢复信号限速 - 记录上次向对端发送 media_ready 恢复请求的时间戳 */
+  const lastRecoverySignalRef = useRef<number>(0);
+
   // ==================== WebCodecs 音频编码器/解码器引用 ====================
 
   /** 音频编码器 - WebCodecs Opus 实时编码 */
@@ -553,9 +556,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
       // 检查对方是否已经准备好，如果是，则开始录制
       if (isRemoteReceiverReady) {
-        dlog('对方已准备好，立即开始媒体录制');
-        startMediaRecording(stream);
-        startMediaInfoReporting();
+        dlog('对方已准备好，1s 后开始媒体录制');
+        // 统一走 startSendingMedia（含 1s 延迟），确保对端 receiver/decoder 完全就绪
+        // 再开始编码发送，避免首条 config/keyframe 在对端未就绪时丢失导致黑屏
+        startSendingMedia();
       } else {
         dlog('等待对方媒体接收器就绪后再开始录制...');
       }
@@ -564,7 +568,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       message.error('无法访问摄像头或麦克风');
       transition('Ended');
     }
-  }, [friendId, isRemoteReceiverReady, sendMediaReady, transition]);
+  }, [friendId, isRemoteReceiverReady, sendMediaReady, startSendingMedia, transition]);
 
   // 同步 ref，确保事件监听器始终调用最新版本
   initLocalMediaRef.current = initLocalMedia;
@@ -2063,19 +2067,25 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         );
 
         // 黑屏看门狗：通话进行超过 4 秒仍未收到首个关键帧，
-        // 说明配置帧/关键帧可能丢失，主动请求关键帧（会携带解码器配置）来恢复
+        // 说明配置帧/关键帧可能丢失。向对端重新发送 media_ready 信号，
+        // 让对端的 media_receiver_ready 监听器重发解码器配置并请求关键帧恢复。
+        // 去掉 videoDecoderRef 非空的限制：收不到 config 时解码器恰好为 null，
+        // 更需要在此时反向触发恢复。限速 3s，避免每 2s 刷屏。
         if (
           IS_WEBCODECS_SUPPORTED &&
           Date.now() - mediaStartTimeRef.current > 4000 &&
-          !videoFirstKeyframeReceivedRef.current &&
-          videoDecoderRef.current
+          !videoFirstKeyframeReceivedRef.current
         ) {
-          dlog('⚠️ 4秒未收到视频关键帧，主动请求关键帧恢复');
-          requestKeyframeRef.current = true;
+          const now = Date.now();
+          if (!lastRecoverySignalRef.current || now - lastRecoverySignalRef.current > 3000) {
+            lastRecoverySignalRef.current = now;
+            dlog('⚠️ 4秒未收到视频关键帧，向对端重新发送 media_ready 请求补发 config + 关键帧');
+            sendMediaReady();
+          }
         }
       }
     }, 2000);
-  }, [mediaState.isInCall, sendMediaInfo, isRemoteReceiverReady]);
+  }, [mediaState.isInCall, sendMediaInfo, isRemoteReceiverReady, sendMediaReady]);
 
   /**
    * 停止媒体信息定时发送

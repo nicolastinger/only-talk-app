@@ -62,10 +62,6 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
         (sender, request_token)
     };
 
-    //插入token到服务器，供连接端验证
-    // let url = format!("{}/user/add_p2p_token/{}/{}", TALK_API, accept_user, request_token);
-    // post_with_body(url, HashMap::new()).await?;
-
     // 本机作为服务端
 
     {
