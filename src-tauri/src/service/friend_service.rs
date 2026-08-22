@@ -5,7 +5,9 @@ use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::cmd::api_controller::post_request;
-use crate::dao::friend_db::{query_friend_info_db, search_friend_db, soft_delete_friend_db, update_friend_info_db};
+use crate::dao::friend_db::{
+    query_friend_info_db, search_friend_db, soft_delete_friend_db, update_friend_info_db,
+};
 use crate::dao::session_db::hide_chat_session_db;
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;

@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+use log::{info, warn};
+use serde::{Deserialize, Serialize};
+
 use crate::dto::http_result::HttpResult;
 use crate::dto::update_user_dto::UpdateUserDTO;
 use crate::entity::user_info::UserInfo;
@@ -8,8 +11,6 @@ use crate::service::api_service::{get_with_token, post_json};
 use crate::service::user_service::{disconnect_quic, reconnect_quic};
 use crate::utils::global_static_str::TALK_API;
 use crate::GLOBAL_QUIC_USER_INFO;
-use log::{info, warn};
-use serde::{Deserialize, Serialize};
 
 /// 用户信息响应（包含缓存状态）
 #[derive(Debug, Serialize, Deserialize)]

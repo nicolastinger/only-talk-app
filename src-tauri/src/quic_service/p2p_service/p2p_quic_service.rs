@@ -509,13 +509,7 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
     }
 
     info!("MediaData通道接收循环结束");
-    let _ = log_quic_event(
-        LOG_LEVEL_INFO,
-        "p2p_service",
-        "MediaData通道接收循环结束",
-        "",
-    )
-    .await;
+    let _ = log_quic_event(LOG_LEVEL_INFO, "p2p_service", "MediaData通道接收循环结束", "").await;
 }
 
 /// 发送媒体帧到MediaData通道（轻量级格式）

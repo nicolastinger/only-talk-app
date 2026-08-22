@@ -32,12 +32,8 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<String, String> {
 pub async fn send_init_p2p_udp() -> Result<String, String> {
     let udp_port = find_available_udp_port(10024).ok_or("no available UDP port")?;
     let addr = format!("0.0.0.0:{}", udp_port);
-    let remote_addr = resolve_ipv4(DOMAIN_NAME, UDP_PORT)
-        .await
-        .map_err(|e| e.to_string())?;
-    send_udp_ping_msg(addr, remote_addr.to_string())
-        .await
-        .map_err(|e| e.to_string())?;
+    let remote_addr = resolve_ipv4(DOMAIN_NAME, UDP_PORT).await.map_err(|e| e.to_string())?;
+    send_udp_ping_msg(addr, remote_addr.to_string()).await.map_err(|e| e.to_string())?;
 
     Ok(format!("127.0.0.1:{}", udp_port))
 }

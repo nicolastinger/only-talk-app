@@ -84,7 +84,11 @@ pub async fn query_app_logs_paged(
         count_query.push_str(&where_clause);
         list_query.push_str(&where_clause);
     }
-    list_query.push_str(&format!(" ORDER BY id DESC LIMIT ?{} OFFSET ?{}", bind_index, bind_index + 1));
+    list_query.push_str(&format!(
+        " ORDER BY id DESC LIMIT ?{} OFFSET ?{}",
+        bind_index,
+        bind_index + 1
+    ));
 
     let mut count_builder = sqlx::query_as::<_, (i64,)>(&count_query);
     let mut list_builder = sqlx::query_as::<_, AppLog>(&list_query);
@@ -128,10 +132,8 @@ pub async fn update_app_log(id: i64, raw: &str, detail: &str) -> Result<bool, an
 /// 根据id删除日志
 pub async fn delete_app_log_by_id(id: i64) -> Result<bool, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let result = sqlx::query(r#"DELETE FROM app_log WHERE id = ?1"#)
-        .bind(id)
-        .execute(&pool_sqlite)
-        .await?;
+    let result =
+        sqlx::query(r#"DELETE FROM app_log WHERE id = ?1"#).bind(id).execute(&pool_sqlite).await?;
     Ok(result.rows_affected() > 0)
 }
 

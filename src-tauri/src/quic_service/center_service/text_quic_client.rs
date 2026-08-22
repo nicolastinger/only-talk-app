@@ -2,6 +2,13 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::{anyhow, Context};
+use log::{error, info, warn};
+use quinn::{Connection, Endpoint, SendStream};
+use tauri::Emitter;
+use tokio::sync::{watch, Mutex};
+use uuid::Uuid;
+
 use crate::dao::app_log_db::log_quic_event;
 use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
@@ -14,12 +21,6 @@ use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::MSG_TYPE_PING;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use anyhow::{anyhow, Context};
-use log::{error, info, warn};
-use quinn::{Connection, Endpoint, SendStream};
-use tauri::Emitter;
-use tokio::sync::{watch, Mutex};
-use uuid::Uuid;
 
 /// 重连间隔（秒）
 const RECONNECT_DELAY_SECS: u64 = 5;
@@ -398,13 +399,9 @@ async fn send_ping_msg(
     match send_via_new_stream(&conn, &ping_msg).await {
         Ok(_) => {
             info!("初始心跳发送成功");
-            let _ = log_quic_event(
-                LOG_LEVEL_INFO,
-                "center_client",
-                "初始心跳发送成功",
-                &remote_addr,
-            )
-            .await;
+            let _ =
+                log_quic_event(LOG_LEVEL_INFO, "center_client", "初始心跳发送成功", &remote_addr)
+                    .await;
             // 初始心跳成功即开始 PONG 超时计时，无需等待首个 PONG 返回
             let now = get_now_time_stamp_as_millis().unwrap_or(0).to_string();
             insert_user_info("last_pong_time", &now).await?;
@@ -426,13 +423,8 @@ async fn send_ping_msg(
     loop {
         tokio::time::sleep(Duration::from_secs(10)).await;
         info!("发送quic客户端心跳");
-        let _ = log_quic_event(
-            LOG_LEVEL_INFO,
-            "center_client",
-            "发送quic客户端心跳",
-            &remote_addr,
-        )
-        .await;
+        let _ = log_quic_event(LOG_LEVEL_INFO, "center_client", "发送quic客户端心跳", &remote_addr)
+            .await;
 
         // 检查心跳实例是否一致
         let current_ping_uuid = get_user_info("ping_uuid").await.unwrap_or_default();

@@ -46,10 +46,7 @@ pub async fn soft_delete_friend_db(me: &str, friend_id: &str) -> Result<(), anyh
 }
 
 /// 模糊搜索好友（按好友名称、好友账号搜索）
-pub async fn search_friend_db(
-    uuid: &str,
-    keyword: &str,
-) -> Result<Vec<Friend>, anyhow::Error> {
+pub async fn search_friend_db(uuid: &str, keyword: &str) -> Result<Vec<Friend>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
     let pattern = format!("%{}%", keyword);
     let record = sqlx::query_as::<_, Friend>(

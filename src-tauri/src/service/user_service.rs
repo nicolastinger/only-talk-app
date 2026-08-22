@@ -2,6 +2,12 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::Duration;
 
+use anyhow::anyhow;
+use log::{error, info, warn};
+use tauri::Emitter;
+use tokio::time::timeout;
+use uuid::Uuid;
+
 use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::app_log_db::log_quic_event;
 use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
@@ -26,11 +32,6 @@ use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
 use crate::utils::message_types::MSG_TYPE_WEBRTC_SIGNAL;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use anyhow::anyhow;
-use log::{error, info, warn};
-use tauri::Emitter;
-use tokio::time::timeout;
-use uuid::Uuid;
 
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
@@ -380,7 +381,8 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
         let mut server_list = GLOBAL_QUIC_SERVER_LIST.write().await;
         server_list.clear();
         info!("已清理QUIC服务器连接列表");
-        let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "已清理QUIC服务器连接列表", "").await;
+        let _ =
+            log_quic_event(LOG_LEVEL_INFO, "user_service", "已清理QUIC服务器连接列表", "").await;
     }
 
     // 标记用户离线状态
@@ -395,7 +397,8 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     }
 
     info!("QUIC连接已断开（状态: Idle）");
-    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC连接已断开（状态: Idle）", "").await;
+    let _ =
+        log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC连接已断开（状态: Idle）", "").await;
     Ok(())
 }
 

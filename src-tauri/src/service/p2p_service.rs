@@ -19,8 +19,10 @@ use crate::quic_service::p2p_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward, udp_port_forward_ipv6,
 };
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::{DOMAIN_NAME, UDP_PORT, UDP_PORT_2, UDP_PORT_V6, UDP_PORT_V6_2};
 use crate::utils::dns::{resolve_ipv4, resolve_ipv6};
+use crate::utils::global_static_str::{
+    DOMAIN_NAME, UDP_PORT, UDP_PORT_2, UDP_PORT_V6, UDP_PORT_V6_2,
+};
 use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
     MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
@@ -195,16 +197,16 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
         resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6).await,
         resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6_2).await,
     ) {
-        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json)
-            .await
-            .unwrap_or_else(|x| {
+        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(
+            |x| {
                 warn!("本机不支持ipv6传输 {}", x);
-            });
-        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json)
-            .await
-            .unwrap_or_else(|x| {
+            },
+        );
+        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json).await.unwrap_or_else(
+            |x| {
                 warn!("本机不支持ipv6传输 {}", x);
-            });
+            },
+        );
     } else {
         info!("域名无IPv6记录，跳过IPv6连接");
     }
