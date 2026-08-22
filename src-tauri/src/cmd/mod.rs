@@ -2,6 +2,7 @@ pub mod api_controller;
 pub mod auth_controller;
 pub mod chat_record_controller;
 pub mod chat_session_controller;
+pub mod device_controller;
 pub mod file_controller;
 pub mod friend_controller;
 pub mod group_controller;

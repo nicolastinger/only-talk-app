@@ -1,4 +1,5 @@
 pub mod android_utils;
+pub mod device_info;
 pub mod dns;
 pub mod global_static_str;
 pub mod image_utils;

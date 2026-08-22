@@ -43,6 +43,7 @@ use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
     mark_read_chat_session, search_chat_session,
 };
+use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
 };
@@ -176,6 +177,7 @@ pub fn run() {
             upload_multiple_files_with_extra_fields_request,
             post_form_data_request,
             compress_image_to_webp_command,
+            get_device_info,
             sign_in,
             refresh_token_command,
             logout,

@@ -19,6 +19,7 @@ pub async fn sign_in(
     url: String,
     mut body: HashMap<String, String>,
 ) -> Result<ApiResponse, String> {
+    body.insert("device_fingerprint".to_string(), crate::utils::device_info::device_fingerprint());
     let client = Client::new();
     let response = client.post(&url).json(&body).send().await.map_err(|e| e.to_string())?;
 
@@ -76,8 +77,7 @@ pub async fn sign_in(
 
     // 持久化 refresh_token 到 user_token 表
     if let Some(ref user_uuid) = uuid {
-        let local_credit =
-            local_ip_address::local_ip().ok().map(|ip| ip.to_string()).unwrap_or_default();
+        let local_credit = crate::utils::device_info::device_fingerprint();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)
@@ -113,7 +113,10 @@ pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
     };
 
     let refresh_url = format!("{}/user/refresh_token", url.trim_end_matches('/'));
-    let body = serde_json::json!({ "refresh_token": refresh_token });
+    let body = serde_json::json!({
+        "refresh_token": refresh_token,
+        "device_fingerprint": crate::utils::device_info::device_fingerprint()
+    });
 
     let client = Client::new();
     let response = client.post(&refresh_url).json(&body).send().await.map_err(|e| e.to_string())?;
@@ -218,12 +221,13 @@ pub async fn get_quick_login_users() -> Result<Vec<QuickLoginUser>, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
-    let twenty_days_secs: i64 = 20 * 24 * 3600;
+    // 与后端 refresh_token 有效期保持一致 (30 天, 见 only-talk-rs user_service 3600*24*30)
+    let thirty_days_secs: i64 = 30 * 24 * 3600;
 
     let mut result = Vec::new();
     for token in tokens {
         let updated = token.updated_at.unwrap_or(0);
-        if now - updated > twenty_days_secs {
+        if now - updated > thirty_days_secs {
             continue;
         }
 
@@ -246,7 +250,10 @@ pub async fn get_quick_login_users() -> Result<Vec<QuickLoginUser>, String> {
 #[command]
 pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiResponse, String> {
     let refresh_url = format!("{}/user/refresh_token", url.trim_end_matches('/'));
-    let body = serde_json::json!({ "refresh_token": refresh_token });
+    let body = serde_json::json!({
+        "refresh_token": refresh_token,
+        "device_fingerprint": crate::utils::device_info::device_fingerprint()
+    });
 
     let client = Client::new();
     let response = client.post(&refresh_url).json(&body).send().await.map_err(|e| e.to_string())?;
@@ -299,8 +306,7 @@ pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiRespon
     user_login().await.map_err(|e| e.to_string())?;
 
     if let Some(ref user_uuid) = uuid {
-        let local_credit =
-            local_ip_address::local_ip().ok().map(|ip| ip.to_string()).unwrap_or_default();
+        let local_credit = crate::utils::device_info::device_fingerprint();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)
