@@ -658,5 +658,10 @@ export default {
     establishingConnection: 'Establishing connection...',
     emoji: 'Emoji',
     inputMessage: 'Enter message...',
+    videoTab: 'Video',
+    logTab: 'Logs',
+    logTitle: 'WebRTC Logs',
+    clearLogs: 'Clear',
+    logEmpty: 'No WebRTC logs yet',
   },
 };

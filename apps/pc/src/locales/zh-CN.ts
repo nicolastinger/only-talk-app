@@ -647,5 +647,10 @@ export default {
     establishingConnection: '正在建立连接...',
     emoji: '表情',
     inputMessage: '输入消息...',
+    videoTab: '视频',
+    logTab: '日志',
+    logTitle: 'WebRTC 日志',
+    clearLogs: '清空',
+    logEmpty: '暂无 WebRTC 日志',
   },
 };

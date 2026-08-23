@@ -41,26 +41,6 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
       return '[隐私模式]';
     }
 
-    if (text_type === 5) {
-      return '[视频通话]';
-    }
-
-    if (text_type === 12) {
-      return '[视频通话邀请]';
-    }
-
-    if (text_type === 13) {
-      return '[已接听]';
-    }
-
-    if (text_type === 14) {
-      return '[已拒绝]';
-    }
-
-    if (text_type === 15) {
-      return '[通话结束]';
-    }
-
     if (text_type === 100) {
       try {
         const parsed = JSON.parse(message);

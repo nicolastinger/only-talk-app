@@ -58,13 +58,6 @@ export function getMessagePreview(
       return "[文件]";
     case 4:
       return "[隐私模式]";
-    case 5:
-      return "[视频通话]";
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-      return "[通话]";
     case 100:
       try {
         const parsed = JSON.parse(lastMessage);

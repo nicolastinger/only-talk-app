@@ -180,6 +180,17 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
     let payload = serde_json::to_string(&msg)?;
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
 
+    // 视频通话控制消息(12-15)完全解耦：仅上报事件，不落库、不更新会话/未读
+    if matches!(
+        msg.text_type,
+        MSG_TYPE_P2P_VIDEO_CALL_INVITE
+            | MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
+            | MSG_TYPE_P2P_VIDEO_CALL_REJECT
+            | MSG_TYPE_P2P_VIDEO_CALL_END
+    ) {
+        return Ok(());
+    }
+
     let friend_uuid = &msg.send_user;
     let mut flag = false;
     let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
@@ -345,23 +356,19 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         timestamp: msg.timestamp,
     };
 
-    // WebRTC 信令：仅明细落库 + 会话摘要更新，不插入聊天记录/会话/未读
-    if ack_record.text_type == MSG_TYPE_WEBRTC_SIGNAL {
-        if let Ok(signal) = serde_json::from_str::<WebRTCSignalMessage>(&text_quic_msg_vo.raw) {
-            save_webrtc_signal(
-                &text_quic_msg_vo.nano_id,
-                signal.session_id.as_deref().unwrap_or_default(),
-                &signal.msg_type,
-                &signal.sender,
-                &signal.receiver,
-                &signal.data,
-                signal.timestamp,
-                signal.prev_id.as_deref().unwrap_or_default(),
-            )
-            .await?;
-        }
+    // 视频通话控制消息(12-15)与 WebRTC 信令(100)不落库：仅更新回执/发送状态并上报事件，
+    // 不插入聊天记录、不更新会话与未读（发送方历史由 send_webrtc_signal_service 落库）
+    if matches!(
+        ack_record.text_type,
+        MSG_TYPE_WEBRTC_SIGNAL
+            | MSG_TYPE_P2P_VIDEO_CALL_INVITE
+            | MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
+            | MSG_TYPE_P2P_VIDEO_CALL_REJECT
+            | MSG_TYPE_P2P_VIDEO_CALL_END
+    ) {
         update_chat_record_ack(&ack_record.send_id, 1, &text_quic_msg_vo.nano_id).await?;
         update_chat_record_send_success(&ack_record.send_id, &text_quic_msg_vo.nano_id).await?;
+        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
         return Ok(());
     }
 

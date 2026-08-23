@@ -1,7 +1,4 @@
-import {
-  setPendingWebRTCCall,
-} from '@/hooks/useWebRTCSignalApi';
-import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
+import { openWebRTCChatHandler } from '@/hooks/useWebRTCSignalApi';
 import { useBearStore } from '@/store/store';
 import {
   ApiOutlined,
@@ -216,37 +213,14 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
         return;
       }
 
-      let service = getWebRTCService();
-      if (!service) {
-        service = initWebRTCService(localUserId);
-      }
-
-      // 生成每次通话唯一的 sessionId，通过文本邀请(12)发送，等待对方允许/拒绝
+      // 完全解耦：点击即打开发起方 WebRTC 窗口，邀请/接受/拒绝都在窗口内处理
       const sessionId = nanoid();
-      service.sessionId = sessionId;
-      setPendingWebRTCCall(friendUuid, sessionId);
-
-      const inviteRaw: TextQuicMsgVo = {
-        nano_id: nanoid(),
-        text_type: 12, // MSG_TYPE_P2P_VIDEO_CALL_INVITE
-        raw: JSON.stringify({
-          type: 'invite',
-          sender: localUserId,
-          receiver: friendUuid,
-          sessionId,
-          timestamp: Date.now(),
-        }),
-        recv_user: friendUuid,
-        send_user: localUserId,
-        timestamp: Date.now(),
-      };
-      await invoke('send_text_msg', { textQuicMsg: inviteRaw });
+      await openWebRTCChatHandler(friendUuid, localUserId, true, undefined, sessionId);
       console.log(
-        `[WebRTC] 已发送视频通话邀请 - friendId: ${friendUuid}, sessionId: ${sessionId}`,
+        `[WebRTC] 已打开发起方 WebRTC 窗口 - friendId: ${friendUuid}, sessionId: ${sessionId}`,
       );
-      message.info(intl.formatMessage({ id: 'chat.footer.webRTCInviteSent' }));
     } catch (e) {
-      console.error('发起 WebRTC 邀请失败:', e);
+      console.error('发起 WebRTC 失败:', e);
       message.error(intl.formatMessage({ id: 'chat.footer.webRTCFailed' }));
     }
   };

@@ -579,10 +579,10 @@ class WebRTCService {
         this.clearIceTimers(friendId);
         break;
       case 'disconnected':
+        // 断开常是瞬态：不再自动重启 ICE，避免触发重协商风暴/DTLS 角色冲突
         console.log(
-          `[WebRTCService.handleConnectionStateChange] ⚠️  连接断开，尝试重启ICE...`,
+          `[WebRTCService.handleConnectionStateChange] ⚠️  连接断开，等待恢复；如持续失败将以 failed 状态自动重启`,
         );
-        this.attemptIceRestartWithDelay(friendId);
         break;
       case 'failed':
         console.log(
@@ -610,12 +610,20 @@ class WebRTCService {
     }
 
     const timeout = setTimeout(() => {
+      const conn = this.connections.get(friendId);
+      // 连接未处于 stable（正在协商/已重启）时跳过兜底重启，避免重协商风暴
+      if (conn && conn.signalingState !== 'stable') {
+        console.log(
+          `[WebRTCService.startIceConnectionTimeout] ⏰ 超时但连接非stable(${conn.signalingState})，跳过兜底重启`,
+        );
+        return;
+      }
       console.log(
         `[WebRTCService.startIceConnectionTimeout] ⏰ ICE连接超时 (${
           WebRTCService.ICE_CONNECTION_TIMEOUT / 1000
         }秒)，尝试重启...`,
       );
-      this.attemptIceRestart(friendId, this.connections.get(friendId));
+      this.attemptIceRestart(friendId, conn);
     }, WebRTCService.ICE_CONNECTION_TIMEOUT);
 
     this.iceTimeoutTimers.set(friendId, timeout);
@@ -675,6 +683,14 @@ class WebRTCService {
   ): Promise<void> {
     if (!connection) {
       console.error(`[WebRTCService.attemptIceRestart] ❌ 连接不存在`);
+      return;
+    }
+
+    // 仅当信令处于 stable 时才可重新协商，否则会触发 DTLS 角色冲突
+    if (connection.signalingState !== 'stable') {
+      console.log(
+        `[WebRTCService.attemptIceRestart] ⏭️ 连接非stable(${connection.signalingState})，跳过本次重启`,
+      );
       return;
     }
 
@@ -1033,6 +1049,10 @@ class WebRTCService {
       let candidateCount = 0;
       // 收集所有srflx候选的映射地址和端口，用于检测对称NAT
       const srflxMappings: { ip: string; port: number }[] = [];
+
+      // 创建数据通道：配置为 max-bundle 时，无媒体/数据通道的 offer 没有 BUNDLE 组，
+      // 会导致 setLocalDescription 失败。添加数据通道可产生 BUNDLE 组并收集候选。
+      tempConnection.createDataChannel('nat-detect');
 
       // 收集ICE候选以分析NAT类型
       tempConnection.onicecandidate = (event) => {
@@ -1427,6 +1447,14 @@ class WebRTCService {
       console.log(`[WebRTCService.handleOffer] ♻️ 使用已存在的连接`);
     }
 
+    // 已有连接但信令非 stable（正在协商或乱序）时，丢弃该 offer，避免重协商冲突
+    if (connection.signalingState !== 'stable') {
+      console.log(
+        `[WebRTCService.handleOffer] ⏭️ 连接非stable(${connection.signalingState})，丢弃该offer`,
+      );
+      return connection.localDescription ?? offer;
+    }
+
     // 设置远程描述，表示接受对端的offer
     console.log(
       `[WebRTCService.handleOffer] ⚙️ 设置远程描述，SDP长度: ${
@@ -1569,6 +1597,14 @@ class WebRTCService {
         `[WebRTCService.handleAnswer] ❌ 未找到 ${friendId} 的连接`,
       );
       throw new Error('未找到该联系人的连接');
+    }
+
+    // 仅当处于 have-local-offer 且连接未关闭时才能设置远程 answer，避免乱序/已关闭时的 DTLS 角色冲突
+    if (connection.connectionState === 'closed' || connection.signalingState !== 'have-local-offer') {
+      console.warn(
+        `[WebRTCService.handleAnswer] ⏭️ 连接状态异常(state=${connection.connectionState}, signaling=${connection.signalingState})，跳过setRemoteDescription`,
+      );
+      return;
     }
 
     // 分析answer中的候选信息
@@ -1818,8 +1854,8 @@ class WebRTCService {
         `[WebRTCService.sendSignal] 信令详情 - sessionId: ${signalMessage.sessionId}, 内容长度: ${raw.length}`,
       );
 
-      // 通过Tauri invoke调用后端的send_text_msg命令
-      await invoke('send_text_msg', {
+      // 通过 Tauri invoke 调用后端的 send_webrtc_signal 命令（独立信令通道）
+      await invoke('send_webrtc_signal', {
         textQuicMsg: {
           nano_id: nanoid(), // 消息的唯一标识
           text_type: 100, // MSG_TYPE_WEBRTC_SIGNAL = 100

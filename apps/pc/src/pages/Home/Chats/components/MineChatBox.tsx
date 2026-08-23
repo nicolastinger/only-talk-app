@@ -211,11 +211,6 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     switch (text_type) {
       case MSG_TYPE_PRIVACY:
         return <PrivacyModeMessage isMine={true} />;
-      case 5:
-      case 12:
-      case 13:
-      case 14:
-      case 15:
       case 100:
         return <WebRTCMessage textType={text_type} isMine={true} raw={raw} />;
       default:
@@ -239,7 +234,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
 
   const isImageMessage = text_type === MSG_TYPE_IMAGE;
   const isFileMessage = text_type === MSG_TYPE_FILE;
-  const isSpecialMessage = [MSG_TYPE_PRIVACY, 5, 12, 13, 14, 15, 100].includes(text_type);
+  const isSpecialMessage = [MSG_TYPE_PRIVACY, 100].includes(text_type);
 
   return (
     <div className={styles.container}>

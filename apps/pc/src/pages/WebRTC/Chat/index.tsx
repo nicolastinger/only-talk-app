@@ -21,11 +21,18 @@
  */
 
 import { updateWebRTCWindowState } from '@/hooks/useWebRTCSignalApi';
+import {
+  clearWebRTCLogs,
+  initWebRTCConsoleCapture,
+  useWebRTCLogs,
+} from '@/services/webrtcLog';
 import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
 import {
   ApiOutlined,
   AudioMutedOutlined,
   AudioOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
   LogoutOutlined,
   ReloadOutlined,
   SendOutlined,
@@ -34,10 +41,12 @@ import {
   VideoCameraOutlined,
 } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useIntl, useLocation } from '@umijs/max';
 import { WebRTCSignalMessage } from '@workspace/types';
 import { Button, Input, message, Spin, Tag, Tooltip } from 'antd';
+import { nanoid } from 'nanoid';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
 
@@ -138,11 +147,27 @@ interface TextQuicMsgVo {
 
 const WebRTCChat: React.FC = () => {
   const intl = useIntl();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const friendId = params.get('friendId') || '';
+  const isInitiator = params.get('initiator') === 'true';
+  const localUserId = params.get('localUserId') || '';
+  const initialSignalData = params.get('signalData');
+  const urlSessionId = params.get('sessionId') || '';
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<
     'connecting' | 'connected' | 'disconnected' | 'failed'
   >('connecting');
+  const [callStage, setCallStage] = useState<
+    'incoming' | 'outgoing' | 'connecting' | 'connected' | 'rejected' | 'ended'
+  >(isInitiator ? 'outgoing' : 'incoming');
+
+  // 呼叫状态机：接通前(来电/去电/拒绝)仅显示呼叫提示界面
+  const isPreCall =
+    callStage === 'incoming' ||
+    callStage === 'outgoing' ||
+    callStage === 'rejected';
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -151,14 +176,97 @@ const WebRTCChat: React.FC = () => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeView, setActiveView] = useState<'video' | 'log'>('video');
+  const webRTCLogs = useWebRTCLogs();
+  const logContainerRef = useRef<HTMLDivElement>(null);
 
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const friendId = params.get('friendId') || '';
-  const isInitiator = params.get('initiator') === 'true';
-  const localUserId = params.get('localUserId') || '';
-  const initialSignalData = params.get('signalData');
-  const urlSessionId = params.get('sessionId') || '';
+  // 采集当前窗口与 WebRTC 相关的日志，用于日志 Tab 展示
+  useEffect(() => {
+    initWebRTCConsoleCapture();
+  }, []);
+
+  // 日志更新时自动滚到底部
+  useEffect(() => {
+    const el = logContainerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [webRTCLogs]);
+
+  // 发送视频通话控制消息（12邀请/13接受/14拒绝/15结束）
+  const sendControlMsg = async (text_type: number, type: string, sessionId: string) => {
+    const msg: TextQuicMsgVo = {
+      nano_id: nanoid(),
+      text_type,
+      raw: JSON.stringify({
+        type,
+        sender: localUserId,
+        receiver: friendId,
+        sessionId,
+        timestamp: Date.now(),
+      }),
+      recv_user: friendId,
+      send_user: localUserId,
+      timestamp: Date.now(),
+    };
+    await invoke('send_text_msg', { textQuicMsg: msg });
+  };
+
+  // 发起方：发送邀请
+  const sendInvite = async (sessionId: string) => {
+    await sendControlMsg(12, 'invite', sessionId);
+  };
+
+  // 收到对方接受(13)后：创建 offer 并发送 100 信令
+  const sendOffer = async () => {
+    const service = getWebRTCService();
+    if (!service) {
+      console.error('[WebRTCChat] ❌ WebRTCService不存在，无法创建offer');
+      return;
+    }
+    console.log(`[WebRTCChat] 对方已接受，创建offer... (friendId=${friendId})`);
+    const offer = await service.createOffer(friendId);
+    const signalMessage: WebRTCSignalMessage = {
+      type: 'offer',
+      sender: localUserId,
+      receiver: friendId,
+      sessionId: service.sessionId,
+      data: offer,
+      timestamp: Date.now(),
+    };
+    await service.sendSignal(signalMessage);
+    setCallStage('connecting');
+    console.log(`[WebRTCChat] ✅ offer已发送，等待对端的answer和ICE候选...`);
+  };
+
+  // 被叫方：接受
+  const handleAccept = async () => {
+    const service = getWebRTCService();
+    const sessionId = service?.sessionId || urlSessionId;
+    await sendControlMsg(13, 'accept', sessionId);
+    setCallStage('connecting');
+  };
+
+  // 被叫方/发起方：拒绝
+  const handleReject = async () => {
+    const service = getWebRTCService();
+    const sessionId = service?.sessionId || urlSessionId;
+    await sendControlMsg(14, 'reject', sessionId);
+    setCallStage('rejected');
+    // 短暂提示后自动关闭窗口
+    setTimeout(() => closeWebRTCWindow(), 2000);
+  };
+
+  // 关闭当前WebRTC窗口（不发送结束信令，用于未接通时的退出）
+  const closeWebRTCWindow = async () => {
+    try {
+      await updateWebRTCWindowState(friendId, 'close');
+      const currentWindow = window.getCurrentWindow();
+      await currentWindow.close();
+    } catch (e) {
+      console.error('[WebRTCChat] 关闭窗口失败:', e);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -257,30 +365,13 @@ const WebRTCChat: React.FC = () => {
       console.log(`[WebRTCChat] 连接状态回调已设置`);
 
       if (isInitiator) {
-        console.log(`[WebRTCChat] 本端为发起方，创建offer...`);
+        console.log(`[WebRTCChat] 本端为发起方，发送视频通话邀请...`);
         try {
-          console.log(`[WebRTCChat] 调用 service.createOffer(${friendId})...`);
-          const offer = await service.createOffer(friendId);
-          console.log(`[WebRTCChat] offer创建成功`);
-
-          const signalMessage: WebRTCSignalMessage = {
-            type: 'offer',
-            sender: localUserId,
-            receiver: friendId,
-            sessionId: service.sessionId,
-            data: offer,
-            timestamp: Date.now(),
-          };
-          console.log(`[WebRTCChat] offer信令消息已构建，准备发送...`);
-
-          console.log(`[WebRTCChat] 调用 service.sendSignal()...`);
-          await service.sendSignal(signalMessage);
-          console.log(
-            `[WebRTCChat] ✅ offer已发送，等待对端的answer和ICE候选...`,
-          );
+          await sendInvite(service.sessionId);
+          console.log(`[WebRTCChat] ✅ 邀请已发送，等待对方接受...`);
         } catch (e) {
-          console.error(`[WebRTCChat] ❌ 创建offer失败:`, e);
-          message.error(intl.formatMessage({ id: 'webrtc.connectionCreateFailed' }));
+          console.error(`[WebRTCChat] ❌ 发送邀请失败:`, e);
+          message.error(intl.formatMessage({ id: 'chat.footer.webRTCFailed' }));
         }
       } else if (initialSignalData) {
         console.log(`[WebRTCChat] 本端为响应方，处理对端的offer...`);
@@ -319,8 +410,10 @@ const WebRTCChat: React.FC = () => {
           message.error(intl.formatMessage({ id: 'webrtc.signalProcessFailed' }));
         }
       } else {
+        // 响应方：已接受后等待对端 offer 的常规路径，正常逻辑，无需告警
+        setCallStage('incoming');
         console.log(
-          `[WebRTCChat] ⚠️  既不是发起方也没有initialSignalData，可能是异常状态`,
+          `[WebRTCChat] 本端为响应方，等待对端同意后发送 offer（正常流程）`,
         );
       }
     };
@@ -328,6 +421,33 @@ const WebRTCChat: React.FC = () => {
     console.log(`[WebRTCChat] useEffect(initWebRTC) - 组件挂载，开始初始化`);
     initWebRTC();
   }, []);
+
+  // 接通前呼叫提示阶段视频元素未挂载，此处于视频面板挂载时绑定本地/远程媒体流
+  useEffect(() => {
+    if (isPreCall) return;
+    const service = getWebRTCService();
+    if (!service) return;
+    const local = service.getLocalStream();
+    if (local && localVideoRef.current) {
+      localVideoRef.current.srcObject = local;
+    }
+    const remote = service.getRemoteStream(friendId);
+    if (remote && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remote;
+    }
+    const state = service.getConnectionState(friendId);
+    if (state) {
+      if (state === 'connected') {
+        setConnectionStatus('connected');
+      } else if (state === 'disconnected' || state === 'closed') {
+        setConnectionStatus('disconnected');
+      } else if (state === 'failed') {
+        setConnectionStatus('failed');
+      } else {
+        setConnectionStatus('connecting');
+      }
+    }
+  }, [isPreCall, friendId]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -438,6 +558,46 @@ const WebRTCChat: React.FC = () => {
       }
     };
   }, [friendId]);
+
+  // 监听对方对通话邀请的回应：13=接受(发起offer)，14=拒绝
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      try {
+        unlisten = await listen<string>('text_message', async (event) => {
+          const text: TextQuicMsgVo = JSON.parse(event.payload);
+          if (text.recv_user !== localUserId || text.send_user !== friendId) {
+            return;
+          }
+          if (text.text_type === 13) {
+            console.log(`[WebRTCChat] 收到对方接受通知，开始创建offer...`);
+            try {
+              await sendOffer();
+            } catch (e) {
+              console.error('[WebRTCChat] 创建offer失败:', e);
+              message.error(intl.formatMessage({ id: 'webrtc.connectionCreateFailed' }));
+            }
+          } else if (text.text_type === 14) {
+            console.log(`[WebRTCChat] 对方拒绝了通话请求`);
+            setCallStage('rejected');
+            setTimeout(() => closeWebRTCWindow(), 2000);
+          }
+        });
+        console.log(`[WebRTCChat] ✅ 通话回应监听已设置`);
+      } catch (e) {
+        console.error(`[WebRTCChat] ❌ 设置通话回应监听失败:`, e);
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [friendId, localUserId]);
 
   const scrollToBottom = () => {
     const container = messageContainerRef.current;
@@ -664,6 +824,106 @@ const WebRTCChat: React.FC = () => {
     );
   };
 
+  const renderCallScreen = () => {
+    if (callStage === 'incoming') {
+      return (
+        <div className={styles.callScreen}>
+          <div className={styles.callAvatar}>
+            <VideoCameraOutlined />
+          </div>
+          <div className={styles.callTitle}>
+            {intl.formatMessage({ id: 'webRTCMessage.inviteReceived' })}
+          </div>
+          <div className={styles.callActions}>
+            <Button
+              type="primary"
+              icon={<CheckCircleOutlined />}
+              size="large"
+              onClick={() => handleAccept().catch(() => {})}
+            >
+              {intl.formatMessage({ id: 'webRTCMessage.acceptBtn' })}
+            </Button>
+            <Button
+              danger
+              icon={<CloseCircleOutlined />}
+              size="large"
+              onClick={() => handleReject().catch(() => {})}
+            >
+              {intl.formatMessage({ id: 'webRTCMessage.rejectBtn' })}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    if (callStage === 'outgoing') {
+      return (
+        <div className={styles.callScreen}>
+          <div className={styles.callAvatar}>
+            <VideoCameraOutlined />
+          </div>
+          <div className={styles.callTitle}>
+            {intl.formatMessage({ id: 'chat.footer.webRTCInviteSent' })}
+          </div>
+          <Spin />
+        </div>
+      );
+    }
+    // rejected
+    return (
+      <div className={styles.callScreen}>
+        <div className={styles.callAvatar}>
+          <VideoCameraOutlined />
+        </div>
+        <div className={styles.callTitle}>
+          {intl.formatMessage({ id: 'webRTCMessage.rejected' })}
+        </div>
+      </div>
+    );
+  };
+
+  const formatLogTime = (ts: number): string => {
+    const d = new Date(ts);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${String(
+      d.getMilliseconds(),
+    ).padStart(3, '0')}`;
+  };
+
+  const logLevelClass = (level: string) => {
+    if (level === 'warn') return styles.logWarn;
+    if (level === 'error') return styles.logError;
+    return styles.logInfo;
+  };
+
+  const renderLogPanel = () => (
+    <div className={styles.logPanel}>
+      <div className={styles.logHeader}>
+        <span className={styles.logTitle}>
+          {intl.formatMessage({ id: 'webrtc.logTitle' })}
+        </span>
+        <Button size="small" onClick={() => clearWebRTCLogs()}>
+          {intl.formatMessage({ id: 'webrtc.clearLogs' })}
+        </Button>
+      </div>
+      <div className={styles.logBody} ref={logContainerRef}>
+        {webRTCLogs.length === 0 && (
+          <div className={styles.logEmpty}>
+            {intl.formatMessage({ id: 'webrtc.logEmpty' })}
+          </div>
+        )}
+        {webRTCLogs.map((log) => (
+          <div key={log.id} className={styles.logLine}>
+            <span className={styles.logTime}>{formatLogTime(log.timestamp)}</span>
+            <span className={`${styles.logLevel} ${logLevelClass(log.level)}`}>
+              [{log.level.toUpperCase()}]
+            </span>
+            <span className={styles.logMessage}>{log.message}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -671,6 +931,20 @@ const WebRTCChat: React.FC = () => {
           <ApiOutlined className={styles.webrtcIcon} />
           <span className={styles.title}>{intl.formatMessage({ id: 'webrtc.videoChat' })}</span>
           {getStatusTag()}
+        </div>
+        <div className={styles.viewTabs}>
+          <span
+            className={`${styles.viewTab} ${activeView === 'video' ? styles.viewTabActive : ''}`}
+            onClick={() => setActiveView('video')}
+          >
+            {intl.formatMessage({ id: 'webrtc.videoTab' })}
+          </span>
+          <span
+            className={`${styles.viewTab} ${activeView === 'log' ? styles.viewTabActive : ''}`}
+            onClick={() => setActiveView('log')}
+          >
+            {intl.formatMessage({ id: 'webrtc.logTab' })}
+          </span>
         </div>
         <div className={styles.headerButtons}>
           <Button
@@ -685,7 +959,12 @@ const WebRTCChat: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.mainContent}>
+      {activeView === 'log' ? (
+        renderLogPanel()
+      ) : isPreCall ? (
+        renderCallScreen()
+      ) : (
+        <div className={styles.mainContent}>
         <div className={styles.videoPanel}>
           <div className={styles.videoWrapper}>
             <div className={styles.videoContainer}>
@@ -789,7 +1068,10 @@ const WebRTCChat: React.FC = () => {
             )}
             {connectionStatus === 'connecting' && (
               <div className={styles.connectingContainer}>
-                <Spin tip={intl.formatMessage({ id: 'webrtc.establishingConnection' })} />
+                <Spin />
+                <span className={styles.connectingText}>
+                  {intl.formatMessage({ id: 'webrtc.establishingConnection' })}
+                </span>
               </div>
             )}
             {messages.map(renderMessage)}
@@ -843,6 +1125,7 @@ const WebRTCChat: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

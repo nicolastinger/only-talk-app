@@ -263,26 +263,36 @@ async fn try_connect_once(
                     result = conn_for_uni.accept_uni() => {
                         match result {
                             Ok(mut recv) => {
-                                let mut buf = vec![0u8; 1024 * 8];
-                                match recv.read(&mut buf).await {
-                                    Ok(Some(length)) => {
-                                        let _ = process_rec_msg(
-                                            &mut buf, length, &ConnectionType::Text,
-                                            Arc::new(Mutex::new(Vec::new())), head_length,
-                                        )
-                                        .await;
+                                // 大消息会跨多个QUIC包到达，必须读取完整流后统一处理，
+                                // 否则未读余量会触发对端 STOP_SENDING，导致"发送被对端终止"
+                                let mut msg_data: Vec<u8> = Vec::new();
+                                let mut chunk = vec![0u8; 1024 * 8];
+                                loop {
+                                    match recv.read(&mut chunk).await {
+                                        Ok(Some(n)) => {
+                                            msg_data.extend_from_slice(&chunk[..n]);
+                                        }
+                                        Ok(None) => break,
+                                        Err(e) => {
+                                            error!("[客户端] uni流读取错误: {}", e);
+                                            let _ = log_quic_event(
+                                                LOG_LEVEL_ERROR,
+                                                "center_client",
+                                                &format!("[客户端] uni流读取错误: {}", e),
+                                                &server_addr.to_string(),
+                                            )
+                                            .await;
+                                            break;
+                                        }
                                     }
-                                    Ok(None) => {}
-                                    Err(e) => {
-                                        error!("[客户端] uni流读取错误: {}", e);
-                                        let _ = log_quic_event(
-                                            LOG_LEVEL_ERROR,
-                                            "center_client",
-                                            &format!("[客户端] uni流读取错误: {}", e),
-                                            &server_addr.to_string(),
-                                        )
-                                        .await;
-                                    }
+                                }
+                                if !msg_data.is_empty() {
+                                    let msg_len = msg_data.len();
+                                    let _ = process_rec_msg(
+                                        &mut msg_data, msg_len, &ConnectionType::Text,
+                                        uni_buffer_msg.clone(), head_length,
+                                    )
+                                    .await;
                                 }
                             }
                             Err(e) => {

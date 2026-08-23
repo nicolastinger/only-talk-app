@@ -1,6 +1,6 @@
 import DevAssistant from '@/components/DevAssistant';
 import SyncLoadingOverlay from '@/components/SyncLoadingOverlay';
-import { useP2pMessageApi, useWebRTCSignalApi } from '@/hooks';
+import { useP2pMessageApi, useWebRTCIncomingCall, useWebRTCSignalApi } from '@/hooks';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
 import { useEffect } from 'react';
@@ -9,6 +9,8 @@ import styles from './styles/RootLayout.less';
 const RootLayout: React.FC = () => {
   useP2pMessageApi();
   useWebRTCSignalApi();
+  // 全局监听视频通话来电（不依赖所在聊天会话），确保不漏接
+  useWebRTCIncomingCall();
 
   // 窗口在 tauri.conf.json 中配置为 visible:false，首帧渲染完成后再显示，避免白屏
   useEffect(() => {

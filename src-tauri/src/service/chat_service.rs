@@ -29,6 +29,7 @@ use crate::dao::session_db::{
     query_chat_session_by_user_db, query_chat_session_db, query_group_chat_session,
     search_chat_session_db, update_chat_session_db, update_chat_session_local_db,
 };
+use crate::dao::webrtc_signal_db::save_webrtc_signal;
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
@@ -42,6 +43,7 @@ use crate::entity::group::Group;
 use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::Page;
+use crate::quic_service::center_service::process_text_msg_from_server::WebRTCSignalMessage;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
 use crate::service::user_service::{get_user_info, get_user_map};
@@ -536,6 +538,48 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
         chat_record_ack.send_user,
         chat_record_ack.send_id,
     )?;
+    let conn = {
+        let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+    };
+
+    send_msg(test_msg, &conn).await
+}
+
+/// 发送 WebRTC 信令消息（独立通道）
+///
+/// 不走 send/ack 表、不设置 prev_id、不经发送锁，直接经 SERVER_TEXT 连接上送；
+/// 发送方本地历史由 save_webrtc_signal 落库（100 信令不再有服务器回执路径），
+/// 对端历史经 process_webrtc_signal 落库，双方对称。
+pub async fn send_webrtc_signal_service(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<String, anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
+
+    // 发送方本地保存信令明细 + 会话摘要
+    if let Ok(signal) = serde_json::from_str::<WebRTCSignalMessage>(&text_quic_msg.raw) {
+        save_webrtc_signal(
+            &text_quic_msg.nano_id,
+            signal.session_id.as_deref().unwrap_or_default(),
+            &signal.msg_type,
+            &signal.sender,
+            &signal.receiver,
+            &signal.data,
+            signal.timestamp,
+            signal.prev_id.as_deref().unwrap_or_default(),
+        )
+        .await?;
+    }
+
+    let raw: Vec<u8> = Vec::from(text_quic_msg.raw);
+    let test_msg = generate_text_msg_without_nano(
+        text_quic_msg.text_type,
+        raw,
+        text_quic_msg.recv_user,
+        sender,
+        text_quic_msg.nano_id,
+    )?;
+
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
         server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
