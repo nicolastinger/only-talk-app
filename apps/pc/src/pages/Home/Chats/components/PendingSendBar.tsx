@@ -43,8 +43,13 @@ const formatRaw = (record: ChatRecordSend): string => {
         const parsed = JSON.parse(record.raw);
         return parsed.file_name ?? '[文件]';
       }
-      case 100:
+      case 100: {
+        const parsed = JSON.parse(record.raw);
+        if (parsed?.type === 'offer') return '[视频通话]';
+        if (parsed?.type === 'answer') return '[已接听]';
+        if (parsed?.type === 'end') return '[通话结束]';
         return '[WebRTC信令]';
+      }
       default:
         return record.raw;
     }

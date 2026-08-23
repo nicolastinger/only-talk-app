@@ -4,6 +4,7 @@ import { formatFullTime } from '@/utils/format';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
+import CallInviteMessage from './CallInviteMessage';
 import ChatFile from './ChatFile';
 import ChatImage from './ChatImage';
 import PrivacyModeMessage from './PrivacyModeMessage';
@@ -148,8 +149,9 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
     switch (text_type) {
       case MSG_TYPE_PRIVACY:
         return <PrivacyModeMessage isMine={false} />;
-      case 5:
       case 12:
+        return <CallInviteMessage friendUuid={friendUuid} raw={raw} />;
+      case 5:
       case 13:
       case 14:
       case 15:

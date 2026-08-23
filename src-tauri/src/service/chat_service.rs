@@ -844,6 +844,8 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         }
+        // 视频通话控制消息（邀请/接受/拒绝/结束），不参与 prev_id 链
+        12..=15 => Ok(raw.to_string()),
         _ => Err(anyhow!("不支持的消息类型: {}", text_type)),
     }
 }

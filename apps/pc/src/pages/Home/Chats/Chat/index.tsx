@@ -1,4 +1,9 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
+import {
+  clearPendingWebRTCCall,
+  getPendingWebRTCCall,
+  openWebRTCChatHandler,
+} from '@/hooks/useWebRTCSignalApi';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
@@ -45,6 +50,22 @@ const ChatPage: React.FC = () => {
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(friendUuid, meUuid);
+
+  // 处理对方对视频通话邀请的回应：13=接受（作为发起方开窗发 offer），14=拒绝（清等待状态）
+  useEffect(() => {
+    if (!textMessage || textMessage.send_user !== friendUuid) {
+      return;
+    }
+    if (textMessage.text_type === 13) {
+      const sessionId = getPendingWebRTCCall(friendUuid);
+      clearPendingWebRTCCall(friendUuid);
+      openWebRTCChatHandler(friendUuid, meUuid, true, undefined, sessionId).catch((e) => {
+        console.error('[Chat] 对方接受后打开 WebRTC 窗口失败:', e);
+      });
+    } else if (textMessage.text_type === 14) {
+      clearPendingWebRTCCall(friendUuid);
+    }
+  }, [textMessage, friendUuid, meUuid]);
 
   const handleHeightChange = (heightPercent: number) => {
     const containerHeight = window.innerHeight;

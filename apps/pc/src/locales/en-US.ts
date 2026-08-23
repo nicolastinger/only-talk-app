@@ -261,6 +261,7 @@ export default {
       startWebRTC: 'Start WebRTC Chat',
       userInfoError: 'Unable to get user info',
       webRTCFailed: 'Failed to start WebRTC chat',
+      webRTCInviteSent: 'Video call invitation sent, waiting for reply',
     },
     pendingBar: {
       title: 'Pending messages',
@@ -593,6 +594,11 @@ export default {
     mediaAudio: 'Audio',
     mediaVideo: 'Video',
     mediaData: 'Data',
+    hideDetail: 'Hide details',
+    loading: 'Loading...',
+    noDetail: 'No signaling details',
+    acceptBtn: 'Accept',
+    rejectBtn: 'Decline',
   },
   groupInfo: {
     memberCount: '{count} members',

@@ -4,6 +4,7 @@ import {
   PhoneOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
 import React, { useMemo, useState } from 'react';
 import styles from './styles/WebRTCMessage.less';
@@ -22,6 +23,18 @@ interface ParsedSignal {
   receiver: string;
   sessionId?: string;
   data: any;
+  timestamp: number;
+}
+
+/** 从后端拉取的会话明细记录 */
+interface DetailRecord {
+  id: number;
+  nano_id: string;
+  session_id: string;
+  msg_type: string;
+  send_user: string;
+  recv_user: string;
+  data: string;
   timestamp: number;
 }
 
@@ -52,7 +65,7 @@ const MEDIA_TYPE_MAP: Record<string, string> = {
   data: 'webRTCMessage.mediaData',
 };
 
-// 交换步骤 -> 图标/文案/样式（复用现有样式体系：offer=邀请色，answer=接听色，candidate=信令色）
+// 交换步骤 -> 图标/文案/样式
 const getSignalStep = (type: string) => {
   switch (type) {
     case 'offer':
@@ -61,6 +74,8 @@ const getSignalStep = (type: string) => {
       return { icon: <CheckCircleOutlined />, labelKey: 'webRTCMessage.answer', styleType: 'accept' };
     case 'candidate':
       return { icon: <PhoneOutlined />, labelKey: 'webRTCMessage.candidate', styleType: 'signal' };
+    case 'end':
+      return { icon: <PhoneOutlined />, labelKey: 'webRTCMessage.ended', styleType: 'end' };
     default:
       return { icon: <VideoCameraOutlined />, labelKey: 'webRTCMessage.signal', styleType: 'signal' };
   }
@@ -114,9 +129,45 @@ const getMessageInfo = (textType: number, isMine: boolean, t: (id: string) => st
   }
 };
 
+/** 从会话明细记录提取可读摘要文案 */
+const getDetailContent = (record: DetailRecord, t: (id: string) => string): string => {
+  let data: any = record.data;
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data);
+    } catch {
+      // 保持原字符串
+    }
+  }
+
+  if (record.msg_type === 'candidate') {
+    const candidateStr = typeof data === 'string' ? data : data?.candidate;
+    if (!candidateStr) return t('webRTCMessage.iceComplete');
+    const parsed = parseIceCandidate(candidateStr);
+    return parsed ? `${parsed.type} ${parsed.protocol} ${parsed.ip}:${parsed.port}` : candidateStr;
+  }
+  if (record.msg_type === 'offer' || record.msg_type === 'answer') {
+    const sdp = typeof data === 'string' ? data : data?.sdp;
+    if (sdp) {
+      const mediaTypes = getSdpMediaTypes(sdp);
+      if (mediaTypes.length > 0) {
+        return mediaTypes
+          .map((m) => {
+            const mediaKey = MEDIA_TYPE_MAP[m];
+            return mediaKey ? t(mediaKey) : m;
+          })
+          .join('+');
+      }
+    }
+  }
+  return '—';
+};
+
 const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) => {
   const intl = useIntl();
   const [showDetail, setShowDetail] = useState(false);
+  const [detailRecords, setDetailRecords] = useState<DetailRecord[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
   const t = (id: string) => intl.formatMessage({ id });
 
   // 解析存储的信令记录
@@ -130,7 +181,34 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
     }
   }, [raw]);
 
-  // 可解析出信令记录时：展示交换步骤与内容
+  const fetchDetail = async () => {
+    if (!signal?.sessionId) {
+      setDetailRecords([]);
+      return;
+    }
+    setDetailLoading(true);
+    try {
+      const records = await invoke<DetailRecord[]>('get_webrtc_signal_records', {
+        sessionId: signal.sessionId,
+      });
+      setDetailRecords(records || []);
+    } catch (e) {
+      console.error('[WebRTCMessage] 获取WebRTC信令详情失败:', e);
+      setDetailRecords([]);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const toggleDetail = () => {
+    const next = !showDetail;
+    setShowDetail(next);
+    if (next && !detailRecords.length) {
+      fetchDetail();
+    }
+  };
+
+  // 可解析出信令记录时：展示单条会话摘要 + 可展开明细
   if (signal && textType === 100) {
     const step = getSignalStep(signal.type);
     const { type, data, sessionId } = signal;
@@ -179,11 +257,28 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
             {isIceComplete ? t('webRTCMessage.iceComplete') : contentText || '—'}
             {sessionText && <span className={styles.session}>{sessionText}</span>}
           </div>
-          <div className={styles.detail} onClick={() => setShowDetail(!showDetail)}>
-            {t('webRTCMessage.detail')}
-          </div>
+          {sessionId && (
+            <div className={styles.detail} onClick={toggleDetail}>
+              {showDetail ? t('webRTCMessage.hideDetail') : t('webRTCMessage.detail')}
+            </div>
+          )}
           {showDetail && (
-            <pre className={styles.detailContent}>{JSON.stringify(signal, null, 2)}</pre>
+            <div className={styles.detailContent}>
+              {detailLoading && t('webRTCMessage.loading')}
+              {!detailLoading && detailRecords.length === 0 && t('webRTCMessage.noDetail')}
+              {!detailLoading &&
+                detailRecords.map((record) => {
+                  const recStep = getSignalStep(record.msg_type);
+                  return (
+                    <div key={`${record.id}_${record.msg_type}_${record.timestamp}`}>
+                      <span className={styles.detailStep}>{t(recStep.labelKey)}</span>
+                      <span className={styles.detailData}>
+                        {getDetailContent(record, t)}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
           )}
         </div>
       </div>

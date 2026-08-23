@@ -119,7 +119,7 @@ interface ChatMessageItem {
 }
 
 interface WebRTCSignalMsgRaw {
-  type: 'offer' | 'answer' | 'candidate';
+  type: 'offer' | 'answer' | 'candidate' | 'end';
   sender: string;
   receiver: string;
   sessionId: string;
@@ -158,6 +158,7 @@ const WebRTCChat: React.FC = () => {
   const isInitiator = params.get('initiator') === 'true';
   const localUserId = params.get('localUserId') || '';
   const initialSignalData = params.get('signalData');
+  const urlSessionId = params.get('sessionId') || '';
 
   useEffect(() => {
     scrollToBottom();
@@ -187,6 +188,12 @@ const WebRTCChat: React.FC = () => {
       console.log(
         `[WebRTCChat] WebRTCService已初始化，会话ID: ${service.sessionId}`,
       );
+
+      // 若通过邀请流程携带了 sessionId，则注入以保证双方使用同一会话
+      if (urlSessionId) {
+        service.sessionId = urlSessionId;
+        console.log(`[WebRTCChat] 已注入会话ID: ${service.sessionId}`);
+      }
 
       try {
         console.log(`[WebRTCChat] 初始化本地媒体流...`);
@@ -400,6 +407,12 @@ const WebRTCChat: React.FC = () => {
               );
               await service.handleCandidate(friendId, signalMsg.data);
               console.log(`[WebRTCChat.onWebRTCSignal] ✅ candidate已处理`);
+            } else if (signalMsg.type === 'end') {
+              console.log(
+                `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的结束信令，关闭连接`,
+              );
+              setConnectionStatus('disconnected');
+              await service.closeConnection(friendId);
             } else {
               console.log(
                 `[WebRTCChat.onWebRTCSignal] ⚠️  未知的信令类型: ${signalMsg.type}`,
@@ -569,6 +582,25 @@ const WebRTCChat: React.FC = () => {
     try {
       const service = getWebRTCService();
       if (service) {
+        console.log(
+          `[WebRTCChat.handleExit] 先发送结束信令，再关闭连接...`,
+        );
+        // 发送结束信令通知对端（对端会借此清理连接）
+        try {
+          const endSignal: WebRTCSignalMessage = {
+            type: 'end',
+            sender: localUserId,
+            receiver: friendId,
+            sessionId: service.sessionId,
+            data: {},
+            timestamp: Date.now(),
+          };
+          await service.sendSignal(endSignal);
+          console.log(`[WebRTCChat.handleExit] ✅ 结束信令已发送`);
+        } catch (sendEndErr) {
+          console.error(`[WebRTCChat.handleExit] 发送结束信令失败:`, sendEndErr);
+        }
+
         console.log(
           `[WebRTCChat.handleExit] 调用 service.closeConnection(${friendId})...`,
         );

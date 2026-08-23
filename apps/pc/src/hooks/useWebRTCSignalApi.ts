@@ -1,32 +1,30 @@
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
-import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { WindowOptions } from '@tauri-apps/api/window';
-import { useEffect, useMemo, useState } from 'react';
-
-interface WebRTCSignalMsgRaw {
-  type: 'offer' | 'answer' | 'candidate';
-  sender: string;
-  receiver: string;
-  sessionId: string;
-  data: any;
-  timestamp: number;
-}
-
-interface TextQuicMsgVo {
-  nano_id: string;
-  text_type: number;
-  raw: string;
-  recv_user: string;
-  send_user: string;
-  timestamp: number;
-}
+import { useMemo, useState } from 'react';
 
 /** WebRTC窗口最大数量 */
 const MAX_WEBRTC_WINDOWS = 2;
+
+/** 记录本端发起但尚未被对方处理的通话 sessionId，key 为 friendId */
+const pendingWebRTCCalls = new Map<string, string>();
+
+/** 设置等待对方接受的通话 sessionId */
+const setPendingWebRTCCall = (friendId: string, sessionId: string) => {
+  pendingWebRTCCalls.set(friendId, sessionId);
+};
+
+/** 获取等待对方接受的通话 sessionId */
+const getPendingWebRTCCall = (friendId: string): string | undefined => {
+  return pendingWebRTCCalls.get(friendId);
+};
+
+/** 清除等待/已完成的通话 sessionId */
+const clearPendingWebRTCCall = (friendId: string) => {
+  pendingWebRTCCalls.delete(friendId);
+};
 
 /**
  * 生成WebRTC窗口的固定label
@@ -125,6 +123,7 @@ const openWebRTCChatHandler = async (
   localUserId: string,
   isInitiator: boolean,
   signalData?: string,
+  sessionId?: string,
 ) => {
   // 检查是否已有该好友的WebRTC窗口
   const isAlreadyOpen = await isWebRTCWindowOpen(friendId);
@@ -157,6 +156,9 @@ const openWebRTCChatHandler = async (
   if (signalData) {
     url += `&signalData=${encodeURIComponent(signalData)}`;
   }
+  if (sessionId) {
+    url += `&sessionId=${encodeURIComponent(sessionId)}`;
+  }
   const webviewOptions: WebviewOptions = {
     x: 0,
     y: 0,
@@ -181,74 +183,20 @@ const openWebRTCChatHandler = async (
 };
 
 const useWebRTCSignalApi = () => {
-  const [state, setState] = useState<boolean>(false);
-  const userInfo = useBearStore((state) => state.userInfo);
+  const [state] = useState<boolean>(false);
 
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    const setupListener = async () => {
-      try {
-        unlisten = await listen<string>('webrtc_signal', async (event) => {
-          console.log('主窗口收到 WebRTC 信令消息:', event.payload);
-          try {
-            const msgVo: TextQuicMsgVo = JSON.parse(event.payload);
-            const signalMsg: WebRTCSignalMsgRaw = JSON.parse(msgVo.raw);
-            const localUserId = userInfo.uuid;
-
-            if (signalMsg.type === 'offer') {
-              // 检查是否已有该好友的WebRTC窗口
-              const isAlreadyOpen = await isWebRTCWindowOpen(signalMsg.sender);
-              if (isAlreadyOpen) {
-                console.log(
-                  `[WebRTC] 好友 ${signalMsg.sender} 的窗口已存在，信令将由Chat窗口自行处理`,
-                );
-                // Chat窗口自己监听了webrtc_signal事件，会自动处理
-                // 只需聚焦已有窗口
-                const label = getWebRTCWindowLabel(signalMsg.sender);
-                const existingWindow = await WebviewWindow.getByLabel(label);
-                if (existingWindow) {
-                  try {
-                    await existingWindow.setFocus();
-                  } catch {
-                    // 忽略聚焦失败
-                  }
-                }
-                return;
-              }
-              console.log('收到 offer，打开 WebRTC 聊天窗口');
-              await openWebRTCChatHandler(
-                signalMsg.sender,
-                localUserId,
-                false,
-                msgVo.raw,
-              );
-            }
-          } catch (e) {
-            console.error('处理 WebRTC 信令失败:', e);
-          }
-        });
-      } catch (e) {
-        console.error('监听 WebRTC 信令失败:', e);
-      }
-    };
-
-    setupListener();
-
-    return () => {
-      if (unlisten) {
-        unlisten();
-      }
-    };
-  }, [userInfo.uuid]);
-
+  // WebRTC 窗口的开启改由「邀请(12)/接受(13)」流程驱动（见 FooterToolBar / CallInviteMessage / Chat 容器）。
+  // 100 信令只在已打开的 WebRTC 窗口内部处理，本 hook 不再监听信令自动开窗。
   return useMemo(() => ({ state }), [state]);
 };
 
 export {
+  clearPendingWebRTCCall,
+  getPendingWebRTCCall,
   getWebRTCWindowLabel,
   isWebRTCWindowOpen,
   openWebRTCChatHandler,
+  setPendingWebRTCCall,
   updateWebRTCWindowState,
   useWebRTCSignalApi,
 };

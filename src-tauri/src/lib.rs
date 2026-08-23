@@ -35,9 +35,9 @@ use crate::cmd::auth_controller::{
 };
 use crate::cmd::chat_record_controller::{
     get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
-    get_pending_send_records, ignore_send_msg, mark_group_read, mark_read, retry_send_msg,
-    send_file_msg, send_group_file_msg, send_group_image_msg, send_group_text_msg, send_image_msg,
-    send_text_msg,
+    get_pending_send_records, get_webrtc_signal_records, ignore_send_msg, mark_group_read,
+    mark_read, retry_send_msg, send_file_msg, send_group_file_msg, send_group_image_msg,
+    send_group_text_msg, send_image_msg, send_text_msg,
 };
 use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
@@ -208,6 +208,7 @@ pub fn run() {
             send_p2p_file_transfer_response,
             get_chat_record_from_store,
             get_chat_record_by_type,
+            get_webrtc_signal_records,
             get_group_chat_record_from_store,
             get_pending_send_records,
             retry_send_msg,

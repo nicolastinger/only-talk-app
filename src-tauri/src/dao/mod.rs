@@ -20,6 +20,7 @@ pub mod init_db;
 pub mod init_private_db;
 pub mod session_db;
 pub mod store;
+pub mod webrtc_signal_db;
 
 // 用户数据库
 pub async fn get_db_client() -> Result<sqlx::SqlitePool, anyhow::Error> {

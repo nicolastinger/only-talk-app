@@ -62,6 +62,14 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
     }
 
     if (text_type === 100) {
+      try {
+        const parsed = JSON.parse(message);
+        if (parsed?.type === 'offer') return '[视频通话]';
+        if (parsed?.type === 'answer') return '[已接听]';
+        if (parsed?.type === 'end') return '[通话结束]';
+      } catch (e) {
+        // 解析失败则回退到通用文案
+      }
       return '[WebRTC信令]';
     }
 

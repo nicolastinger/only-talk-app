@@ -3,8 +3,8 @@
  * 用于在两个对等端之间交换会话描述和ICE候选信息
  */
 interface WebRTCSignalMessage {
-  /** 信令类型: offer(发起方的媒体描述) | answer(响应方的媒体描述) | candidate(ICE候选地址) */
-  type: "offer" | "answer" | "candidate";
+  /** 信令类型: offer(发起方的媒体描述) | answer(响应方的媒体描述) | candidate(ICE候选地址) | end(通话结束) */
+  type: "offer" | "answer" | "candidate" | "end";
   /** 发送方用户ID */
   sender: string;
   /** 接收方用户ID */

@@ -5,7 +5,9 @@ use tokio::time::timeout;
 
 use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
 use crate::dao::chat_record_send::query_chat_record_send_by_user;
+use crate::dao::webrtc_signal_db::query_webrtc_signal_by_session;
 use crate::entity::chat_record_send::ChatRecordSend;
+use crate::entity::webrtc_signal::WebrtcSignal;
 use crate::entity::Page;
 use crate::service::chat_service::{
     get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
@@ -103,6 +105,12 @@ pub async fn get_chat_record_by_type(
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, String> {
     get_chat_record_by_type_service(text_quic_msg, text_type, page).await.map_err(|e| e.to_string())
+}
+
+/// 按会话 id 获取 WebRTC 信令明细（用于详情展示）
+#[tauri::command]
+pub async fn get_webrtc_signal_records(session_id: String) -> Result<Vec<WebrtcSignal>, String> {
+    query_webrtc_signal_by_session(&session_id).await.map_err(|e| e.to_string())
 }
 
 /// 获取群聊的本地聊天数据

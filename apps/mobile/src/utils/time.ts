@@ -66,6 +66,14 @@ export function getMessagePreview(
     case 15:
       return "[通话]";
     case 100:
+      try {
+        const parsed = JSON.parse(lastMessage);
+        if (parsed?.type === "offer") return "[视频通话]";
+        if (parsed?.type === "answer") return "[已接听]";
+        if (parsed?.type === "end") return "[通话结束]";
+      } catch {
+        // 解析失败则回退到通用文案
+      }
       return "[WebRTC信令]";
     default:
       return lastMessage || "";

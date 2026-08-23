@@ -15,6 +15,7 @@ use crate::dao::group_message_read::query_group_last_read_msg;
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
+use crate::dao::webrtc_signal_db::save_webrtc_signal;
 use crate::dto::add_read_chat_record::AddReadChatRecord;
 use crate::dto::http_result::HttpResult;
 use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO};
@@ -22,6 +23,7 @@ use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
+use crate::quic_service::center_service::process_text_msg_from_server::WebRTCSignalMessage;
 use crate::quic_service::center_service::text_quic_client::run_client;
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::chat_service::process_no_send_success_msg;
@@ -106,6 +108,23 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
     for text_quic_msg in text_quic_msg_vec {
+        // WebRTC信令消息仅同步明细/摘要入库，不参与会话与未读计数
+        if text_quic_msg.text_type == MSG_TYPE_WEBRTC_SIGNAL {
+            if let Ok(signal) = serde_json::from_str::<WebRTCSignalMessage>(&text_quic_msg.raw) {
+                save_webrtc_signal(
+                    &text_quic_msg.nano_id,
+                    signal.session_id.as_deref().unwrap_or_default(),
+                    &signal.msg_type,
+                    &signal.sender,
+                    &signal.receiver,
+                    &signal.data,
+                    signal.timestamp,
+                    signal.prev_id.as_deref().unwrap_or_default(),
+                )
+                .await?;
+            }
+            continue;
+        }
         // 保存消息，返回是否真正新增（本地已存在则说明之前拉过/在线收过，不再计入未读）
         let is_new = match insert_chat_record(&text_quic_msg).await {
             Ok(v) => v,
@@ -113,10 +132,6 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
                 continue;
             }
         };
-        // WebRTC信令消息仅同步历史入库，不参与会话与未读计数
-        if text_quic_msg.text_type == MSG_TYPE_WEBRTC_SIGNAL {
-            continue;
-        }
         // 只有我收到的消息才算未读，自己发的消息只同步展示不计角标
         let is_received = text_quic_msg.recv_user == uuid;
         let user = match is_received {

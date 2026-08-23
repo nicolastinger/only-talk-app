@@ -15,8 +15,8 @@ use crate::dao::group_message_ack::{
     query_group_message_ack_by_local_nano_id, update_group_message_ack_status,
 };
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
+use crate::dao::webrtc_signal_db::save_webrtc_signal;
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
-use crate::entity::chat_record_raw::{ChatRecordRaw, WebRTCSignalRecord};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::p2p_models::P2pInitMsg;
@@ -33,9 +33,10 @@ use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE,
     MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_NOTIFICATION, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE,
-    MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING,
-    MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL,
-    NOTIFY_TYPE_MSG,
+    MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER,
+    MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM,
+    MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
@@ -43,17 +44,17 @@ use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct WebRTCSignalMessage {
+pub struct WebRTCSignalMessage {
     #[serde(rename = "type")]
-    msg_type: String,
-    sender: String,
-    receiver: String,
+    pub msg_type: String,
+    pub sender: String,
+    pub receiver: String,
     #[serde(rename = "sessionId")]
-    session_id: Option<String>,
+    pub session_id: Option<String>,
     #[serde(default)]
-    prev_id: Option<String>,
-    data: serde_json::Value,
-    timestamp: i64,
+    pub prev_id: Option<String>,
+    pub data: serde_json::Value,
+    pub timestamp: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -78,8 +79,14 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
     info!("处理消息 {:?}", text_vec);
     for msg in text_vec {
         match msg.text_type {
-            // 单聊消息
-            MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE => {
+            // 单聊消息（含视频通话控制类型：邀请/接受/拒绝/结束）
+            MSG_TYPE_TEXT
+            | MSG_TYPE_IMAGE
+            | MSG_TYPE_FILE
+            | MSG_TYPE_P2P_VIDEO_CALL_INVITE
+            | MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
+            | MSG_TYPE_P2P_VIDEO_CALL_REJECT
+            | MSG_TYPE_P2P_VIDEO_CALL_END => {
                 process_private_chat_message(msg).await?;
             }
             // 群聊消息
@@ -338,6 +345,26 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         timestamp: msg.timestamp,
     };
 
+    // WebRTC 信令：仅明细落库 + 会话摘要更新，不插入聊天记录/会话/未读
+    if ack_record.text_type == MSG_TYPE_WEBRTC_SIGNAL {
+        if let Ok(signal) = serde_json::from_str::<WebRTCSignalMessage>(&text_quic_msg_vo.raw) {
+            save_webrtc_signal(
+                &text_quic_msg_vo.nano_id,
+                signal.session_id.as_deref().unwrap_or_default(),
+                &signal.msg_type,
+                &signal.sender,
+                &signal.receiver,
+                &signal.data,
+                signal.timestamp,
+                signal.prev_id.as_deref().unwrap_or_default(),
+            )
+            .await?;
+        }
+        update_chat_record_ack(&ack_record.send_id, 1, &text_quic_msg_vo.nano_id).await?;
+        update_chat_record_send_success(&ack_record.send_id, &text_quic_msg_vo.nano_id).await?;
+        return Ok(());
+    }
+
     // 2.聊天插入数据库（使用INSERT OR IGNORE避免重复插入）
     insert_chat_record(&text_quic_msg_vo).await?;
 
@@ -478,7 +505,7 @@ async fn process_local_notify_message(
 }
 
 async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
-    let mut msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let signal: WebRTCSignalMessage = serde_json::from_str(&msg.raw)?;
 
     info!(
@@ -520,18 +547,18 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
     let payload = serde_json::to_string(&msg)?;
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("webrtc_signal", payload)?;
 
-    // 参考text消息格式，包装为 WebRTCSignalRecord 后保存到本地聊天记录
-    let webrtc_record = WebRTCSignalRecord {
-        prev_id: signal.prev_id.unwrap_or_default(),
-        signal_type: signal.msg_type,
-        sender: signal.sender,
-        receiver: signal.receiver,
-        session_id: signal.session_id.unwrap_or_default(),
-        data: signal.data,
-        timestamp: signal.timestamp,
-    };
-    msg.raw = webrtc_record.json_serialize()?;
-    insert_chat_record(&msg).await?;
+    // 明细落库 + 会话摘要更新（candidate 仅写明细，不更新摘要）
+    save_webrtc_signal(
+        &msg.nano_id,
+        signal.session_id.as_deref().unwrap_or_default(),
+        &signal.msg_type,
+        &signal.sender,
+        &signal.receiver,
+        &signal.data,
+        signal.timestamp,
+        signal.prev_id.as_deref().unwrap_or_default(),
+    )
+    .await?;
 
     Ok(())
 }

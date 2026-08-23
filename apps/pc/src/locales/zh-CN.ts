@@ -256,6 +256,7 @@ export default {
       startWebRTC: '发起 WebRTC 聊天',
       userInfoError: '无法获取用户信息',
       webRTCFailed: '发起 WebRTC 聊天失败',
+      webRTCInviteSent: '已发送视频通话邀请，等待对方接受',
     },
     pendingBar: {
       title: '待发送记录',
@@ -585,6 +586,11 @@ export default {
     mediaAudio: '音频',
     mediaVideo: '视频',
     mediaData: '数据',
+    hideDetail: '收起详情',
+    loading: '加载中...',
+    noDetail: '暂无信令明细',
+    acceptBtn: '允许',
+    rejectBtn: '拒绝',
   },
   groupInfo: {
     memberCount: '{count} 位成员',

@@ -256,6 +256,7 @@ export default {
       startWebRTC: '發起 WebRTC 聊天',
       userInfoError: '無法獲取用戶信息',
       webRTCFailed: '發起 WebRTC 聊天失敗',
+      webRTCInviteSent: '已發送視訊通話邀請，等待對方接受',
     },
     pendingBar: {
       title: '待發送記錄',
@@ -585,6 +586,11 @@ export default {
     mediaAudio: '音訊',
     mediaVideo: '視訊',
     mediaData: '資料',
+    hideDetail: '收合詳情',
+    loading: '載入中...',
+    noDetail: '暫無信令明細',
+    acceptBtn: '允許',
+    rejectBtn: '拒絕',
   },
   groupInfo: {
     memberCount: '{count} 位成員',

@@ -17,6 +17,7 @@ use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::user_info::UserInfo;
 use crate::entity::user_token::UserToken;
+use crate::entity::webrtc_signal::WebrtcSignal;
 use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 初始化公共数据库
@@ -64,6 +65,7 @@ pub async fn init_private_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Er
     init_sqlite::<ChatRecordAck>(pool_sqlite).await?;
     init_sqlite::<GroupMessageAck>(pool_sqlite).await?;
     init_sqlite::<GroupMessageRead>(pool_sqlite).await?;
+    init_sqlite::<WebrtcSignal>(pool_sqlite).await?;
     {
         // 本地存储初始化成功
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
