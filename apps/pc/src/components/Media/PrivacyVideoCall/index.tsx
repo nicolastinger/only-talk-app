@@ -568,7 +568,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       message.error('无法访问摄像头或麦克风');
       transition('Ended');
     }
-  }, [friendId, isRemoteReceiverReady, sendMediaReady, startSendingMedia, transition]);
+  }, [friendId, isRemoteReceiverReady, sendMediaReady, transition]);
 
   // 同步 ref，确保事件监听器始终调用最新版本
   initLocalMediaRef.current = initLocalMedia;

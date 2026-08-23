@@ -1,5 +1,6 @@
 import {
   CheckCircleOutlined,
+  CloseCircleOutlined,
   PhoneOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
@@ -24,6 +25,32 @@ interface ParsedSignal {
   data: any;
   timestamp: number;
 }
+
+// 视频通话控制消息类型（12-15）
+const IS_CONTROL_TYPE = (textType: number): boolean =>
+  textType >= 12 && textType <= 15;
+
+// 控制消息 -> 图标 / 文案 key / 样式
+interface ControlStep {
+  icon: React.ReactNode;
+  labelKey: string;
+  styleType: string;
+}
+
+const getControlStep = (type: string): ControlStep => {
+  switch (type) {
+    case 'invite':
+      return { icon: <VideoCameraOutlined />, labelKey: '', styleType: 'invite' };
+    case 'accept':
+      return { icon: <CheckCircleOutlined />, labelKey: 'webRTCMessage.accepted', styleType: 'accept' };
+    case 'reject':
+      return { icon: <CloseCircleOutlined />, labelKey: 'webRTCMessage.rejected', styleType: 'reject' };
+    case 'end':
+      return { icon: <PhoneOutlined />, labelKey: 'webRTCMessage.ended', styleType: 'end' };
+    default:
+      return { icon: <VideoCameraOutlined />, labelKey: 'webRTCMessage.signal', styleType: 'signal' };
+  }
+};
 
 /** 从后端拉取的会话明细记录 */
 interface DetailRecord {
@@ -158,6 +185,35 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
       fetchDetail();
     }
   };
+
+  // 视频通话控制消息(12-15)：解析 raw 并渲染为状态气泡
+  if (IS_CONTROL_TYPE(textType)) {
+    const step = getControlStep(signal?.type || '');
+    const isInvite = step.styleType === 'invite';
+    const labelKey = isInvite
+      ? isMine
+        ? 'webRTCMessage.started'
+        : 'webRTCMessage.otherStarted'
+      : step.labelKey;
+    const sessionText = signal?.sessionId
+      ? `${t('webRTCMessage.session')}: ${signal.sessionId.slice(0, 8)}`
+      : '';
+    return (
+      <div
+        className={`${styles.container} ${styles[step.styleType]} ${
+          isMine ? styles.mine : styles.friend
+        }`}
+      >
+        <div className={styles.iconWrapper}>{step.icon}</div>
+        <div className={styles.text}>
+          <div className={styles.title}>
+            {labelKey ? t(labelKey) : t('webRTCMessage.default')}
+          </div>
+          {sessionText && <div className={styles.content}>{sessionText}</div>}
+        </div>
+      </div>
+    );
+  }
 
   // 仅渲染 WebRTC 会话摘要（text_type=100），其余类型不再渲染
   if (textType !== 100 || !signal) {

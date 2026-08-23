@@ -41,6 +41,26 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
       return '[隐私模式]';
     }
 
+    // 视频通话控制消息(12-15)：解析为聊天列表预览文案
+    if (text_type != null && text_type >= 12 && text_type <= 15) {
+      try {
+        const parsed = JSON.parse(message);
+        switch (parsed?.type) {
+          case 'invite':
+            return '[视频通话邀请]';
+          case 'accept':
+            return '[已接听]';
+          case 'reject':
+            return '[已拒绝]';
+          case 'end':
+            return '[通话结束]';
+        }
+      } catch (e) {
+        // 解析失败则回退到通用文案
+      }
+      return '[视频通话]';
+    }
+
     if (text_type === 100) {
       try {
         const parsed = JSON.parse(message);
