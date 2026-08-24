@@ -55,3 +55,8 @@ pub static ZERO_UUID: &str = "00000000-0000-0000-0000-000000000000";
 pub static PLATFORM: u8 = 0; // PC
 #[cfg(not(desktop))]
 pub static PLATFORM: u8 = 1; // MOBILE;
+
+/// 运行环境标识(ONLY_TALK_ENV 环境变量, 未设置默认 prod)
+pub fn get_env() -> String {
+    std::env::var("ONLY_TALK_ENV").unwrap_or_else(|_| "prod".to_string())
+}

@@ -14,7 +14,7 @@ use crate::dao::init_common_db::init_common_sqlite;
 use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
 use crate::utils::dns::resolve_ipv6;
 use crate::utils::global_static_str::{
-    APP_PATH, DEFAULT_IMAGE, DOMAIN_NAME, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
+    get_env, APP_PATH, DEFAULT_IMAGE, DOMAIN_NAME, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
     RESOURCE_PATH, SQLITE_PATH, UDP_PORT_V6,
 };
 
@@ -22,8 +22,11 @@ pub async fn init_app(
     root_path: PathBuf,
     app_handle: Option<tauri::AppHandle<Wry>>,
 ) -> Result<(), anyhow::Error> {
-    // 获取应用的路径
-    let app_path = root_path.to_str().expect("获取应用路径失败");
+    // 获取应用的路径(挂载运行环境 {env} 段, 如 prod/dev/test)
+    let env = get_env();
+    let app_path = root_path.join(&env);
+    info!("运行环境: {}, 应用数据路径: {:?}", env, app_path);
+    let app_path = app_path.to_str().expect("获取应用路径失败");
     set_config(APP_PATH, app_path);
     // 获取日志路径
     let log_dir = Path::new(app_path).join(LOG_PATH);

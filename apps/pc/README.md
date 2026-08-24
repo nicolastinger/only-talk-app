@@ -73,6 +73,26 @@ pnpm tauri build
 pnpm format
 ```
 
+## 本地数据目录与运行环境
+
+桌面端本地数据/资源目录按运行环境隔离，通过环境变量 `ONLY_TALK_ENV` 指定（未设置默认 `prod`）：
+
+```
+Documents/OnlyTalk/{env}/
+├── dbData/     # 本地数据库
+├── resource/   # 本地资源
+└── logs/       # 日志
+```
+
+示例（PowerShell）：
+
+```powershell
+$env:ONLY_TALK_ENV="dev"
+pnpm tauri dev
+```
+
+更多说明见仓库根目录 [README](../README.md)。
+
 ## 项目结构
 
 ```
