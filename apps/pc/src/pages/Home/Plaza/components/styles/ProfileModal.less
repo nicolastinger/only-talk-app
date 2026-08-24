@@ -39,6 +39,18 @@
   text-align: center;
 }
 
+.motto {
+  margin: 12px auto 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-color);
+  font-style: italic;
+  max-width: 300px;
+  border-left: 3px solid var(--color-primary);
+  padding-left: 10px;
+  text-align: left;
+}
+
 .bio {
   margin: 4px auto 16px;
   font-size: 13px;
@@ -72,6 +84,33 @@
 .value {
   color: var(--text-color);
   font-weight: 500;
+}
+
+.tagsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tagsTitle {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagChip {
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  color: var(--color-primary);
+  background: rgba(64, 150, 255, 0.12);
+  white-space: nowrap;
 }
 
 .friendBtn {

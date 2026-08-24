@@ -6,6 +6,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getGenderLabel } from './genderHelper';
 import styles from './styles/PlazaCard.less';
 
+const MAX_TAGS_SHOWN = 3;
+
 const hashHue = (str: string) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -15,7 +17,8 @@ const hashHue = (str: string) => {
 };
 
 const PlazaCard = (props: { user: PlazaUser; onClick: () => void }) => {
-  const { username, icon, info, gender, age, address } = props.user;
+  const { username, icon, info, gender, age, address, motto, tags } =
+    props.user;
   const intl = useIntl();
   const [userIcon, setUserIcon] = useState<string | null>(null);
   const hue = useMemo(
@@ -42,6 +45,12 @@ const PlazaCard = (props: { user: PlazaUser; onClick: () => void }) => {
 
   const cardStyle = { '--card-hue': hue } as React.CSSProperties;
 
+  const genderClass =
+    gender === 2 ? styles.male : gender === 3 ? styles.female : '';
+
+  const shownTags = (tags || []).slice(0, MAX_TAGS_SHOWN);
+  const restCount = (tags || []).length - shownTags.length;
+
   return (
     <div className={styles.container} style={cardStyle} onClick={props.onClick}>
       <div className={styles.cover}>
@@ -58,19 +67,36 @@ const PlazaCard = (props: { user: PlazaUser; onClick: () => void }) => {
       </div>
       <div className={styles.body}>
         <div className={styles.name}>{username || ''}</div>
-        <div className={styles.info}>{info || ''}</div>
-        <div className={styles.tags}>
+
+        <div className={styles.meta}>
+          {gender !== undefined && gender !== null ? (
+            <span className={`${styles.gender} ${genderClass}`}>
+              {getGenderLabel(intl, gender)}
+            </span>
+          ) : null}
           {age ? (
-            <span className={styles.tag}>
+            <span className={styles.metaText}>
               {age}
               {intl.formatMessage({ id: 'plaza.ageUnit' })}
             </span>
           ) : null}
-          {gender !== undefined && gender !== null ? (
-            <span className={styles.tag}>{getGenderLabel(intl, gender)}</span>
-          ) : null}
-          {address ? <span className={styles.tag}>{address}</span> : null}
+          {address ? <span className={styles.metaText}>{address}</span> : null}
         </div>
+
+        {(motto || info) && <div className={styles.motto}>{motto || info}</div>}
+
+        {shownTags.length > 0 && (
+          <div className={styles.tags}>
+            {shownTags.map((tag) => (
+              <span key={tag} className={styles.tag}>
+                {tag}
+              </span>
+            ))}
+            {restCount > 0 && (
+              <span className={styles.tagMore}>+{restCount}</span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

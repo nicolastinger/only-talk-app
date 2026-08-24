@@ -569,6 +569,7 @@ export default {
     manage: '我的廣場設置',
     addFriend: '加好友',
     requested: '已申請',
+    tagsTitle: '標籤',
     gender: '性別',
     age: '年齡',
     ageUnit: '歲',

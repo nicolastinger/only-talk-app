@@ -578,6 +578,7 @@ export default {
     manage: 'My Plaza Settings',
     addFriend: 'Add Friend',
     requested: 'Requested',
+    tagsTitle: 'Tags',
     gender: 'Gender',
     age: 'Age',
     ageUnit: ' yrs',

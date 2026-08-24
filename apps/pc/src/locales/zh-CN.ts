@@ -569,6 +569,7 @@ export default {
     manage: '我的广场设置',
     addFriend: '加好友',
     requested: '已申请',
+    tagsTitle: '标签',
     gender: '性别',
     age: '年龄',
     ageUnit: '岁',

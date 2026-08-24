@@ -119,6 +119,8 @@ const ProfileModal = (props: {
             <div className={styles.name}>{user.username || '-'}</div>
           </div>
 
+          {user.motto && <div className={styles.motto}>{user.motto}</div>}
+
           {user.info && <div className={styles.bio}>{user.info}</div>}
 
           <div className={styles.infoSection}>
@@ -147,6 +149,21 @@ const ProfileModal = (props: {
               <span className={styles.value}>{user.address || '-'}</span>
             </div>
           </div>
+
+          {(user.tags || []).length > 0 && (
+            <div className={styles.tagsSection}>
+              <span className={styles.tagsTitle}>
+                {intl.formatMessage({ id: 'plaza.tagsTitle' })}
+              </span>
+              <div className={styles.tagList}>
+                {user.tags!.map((tag) => (
+                  <span key={tag} className={styles.tagChip}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <Button
             type="primary"
