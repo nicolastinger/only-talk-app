@@ -6,6 +6,7 @@ import { useBearStore } from '@/store/store';
 import {
   BellOutlined,
   MessageOutlined,
+  RadarChartOutlined,
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -87,6 +88,13 @@ const LeftAside = () => {
         active: false,
         icon: <UserOutlined style={{ fontSize: '18px' }} />,
         unreadCount: menuUnread.contacts,
+      },
+      {
+        text: intl.formatMessage({ id: 'leftAside.plaza' }),
+        url: '/home/plaza',
+        active: false,
+        icon: <RadarChartOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: 0,
       },
     ]);
 
@@ -209,7 +217,10 @@ const LeftAside = () => {
       <div className={styles.bottom}>{renderBtn(bottomBtnList)}</div>
 
       <UserInfoModal visible={isModalVisible} onClose={handleCancel} />
-      <NotificationPanel visible={notifyVisible} onClose={() => setNotifyVisible(false)} />
+      <NotificationPanel
+        visible={notifyVisible}
+        onClose={() => setNotifyVisible(false)}
+      />
     </div>
   );
 };

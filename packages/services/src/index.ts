@@ -3,4 +3,5 @@ export * from "./groupService";
 export * from "./httpService";
 export * from "./imagePreviewService";
 export * from "./notificationService";
+export * from "./plazaService";
 export * from "./userService";

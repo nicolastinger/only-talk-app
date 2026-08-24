@@ -1,23 +1,34 @@
 import {
   BellOutlined,
   InfoCircleOutlined,
+  RadarChartOutlined,
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { useIntl } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
 import { Layout, Menu } from 'antd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './Settings.less';
 import AboutApp from './components/AboutApp';
 import AccountPrivacy from './components/AccountPrivacy';
 import GeneralSettings from './components/GeneralSettings';
 import NotificationSettings from './components/NotificationSettings';
+import PlazaSettings from './components/PlazaSettings';
 
 const { Sider, Content } = Layout;
 
 const SettingsPage = () => {
   const intl = useIntl();
-  const [activeTab, setActiveTab] = useState('account');
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const queryTab = params.get('tab');
+  const [activeTab, setActiveTab] = useState(queryTab || 'account');
+
+  useEffect(() => {
+    if (queryTab) {
+      setActiveTab(queryTab);
+    }
+  }, [queryTab]);
 
   const menuItems = [
     {
@@ -36,6 +47,11 @@ const SettingsPage = () => {
       label: intl.formatMessage({ id: 'settings.notification' }),
     },
     {
+      key: 'plaza',
+      icon: <RadarChartOutlined />,
+      label: intl.formatMessage({ id: 'settings.plaza' }),
+    },
+    {
       key: 'about',
       icon: <InfoCircleOutlined />,
       label: intl.formatMessage({ id: 'settings.about' }),
@@ -50,6 +66,8 @@ const SettingsPage = () => {
         return <GeneralSettings />;
       case 'notification':
         return <NotificationSettings />;
+      case 'plaza':
+        return <PlazaSettings />;
       case 'about':
         return <AboutApp />;
       default:

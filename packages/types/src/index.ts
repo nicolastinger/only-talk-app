@@ -4,6 +4,7 @@ export * from "./file";
 export * from "./friend";
 export * from "./menu";
 export * from "./p2p";
+export * from "./plaza";
 export * from "./theme";
 export * from "./user";
 export * from "./webrtc";

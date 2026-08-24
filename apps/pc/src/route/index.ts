@@ -104,6 +104,11 @@ const routes = [
               },
             ],
           },
+          {
+            name: 'menu.plaza',
+            path: 'plaza',
+            component: '@/layouts/HomeLayout/PlazaLayout',
+          },
         ],
       },
       {
