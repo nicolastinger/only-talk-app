@@ -501,16 +501,20 @@
 
 .codeBtn {
   flex-shrink: 0;
-  width: 84px;
+  min-width: 84px;
+  max-width: 120px;
   height: 34px;
-  padding: 0 10px;
+  padding: 0 12px;
   border: none;
   border-radius: 8px;
+  box-sizing: border-box;
   background: var(--btn-gradient-primary);
   color: #fff;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+  text-align: center;
+  overflow: hidden;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(26, 92, 255, 0.25);
   transition: all 0.2s ease;
@@ -527,8 +531,8 @@
 }
 
 .codeBtn:disabled {
-  background: rgba(255, 255, 255, 0.25);
-  color: rgba(255, 255, 255, 0.7);
+  background: rgba(26, 92, 255, 0.45);
+  color: rgba(255, 255, 255, 0.92);
   cursor: not-allowed;
   box-shadow: none;
 }
