@@ -109,6 +109,11 @@ const routes = [
             path: 'plaza',
             component: '@/layouts/HomeLayout/PlazaLayout',
           },
+          {
+            name: 'menu.moments',
+            path: 'moments',
+            component: './Home/Moments',
+          },
         ],
       },
       {

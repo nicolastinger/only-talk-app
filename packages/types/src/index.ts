@@ -3,6 +3,7 @@ export * from "./constants";
 export * from "./file";
 export * from "./friend";
 export * from "./menu";
+export * from "./moment";
 export * from "./p2p";
 export * from "./plaza";
 export * from "./theme";

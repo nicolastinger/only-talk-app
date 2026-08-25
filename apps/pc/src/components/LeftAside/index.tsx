@@ -6,6 +6,7 @@ import { useBearStore } from '@/store/store';
 import {
   BellOutlined,
   MessageOutlined,
+  PictureOutlined,
   RadarChartOutlined,
   SettingOutlined,
   UserOutlined,
@@ -94,6 +95,13 @@ const LeftAside = () => {
         url: '/home/plaza',
         active: false,
         icon: <RadarChartOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: 0,
+      },
+      {
+        text: intl.formatMessage({ id: 'leftAside.moments' }),
+        url: '/home/moments',
+        active: false,
+        icon: <PictureOutlined style={{ fontSize: '18px' }} />,
         unreadCount: 0,
       },
     ]);
