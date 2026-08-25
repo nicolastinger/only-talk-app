@@ -33,8 +33,6 @@ pub struct DeviceInfo {
     pub product_serial: Option<String>,
     /// 整机 UUID
     pub product_uuid: Option<String>,
-    /// 网卡 MAC 地址列表（已排序去重）
-    pub mac_addresses: Vec<String>,
 }
 
 /// 计算稳定设备指纹：对输入字段排序去重后做 SHA-256 摘要，返回小写十六进制
@@ -79,13 +77,7 @@ pub fn collect_device_info() -> DeviceInfo {
 
     let machine_uid = machine_uid::get().unwrap_or_default();
 
-    let mut mac_addresses: Vec<String> = mac_address::MacAddressIterator::new()
-        .map(|iter| iter.map(|mac| mac.to_string()).collect())
-        .unwrap_or_default();
-    mac_addresses.sort();
-    mac_addresses.dedup();
-
-    let mut parts = vec![
+    let parts: Vec<String> = [
         machine_uid.clone(),
         cpu_brand.clone(),
         cpu_vendor.clone(),
@@ -93,8 +85,10 @@ pub fn collect_device_info() -> DeviceInfo {
         motherboard_serial.clone().unwrap_or_default(),
         product_serial.clone().unwrap_or_default(),
         product_uuid.clone().unwrap_or_default(),
-    ];
-    parts.extend(mac_addresses.clone());
+    ]
+    .into_iter()
+    .filter(|v| !v.is_empty())
+    .collect();
     let parts_refs: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
     let device_fingerprint = fingerprint_from_parts(&parts_refs);
 
@@ -113,7 +107,6 @@ pub fn collect_device_info() -> DeviceInfo {
         motherboard_serial,
         product_serial,
         product_uuid,
-        mac_addresses,
     }
 }
 

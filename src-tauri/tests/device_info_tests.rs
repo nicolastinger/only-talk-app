@@ -43,11 +43,6 @@ fn test_collect_device_info_basic() {
     let info = collect_device_info();
     assert_eq!(info.device_fingerprint.len(), 64);
     assert!(!info.machine_uid.is_empty(), "machine_uid 应该能获取到");
-
-    let mut expected = info.mac_addresses.clone();
-    expected.sort();
-    expected.dedup();
-    assert_eq!(info.mac_addresses, expected, "MAC 列表应排序且去重");
 }
 
 #[test]
@@ -62,6 +57,5 @@ fn test_device_info_serializable() {
     let info = collect_device_info();
     let json = serde_json::to_string(&info).expect("DeviceInfo 应可序列化为 JSON");
     assert!(json.contains(&info.device_fingerprint));
-    assert!(json.contains("mac_addresses"));
     assert!(json.contains("motherboard_serial"));
 }
