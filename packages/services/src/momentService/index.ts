@@ -24,12 +24,17 @@ function parseData<T>(res: any): T {
 
 export const get_moment_list = async (
   pageNum = 1,
-  pageSize = 20
+  pageSize = 20,
+  authorUuid?: string
 ): Promise<MomentListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     TALK_API + "/moment/list",
-    JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} })
+    JSON.stringify({
+      page_num: pageNum,
+      page_size: pageSize,
+      data: authorUuid ? { author_uuid: authorUuid } : {},
+    })
   );
   return parseData<MomentListResult>(res);
 };
@@ -45,7 +50,9 @@ export const get_moment_detail = async (
   return parseData<MomentVo>(res);
 };
 
-export const create_moment = async (dto: CreateMomentDTO): Promise<MomentVo> => {
+export const create_moment = async (
+  dto: CreateMomentDTO
+): Promise<MomentVo> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     TALK_API + "/moment/create",

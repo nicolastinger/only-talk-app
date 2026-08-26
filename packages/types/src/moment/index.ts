@@ -55,6 +55,12 @@ interface AddCommentDTO {
   content: string;
 }
 
+/** 动态列表应询参数 */
+interface MomentListQuery {
+  /** 按作者过滤(仅公开+自己可见) */
+  author_uuid?: string;
+}
+
 /** 通用分页参数 */
 interface PageReq {
   page_num: number;
@@ -69,5 +75,6 @@ export type {
   CreateMomentDTO,
   LikeToggleDTO,
   AddCommentDTO,
+  MomentListQuery,
   PageReq,
 };

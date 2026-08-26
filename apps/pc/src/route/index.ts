@@ -110,6 +110,11 @@ const routes = [
             component: '@/layouts/HomeLayout/PlazaLayout',
           },
           {
+            name: 'menu.plazaUserMoments',
+            path: 'plaza/user/:uuid',
+            component: './Home/Plaza/UserMoments',
+          },
+          {
             name: 'menu.moments',
             path: 'moments',
             component: './Home/Moments',

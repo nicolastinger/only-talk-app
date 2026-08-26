@@ -1,6 +1,6 @@
 import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
-import { useIntl } from '@umijs/max';
+import { history, useIntl } from '@umijs/max';
 import { add_friend, getFiles } from '@workspace/services';
 import { FriendRequestInfoDTO, PlazaUser } from '@workspace/types';
 import { Button, message, Modal } from 'antd';
@@ -11,8 +11,9 @@ import styles from './styles/ProfileModal.less';
 const ProfileModal = (props: {
   user: PlazaUser | null;
   onClose: () => void;
+  addType?: string;
 }) => {
-  const { user, onClose } = props;
+  const { user, onClose, addType } = props;
   const intl = useIntl();
   const [userIcon, setUserIcon] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -60,6 +61,11 @@ const ProfileModal = (props: {
     }
   }, [user]);
 
+  const viewMoments = () => {
+    if (!user) return;
+    history.push(`/home/plaza/user/${user.uuid}`);
+  };
+
   const addFriend = async () => {
     if (!user) return;
     setSending(true);
@@ -72,7 +78,7 @@ const ProfileModal = (props: {
         accept_message: '',
         request_user: me,
         accept_user: user.uuid,
-        add_type: 'plaza',
+        add_type: addType || 'plaza',
         version: 0,
         accept_status: 0,
       };
@@ -165,19 +171,29 @@ const ProfileModal = (props: {
             </div>
           )}
 
-          <Button
-            type="primary"
-            block
-            size="large"
-            loading={sending}
-            disabled={requested}
-            onClick={addFriend}
-            className={styles.friendBtn}
-          >
-            {requested
-              ? intl.formatMessage({ id: 'plaza.requested' })
-              : intl.formatMessage({ id: 'plaza.addFriend' })}
-          </Button>
+          <div className={styles.actions}>
+            <Button
+              block
+              size="large"
+              className={styles.viewBtn}
+              onClick={viewMoments}
+            >
+              {intl.formatMessage({ id: 'plaza.viewMoments' })}
+            </Button>
+            <Button
+              type="primary"
+              block
+              size="large"
+              loading={sending}
+              disabled={requested}
+              onClick={addFriend}
+              className={styles.friendBtn}
+            >
+              {requested
+                ? intl.formatMessage({ id: 'plaza.requested' })
+                : intl.formatMessage({ id: 'plaza.addFriend' })}
+            </Button>
+          </div>
         </div>
       )}
     </Modal>

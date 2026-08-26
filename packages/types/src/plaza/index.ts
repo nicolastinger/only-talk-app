@@ -9,6 +9,8 @@ interface PlazaUser {
   address?: string;
   motto?: string;
   tags?: string[];
+  /** 我是否已心动 */
+  liked_by_me?: boolean;
 }
 
 /** 广场分页结果 */
@@ -40,6 +42,19 @@ interface PlazaListQuery {
   gender?: number;
   age_min?: number;
   age_max?: number;
+  /** 按标签筛选 */
+  tag?: string;
+}
+
+/** 心动切换(为匹配打基础) */
+interface PlazaCrushToggleDTO {
+  target_uuid: string;
+}
+
+/** 心动切换结果 */
+interface PlazaCrushResult {
+  /** 是否达成互相心动(匹配) */
+  matched: boolean;
 }
 
 export type {
@@ -49,4 +64,6 @@ export type {
   PlazaUpdateProfileDTO,
   PlazaUpdateTagsDTO,
   PlazaListQuery,
+  PlazaCrushToggleDTO,
+  PlazaCrushResult,
 };

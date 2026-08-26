@@ -31,6 +31,7 @@
 }
 
 .cover {
+  position: relative;
   height: 76px;
   background: linear-gradient(
     135deg,
@@ -40,6 +41,36 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.crushBtn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  z-index: 2;
+
+  &:hover {
+    transform: scale(1.14);
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  &.crushActive {
+    color: #fff;
+    background: linear-gradient(135deg, #ff5b7f, #fb7299);
+  }
 }
 
 .coverIcon {
@@ -144,6 +175,13 @@
   color: hsl(var(--card-hue), 45%, 40%);
   background: hsl(var(--card-hue), 70%, 92%);
   white-space: nowrap;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    filter: brightness(0.94);
+    transform: translateY(-1px);
+  }
 }
 
 .tagMore {

@@ -8,8 +8,12 @@ import styles from './styles/MomentList.less';
 
 const PAGE_SIZE = 10;
 
-const MomentList = (props: { refreshKey: number }) => {
-  const { refreshKey } = props;
+const MomentList = (props: {
+  refreshKey: number;
+  authorUuid?: string;
+  emptyText?: string;
+}) => {
+  const { refreshKey, authorUuid, emptyText } = props;
   const [moments, setMoments] = useState<MomentVo[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -19,12 +23,13 @@ const MomentList = (props: { refreshKey: number }) => {
   useEffect(() => {
     setPage(1);
     load(1, true);
-  }, [refreshKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, authorUuid]);
 
   const load = async (p: number, reset: boolean) => {
     setLoading(true);
     try {
-      const res = await get_moment_list(p, PAGE_SIZE);
+      const res = await get_moment_list(p, PAGE_SIZE, authorUuid);
       setTotal(res.total);
       setMoments((prev) => (reset ? res.list : [...prev, ...res.list]));
       setPage(p);
@@ -42,8 +47,8 @@ const MomentList = (props: { refreshKey: number }) => {
       prev.map((m) =>
         m.uuid === momentUuid
           ? { ...m, comment_count: Math.max(0, m.comment_count + delta) }
-          : m
-      )
+          : m,
+      ),
     );
   };
 
@@ -56,7 +61,9 @@ const MomentList = (props: { refreshKey: number }) => {
           <Spin />
         </div>
       ) : moments.length === 0 ? (
-        <div className={styles.empty}>暂无动态，点击右上角发布吧</div>
+        <div className={styles.empty}>
+          {emptyText || '暂无动态，点击右上角发布吧'}
+        </div>
       ) : (
         <>
           {moments.map((m) => (

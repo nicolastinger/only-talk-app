@@ -18,6 +18,7 @@
   "dependencies": {
     "@ant-design/icons": "5.x",
     "@ant-design/pro-components": "^2.4.4",
+    "@react-spring/web": "9.5.5",
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-autostart": "~2.0.0",
     "@tauri-apps/plugin-dialog": "^2.4.2",
@@ -30,6 +31,7 @@
     "dva": "^2.4.1",
     "nanoid": "^5.1.5",
     "react-markdown": "^10.1.0",
+    "react-tinder-card": "^1.6.4",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

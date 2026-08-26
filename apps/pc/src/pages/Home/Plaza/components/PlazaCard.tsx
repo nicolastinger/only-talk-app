@@ -1,7 +1,8 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
-import { getFiles } from '@workspace/services';
+import { getFiles, switch_plaza_crush } from '@workspace/services';
 import { PlazaUser } from '@workspace/types';
+import { message } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import { getGenderLabel } from './genderHelper';
 import styles from './styles/PlazaCard.less';
@@ -16,15 +17,27 @@ const hashHue = (str: string) => {
   return hash;
 };
 
-const PlazaCard = (props: { user: PlazaUser; onClick: () => void }) => {
+const PlazaCard = (props: {
+  user: PlazaUser;
+  onClick: () => void;
+  onTagClick?: (tag: string) => void;
+  showCrush?: boolean;
+  onMatched?: (user: PlazaUser) => void;
+}) => {
   const { username, icon, info, gender, age, address, motto, tags } =
     props.user;
   const intl = useIntl();
   const [userIcon, setUserIcon] = useState<string | null>(null);
+  const [liked, setLiked] = useState(!!props.user.liked_by_me);
+  const [crushing, setCrushing] = useState(false);
   const hue = useMemo(
     () => hashHue(props.user.uuid || username || ''),
     [props.user.uuid, username],
   );
+
+  useEffect(() => {
+    setLiked(!!props.user.liked_by_me);
+  }, [props.user.liked_by_me]);
 
   const getUserIcon = async (icon: string) => {
     try {
@@ -51,6 +64,31 @@ const PlazaCard = (props: { user: PlazaUser; onClick: () => void }) => {
   const shownTags = (tags || []).slice(0, MAX_TAGS_SHOWN);
   const restCount = (tags || []).length - shownTags.length;
 
+  const handleCrush = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (crushing) return;
+    setCrushing(true);
+    try {
+      const result = await switch_plaza_crush({ target_uuid: props.user.uuid });
+      setLiked((prev) => !prev);
+      if (result.matched) {
+        props.onMatched?.(props.user);
+      }
+    } catch (error) {
+      console.error(error);
+      message.error(intl.formatMessage({ id: 'plaza.crushFailed' }));
+    } finally {
+      setCrushing(false);
+    }
+  };
+
+  const handleTagClick = (e: React.MouseEvent, tag: string) => {
+    e.stopPropagation();
+    props.onTagClick?.(tag);
+  };
+
+  const showCrush = props.showCrush !== false;
+
   return (
     <div className={styles.container} style={cardStyle} onClick={props.onClick}>
       <div className={styles.cover}>
@@ -64,6 +102,17 @@ const PlazaCard = (props: { user: PlazaUser; onClick: () => void }) => {
             }}
           />
         </div>
+        {showCrush && (
+          <button
+            className={`${styles.crushBtn} ${liked ? styles.crushActive : ''}`}
+            onClick={handleCrush}
+            title={intl.formatMessage({
+              id: liked ? 'plaza.crushed' : 'plaza.crush',
+            })}
+          >
+            {liked ? '♥' : '♡'}
+          </button>
+        )}
       </div>
       <div className={styles.body}>
         <div className={styles.name}>{username || ''}</div>
@@ -88,7 +137,11 @@ const PlazaCard = (props: { user: PlazaUser; onClick: () => void }) => {
         {shownTags.length > 0 && (
           <div className={styles.tags}>
             {shownTags.map((tag) => (
-              <span key={tag} className={styles.tag}>
+              <span
+                key={tag}
+                className={styles.tag}
+                onClick={(e) => handleTagClick(e, tag)}
+              >
                 {tag}
               </span>
             ))}
