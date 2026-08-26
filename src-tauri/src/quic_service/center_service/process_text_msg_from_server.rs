@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::dao::chat_record_ack::update_chat_record_ack;
 use crate::dao::chat_record_db::insert_chat_record;
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
+use crate::dao::friend_db::is_blocked_db;
 use crate::dao::group_chat_record_db::insert_group_chat_record;
 use crate::dao::group_message_ack::{
     query_group_message_ack_by_local_nano_id, update_group_message_ack_status,
@@ -176,6 +177,12 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
     let me = get_user_info("uuid").await?;
 
     insert_chat_record(&msg).await?;
+
+    // 发送者已被拉黑：消息仍落库，但不展示、不进会话列表、不计未读（对方可发送，本地不显示）
+    if is_blocked_db(&me, &msg.send_user).await? {
+        info!("发送者已被拉黑，仅落库不展示: {}", msg.send_user);
+        return Ok(());
+    }
 
     let payload = serde_json::to_string(&msg)?;
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;

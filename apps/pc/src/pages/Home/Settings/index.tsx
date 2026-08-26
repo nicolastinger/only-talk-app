@@ -56,7 +56,7 @@ const SettingsPage = () => {
     {
       key: 'blacklist',
       icon: <StopOutlined />,
-      label: intl.formatMessage({ id: 'settings.blacklist' }),
+      label: intl.formatMessage({ id: 'settings.blacklistMenu' }),
     },
     {
       key: 'about',

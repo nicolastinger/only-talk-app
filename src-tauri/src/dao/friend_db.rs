@@ -65,6 +65,19 @@ pub async fn set_block_friend_db(
     Ok(())
 }
 
+/// 判断好友是否已被拉黑
+pub async fn is_blocked_db(me: &str, friend_id: &str) -> Result<bool, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let record: Option<(i64,)> = sqlx::query_as(
+        r#"select is_block from friend where me = ?1 and friend_id = ?2 and is_del = 0 limit 1"#,
+    )
+    .bind(me)
+    .bind(friend_id)
+    .fetch_optional(&pool_sqlite)
+    .await?;
+    Ok(record.map(|r| r.0 == 1).unwrap_or(false))
+}
+
 /// 查询黑名单列表
 pub async fn query_black_list_db(me: &str) -> Result<Vec<Friend>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;

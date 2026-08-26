@@ -9,7 +9,7 @@ use crate::dao::friend_db::{
     query_black_list_db, query_friend_info_db, search_friend_db, set_block_friend_db,
     soft_delete_friend_db, update_friend_info_db,
 };
-use crate::dao::session_db::hide_chat_session_db;
+use crate::dao::session_db::{hide_chat_session_db, show_chat_session_db};
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
@@ -144,6 +144,7 @@ pub async fn block_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
 
     if result.status == 200 {
         set_block_friend_db(&uuid, friend_uuid, 1).await?;
+        hide_chat_session_db(&uuid, friend_uuid).await?;
     } else {
         return Err(anyhow!("拉黑好友失败: {}", result.body));
     }
@@ -162,6 +163,7 @@ pub async fn unblock_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
 
     if result.status == 200 {
         set_block_friend_db(&uuid, friend_uuid, 0).await?;
+        show_chat_session_db(&uuid, friend_uuid).await?;
     } else {
         return Err(anyhow!("取消拉黑好友失败: {}", result.body));
     }

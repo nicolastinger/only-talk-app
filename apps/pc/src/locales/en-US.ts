@@ -153,7 +153,7 @@ export default {
     general: 'General',
     notification: 'Notifications',
     plaza: 'Plaza',
-    blacklist: 'Blacklist',
+    blacklistMenu: 'Blacklist',
     about: 'About',
     blacklist: {
       title: 'Blacklist',
@@ -162,6 +162,16 @@ export default {
       unblock: 'Unblock',
       unblockSuccess: 'Unblocked',
       unblockFailed: 'Failed to unblock',
+      searchPlaceholder: 'Search account to block',
+      search: 'Search',
+      notFound: 'User not found',
+      block: 'Block',
+      blockConfirmTitle: 'Confirm Block',
+      blockConfirmMsg:
+        'Are you sure you want to block "{name}"? They will no longer be able to send you messages.',
+      blockSuccess: 'Blocked',
+      blockFailed: 'Failed to block',
+      cancel: 'Cancel',
     },
     generalSettings: {
       title: 'General Settings',
