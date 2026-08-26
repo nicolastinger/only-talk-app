@@ -110,26 +110,26 @@
 
   :global {
     .ant-typography {
-      color: var(--color-white-01);
+      color: var(--text-primary);
     }
   }
 }
 
 .sectionTitle {
-  margin-bottom: 20px !important;
-  color: var(--color-white-01) !important;
+  margin-bottom: 24px !important;
+  color: var(--text-primary) !important;
 }
 
 .settingCard {
   margin-bottom: 20px;
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: var(--shadow-sm);
   background: var(--card-bg) !important;
   border: 1px solid var(--card-border) !important;
 
   :global {
     .ant-card-body {
-      padding: 20px;
+      padding: 24px;
     }
   }
 }
@@ -137,26 +137,37 @@
 .cardHeader {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 
   .cardIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
     margin-right: 12px;
-    font-size: 18px;
-    color: var(--color-info);
+    border-radius: 8px;
+    background: var(--color-info-bg);
+    font-size: 16px;
+    color: var(--color-primary);
   }
 }
 
 .divider {
-  margin: 16px 0 !important;
+  margin: 0 0 20px !important;
   border-color: var(--divider-bg) !important;
 }
 
 .settingCheckbox {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 
   :global {
     .ant-checkbox-wrapper {
-      color: var(--color-white-01);
+      color: var(--text-primary);
+
+      .ant-checkbox+span {
+        color: var(--text-primary);
+      }
     }
   }
 }
@@ -178,7 +189,8 @@
 
 .description {
   display: block;
-  margin-top: 8px !important;
+  margin-top: 12px !important;
+  color: var(--text-tertiary) !important;
 }
 
 .textArea {
@@ -186,7 +198,7 @@
 
   :global {
     .ant-input {
-      color: var(--color-white-01);
+      color: var(--text-primary);
     }
   }
 }
@@ -203,13 +215,111 @@
   margin-right: 8px;
 }
 
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 4px 4px;
+
+  .profileAvatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 3px solid var(--color-primary);
+    box-shadow: var(--shadow-primary);
+  }
+
+  .profileIdentity {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .profileName {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .profileAccount {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+  }
+}
+
 .accountInfo {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
+  align-items: baseline;
+  gap: 24px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--divider-bg);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 4px;
+  }
+
+  .accountLabel {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
 
   .accountValue {
+    text-align: right;
+    min-width: 0;
+    word-break: break-all;
+    color: var(--text-primary);
     font-weight: 500;
+    font-size: 14px;
+  }
+}
+
+.blacklistItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--divider-bg);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .blacklistAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .blacklistIdentity {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .blacklistName {
+      font-weight: 500;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .blacklistAccount {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
   }
 }
 

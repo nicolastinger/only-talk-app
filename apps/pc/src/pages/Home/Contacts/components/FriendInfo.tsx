@@ -2,8 +2,10 @@ import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import {
+  block_friend,
   get_user_info_with_cache,
   refresh_user_info,
+  unblock_friend,
   getFiles,
 } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
@@ -18,6 +20,7 @@ const FriendInfo = (props: { uuid: string }) => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   const genderMap: { [key: number]: string } = {
     0: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }),
@@ -127,10 +130,46 @@ const FriendInfo = (props: { uuid: string }) => {
     return date.toLocaleDateString('zh-CN');
   };
 
+  const handleToggleBlock = async () => {
+    try {
+      if (isBlocked) {
+        await unblock_friend(uuid);
+        message.success(intl.formatMessage({ id: 'friendInfo.unblockedSuccess' }));
+        setIsBlocked(false);
+      } else {
+        await block_friend(uuid);
+        message.success(intl.formatMessage({ id: 'friendInfo.blockedSuccess' }));
+        setIsBlocked(true);
+      }
+    } catch (error) {
+      message.error(
+        intl.formatMessage({
+          id: isBlocked ? 'friendInfo.unblockedFailed' : 'friendInfo.blockedFailed',
+        }),
+      );
+      console.error('拉黑操作失败:', error);
+    }
+  };
+
   const renderBtn = () => {
     return (
       <Button color="default" variant="solid" onClick={routeToChat}>
         {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
+      </Button>
+    );
+  };
+
+  const renderBlockBtn = () => {
+    return (
+      <Button
+        danger={!isBlocked}
+        color={isBlocked ? 'default' : 'error'}
+        variant="solid"
+        onClick={handleToggleBlock}
+      >
+        {intl.formatMessage({
+          id: isBlocked ? 'friendInfo.unblock' : 'friendInfo.block',
+        })}
       </Button>
     );
   };
@@ -234,6 +273,7 @@ const FriendInfo = (props: { uuid: string }) => {
 
         <div className={styles.footer}>
           <div className={styles.button}>{renderBtn()}</div>
+          <div className={styles.dangerButton}>{renderBlockBtn()}</div>
         </div>
       </div>
     </div>

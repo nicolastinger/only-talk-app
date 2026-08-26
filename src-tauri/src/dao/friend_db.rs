@@ -45,6 +45,38 @@ pub async fn soft_delete_friend_db(me: &str, friend_id: &str) -> Result<(), anyh
     Ok(())
 }
 
+/// 更新好友拉黑状态
+pub async fn set_block_friend_db(
+    me: &str,
+    friend_id: &str,
+    is_block: i32,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let now = chrono::Utc::now().timestamp();
+    sqlx::query(
+        r#"UPDATE friend SET is_block = ?1, updated_at = ?2 WHERE me = ?3 AND friend_id = ?4"#,
+    )
+    .bind(is_block)
+    .bind(now)
+    .bind(me)
+    .bind(friend_id)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}
+
+/// 查询黑名单列表
+pub async fn query_black_list_db(me: &str) -> Result<Vec<Friend>, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let record = sqlx::query_as::<_, Friend>(
+        r#"select * from friend where me = ?1 and is_block = 1 and is_del = 0"#,
+    )
+    .bind(me)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(record)
+}
+
 /// 模糊搜索好友（按好友名称、好友账号搜索）
 pub async fn search_friend_db(uuid: &str, keyword: &str) -> Result<Vec<Friend>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;

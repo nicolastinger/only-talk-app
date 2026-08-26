@@ -11,6 +11,7 @@ import {
   SignUpStep1Request,
   SendVerifyCodeRequest,
   CompleteProfileRequest,
+  BlackListVo,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -116,6 +117,22 @@ export const delete_friend = async (friendUuid: string) => {
   return await invoke("delete_friend_command", {
     friendUuid,
   });
+};
+
+export const block_friend = async (friendUuid: string) => {
+  return await invoke("block_friend_command", {
+    friendUuid,
+  });
+};
+
+export const unblock_friend = async (friendUuid: string) => {
+  return await invoke("unblock_friend_command", {
+    friendUuid,
+  });
+};
+
+export const get_black_list = async (): Promise<BlackListVo[]> => {
+  return await invoke<BlackListVo[]>("get_black_list");
 };
 
 export const cache_user_info = async (userInfo: UserInfo) => {

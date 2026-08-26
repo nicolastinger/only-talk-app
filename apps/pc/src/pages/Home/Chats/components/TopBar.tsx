@@ -7,7 +7,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { history, useIntl } from '@umijs/max';
-import { delete_friend } from '@workspace/services';
+import { block_friend, delete_friend, unblock_friend } from '@workspace/services';
 import { FriendVo } from '@workspace/types';
 import { Dropdown, Modal, message } from 'antd';
 import React, { useState } from 'react';
@@ -22,6 +22,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   const { title, friendInfo } = props;
   const intl = useIntl();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [blockModalVisible, setBlockModalVisible] = useState(false);
   const triggerRefresh = useBearStore((state) => state.triggerRefresh);
 
   const handleViewProfile = () => {
@@ -54,7 +55,38 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   };
 
   const handleBlock = () => {
-    message.info(intl.formatMessage({ id: 'chat.topBar.blockDeveloping' }));
+    if (friendInfo?.is_block === 1) {
+      handleUnblock();
+    } else {
+      setBlockModalVisible(true);
+    }
+  };
+
+  const confirmBlock = async () => {
+    if (!friendInfo?.friend_id) return;
+
+    try {
+      await block_friend(friendInfo.friend_id);
+      message.success(intl.formatMessage({ id: 'chat.topBar.blockedSuccess' }));
+      setBlockModalVisible(false);
+      triggerRefresh();
+    } catch (error) {
+      message.error(intl.formatMessage({ id: 'chat.topBar.blockedFailed' }));
+      console.error('拉黑好友失败:', error);
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!friendInfo?.friend_id) return;
+
+    try {
+      await unblock_friend(friendInfo.friend_id);
+      message.success(intl.formatMessage({ id: 'chat.topBar.unblockedSuccess' }));
+      triggerRefresh();
+    } catch (error) {
+      message.error(intl.formatMessage({ id: 'chat.topBar.unblockedFailed' }));
+      console.error('取消拉黑失败:', error);
+    }
   };
 
   const menuItems = [
@@ -72,7 +104,12 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
     },
     {
       key: 'block',
-      label: intl.formatMessage({ id: 'chat.topBar.blockFriend' }),
+      label: intl.formatMessage({
+        id:
+          friendInfo?.is_block === 1
+            ? 'chat.topBar.unblockFriend'
+            : 'chat.topBar.blockFriend',
+      }),
       icon: <StopOutlined />,
       onClick: handleBlock,
     },
@@ -117,6 +154,25 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
         </p>
         <p style={{ color: '#999', fontSize: '12px' }}>
           {intl.formatMessage({ id: 'chat.topBar.deleteWarning' })}
+        </p>
+      </Modal>
+      <Modal
+        title={intl.formatMessage({ id: 'chat.topBar.confirmBlock' })}
+        open={blockModalVisible}
+        onOk={confirmBlock}
+        onCancel={() => setBlockModalVisible(false)}
+        okText={intl.formatMessage({ id: 'chat.topBar.confirm' })}
+        cancelText={intl.formatMessage({ id: 'chat.topBar.cancel' })}
+        okButtonProps={{ danger: true }}
+      >
+        <p>
+          {intl.formatMessage(
+            { id: 'chat.topBar.confirmBlockMsg' },
+            { name: friendInfo?.friend_name || title },
+          )}
+        </p>
+        <p style={{ color: '#999', fontSize: '12px' }}>
+          {intl.formatMessage({ id: 'chat.topBar.blockWarning' })}
         </p>
       </Modal>
     </div>

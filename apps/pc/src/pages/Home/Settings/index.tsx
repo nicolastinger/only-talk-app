@@ -3,6 +3,7 @@ import {
   InfoCircleOutlined,
   RadarChartOutlined,
   SettingOutlined,
+  StopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { useIntl, useLocation } from '@umijs/max';
@@ -11,6 +12,7 @@ import { useEffect, useState } from 'react';
 import styles from './Settings.less';
 import AboutApp from './components/AboutApp';
 import AccountPrivacy from './components/AccountPrivacy';
+import BlackList from './components/BlackList';
 import GeneralSettings from './components/GeneralSettings';
 import NotificationSettings from './components/NotificationSettings';
 import PlazaSettings from './components/PlazaSettings';
@@ -52,6 +54,11 @@ const SettingsPage = () => {
       label: intl.formatMessage({ id: 'settings.plaza' }),
     },
     {
+      key: 'blacklist',
+      icon: <StopOutlined />,
+      label: intl.formatMessage({ id: 'settings.blacklist' }),
+    },
+    {
       key: 'about',
       icon: <InfoCircleOutlined />,
       label: intl.formatMessage({ id: 'settings.about' }),
@@ -68,6 +75,8 @@ const SettingsPage = () => {
         return <NotificationSettings />;
       case 'plaza':
         return <PlazaSettings />;
+      case 'blacklist':
+        return <BlackList />;
       case 'about':
         return <AboutApp />;
       default:

@@ -98,4 +98,12 @@ interface GroupInvitationVo {
   created_at: number;
 }
 
-export type { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo, GroupVo, GroupMemberVo, CreateGroupRequest, GroupInvitationVo };
+interface BlackListVo {
+  uuid: string;
+  account?: string;
+  username?: string;
+  icon?: string;
+  created_at?: number;
+}
+
+export type { ChatSessionEvent, ChatSessionVo, FriendVo, FileVo, GroupVo, GroupMemberVo, CreateGroupRequest, GroupInvitationVo, BlackListVo };

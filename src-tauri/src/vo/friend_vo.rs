@@ -43,7 +43,17 @@ pub struct FriendListVO {
     pub icon: String,
     pub info: String,
     pub is_del: bool,
+    pub is_block: bool,
     pub version: i32,
     pub created_at: i64,
     pub updated_at: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BlackListVo {
+    pub uuid: String,
+    pub account: String,
+    pub username: String,
+    pub icon: String,
+    pub created_at: i64,
 }

@@ -48,8 +48,8 @@ use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
 };
 use crate::cmd::friend_controller::{
-    delete_friend_command, get_friend_info, get_friend_list, search_friend,
-    update_local_friend_list,
+    block_friend_command, delete_friend_command, get_black_list, get_friend_info,
+    get_friend_list, search_friend, unblock_friend_command, update_local_friend_list,
 };
 use crate::cmd::group_controller::{
     accept_group_invitation_command, create_group_chat_session_command, create_group_command,
@@ -221,6 +221,9 @@ pub fn run() {
             mark_read,
             get_friend_list,
             search_friend,
+            block_friend_command,
+            unblock_friend_command,
+            get_black_list,
             create_chat_session,
             get_system_notification,
             update_local_friend_list,
