@@ -689,6 +689,9 @@ export default {
       title: '按讚的人',
       empty: '還沒有人按讚',
     },
+    delete: '刪除',
+    deleteConfirm: '確定刪除這條動態嗎？',
+    deleteSuccess: '刪除成功',
   },
   privacyChat: {
     me: '我',

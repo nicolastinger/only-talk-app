@@ -689,6 +689,9 @@ export default {
       title: '赞过的人',
       empty: '还没有人点赞',
     },
+    delete: '删除',
+    deleteConfirm: '确定删除这条动态吗？',
+    deleteSuccess: '删除成功',
   },
   privacyChat: {
     me: '我',

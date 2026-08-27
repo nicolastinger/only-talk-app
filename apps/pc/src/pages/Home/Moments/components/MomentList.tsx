@@ -162,6 +162,10 @@ const MomentList = (props: {
                   onOpenComments={(moment) => setSelected(moment)}
                   onOpenDetail={(moment) => history.push('/home/moments/' + moment.uuid)}
                   onMediaLoad={scheduleMeasure}
+                  onDeleted={(moment) => {
+                    setMoments((prev) => prev.filter((mm) => mm.uuid !== moment.uuid));
+                    requestAnimationFrame(scheduleMeasure);
+                  }}
                 />
               </div>
             ))}

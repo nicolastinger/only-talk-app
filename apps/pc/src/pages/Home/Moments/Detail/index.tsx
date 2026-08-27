@@ -1,10 +1,10 @@
-import { getFiles, get_moment_detail, switch_moment_like, switch_user_follow } from '@workspace/services';
+import { delete_moment, getFiles, get_moment_detail, switch_moment_like, switch_user_follow } from '@workspace/services';
 import { MomentVo } from '@workspace/types';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { history, useIntl, useLocation } from '@umijs/max';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { Empty, Spin, message } from 'antd';
+import { Empty, Modal, Spin, message } from 'antd';
 import { useEffect, useState } from 'react';
 import CommentSection from '../components/CommentSection';
 import LikersModal from '../components/LikersModal';
@@ -101,6 +101,25 @@ const MomentDetail = () => {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const handleDelete = () => {
+    if (!moment) return;
+    Modal.confirm({
+      title: intl.formatMessage({ id: 'moments.delete' }),
+      content: intl.formatMessage({ id: 'moments.deleteConfirm' }),
+      okText: intl.formatMessage({ id: 'moments.delete' }),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await delete_moment({ moment_uuid: moment.uuid });
+          message.success(intl.formatMessage({ id: 'moments.deleteSuccess' }));
+          history.back();
+        } catch (err) {
+          message.error((err as Error).message || '操作失败');
+        }
+      },
+    });
+  };
+
   const isMine = !!myUuid && moment?.author_uuid === myUuid;
 
   return (
@@ -155,6 +174,11 @@ const MomentDetail = () => {
                 {isFollowing
                   ? intl.formatMessage({ id: 'moments.following' })
                   : intl.formatMessage({ id: 'moments.follow' })}
+              </button>
+            )}
+            {isMine && (
+              <button className={styles.deleteBtn} onClick={handleDelete}>
+                {intl.formatMessage({ id: 'moments.delete' })}
               </button>
             )}
           </div>

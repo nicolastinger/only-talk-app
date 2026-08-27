@@ -1,6 +1,7 @@
 import {
   AddCommentDTO,
   CreateMomentDTO,
+  DeleteMomentDTO,
   FollowToggleDTO,
   HTTP_METHOD,
   LikeToggleDTO,
@@ -64,6 +65,17 @@ export const create_moment = async (
     JSON.stringify(dto)
   );
   return parseData<MomentVo>(res);
+};
+
+export const delete_moment = async (
+  dto: DeleteMomentDTO
+): Promise<boolean> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/moment/delete",
+    JSON.stringify(dto)
+  );
+  return parseData<boolean>(res);
 };
 
 export const switch_moment_like = async (

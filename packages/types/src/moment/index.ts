@@ -64,6 +64,11 @@ interface LikeToggleDTO {
   moment_uuid: string;
 }
 
+/** 删除动态 */
+interface DeleteMomentDTO {
+  moment_uuid: string;
+}
+
 /** 关注切换 */
 interface FollowToggleDTO {
   target_user_uuid: string;
@@ -103,6 +108,7 @@ export type {
   MomentLikerListResult,
   CreateMomentDTO,
   LikeToggleDTO,
+  DeleteMomentDTO,
   FollowToggleDTO,
   AddCommentDTO,
   MomentListQuery,

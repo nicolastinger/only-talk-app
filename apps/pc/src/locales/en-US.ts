@@ -699,6 +699,9 @@ export default {
       title: 'Liked by',
       empty: 'No likes yet',
     },
+    delete: 'Delete',
+    deleteConfirm: 'Delete this moment?',
+    deleteSuccess: 'Deleted',
   },
   privacyChat: {
     me: 'Me',

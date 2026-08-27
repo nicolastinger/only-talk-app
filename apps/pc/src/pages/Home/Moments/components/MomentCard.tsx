@@ -1,9 +1,9 @@
-import { getFiles, switch_moment_like, switch_user_follow } from '@workspace/services';
+import { delete_moment, getFiles, switch_moment_like, switch_user_follow } from '@workspace/services';
 import { MomentVo } from '@workspace/types';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { useIntl } from '@umijs/max';
-import { message } from 'antd';
+import { message, Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import MomentMedia from './MomentMedia';
 import styles from './styles/MomentCard.less';
@@ -13,8 +13,9 @@ const MomentCard = (props: {
   onOpenComments: (moment: MomentVo) => void;
   onOpenDetail?: (moment: MomentVo) => void;
   onMediaLoad?: () => void;
+  onDeleted?: (moment: MomentVo) => void;
 }) => {
-  const { moment, onOpenComments, onOpenDetail, onMediaLoad } = props;
+  const { moment, onOpenComments, onOpenDetail, onMediaLoad, onDeleted } = props;
   const intl = useIntl();
   const myUuid = useBearStore((state) => state.userInfo.uuid);
   const isMine = !!myUuid && myUuid === moment.author_uuid;
@@ -74,6 +75,26 @@ const MomentCard = (props: {
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onDeleted) return;
+    Modal.confirm({
+      title: intl.formatMessage({ id: 'moments.delete' }),
+      content: intl.formatMessage({ id: 'moments.deleteConfirm' }),
+      okText: intl.formatMessage({ id: 'moments.delete' }),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await delete_moment({ moment_uuid: moment.uuid });
+          message.success(intl.formatMessage({ id: 'moments.deleteSuccess' }));
+          onDeleted(moment);
+        } catch (err) {
+          message.error((err as Error).message || '操作失败');
+        }
+      },
+    });
+  };
+
   return (
     <div
       className={styles.card}
@@ -121,6 +142,11 @@ const MomentCard = (props: {
               {isFollowing
                 ? intl.formatMessage({ id: 'moments.following' })
                 : intl.formatMessage({ id: 'moments.follow' })}
+            </button>
+          )}
+          {isMine && onDeleted && (
+            <button className={styles.deleteBtn} onClick={handleDelete}>
+              {intl.formatMessage({ id: 'moments.delete' })}
             </button>
           )}
           <button
