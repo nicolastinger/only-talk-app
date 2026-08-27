@@ -119,6 +119,11 @@ const routes = [
             path: 'moments',
             component: './Home/Moments',
           },
+          {
+            name: 'menu.momentDetail',
+            path: 'moments/:id',
+            component: './Home/Moments/Detail',
+          },
         ],
       },
       {

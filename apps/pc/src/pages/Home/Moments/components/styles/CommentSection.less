@@ -1,0 +1,84 @@
+.section {
+  margin-top: 24px;
+  border-top: 1px solid var(--border-color, #f0f0f0);
+  padding-top: 16px;
+}
+
+.head {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+  margin-bottom: 12px;
+}
+
+.empty {
+  padding: 12px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.commentItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.commentBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.commentMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-color-tertiary, #999);
+}
+
+.commentText {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-color, #333);
+  word-break: break-word;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.loadMore {
+  margin: 8px auto;
+  padding: 4px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-primary-bg, rgba(64, 150, 255, 0.08));
+  color: var(--color-primary, #4096ff);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(64, 150, 255, 0.16);
+  }
+}
+
+.inputRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

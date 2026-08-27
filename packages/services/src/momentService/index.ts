@@ -1,10 +1,12 @@
 import {
   AddCommentDTO,
   CreateMomentDTO,
+  FollowToggleDTO,
   HTTP_METHOD,
   LikeToggleDTO,
   MomentCommentListResult,
   MomentCommentVo,
+  MomentLikerListResult,
   MomentListResult,
   MomentVo,
   TALK_API,
@@ -25,7 +27,7 @@ function parseData<T>(res: any): T {
 export const get_moment_list = async (
   pageNum = 1,
   pageSize = 20,
-  authorUuid?: string
+  params?: { authorUuid?: string; feed?: string }
 ): Promise<MomentListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
@@ -33,7 +35,10 @@ export const get_moment_list = async (
     JSON.stringify({
       page_num: pageNum,
       page_size: pageSize,
-      data: authorUuid ? { author_uuid: authorUuid } : {},
+      data: {
+        author_uuid: params?.authorUuid,
+        feed: params?.feed,
+      },
     })
   );
   return parseData<MomentListResult>(res);
@@ -72,6 +77,17 @@ export const switch_moment_like = async (
   return parseData<boolean>(res);
 };
 
+export const switch_user_follow = async (
+  dto: FollowToggleDTO
+): Promise<boolean> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/moment/follow/switch",
+    JSON.stringify(dto)
+  );
+  return parseData<boolean>(res);
+};
+
 export const post_moment_comment = async (
   dto: AddCommentDTO
 ): Promise<MomentCommentVo> => {
@@ -98,4 +114,21 @@ export const get_moment_comments = async (
     })
   );
   return parseData<MomentCommentListResult>(res);
+};
+
+export const get_moment_likers = async (
+  momentUuid: string,
+  pageNum = 1,
+  pageSize = 20
+): Promise<MomentLikerListResult> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    TALK_API + "/moment/like/list",
+    JSON.stringify({
+      page_num: pageNum,
+      page_size: pageSize,
+      data: { moment_uuid: momentUuid },
+    })
+  );
+  return parseData<MomentLikerListResult>(res);
 };

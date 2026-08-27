@@ -1,5 +1,6 @@
 import { PictureOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
+import { Tabs } from 'antd';
 import { useState } from 'react';
 import MomentComposer from './components/MomentComposer';
 import MomentList from './components/MomentList';
@@ -9,6 +10,7 @@ const Moments = () => {
   const intl = useIntl();
   const [composerOpen, setComposerOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [tab, setTab] = useState('plaza');
 
   const handlePublished = () => {
     setRefreshKey((k) => k + 1);
@@ -30,8 +32,32 @@ const Moments = () => {
           <span>{intl.formatMessage({ id: 'moments.publish' })}</span>
         </button>
       </div>
+      <div className={styles.tabs}>
+        <Tabs
+          activeKey={tab}
+          onChange={setTab}
+          items={[
+            {
+              key: 'plaza',
+              label: intl.formatMessage({ id: 'moments.tabs.plaza' }),
+            },
+            {
+              key: 'following',
+              label: intl.formatMessage({ id: 'moments.tabs.following' }),
+            },
+            {
+              key: 'mine',
+              label: intl.formatMessage({ id: 'moments.tabs.mine' }),
+            },
+          ]}
+        />
+      </div>
       <div className={styles.body}>
-        <MomentList refreshKey={refreshKey} />
+        <MomentList
+          refreshKey={refreshKey}
+          feed={tab}
+          key={tab}
+        />
       </div>
       <MomentComposer
         open={composerOpen}

@@ -653,6 +653,15 @@ export default {
     publish: '发布动态',
     empty: '暂无动态，点击右上角发布吧',
     mine: '我的动态',
+    follow: '关注',
+    following: '已关注',
+    tabs: {
+      plaza: '广场',
+      following: '关注',
+      mine: '我的',
+    },
+    emptyFollowing: '关注的人还没发布动态',
+    emptyMine: '你还没有发布动态',
     composer: {
       title: '发布动态',
       placeholder: '这一刻的想法...',
@@ -671,6 +680,14 @@ export default {
       empty: '暂无评论',
       placeholder: '写下你的评论...',
       send: '发送',
+    },
+    detail: {
+      title: '动态详情',
+    },
+    loadMore: '加载更多',
+    likers: {
+      title: '赞过的人',
+      empty: '还没有人点赞',
     },
   },
   privacyChat: {

@@ -663,6 +663,15 @@ export default {
     publish: 'Publish',
     empty: 'No moments yet, publish one now',
     mine: 'My Moment',
+    follow: 'Follow',
+    following: 'Following',
+    tabs: {
+      plaza: 'Plaza',
+      following: 'Following',
+      mine: 'Mine',
+    },
+    emptyFollowing: 'People you follow have not posted yet',
+    emptyMine: 'You have not posted yet',
     composer: {
       title: 'Publish Moment',
       placeholder: 'What is on your mind...',
@@ -681,6 +690,14 @@ export default {
       empty: 'No comments yet',
       placeholder: 'Write a comment...',
       send: 'Send',
+    },
+    detail: {
+      title: 'Moment',
+    },
+    loadMore: 'Load more',
+    likers: {
+      title: 'Liked by',
+      empty: 'No likes yet',
     },
   },
   privacyChat: {

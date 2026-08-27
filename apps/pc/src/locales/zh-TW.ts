@@ -653,6 +653,15 @@ export default {
     publish: '發布動態',
     empty: '暫無動態，點擊右上角發布吧',
     mine: '我的動態',
+    follow: '關注',
+    following: '已關注',
+    tabs: {
+      plaza: '廣場',
+      following: '關注',
+      mine: '我的',
+    },
+    emptyFollowing: '關注的人還沒發布動態',
+    emptyMine: '你還沒有發布動態',
     composer: {
       title: '發布動態',
       placeholder: '這一刻的想法...',
@@ -671,6 +680,14 @@ export default {
       empty: '暫無評論',
       placeholder: '寫下你的評論...',
       send: '發送',
+    },
+    detail: {
+      title: '動態詳情',
+    },
+    loadMore: '載入更多',
+    likers: {
+      title: '按讚的人',
+      empty: '還沒有人按讚',
     },
   },
   privacyChat: {

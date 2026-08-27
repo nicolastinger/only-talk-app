@@ -1,0 +1,60 @@
+.modal {
+  :global {
+    .ant-modal-body {
+      padding: 16px 24px;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+  }
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-color-tertiary, #999);
+}
+
+.loadMore {
+  margin: 8px auto;
+  padding: 4px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-primary-bg, rgba(64, 150, 255, 0.08));
+  color: var(--color-primary, #4096ff);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(64, 150, 255, 0.16);
+  }
+}
