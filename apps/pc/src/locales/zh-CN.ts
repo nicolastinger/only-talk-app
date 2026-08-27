@@ -652,6 +652,7 @@ export default {
     subtitle: '分享你的瞬间，看见世界的精彩',
     publish: '发布动态',
     empty: '暂无动态，点击右上角发布吧',
+    mine: '我的动态',
     composer: {
       title: '发布动态',
       placeholder: '这一刻的想法...',

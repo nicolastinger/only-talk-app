@@ -1,9 +1,23 @@
 .card {
+  position: relative;
   background: var(--card-bg, #fff);
   border-radius: 14px;
   padding: 18px 20px;
   margin-bottom: 16px;
   box-shadow: 0 2px 12px rgba(74, 144, 255, 0.06);
+}
+
+.mineBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4096ff, #7b5bff);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  z-index: 2;
 }
 
 .author {

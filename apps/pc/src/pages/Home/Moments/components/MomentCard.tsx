@@ -1,6 +1,7 @@
 import { getFiles, switch_moment_like } from '@workspace/services';
 import { MomentVo } from '@workspace/types';
 import { DEFAULT_ICON } from '@/constants';
+import { useBearStore } from '@/store/store';
 import { useIntl } from '@umijs/max';
 import { message } from 'antd';
 import { useEffect, useState } from 'react';
@@ -12,6 +13,8 @@ const MomentCard = (props: {
 }) => {
   const { moment, onOpenComments } = props;
   const intl = useIntl();
+  const myUuid = useBearStore((state) => state.userInfo.uuid);
+  const isMine = !!myUuid && myUuid === moment.author_uuid;
   const [avatar, setAvatar] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
   const [likeCount, setLikeCount] = useState(moment.like_count);
@@ -54,6 +57,11 @@ const MomentCard = (props: {
 
   return (
     <div className={styles.card}>
+      {isMine && (
+        <span className={styles.mineBadge}>
+          {intl.formatMessage({ id: 'moments.mine' })}
+        </span>
+      )}
       <div className={styles.author}>
         <img
           src={avatar || DEFAULT_ICON}

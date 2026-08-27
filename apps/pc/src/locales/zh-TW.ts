@@ -652,6 +652,7 @@ export default {
     subtitle: '分享你的瞬間，看見世界的精彩',
     publish: '發布動態',
     empty: '暫無動態，點擊右上角發布吧',
+    mine: '我的動態',
     composer: {
       title: '發布動態',
       placeholder: '這一刻的想法...',

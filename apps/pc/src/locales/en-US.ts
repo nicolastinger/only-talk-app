@@ -662,6 +662,7 @@ export default {
     subtitle: 'Share your moments, see the world',
     publish: 'Publish',
     empty: 'No moments yet, publish one now',
+    mine: 'My Moment',
     composer: {
       title: 'Publish Moment',
       placeholder: 'What is on your mind...',
