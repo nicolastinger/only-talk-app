@@ -13,10 +13,11 @@ const MomentCard = (props: {
   index?: number;
   onOpenComments: (moment: MomentVo) => void;
   onOpenDetail?: (moment: MomentVo) => void;
+  onOpenUser?: (moment: MomentVo) => void;
   onMediaLoad?: () => void;
   onDeleted?: (moment: MomentVo) => void;
 }) => {
-  const { moment, index, onOpenComments, onOpenDetail, onMediaLoad, onDeleted } = props;
+  const { moment, index, onOpenComments, onOpenDetail, onOpenUser, onMediaLoad, onDeleted } = props;
   const intl = useIntl();
   const myUuid = useBearStore((state) => state.userInfo.uuid);
   const isMine = !!myUuid && myUuid === moment.author_uuid;
@@ -42,6 +43,11 @@ const MomentCard = (props: {
     };
     load();
   }, [moment.icon, moment.uuid]);
+
+  const handleOpenUser = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOpenUser?.(moment);
+  };
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -116,13 +122,16 @@ const MomentCard = (props: {
             src={avatar || DEFAULT_ICON}
             className={styles.avatar}
             alt="avatar"
+            onClick={handleOpenUser}
             onError={(e) => {
               (e.target as HTMLImageElement).src = DEFAULT_ICON;
             }}
           />
           <div className={styles.userMeta}>
             <div className={styles.usernameRow}>
-              <span className={styles.username}>{moment.username || '用户'}</span>
+              <span className={styles.username} onClick={handleOpenUser}>
+                {moment.username || '用户'}
+              </span>
               {isMine && (
                 <span className={styles.mineBadge}>
                   {intl.formatMessage({ id: 'moments.mine' })}

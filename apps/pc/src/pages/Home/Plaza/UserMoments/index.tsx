@@ -54,11 +54,13 @@ const UserMoments = () => {
           </div>
         </div>
       </div>
-      <MomentList
-        refreshKey={0}
-        authorUuid={uuid}
-        emptyText={intl.formatMessage({ id: 'plaza.momentsEmpty' })}
-      />
+      <div className={styles.body}>
+        <MomentList
+          refreshKey={0}
+          authorUuid={uuid}
+          emptyText={intl.formatMessage({ id: 'plaza.momentsEmpty' })}
+        />
+      </div>
     </div>
   );
 };

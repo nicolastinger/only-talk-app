@@ -60,6 +60,13 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px rgba(64, 150, 255, 0.24);
+  }
 }
 
 .userMeta {
@@ -81,6 +88,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 120px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--color-primary, #4096ff);
+  }
 }
 
 .mineBadge {
