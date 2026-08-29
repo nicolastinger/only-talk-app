@@ -1,3 +1,4 @@
+export * from "./announcement";
 export * from "./httpRust";
 export * from "./page";
 export * from "./po";

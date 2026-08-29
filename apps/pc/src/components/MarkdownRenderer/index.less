@@ -14,6 +14,14 @@
   overflow-y: auto;
 }
 
+/* 由外部容器包裹时使用的裸样式：保留排版，去掉自带盒子 */
+.bare {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
 .markdownBody::-webkit-scrollbar {
   width: 8px;
   background: var(--markdown-code-bg);

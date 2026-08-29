@@ -1,3 +1,4 @@
+import AnnouncementBanner from '@/components/AnnouncementBanner';
 import DraggableHeader from '@/components/DraggableHeader';
 import { LeftAside } from '@/components/LeftAside';
 import OnlineStatusSwitch from '@/components/OnlineStatusSwitch';
@@ -180,6 +181,7 @@ const HomeLayout = () => {
           <div className={styles.rightSideBarToolDraggable}>
             <DraggableHeader />
           </div>
+          <AnnouncementBanner />
           {!isConnected && (
             <div className={styles.quicReconnectTip}>
               <span className={styles.tipIcon}>⚠️</span>

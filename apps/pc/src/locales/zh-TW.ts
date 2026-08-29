@@ -5,6 +5,13 @@ export default {
   'menu.testComponent': '組件測試',
   'menu.table': 'CRUD 示例',
   'menu.chats.self-chat': '筆記',
+  announcement: {
+    banner: '公告',
+    readBy: '已讀用戶',
+    noReadUsers: '暫無已讀用戶',
+    ignore: '忽略此公告',
+    gotIt: '我知道了',
+  },
   'welcome.title': '歡迎使用',
   'welcome.desc': '這是一個基於 Umi 的示例項目',
   'not-found': '404找不到',

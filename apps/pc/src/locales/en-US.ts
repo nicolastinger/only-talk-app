@@ -4,6 +4,13 @@ export default {
   'menu.access': 'Access',
   'menu.table': 'CRUD Example',
   'menu.chats.self-chat': 'Notes',
+  announcement: {
+    banner: 'Announcement',
+    readBy: 'Read by',
+    noReadUsers: 'No readers yet',
+    ignore: 'Ignore',
+    gotIt: 'Got it',
+  },
   'welcome.title': 'Welcome',
   'welcome.desc': 'This is a sample project based on Umi',
   'not-found': 'Not found',
