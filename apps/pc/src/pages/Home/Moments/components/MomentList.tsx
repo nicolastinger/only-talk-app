@@ -8,10 +8,10 @@ import MomentCard from './MomentCard';
 import styles from './styles/MomentList.less';
 
 const PAGE_SIZE = 10;
-const GAP = 16;
+const GAP = 22;
 
 const resolveColumns = (width: number) =>
-  width < 560 ? 1 : width < 860 ? 2 : width < 1200 ? 3 : 4;
+  width < 640 ? 1 : width < 1000 ? 2 : width < 1400 ? 3 : 4;
 
 const MomentList = (props: {
   refreshKey: number;
@@ -37,7 +37,7 @@ const MomentList = (props: {
     const width = node.clientWidth;
     if (!width) return;
     const count = resolveColumns(width);
-    const colWidth = Math.max(120, Math.floor((width - GAP * (count - 1)) / count));
+    const colWidth = Math.max(180, Math.floor((width - GAP * (count - 1)) / count));
     const colTops = new Array<number>(count).fill(0);
     moments.forEach((m) => {
       const el = cardEls.current.get(m.uuid);
@@ -148,7 +148,7 @@ const MomentList = (props: {
       ) : (
         <>
           <div className={styles.masonry} ref={masonryRef}>
-            {moments.map((m) => (
+            {moments.map((m, i) => (
               <div
                 key={m.uuid}
                 className={styles.item}
@@ -159,6 +159,7 @@ const MomentList = (props: {
               >
                 <MomentCard
                   moment={m}
+                  index={i}
                   onOpenComments={(moment) => setSelected(moment)}
                   onOpenDetail={(moment) => history.push('/home/moments/' + moment.uuid)}
                   onMediaLoad={scheduleMeasure}

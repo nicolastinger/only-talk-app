@@ -4,18 +4,19 @@ import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { useIntl } from '@umijs/max';
 import { message, Modal } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import MomentMedia from './MomentMedia';
 import styles from './styles/MomentCard.less';
 
 const MomentCard = (props: {
   moment: MomentVo;
+  index?: number;
   onOpenComments: (moment: MomentVo) => void;
   onOpenDetail?: (moment: MomentVo) => void;
   onMediaLoad?: () => void;
   onDeleted?: (moment: MomentVo) => void;
 }) => {
-  const { moment, onOpenComments, onOpenDetail, onMediaLoad, onDeleted } = props;
+  const { moment, index, onOpenComments, onOpenDetail, onMediaLoad, onDeleted } = props;
   const intl = useIntl();
   const myUuid = useBearStore((state) => state.userInfo.uuid);
   const isMine = !!myUuid && myUuid === moment.author_uuid;
@@ -98,6 +99,7 @@ const MomentCard = (props: {
   return (
     <div
       className={styles.card}
+      style={{ '--seq': index * 40 } as CSSProperties}
       onClick={() => onOpenDetail?.(moment)}
       role="button"
       tabIndex={0}

@@ -45,12 +45,25 @@
   font-weight: 700;
   color: var(--text-color);
   letter-spacing: 0.5px;
+  animation: fadeInDown 0.35s ease backwards;
 }
 
 .subtitle {
   margin-top: 4px;
   font-size: 13px;
   color: var(--text-color-secondary);
+  animation: fadeInDown 0.45s ease 0.05s backwards;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .publishBtn {

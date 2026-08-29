@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AppImage from '@/components/AppImage';
 import styles from './styles/MomentMedia.less';
 
 const MomentMedia = (props: { images: string[]; onMediaLoad?: () => void }) => {
@@ -34,6 +35,11 @@ const MomentMedia = (props: { images: string[]; onMediaLoad?: () => void }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [images]);
 
+  // images 变化时重置索引回首图
+  useEffect(() => {
+    setImgIndex(0);
+  }, [images]);
+
   if (images.length === 0) return null;
 
   return (
@@ -44,12 +50,13 @@ const MomentMedia = (props: { images: string[]; onMediaLoad?: () => void }) => {
       }
     >
       <img src={images[imgIndex]} className={styles.mediaBg} alt="" aria-hidden />
-      <img
+      <AppImage
+        key={imgIndex}
         src={images[imgIndex]}
+        fill
         className={styles.mediaImg}
-        alt=""
-        onLoad={() => onMediaLoad?.()}
-        onError={() => onMediaLoad?.()}
+        onLoad={onMediaLoad}
+        onError={onMediaLoad}
       />
       {images.length > 1 && (
         <>

@@ -3,6 +3,7 @@ import {
   getGroupImageMessages,
   openImagePreviewWindow,
 } from '@workspace/services';
+import AppImage from '@/components/AppImage';
 import React from 'react';
 
 interface ChatImageProps {
@@ -37,15 +38,6 @@ const ChatImage: React.FC<ChatImageProps> = ({
   nanoId,
 }) => {
   const [isOpening, setIsOpening] = React.useState(false);
-  const [imgError, setImgError] = React.useState(false);
-  const imgRef = React.useRef<HTMLImageElement>(null);
-
-  // 检查图片是否已经缓存加载完成（onLoad可能在handler挂载前触发）
-  React.useEffect(() => {
-    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
-      // 图片已缓存，无需特殊处理
-    }
-  }, [src]);
 
   const handleClick = async () => {
     if (!src || isOpening) return;
@@ -85,65 +77,18 @@ const ChatImage: React.FC<ChatImageProps> = ({
     }
   };
 
-  if (src && !imgError) {
-    return (
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt}
-        className={className}
-        style={{
-          maxWidth,
-          maxHeight,
-          borderRadius,
-          cursor: 'pointer',
-          ...style,
-        }}
-        onClick={handleClick}
-        onError={(e) => {
-          console.error('图片加载失败', e);
-          setImgError(true);
-        }}
-      />
-    );
-  }
-
-  if (loading && !imgError) {
-    return (
-      <div
-        className={className}
-        style={{
-          maxWidth,
-          maxHeight,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#999',
-          fontSize: '12px',
-          ...style,
-        }}
-      >
-        加载中...
-      </div>
-    );
-  }
-
   return (
-    <div
+    <AppImage
+      src={src}
+      loading={loading}
+      alt={alt}
       className={className}
-      style={{
-        maxWidth,
-        maxHeight,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#999',
-        fontSize: '12px',
-        ...style,
-      }}
-    >
-      图片加载失败
-    </div>
+      style={style}
+      maxWidth={maxWidth}
+      maxHeight={maxHeight}
+      borderRadius={borderRadius}
+      onClick={handleClick}
+    />
   );
 };
 
