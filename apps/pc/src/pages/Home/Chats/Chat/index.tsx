@@ -2,7 +2,7 @@ import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { useLocation, useIntl } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
 import {
   ChatMessage,
   FriendVo,
@@ -261,15 +261,8 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (textMessage) {
-      // 视频通话控制消息(12-15)已完全解耦，不渲染为聊天气泡
-      if (
-        textMessage.text_type === 12 ||
-        textMessage.text_type === 13 ||
-        textMessage.text_type === 14 ||
-        textMessage.text_type === 15
-      ) {
-        return;
-      }
+      // 视频通话控制消息(12-15)：同样作为聊天气泡展示（WebRTCMessage），
+      // 用于在打开聊天窗时实时浮出 邀请/已接听/已拒绝/通话结束 卡片
       let from = MessageFrom.Customer;
       if (textMessage.send_user == SYSTEM_ACCOUNT) {
         from = MessageFrom.System;
@@ -384,7 +377,9 @@ const ChatPage: React.FC = () => {
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'chat.noMoreMessages' })}</div>
+            <div className={styles.noMoreIndicator}>
+              {intl.formatMessage({ id: 'chat.noMoreMessages' })}
+            </div>
           )}
           <MessageList
             messages={messageList}

@@ -373,7 +373,7 @@ export const useWebRTCCall = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPreCall, friendId]);
+  }, [isPreCall, friendId, activeView]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;

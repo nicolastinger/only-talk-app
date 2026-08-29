@@ -187,17 +187,8 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
     let payload = serde_json::to_string(&msg)?;
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
 
-    // 视频通话控制消息(12-15)完全解耦：仅上报事件，不落库、不更新会话/未读
-    if matches!(
-        msg.text_type,
-        MSG_TYPE_P2P_VIDEO_CALL_INVITE
-            | MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
-            | MSG_TYPE_P2P_VIDEO_CALL_REJECT
-            | MSG_TYPE_P2P_VIDEO_CALL_END
-    ) {
-        return Ok(());
-    }
-
+    // 视频通话控制消息(12-15)不在此提前返回：仍更新会话列表，
+    // 便于会话列表预览 [视频通话邀请]/[已接听]/[已拒绝]/[通话结束]（前端聊天窗对 12-15 不渲染气泡）
     let friend_uuid = &msg.send_user;
     let mut flag = false;
     let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
@@ -363,8 +354,8 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         timestamp: msg.timestamp,
     };
 
-    // 视频通话控制消息(12-15)与 WebRTC 信令(100)不落库：仅更新回执/发送状态并上报事件，
-    // 不插入聊天记录、不更新会话与未读（发送方历史由 send_webrtc_signal_service 落库）
+    // 视频通话控制消息(12-15)与 WebRTC 信令(100)：控制消息已不走 send/ack 表（发送方直接上送），
+    // 此处回执通常查不到发送记录而提前返回；12-15/100 均不落库、不更新会话（信号为瞬态）
     if matches!(
         ack_record.text_type,
         MSG_TYPE_WEBRTC_SIGNAL

@@ -14,7 +14,8 @@ use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
 };
 use crate::dao::chat_record_db::{
-    query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
+    insert_chat_record, query_chat_record_by_type_from_db, query_chat_record_from_db,
+    query_last_chat_record,
 };
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
@@ -451,6 +452,26 @@ pub async fn get_group_chat_record_service(
 pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let now = get_now_time_stamp_as_millis()?;
+
+    // 实时通话控制消息(12-15)：绝不进入待发送/回执表（否则断连时后台重发机制会重发，
+    // 导致重复邀请/接受/结束）。直接经 SERVER_TEXT 上送，发送失败即放弃（宁断连不重发）；
+    // 发送方本地落库供聊天历史展示。
+    if (12..=15).contains(&text_quic_msg.text_type) {
+        insert_chat_record(&text_quic_msg).await?;
+        let raw = text_quic_msg.raw.as_bytes().to_vec();
+        let test_msg = generate_text_msg_without_nano(
+            text_quic_msg.text_type,
+            raw,
+            text_quic_msg.recv_user.clone(),
+            sender,
+            text_quic_msg.nano_id.clone(),
+        )?;
+        let conn = {
+            let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+            server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+        };
+        return send_msg(test_msg, &conn).await;
+    }
 
     let msg = text_quic_msg.raw;
     let mut prev_id = ZERO_UUID.to_string();
