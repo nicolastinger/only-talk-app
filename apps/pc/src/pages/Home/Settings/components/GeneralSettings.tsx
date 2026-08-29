@@ -16,6 +16,7 @@ import {
   message,
 } from 'antd';
 import { useEffect, useState } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
@@ -24,6 +25,7 @@ const { Option } = Select;
 const GeneralSettings = () => {
   const intl = useIntl();
   const currentLocale = getLocale();
+  const { mode, fontSize, setMode, setFontSize } = useTheme();
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
   const [autoStartLoading, setAutoStartLoading] = useState(false);
 
@@ -119,7 +121,7 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Select defaultValue="light" className={styles.select}>
+        <Select value={mode} onChange={setMode} className={styles.select}>
           <Option value="light">
             {intl.formatMessage({
               id: 'settings.generalSettings.themeModes.light',
@@ -149,7 +151,7 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Select defaultValue="medium" className={styles.select}>
+        <Select value={fontSize} onChange={setFontSize} className={styles.select}>
           <Option value="small">
             {intl.formatMessage({
               id: 'settings.generalSettings.fontSizes.small',
