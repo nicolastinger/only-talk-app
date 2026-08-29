@@ -1,8 +1,13 @@
-import { delete_moment, getFiles, switch_moment_like, switch_user_follow } from '@workspace/services';
-import { MomentVo } from '@workspace/types';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { useIntl } from '@umijs/max';
+import {
+  delete_moment,
+  getFiles,
+  switch_moment_like,
+  switch_user_follow,
+} from '@workspace/services';
+import { MomentVo } from '@workspace/types';
 import { message, Modal } from 'antd';
 import { useEffect, useState, type CSSProperties } from 'react';
 import MomentMedia from './MomentMedia';
@@ -17,7 +22,15 @@ const MomentCard = (props: {
   onMediaLoad?: () => void;
   onDeleted?: (moment: MomentVo) => void;
 }) => {
-  const { moment, index, onOpenComments, onOpenDetail, onOpenUser, onMediaLoad, onDeleted } = props;
+  const {
+    moment,
+    index,
+    onOpenComments,
+    onOpenDetail,
+    onOpenUser,
+    onMediaLoad,
+    onDeleted,
+  } = props;
   const intl = useIntl();
   const myUuid = useBearStore((state) => state.userInfo.uuid);
   const isMine = !!myUuid && myUuid === moment.author_uuid;
@@ -38,7 +51,9 @@ const MomentCard = (props: {
       // 仅在明确 0 图时跳过; undefined(旧后端)也尝试拉取, 保证图片展示
       if (moment.image_count == null || moment.image_count > 0) {
         const imgFiles = await getFiles(moment.uuid);
-        setImages((imgFiles || []).map((f) => f.tauri_file_path || '').filter(Boolean));
+        setImages(
+          (imgFiles || []).map((f) => f.tauri_file_path || '').filter(Boolean),
+        );
       }
     };
     load();
@@ -59,7 +74,7 @@ const MomentCard = (props: {
       setLikeCount((prev) => (liked ? Math.max(0, prev - 1) : prev + 1));
     } catch (e) {
       console.error(e);
-      message.error(e.message || '操作失败');
+      message.error((e as Error).message || '操作失败');
     } finally {
       setLiking(false);
     }
@@ -76,7 +91,7 @@ const MomentCard = (props: {
     } catch (e) {
       console.error(e);
       setIsFollowing(prev);
-      message.error(e.message || '操作失败');
+      message.error((e as Error).message || '操作失败');
     } finally {
       setFollowing(false);
     }
@@ -105,16 +120,14 @@ const MomentCard = (props: {
   return (
     <div
       className={styles.card}
-      style={{ '--seq': index * 40 } as CSSProperties}
+      style={{ '--seq': (index ?? 0) * 40 } as CSSProperties}
       onClick={() => onOpenDetail?.(moment)}
       role="button"
       tabIndex={0}
     >
       <MomentMedia images={images} onMediaLoad={onMediaLoad} />
 
-      {moment.content && (
-        <div className={styles.content}>{moment.content}</div>
-      )}
+      {moment.content && <div className={styles.content}>{moment.content}</div>}
 
       <div className={styles.footer}>
         <div className={styles.userRow}>
@@ -146,7 +159,9 @@ const MomentCard = (props: {
         <div className={styles.actions}>
           {!isMine && (
             <button
-              className={`${styles.followBtn} ${isFollowing ? styles.followed : ''}`}
+              className={`${styles.followBtn} ${
+                isFollowing ? styles.followed : ''
+              }`}
               disabled={following}
               onClick={handleFollow}
             >

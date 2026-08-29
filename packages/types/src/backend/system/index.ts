@@ -6,6 +6,7 @@ interface SystemNotification {
   content_type?: number;
   user_id?: string;
   is_read?: boolean;
+  biz_id?: string;
   level1?: number;
   level2?: number;
   level3?: number;

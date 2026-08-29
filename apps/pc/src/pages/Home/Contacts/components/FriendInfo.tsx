@@ -4,9 +4,9 @@ import { history, useIntl } from '@umijs/max';
 import {
   block_friend,
   get_user_info_with_cache,
+  getFiles,
   refresh_user_info,
   unblock_friend,
-  getFiles,
 } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
 import { Button, Collapse, message } from 'antd';
@@ -41,10 +41,10 @@ const FriendInfo = (props: { uuid: string }) => {
     try {
       const result = await get_user_info_with_cache(uuid);
       console.log('get_user_info_with_cache result:', result);
-      
+
       const user = result.user_info;
       setUserInfo(user);
-      
+
       const friendVo: FriendVo = {
         timestamp: 0,
         friend_id: user.uuid,
@@ -59,17 +59,20 @@ const FriendInfo = (props: { uuid: string }) => {
         is_show: 1,
       };
       setCurrentFriend(friendVo);
-      
+
       const icon = await getUserIcon(user.icon || '');
       setFriendIcon(icon);
-      
+
       if (result.from_cache) {
         console.log('用户信息来自缓存，后台刷新中...');
         refreshUserInfo(uuid);
       }
     } catch (err) {
       console.error('获取用户信息失败', err);
-      message.error(intl.formatMessage({ id: 'friendInfo.loadError' }) || '获取用户信息失败');
+      message.error(
+        intl.formatMessage({ id: 'friendInfo.loadError' }) ||
+          '获取用户信息失败',
+      );
     } finally {
       setLoading(false);
     }
@@ -80,7 +83,7 @@ const FriendInfo = (props: { uuid: string }) => {
       const freshUser = await refresh_user_info(uuid);
       console.log('用户信息已刷新:', freshUser);
       setUserInfo(freshUser);
-      
+
       const friendVo: FriendVo = {
         timestamp: 0,
         friend_id: freshUser.uuid,
@@ -95,7 +98,7 @@ const FriendInfo = (props: { uuid: string }) => {
         is_show: 1,
       };
       setCurrentFriend(friendVo);
-      
+
       const icon = await getUserIcon(freshUser.icon || '');
       setFriendIcon(icon);
     } catch (err) {
@@ -134,17 +137,23 @@ const FriendInfo = (props: { uuid: string }) => {
     try {
       if (isBlocked) {
         await unblock_friend(uuid);
-        message.success(intl.formatMessage({ id: 'friendInfo.unblockedSuccess' }));
+        message.success(
+          intl.formatMessage({ id: 'friendInfo.unblockedSuccess' }),
+        );
         setIsBlocked(false);
       } else {
         await block_friend(uuid);
-        message.success(intl.formatMessage({ id: 'friendInfo.blockedSuccess' }));
+        message.success(
+          intl.formatMessage({ id: 'friendInfo.blockedSuccess' }),
+        );
         setIsBlocked(true);
       }
     } catch (error) {
       message.error(
         intl.formatMessage({
-          id: isBlocked ? 'friendInfo.unblockedFailed' : 'friendInfo.blockedFailed',
+          id: isBlocked
+            ? 'friendInfo.unblockedFailed'
+            : 'friendInfo.blockedFailed',
         }),
       );
       console.error('拉黑操作失败:', error);
@@ -163,7 +172,7 @@ const FriendInfo = (props: { uuid: string }) => {
     return (
       <Button
         danger={!isBlocked}
-        color={isBlocked ? 'default' : 'error'}
+        color={isBlocked ? 'default' : 'danger'}
         variant="solid"
         onClick={handleToggleBlock}
       >

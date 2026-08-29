@@ -11,17 +11,6 @@ export const readContactsNotification = async (ids: string[]) => {
   }
 };
 
-export const clearAllUnreadNotifications = async (
-  setMenuUnread: (menuUnread: { contacts: number; groups: number; system: number; settings: number }) => void
-) => {
-  try {
-    await invoke("clear_all_unread_notifications");
-    setMenuUnread({ contacts: 0, groups: 0, system: 0, settings: 0 });
-  } catch (e) {
-    console.log("清空所有未读通知失败", e);
-  }
-};
-
 export const clearAllUnreadSessions = async () => {
   try {
     await invoke("clear_all_unread_sessions");

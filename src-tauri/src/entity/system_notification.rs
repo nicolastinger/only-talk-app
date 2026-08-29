@@ -94,12 +94,16 @@ impl SystemNotification {
         let placeholders_str = placeholders.join(",");
 
         // 更新未读的系统消息为已读，并返回更新的行数
+        // 传入的 id 可能是通知主键 id，也可能是业务 id(biz_id)，两者都尝试匹配
         let query_str = format!(
-            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND id IN ({}) AND is_read = 0",
-            placeholders_str
+            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND (id IN ({}) OR biz_id IN ({})) AND is_read = 0",
+            placeholders_str, placeholders_str
         );
 
         let mut query = sqlx::query(&query_str).bind(user_id);
+        for id in &ids {
+            query = query.bind(id);
+        }
         for id in &ids {
             query = query.bind(id);
         }

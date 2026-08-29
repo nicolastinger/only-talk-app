@@ -1,8 +1,12 @@
-import { get_moment_comments, getFiles, post_moment_comment } from '@workspace/services';
-import { MomentCommentVo } from '@workspace/types';
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
-import { Avatar, Button, Empty, Input, List, Spin, message } from 'antd';
+import {
+  get_moment_comments,
+  getFiles,
+  post_moment_comment,
+} from '@workspace/services';
+import { MomentCommentVo } from '@workspace/types';
+import { Avatar, Button, Empty, Input, message, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import styles from './styles/CommentSection.less';
 
@@ -38,7 +42,8 @@ const CommentSection = (props: {
         for (const c of res.list) {
           if (c.icon && !record[c.icon]) {
             const files = await getFiles(c.icon);
-            if (files?.[0]?.tauri_file_path) record[c.icon] = files[0].tauri_file_path;
+            if (files?.[0]?.tauri_file_path)
+              record[c.icon] = files[0].tauri_file_path;
           }
         }
         setAvatars(record);
@@ -72,7 +77,7 @@ const CommentSection = (props: {
       await loadComments(1, true);
     } catch (e) {
       console.error(e);
-      message.error(e.message || '评论失败');
+      message.error((e as Error).message || '评论失败');
     } finally {
       setSubmitting(false);
     }
@@ -96,7 +101,10 @@ const CommentSection = (props: {
         <div className={styles.list}>
           {comments.map((item) => (
             <div key={item.id} className={styles.commentItem}>
-              <Avatar size={32} src={avatars[item.icon || ''] || DEFAULT_ICON} />
+              <Avatar
+                size={32}
+                src={avatars[item.icon || ''] || DEFAULT_ICON}
+              />
               <div className={styles.commentBody}>
                 <div className={styles.commentMeta}>
                   <span className={styles.name}>
@@ -115,7 +123,10 @@ const CommentSection = (props: {
               <Spin size="small" />
             </div>
           ) : hasMore ? (
-            <button className={styles.loadMore} onClick={() => loadComments(page + 1, false)}>
+            <button
+              className={styles.loadMore}
+              onClick={() => loadComments(page + 1, false)}
+            >
               {intl.formatMessage({ id: 'moments.loadMore' })}
             </button>
           ) : null}
@@ -125,7 +136,9 @@ const CommentSection = (props: {
         <Input
           value={text}
           maxLength={1000}
-          placeholder={intl.formatMessage({ id: 'moments.comments.placeholder' })}
+          placeholder={intl.formatMessage({
+            id: 'moments.comments.placeholder',
+          })}
           onChange={(e) => setText(e.target.value)}
           onPressEnter={handleSubmit}
         />

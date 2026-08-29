@@ -1,8 +1,12 @@
-import { get_moment_comments, getFiles, post_moment_comment } from '@workspace/services';
-import { MomentCommentVo } from '@workspace/types';
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
-import { Avatar, Button, Empty, Input, List, Modal, message } from 'antd';
+import {
+  get_moment_comments,
+  getFiles,
+  post_moment_comment,
+} from '@workspace/services';
+import { MomentCommentVo } from '@workspace/types';
+import { Avatar, Button, Empty, Input, List, message, Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/CommentModal.less';
 
@@ -39,7 +43,8 @@ const CommentModal = (props: {
       for (const c of list) {
         if (c.icon && !record[c.icon]) {
           const files = await getFiles(c.icon);
-          if (files?.[0]?.tauri_file_path) record[c.icon] = files[0].tauri_file_path;
+          if (files?.[0]?.tauri_file_path)
+            record[c.icon] = files[0].tauri_file_path;
         }
       }
       setAvatars(record);
@@ -61,7 +66,7 @@ const CommentModal = (props: {
       await loadComments();
     } catch (e) {
       console.error(e);
-      message.error(e.message || '评论失败');
+      message.error((e as Error).message || '评论失败');
     } finally {
       setSubmitting(false);
     }
@@ -79,13 +84,16 @@ const CommentModal = (props: {
       <List
         loading={loading}
         dataSource={comments}
-        locale={{ emptyText: <Empty description={intl.formatMessage({ id: 'moments.comments.empty' })} /> }}
+        locale={{
+          emptyText: (
+            <Empty
+              description={intl.formatMessage({ id: 'moments.comments.empty' })}
+            />
+          ),
+        }}
         renderItem={(item) => (
           <List.Item key={item.id} className={styles.commentItem}>
-            <Avatar
-              size={32}
-              src={avatars[item.icon || ''] || DEFAULT_ICON}
-            />
+            <Avatar size={32} src={avatars[item.icon || ''] || DEFAULT_ICON} />
             <div className={styles.commentBody}>
               <div className={styles.commentMeta}>
                 <span className={styles.name}>
@@ -104,7 +112,9 @@ const CommentModal = (props: {
         <Input
           value={commentText}
           maxLength={1000}
-          placeholder={intl.formatMessage({ id: 'moments.comments.placeholder' })}
+          placeholder={intl.formatMessage({
+            id: 'moments.comments.placeholder',
+          })}
           onChange={(e) => setCommentText(e.target.value)}
           onPressEnter={handleSubmit}
         />

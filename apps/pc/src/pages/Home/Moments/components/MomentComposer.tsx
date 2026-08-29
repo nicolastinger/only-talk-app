@@ -1,7 +1,11 @@
-import { TALK_API } from '@workspace/types';
-import { convertPathToTauriUrl, create_moment, selectFile } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
+import {
+  convertPathToTauriUrl,
+  create_moment,
+  selectFile,
+} from '@workspace/services';
+import { TALK_API } from '@workspace/types';
 import { Button, Input, Modal, Segmented, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/MomentComposer.less';
@@ -37,9 +41,12 @@ const MomentComposer = (props: {
     setUploading(true);
     try {
       for (const fp of picked) {
-        const compressed = await invoke<string>('compress_image_to_webp_command', {
-          inputPath: fp,
-        });
+        const compressed = await invoke<string>(
+          'compress_image_to_webp_command',
+          {
+            inputPath: fp,
+          },
+        );
         const preview = convertPathToTauriUrl(compressed);
         const res = await invoke<{ status: number; body: string }>(
           'upload_file_request',
@@ -47,7 +54,7 @@ const MomentComposer = (props: {
             url: `${TALK_API}/file_integrated/upload/moment`,
             filePath: compressed,
             fieldName: 'file',
-          }
+          },
         );
         if (res.status === 200) {
           const json = JSON.parse(res.body);
@@ -72,7 +79,9 @@ const MomentComposer = (props: {
   const handlePublish = async () => {
     const trimmed = content.trim();
     if (!trimmed) {
-      message.warning(intl.formatMessage({ id: 'moments.composer.contentEmpty' }));
+      message.warning(
+        intl.formatMessage({ id: 'moments.composer.contentEmpty' }),
+      );
       return;
     }
     setLoading(true);
@@ -83,13 +92,15 @@ const MomentComposer = (props: {
         file_ids: fileIds,
       });
       if (created) {
-        message.success(intl.formatMessage({ id: 'moments.composer.publishSuccess' }));
+        message.success(
+          intl.formatMessage({ id: 'moments.composer.publishSuccess' }),
+        );
         onClose();
         onSuccess();
       }
     } catch (e) {
       console.error('发布动态失败:', e);
-      message.error(e.message || '发布动态失败');
+      message.error((e as Error).message || '发布动态失败');
     } finally {
       setLoading(false);
     }
@@ -120,7 +131,9 @@ const MomentComposer = (props: {
           rows={4}
           value={content}
           maxLength={2000}
-          placeholder={intl.formatMessage({ id: 'moments.composer.placeholder' })}
+          placeholder={intl.formatMessage({
+            id: 'moments.composer.placeholder',
+          })}
           onChange={(e) => setContent(e.target.value)}
         />
         <div className={styles.visibilityRow}>
@@ -131,8 +144,14 @@ const MomentComposer = (props: {
             value={visibility}
             onChange={(v) => setVisibility(Number(v))}
             options={[
-              { label: intl.formatMessage({ id: 'moments.composer.public' }), value: 0 },
-              { label: intl.formatMessage({ id: 'moments.composer.self' }), value: 1 },
+              {
+                label: intl.formatMessage({ id: 'moments.composer.public' }),
+                value: 0,
+              },
+              {
+                label: intl.formatMessage({ id: 'moments.composer.self' }),
+                value: 1,
+              },
             ]}
           />
         </div>

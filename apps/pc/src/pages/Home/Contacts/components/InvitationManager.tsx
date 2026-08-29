@@ -1,16 +1,21 @@
-import { GroupInvitationVo } from '@workspace/types';
+import { useBearStore } from '@/store/store';
 import {
+  ClearOutlined,
+  TeamOutlined,
+  UserSwitchOutlined,
+} from '@ant-design/icons';
+import { useIntl } from '@umijs/max';
+import {
+  accept_group_invitation,
+  clearUnreadByLevel,
+  decline_group_invitation,
   get_pending_invitations,
   get_sent_invitations,
-  accept_group_invitation,
-  decline_group_invitation,
-  clearUnreadByLevel,
   getUnreadNotificationCounts,
+  readContactsNotification,
 } from '@workspace/services';
-import { Modal, Tabs, Tag, Empty, Button, message, Popconfirm } from 'antd';
-import { ClearOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons';
-import { useBearStore } from '@/store/store';
-import { useIntl } from '@umijs/max';
+import { GroupInvitationVo } from '@workspace/types';
+import { Button, Empty, message, Modal, Popconfirm, Tabs, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/InvitationManager.less';
 
@@ -22,7 +27,13 @@ interface InvitationManagerProps {
 const formatTime = (timestamp: number) => {
   if (!timestamp) return '';
   const d = new Date(timestamp);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    '0',
+  )}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(
+    2,
+    '0',
+  )}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
 const InvitationManager: React.FC<InvitationManagerProps> = ({
@@ -36,11 +47,25 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
 
   const getStatusConfig = (status: number) => {
     const statusMap: Record<number, { text: string; color: string }> = {
-      1: { text: intl.formatMessage({ id: 'contacts.invitation.statusPending' }), color: 'processing' },
-      2: { text: intl.formatMessage({ id: 'contacts.invitation.statusAccepted' }), color: 'success' },
-      3: { text: intl.formatMessage({ id: 'contacts.invitation.statusRejected' }), color: 'error' },
+      1: {
+        text: intl.formatMessage({ id: 'contacts.invitation.statusPending' }),
+        color: 'processing',
+      },
+      2: {
+        text: intl.formatMessage({ id: 'contacts.invitation.statusAccepted' }),
+        color: 'success',
+      },
+      3: {
+        text: intl.formatMessage({ id: 'contacts.invitation.statusRejected' }),
+        color: 'error',
+      },
     };
-    return statusMap[status] || { text: intl.formatMessage({ id: 'contacts.invitation.statusUnknown' }), color: 'default' };
+    return (
+      statusMap[status] || {
+        text: intl.formatMessage({ id: 'contacts.invitation.statusUnknown' }),
+        color: 'default',
+      }
+    );
   };
 
   const refreshUnreadCounts = async () => {
@@ -74,27 +99,39 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
       setSentList(sent || []);
     } catch (err) {
       console.error('获取邀请列表失败', err);
-      message.error(intl.formatMessage({ id: 'contacts.invitation.fetchError' }));
+      message.error(
+        intl.formatMessage({ id: 'contacts.invitation.fetchError' }),
+      );
     }
   };
 
   const handleClearUnread = async () => {
-    await clearUnreadByLevel(1, 3, -1, -1);
+    await clearUnreadByLevel(1, 3, 1, -1);
     refreshUnreadCounts();
-    message.success(intl.formatMessage({ id: 'contacts.invitation.clearUnreadSuccess' }));
+    message.success(
+      intl.formatMessage({ id: 'contacts.invitation.clearUnreadSuccess' }),
+    );
   };
 
   const handleAccept = async (groupUuid: string) => {
     try {
       const ok = await accept_group_invitation(groupUuid);
       if (ok) {
-        message.success(intl.formatMessage({ id: 'contacts.invitation.acceptSuccess' }));
+        message.success(
+          intl.formatMessage({ id: 'contacts.invitation.acceptSuccess' }),
+        );
+        await readContactsNotification([groupUuid]);
+        refreshUnreadCounts();
         loadAll();
       } else {
-        message.warning(intl.formatMessage({ id: 'contacts.invitation.acceptFailed' }));
+        message.warning(
+          intl.formatMessage({ id: 'contacts.invitation.acceptFailed' }),
+        );
       }
     } catch (err) {
-      message.error(intl.formatMessage({ id: 'contacts.invitation.acceptFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'contacts.invitation.acceptFailed' }),
+      );
     }
   };
 
@@ -102,13 +139,21 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
     try {
       const ok = await decline_group_invitation(groupUuid);
       if (ok) {
-        message.success(intl.formatMessage({ id: 'contacts.invitation.rejectSuccess' }));
+        message.success(
+          intl.formatMessage({ id: 'contacts.invitation.rejectSuccess' }),
+        );
+        await readContactsNotification([groupUuid]);
+        refreshUnreadCounts();
         loadAll();
       } else {
-        message.warning(intl.formatMessage({ id: 'contacts.invitation.rejectFailed' }));
+        message.warning(
+          intl.formatMessage({ id: 'contacts.invitation.rejectFailed' }),
+        );
       }
     } catch (err) {
-      message.error(intl.formatMessage({ id: 'contacts.invitation.rejectFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'contacts.invitation.rejectFailed' }),
+      );
     }
   };
 
@@ -188,41 +233,69 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
       key: 'received',
       label: (
         <span className={styles.tabLabel}>
-          <span>{intl.formatMessage({ id: 'contacts.invitation.tabReceived' })}</span>
-          {pendingCount > 0 && <span className={styles.badge}>{pendingCount > 99 ? '99+' : pendingCount}</span>}
+          <span>
+            {intl.formatMessage({ id: 'contacts.invitation.tabReceived' })}
+          </span>
+          {pendingCount > 0 && (
+            <span className={styles.badge}>
+              {pendingCount > 99 ? '99+' : pendingCount}
+            </span>
+          )}
         </span>
       ),
-      children: receivedList.length > 0 ? (
-        <div className={styles.invitationList}>
-          {receivedList.map(renderReceivedItem)}
-        </div>
-      ) : (
-        <Empty description={intl.formatMessage({ id: 'contacts.invitation.noReceived' })} />
-      ),
+      children:
+        receivedList.length > 0 ? (
+          <div className={styles.invitationList}>
+            {receivedList.map(renderReceivedItem)}
+          </div>
+        ) : (
+          <Empty
+            description={intl.formatMessage({
+              id: 'contacts.invitation.noReceived',
+            })}
+          />
+        ),
     },
     {
       key: 'sent',
       label: intl.formatMessage({ id: 'contacts.invitation.tabSent' }),
-      children: sentList.length > 0 ? (
-        <div className={styles.invitationList}>
-          {sentList.map(renderSentItem)}
-        </div>
-      ) : (
-        <Empty description={intl.formatMessage({ id: 'contacts.invitation.noSent' })} />
-      ),
+      children:
+        sentList.length > 0 ? (
+          <div className={styles.invitationList}>
+            {sentList.map(renderSentItem)}
+          </div>
+        ) : (
+          <Empty
+            description={intl.formatMessage({
+              id: 'contacts.invitation.noSent',
+            })}
+          />
+        ),
     },
   ];
 
   return (
     <Modal
       title={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>{intl.formatMessage({ id: 'contacts.invitation.modalTitle' })}</span>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span>
+            {intl.formatMessage({ id: 'contacts.invitation.modalTitle' })}
+          </span>
           <Popconfirm
-            title={intl.formatMessage({ id: 'contacts.invitation.clearUnreadConfirm' })}
+            title={intl.formatMessage({
+              id: 'contacts.invitation.clearUnreadConfirm',
+            })}
             onConfirm={handleClearUnread}
             okText={intl.formatMessage({ id: 'contacts.invitation.confirm' })}
-            cancelText={intl.formatMessage({ id: 'contacts.invitation.cancel' })}
+            cancelText={intl.formatMessage({
+              id: 'contacts.invitation.cancel',
+            })}
           >
             <Button type="text" size="small" icon={<ClearOutlined />}>
               {intl.formatMessage({ id: 'contacts.invitation.clearUnread' })}

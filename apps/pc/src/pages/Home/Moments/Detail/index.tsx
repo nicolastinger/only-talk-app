@@ -1,9 +1,15 @@
-import { delete_moment, getFiles, get_moment_detail, switch_moment_like, switch_user_follow } from '@workspace/services';
-import { MomentVo } from '@workspace/types';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { history, useIntl, useLocation } from '@umijs/max';
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import { history, useIntl, useLocation } from '@umijs/max';
+import {
+  delete_moment,
+  getFiles,
+  get_moment_detail,
+  switch_moment_like,
+  switch_user_follow,
+} from '@workspace/services';
+import { MomentVo } from '@workspace/types';
 import { Empty, Modal, Spin, message } from 'antd';
 import { useEffect, useState } from 'react';
 import CommentSection from '../components/CommentSection';
@@ -50,12 +56,16 @@ const MomentDetail = () => {
         if (m.image_count == null || m.image_count > 0) {
           const imgFiles = await getFiles(momentUuid);
           if (mounted) {
-            setImages((imgFiles || []).map((f) => f.tauri_file_path || '').filter(Boolean));
+            setImages(
+              (imgFiles || [])
+                .map((f) => f.tauri_file_path || '')
+                .filter(Boolean),
+            );
           }
         }
       } catch (e) {
         console.error(e);
-        if (mounted) setError(e.message || '加载失败');
+        if (mounted) setError((e as Error).message || '加载失败');
       }
     };
     load();
@@ -74,7 +84,7 @@ const MomentDetail = () => {
       setLikeCount((prev) => (liked ? Math.max(0, prev - 1) : prev + 1));
     } catch (e) {
       console.error(e);
-      message.error(e.message || '操作失败');
+      message.error((e as Error).message || '操作失败');
     } finally {
       setLiking(false);
     }
@@ -90,7 +100,7 @@ const MomentDetail = () => {
     } catch (e) {
       console.error(e);
       setIsFollowing(prev);
-      message.error(e.message || '操作失败');
+      message.error((e as Error).message || '操作失败');
     } finally {
       setFollowing(false);
     }
@@ -154,7 +164,9 @@ const MomentDetail = () => {
             />
             <div className={styles.authorMeta}>
               <div className={styles.usernameRow}>
-                <span className={styles.username}>{moment.username || '用户'}</span>
+                <span className={styles.username}>
+                  {moment.username || '用户'}
+                </span>
                 {isMine && (
                   <span className={styles.mineBadge}>
                     {intl.formatMessage({ id: 'moments.mine' })}
@@ -167,7 +179,9 @@ const MomentDetail = () => {
             </div>
             {!isMine && (
               <button
-                className={`${styles.followBtn} ${isFollowing ? styles.followed : ''}`}
+                className={`${styles.followBtn} ${
+                  isFollowing ? styles.followed : ''
+                }`}
                 disabled={following}
                 onClick={handleFollow}
               >
@@ -185,7 +199,9 @@ const MomentDetail = () => {
 
           {images.length > 0 && <MomentMedia images={images} />}
 
-          {moment.content && <div className={styles.content}>{moment.content}</div>}
+          {moment.content && (
+            <div className={styles.content}>{moment.content}</div>
+          )}
 
           <div className={styles.actions}>
             <button
@@ -211,7 +227,9 @@ const MomentDetail = () => {
           <div id="moment-comments">
             <CommentSection
               momentUuid={moment.uuid}
-              onCountChange={(delta) => setCommentCount((prev) => Math.max(0, prev + delta))}
+              onCountChange={(delta) =>
+                setCommentCount((prev) => Math.max(0, prev + delta))
+              }
             />
           </div>
         </div>
