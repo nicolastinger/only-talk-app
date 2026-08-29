@@ -248,6 +248,7 @@ export default {
       tagAddPlaceholder: '输入标签后回车',
       tagAdd: '添加',
       tagSave: '保存标签',
+      tagDesc: '标签最多可添加 100 个，将帮助其他用户更快了解你',
       saved: '保存成功',
       updateFailed: '保存失败，请重试',
       loadFailed: '获取广场设置失败',

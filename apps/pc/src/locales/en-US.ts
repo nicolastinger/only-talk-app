@@ -254,6 +254,7 @@ export default {
       tagAddPlaceholder: 'Type a tag and press Enter',
       tagAdd: 'Add',
       tagSave: 'Save Tags',
+      tagDesc: 'You can add up to 100 tags to help others get to know you faster',
       saved: 'Saved successfully',
       updateFailed: 'Save failed, please retry',
       loadFailed: 'Failed to load plaza settings',

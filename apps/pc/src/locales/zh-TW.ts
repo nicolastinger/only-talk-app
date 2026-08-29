@@ -248,6 +248,7 @@ export default {
       tagAddPlaceholder: '輸入標籤後回車',
       tagAdd: '添加',
       tagSave: '保存標籤',
+      tagDesc: '標籤最多可新增 100 個，將幫助其他用戶更快了解你',
       saved: '保存成功',
       updateFailed: '保存失敗，請重試',
       loadFailed: '獲取廣場設置失敗',
