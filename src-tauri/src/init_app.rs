@@ -1,21 +1,18 @@
 use std::fs;
-use std::net::SocketAddrV6;
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
 use fast_log::plugin::file_split::{DateType, KeepType, Rolling, RollingType};
 use fast_log::plugin::packer::LogPacker;
 use fast_log::Config;
-use log::{error, info, warn, LevelFilter};
+use log::{error, info, LevelFilter};
 use tauri::{Manager, Wry};
 
 use crate::config::set_config;
 use crate::dao::init_common_db::init_common_sqlite;
-use crate::quic_service::p2p_service::p2p_stream_quic_server::udp_port_forward_ipv6;
-use crate::utils::dns::resolve_ipv6;
 use crate::utils::global_static_str::{
-    get_env, APP_PATH, DEFAULT_IMAGE, DOMAIN_NAME, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
-    RESOURCE_PATH, SQLITE_PATH, UDP_PORT_V6,
+    get_env, APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
+    RESOURCE_PATH, SQLITE_PATH,
 };
 
 pub async fn init_app(
@@ -83,25 +80,8 @@ pub async fn init_app(
     //     copy_resources_to_app_dir(&handle, &resource_path).await;
     // }
 
-    // 监测ipv6是否支持（通过DNS动态解析域名）
-    tokio::spawn(async move {
-        let addr_v6 = "[::]:10086";
-        let addr_v6_socket: SocketAddrV6 =
-            addr_v6.parse::<SocketAddrV6>().expect("解析ipv6地址失败");
-        let udp_socket_v6 = match resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6).await {
-            Ok(addr) => addr,
-            Err(e) => {
-                info!("域名无IPv6记录，跳过IPv6检测 {}", e);
-                return;
-            }
-        };
-        let addr_json = Vec::new();
-        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(
-            |x| {
-                warn!("本机不支持ipv6传输 {}", x);
-            },
-        );
-    });
+    // 监测ipv6是否支持延后到登录成功后执行(check_ipv6_support)，
+    // 因为 NAT UDP 端口需登录后从 API 动态获取
     info!("应用启动成功");
     Ok(())
 }

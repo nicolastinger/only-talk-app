@@ -6,8 +6,8 @@ use crate::entity::p2p_models::{
 use crate::quic_service::p2p_service::p2p_quic_service::send_media_frame;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
-    access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
-    send_p2p_audio_frame_service, send_p2p_file_data_service,
+    access_p2p_request, close_p2p_connection_service, find_available_udp_port, get_nat_udp_ports,
+    reject_p2p_request, send_p2p_audio_frame_service, send_p2p_file_data_service,
     send_p2p_file_transfer_request_service, send_p2p_file_transfer_response_service,
     send_p2p_media_config_service, send_p2p_media_control_service, send_p2p_media_info_service,
     send_p2p_media_ready_service, send_p2p_text_msg_service, send_p2p_video_call_end_service,
@@ -15,7 +15,7 @@ use crate::service::p2p_service::{
     send_p2p_video_config_service, send_p2p_video_frame_service,
 };
 use crate::utils::dns::resolve_ipv4;
-use crate::utils::global_static_str::{DOMAIN_NAME, UDP_PORT};
+use crate::utils::global_static_str::DOMAIN_NAME;
 
 /// 发送p2p请求给好友
 /// 用于建立P2P连接
@@ -32,7 +32,9 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<String, String> {
 pub async fn send_init_p2p_udp() -> Result<String, String> {
     let udp_port = find_available_udp_port(10024).ok_or("no available UDP port")?;
     let addr = format!("0.0.0.0:{}", udp_port);
-    let remote_addr = resolve_ipv4(DOMAIN_NAME, UDP_PORT).await.map_err(|e| e.to_string())?;
+    let nat_ports = get_nat_udp_ports().await.map_err(|e| e.to_string())?;
+    let remote_addr =
+        resolve_ipv4(DOMAIN_NAME, nat_ports.v4_port_1).await.map_err(|e| e.to_string())?;
     send_udp_ping_msg(addr, remote_addr.to_string()).await.map_err(|e| e.to_string())?;
 
     Ok(format!("127.0.0.1:{}", udp_port))

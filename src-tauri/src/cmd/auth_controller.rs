@@ -10,6 +10,7 @@ use crate::cmd::api_controller::{post_request, ApiResponse};
 use crate::dto::http_result::HttpResult;
 use crate::entity::user_info::UserInfo;
 use crate::entity::user_token::UserToken;
+use crate::service::p2p_service;
 use crate::service::user_service::{add_user_map, get_user_info, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
@@ -74,6 +75,9 @@ pub async fn sign_in(
     };
 
     user_login().await.map_err(|e| e.to_string())?;
+
+    // 登录成功后延迟检测 IPv6 支持(需从 API 动态获取 NAT UDP 端口)
+    tauri::async_runtime::spawn(p2p_service::check_ipv6_support());
 
     // 持久化 refresh_token 到 user_token 表
     if let Some(ref user_uuid) = uuid {
