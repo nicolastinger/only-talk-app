@@ -300,8 +300,6 @@ const getMessageText = (msg: TextQuicMsgVo): string => {
     case 3: // 单聊文件
     case 2003: // 群聊文件
       return "[文件]";
-    case 4:
-      return "[隐私模式]";
     case 5:
       return "[视频通话]";
     case 100:

@@ -37,10 +37,6 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
       return '[文件]';
     }
 
-    if (text_type === 4) {
-      return '[隐私模式]';
-    }
-
     // 视频通话控制消息(12-15)：解析为聊天列表预览文案
     if (text_type != null && text_type >= 12 && text_type <= 15) {
       try {

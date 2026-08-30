@@ -29,6 +29,7 @@ use crate::service::friend_service::update_friend_list;
 use crate::service::group_service::{pull_group_messages, sync_group_list};
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
+use crate::utils::message_types::MSG_TYPE_P2P;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -105,6 +106,10 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
     for text_quic_msg in text_quic_msg_vec {
+        // P2P 隐私握手(4)是瞬态信号：不落库、不建/改会话，与好友聊天完全解耦
+        if text_quic_msg.text_type == MSG_TYPE_P2P {
+            continue;
+        }
         // 保存消息，返回是否真正新增（本地已存在则说明之前拉过/在线收过，不再计入未读）
         let is_new = match insert_chat_record(&text_quic_msg).await {
             Ok(v) => v,

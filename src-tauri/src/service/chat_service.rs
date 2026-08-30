@@ -50,6 +50,7 @@ use crate::service::api_service::upload_file;
 use crate::service::user_service::{get_user_info, get_user_map};
 use crate::utils::global_static_str::{PLATFORM, TALK_API, ZERO_UUID};
 use crate::utils::image_utils::compress_image_to_webp;
+use crate::utils::message_types::MSG_TYPE_P2P;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::group_vo::GroupVo;
@@ -299,6 +300,10 @@ pub async fn update_last_read_msg_from_db(
 
     // 遍历去重后的消息进行处理
     for (_, item) in unique_msgs {
+        // P2P 隐私握手(4)是瞬态信号：不写已读、不建/改会话，与好友聊天完全解耦
+        if item.text_type == MSG_TYPE_P2P {
+            continue;
+        }
         let chat_record_read = ChatRecordRead {
             id: 0,
             nano_id: item.nano_id.clone(),
