@@ -21,16 +21,7 @@
  * - 编解码逻辑拆分到 codec/videoEncoder|videoDecoder|audioEncoder|audioDecoder
  * - IPC 传输封装到 transport/p2pTransport，事件监听封装到 events/p2pEvents
  */
-import { DEFAULT_ICON } from '@/constants';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
-import {
-  AudioMutedOutlined,
-  AudioOutlined,
-  LogoutOutlined,
-  PhoneOutlined,
-  ReloadOutlined,
-  VideoCameraOutlined,
-} from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
 import { get_user_info_with_cache } from '@workspace/services';
 import {
@@ -40,7 +31,7 @@ import {
   UserInfo,
   VideoCallInvite,
 } from '@workspace/types';
-import { Button, message, Spin, Tooltip } from 'antd';
+import { message, Spin } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './index.module.less';
 
@@ -48,6 +39,9 @@ import * as audioDecoder from './codec/audioDecoder';
 import * as audioEncoder from './codec/audioEncoder';
 import * as videoDecoder from './codec/videoDecoder';
 import * as videoEncoder from './codec/videoEncoder';
+import CallControls from './components/CallControls';
+import RingOverlay from './components/RingOverlay';
+import VideoPanel from './components/VideoPanel';
 import { registerP2pMediaEvents } from './events/p2pEvents';
 import { CallPhase } from './lib/callState';
 import { defaultMediaConfig, dlog, IS_WEBCODECS_SUPPORTED } from './lib/config';
@@ -1251,37 +1245,12 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     <div className={styles.videoCallContainer}>
       {/* 响铃/呼叫遮罩 - 等待对方接听 */}
       {(callPhase === 'Calling' || callPhase === 'Ringing') && (
-        <div className={styles.ringOverlay}>
-          <div className={styles.ringContent}>
-            <div className={styles.ringAvatarWrap}>
-              <img
-                className={styles.ringAvatar}
-                src={friendAvatar || DEFAULT_ICON}
-                alt="avatar"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = DEFAULT_ICON;
-                }}
-              />
-            </div>
-            <div className={styles.ringName}>{friendName}</div>
-            <div className={styles.ringStatus}>
-              {isWaitingResponse ? '正在呼叫对方...' : '等待对方接听...'}
-            </div>
-            <div className={styles.ringActions}>
-              <Tooltip title="取消通话">
-                <Button
-                  type="primary"
-                  danger
-                  shape="circle"
-                  size="large"
-                  icon={<PhoneOutlined />}
-                  onClick={() => handleEndCall(true)}
-                  className={styles.ringCancelBtn}
-                />
-              </Tooltip>
-            </div>
-          </div>
-        </div>
+        <RingOverlay
+          friendAvatar={friendAvatar}
+          friendName={friendName}
+          isWaitingResponse={isWaitingResponse}
+          onCancel={() => handleEndCall(true)}
+        />
       )}
 
       {/* 加载状态遮罩 - 建立连接中 */}
@@ -1292,114 +1261,26 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       )}
 
       {/* 视频区域 */}
-      <div className={styles.videoWrapper}>
-        {/* 远程视频 - 对方视频 */}
-        <div className={styles.remoteVideo}>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className={styles.video}
-          />
-          {/* 远程音频 - 对方音频 */}
-          <audio ref={remoteAudioRef} autoPlay />
-          {/* 等待连接提示 */}
-          {!isInCall && callPhase !== 'Calling' && callPhase !== 'Ringing' && (
-            <div className={styles.waitingOverlay}>
-              <span>等待对方连接...</span>
-            </div>
-          )}
-        </div>
-
-        {/* 本地视频 - 自己的视频 */}
-        <div className={styles.localVideo}>
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className={styles.video}
-          />
-          {/* 视频关闭遮罩 */}
-          {!mediaState.videoEnabled && (
-            <div className={styles.videoOffOverlay}>
-              <VideoCameraOutlined style={{ fontSize: 32 }} />
-            </div>
-          )}
-        </div>
-      </div>
+      <VideoPanel
+        remoteVideoRef={remoteVideoRef}
+        remoteAudioRef={remoteAudioRef}
+        localVideoRef={localVideoRef}
+        isInCall={isInCall}
+        callPhase={callPhase}
+        videoEnabled={mediaState.videoEnabled}
+      />
 
       {/* 控制按钮区域 */}
-      <div className={styles.controls}>
-        {/* 音频开关按钮 */}
-        <Tooltip title={mediaState.audioEnabled ? '关闭麦克风' : '开启麦克风'}>
-          <Button
-            type={mediaState.audioEnabled ? 'primary' : 'default'}
-            shape="circle"
-            size="large"
-            icon={
-              mediaState.audioEnabled ? (
-                <AudioOutlined />
-              ) : (
-                <AudioMutedOutlined />
-              )
-            }
-            onClick={toggleAudio}
-            className={styles.controlButton}
-          />
-        </Tooltip>
-
-        {/* 视频开关按钮 */}
-        <Tooltip title={mediaState.videoEnabled ? '关闭摄像头' : '开启摄像头'}>
-          <Button
-            type={mediaState.videoEnabled ? 'primary' : 'default'}
-            shape="circle"
-            size="large"
-            icon={<VideoCameraOutlined />}
-            onClick={toggleVideo}
-            className={styles.controlButton}
-          />
-        </Tooltip>
-
-        {/* 重启媒体按钮 - 作为黑屏问题的兜底方案 */}
-        <Tooltip title="重启视频/音频 (解决黑屏问题)">
-          <Button
-            type="default"
-            shape="circle"
-            size="large"
-            icon={<ReloadOutlined spin={isRestarting} />}
-            onClick={handleRestartMedia}
-            disabled={isRestarting || !isInCall}
-            className={styles.controlButton}
-          />
-        </Tooltip>
-
-        {/* 结束通话按钮 */}
-        <Tooltip title="结束通话">
-          <Button
-            type="primary"
-            danger
-            shape="circle"
-            size="large"
-            icon={<PhoneOutlined />}
-            onClick={() => handleEndCall(true)}
-            className={styles.endCallButton}
-          />
-        </Tooltip>
-
-        {/* 退出按钮 */}
-        <Tooltip title="退出隐私聊天">
-          <Button
-            type="default"
-            danger
-            shape="circle"
-            size="large"
-            icon={<LogoutOutlined />}
-            onClick={handleExit}
-            className={styles.exitButton}
-          />
-        </Tooltip>
-      </div>
+      <CallControls
+        mediaState={mediaState}
+        isRestarting={isRestarting}
+        isInCall={isInCall}
+        onToggleAudio={toggleAudio}
+        onToggleVideo={toggleVideo}
+        onRestart={handleRestartMedia}
+        onEnd={() => handleEndCall(true)}
+        onExit={handleExit}
+      />
     </div>
   );
 };
