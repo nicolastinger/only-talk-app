@@ -553,6 +553,11 @@ pub async fn send_media_frame(
 ) -> Result<(), anyhow::Error> {
     let frame_data = MediaFrameHeader::build_frame(frame_type, &data);
 
+    // 连接已关闭（P2P_STREAM_SENDER 条目被清理），直接丢弃帧，不再重建队列
+    if !P2P_STREAM_SENDER.contains_key(&target_uuid) {
+        return Ok(());
+    }
+
     // 获取或创建该用户的发送队列（并首次启动消费者任务）
     if !P2P_MEDIA_SEND_QUEUES.contains_key(&target_uuid) {
         init_media_send_queue(target_uuid.clone());
@@ -636,11 +641,16 @@ fn init_media_send_queue(target_uuid: String) {
                                 break;
                             }
                         }
-                        Err(e) => {
-                            // 流暂未建立：保留当前帧重试，同时允许队列继续积压
-                            warn!(
-                                "媒体发送队列: 找不到发送流 target={} err={}",
-                                target_for_task, e
+                        Err(_) => {
+                            // 连接已关闭（P2P_STREAM_SENDER 条目已被清理）：停止重试并退出
+                            if !P2P_STREAM_SENDER.contains_key(&target_for_task) {
+                                info!("媒体发送队列: 连接已关闭 target={}，停止发送", target_for_task);
+                                break;
+                            }
+                            // 流暂未建立（连接建立初期）：保留当前帧重试，同时允许队列继续积压
+                            log::trace!(
+                                "媒体发送队列: 找不到发送流 target={}",
+                                target_for_task
                             );
                             pending_frame = Some(frame_data);
                             tokio::time::sleep(Duration::from_millis(100)).await;
