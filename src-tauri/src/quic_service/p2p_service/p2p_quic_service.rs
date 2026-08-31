@@ -411,6 +411,9 @@ pub async fn process_media_data_channel(
     // 读取头部用的固定缓冲区
     let mut header_buf = [0u8; MEDIA_FRAME_HEADER_SIZE];
 
+    // 复用帧体缓冲区（预分配 1MB，resize 复用底层内存，避免每帧零初始化+堆分配）
+    let mut data_buf: Vec<u8> = Vec::with_capacity(1024 * 1024);
+
     loop {
         // 使用 tokio::select 同时监听数据到达和取消信号
         tokio::select! {
@@ -470,8 +473,8 @@ pub async fn process_media_data_channel(
             }
         };
 
-        // 3. 读取帧体数据（精确读取，避免多余分配）
-        let mut data_buf = vec![0u8; header.data_len as usize];
+        // 3. 读取帧体数据（复用预分配缓冲区，resize 复用底层内存避免重复分配）
+        data_buf.resize(header.data_len as usize, 0);
         match recv_stream.read_exact(&mut data_buf).await {
             Ok(()) => {}
             Err(e) => {
