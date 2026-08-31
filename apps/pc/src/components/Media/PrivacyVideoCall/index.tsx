@@ -45,7 +45,6 @@ import VideoPanel from './components/VideoPanel';
 import { registerP2pMediaChannels, registerP2pMediaEvents } from './events/p2pEvents';
 import { CallPhase } from './lib/callState';
 import { defaultMediaConfig, dlog, IS_WEBCODECS_SUPPORTED } from './lib/config';
-import { JitterBuffer } from './lib/jitterBuffer';
 import { createMediaSession, MediaSession } from './lib/mediaSession';
 import * as transport from './transport/p2pTransport';
 
@@ -89,9 +88,6 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 所有可变媒体/编解码状态槽位（编解码模块经此读写，见 lib/mediaSession.ts） */
   const sessionRef = useRef<MediaSession>(createMediaSession());
   const session = sessionRef.current;
-
-  /** 视频帧抖动缓冲（平滑网络抖动，避免解码器过载丢帧） */
-  const jitterBufferRef = useRef<JitterBuffer | null>(null);
 
   // ==================== 事件监听器清理引用 ====================
 
@@ -411,16 +407,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       const channelUnlisten = await registerP2pMediaChannels(friendId, {
         onVideoFrame: (frameData) => {
           if (IS_WEBCODECS_SUPPORTED) {
-            // WebCodecs 路径：先入抖动缓冲平滑网络抖动，再送解码器
-            if (jitterBufferRef.current) {
-              jitterBufferRef.current.push(frameData);
-            } else {
-              videoDecoder.handleWebCodecsVideoFrame(
-                session,
-                friendId,
-                frameData,
-              );
-            }
+            videoDecoder.handleWebCodecsVideoFrame(session, friendId, frameData);
           } else {
             session.videoBufferQueue.push(frameData);
             videoDecoder.processVideoBufferQueue(session);
@@ -1225,11 +1212,6 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       // 初始化远程媒体接收器
       await initRemoteMediaReceiver();
 
-      // 初始化视频帧抖动缓冲（WebCodecs 路径）
-      if (IS_WEBCODECS_SUPPORTED && !jitterBufferRef.current) {
-        jitterBufferRef.current = new JitterBuffer(session, friendId);
-      }
-
       if (!isMountedRef.current) return;
 
       if (isInitiator) {
@@ -1250,8 +1232,6 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     return () => {
       console.log('[PrivacyVideoCall] 组件卸载');
       isMountedRef.current = false;
-      jitterBufferRef.current?.destroy();
-      jitterBufferRef.current = null;
       handleEndCall(true);
     };
     // 空依赖数组确保此 effect 只执行一次
