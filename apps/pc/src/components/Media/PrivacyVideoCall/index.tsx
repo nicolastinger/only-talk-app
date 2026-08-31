@@ -42,7 +42,7 @@ import * as videoEncoder from './codec/videoEncoder';
 import CallControls from './components/CallControls';
 import RingOverlay from './components/RingOverlay';
 import VideoPanel from './components/VideoPanel';
-import { registerP2pMediaEvents } from './events/p2pEvents';
+import { registerP2pMediaChannels, registerP2pMediaEvents } from './events/p2pEvents';
 import { CallPhase } from './lib/callState';
 import { defaultMediaConfig, dlog, IS_WEBCODECS_SUPPORTED } from './lib/config';
 import { createMediaSession, MediaSession } from './lib/mediaSession';
@@ -400,34 +400,30 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    */
   useEffect(() => {
     const setup = async () => {
-      // ==================== 第一步：注册所有事件监听器 ====================
-      // 必须在任何信令之前完成，避免视频帧到达时监听器未就绪
-      unlistenRef.current = await registerP2pMediaEvents({
-        onVideoFrame: (payload) => {
+      // ==================== 第一步：注册媒体 Channel 与事件监听器 ====================
+      // 视频/音频帧通过 Channel 二进制直传（避免 JSON number[] 序列化），
+      // 其他信令（媒体控制/接受/拒绝/结束/媒体信息/就绪）继续走事件监听。
+      // 必须在任何信令之前完成，避免视频帧到达时监听器未就绪。
+      const channelUnlisten = await registerP2pMediaChannels(friendId, {
+        onVideoFrame: (frameData) => {
           if (IS_WEBCODECS_SUPPORTED) {
-            videoDecoder.handleWebCodecsVideoFrame(
-              session,
-              friendId,
-              new Uint8Array(payload),
-            );
+            videoDecoder.handleWebCodecsVideoFrame(session, friendId, frameData);
           } else {
-            const data = new Uint8Array(payload);
-            session.videoBufferQueue.push(data);
+            session.videoBufferQueue.push(frameData);
             videoDecoder.processVideoBufferQueue(session);
           }
         },
-        onAudioFrame: (payload) => {
+        onAudioFrame: (frameData) => {
           if (session.audioWebCodecsActive) {
-            audioDecoder.handleWebCodecsAudioFrame(
-              session,
-              new Uint8Array(payload),
-            );
+            audioDecoder.handleWebCodecsAudioFrame(session, frameData);
           } else {
-            const data = new Uint8Array(payload);
-            session.audioBufferQueue.push(data);
+            session.audioBufferQueue.push(frameData);
             audioDecoder.processAudioBufferQueue(session);
           }
         },
+      });
+
+      unlistenRef.current = await registerP2pMediaEvents({
         onMediaControl: handleMediaControl,
         onVideoCallAccept: (payload) => {
           console.log('对方接受了视频通话:', payload);
@@ -477,7 +473,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         },
       });
 
-      console.log('[PrivacyVideoCall] 所有事件监听器已注册完成');
+      // 合并 Channel 取消函数与事件监听取消函数
+      unlistenRef.current = [...channelUnlisten, ...unlistenRef.current];
+
+      console.log('[PrivacyVideoCall] 所有媒体Channel与事件监听器已注册完成');
     };
 
     setup();
