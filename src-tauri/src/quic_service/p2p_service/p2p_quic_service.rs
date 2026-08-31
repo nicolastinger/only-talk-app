@@ -489,7 +489,8 @@ pub async fn process_media_data_channel(
                 break;
             }
         }
-        info!("接收到媒体帧 {:?}", header.data_len);
+        // 热路径：每帧日志降级为 trace，避免高频打印
+        log::trace!("接收到媒体帧 {:?}", header.data_len);
 
         // 4. 根据帧类型分发处理
         // 优先走二进制 Channel 直传（消除 JSON 序列化）；未注册 Channel 时回退到 emit

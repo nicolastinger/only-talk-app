@@ -282,7 +282,8 @@ pub async fn send_p2p_video_frame_service(
     frame_data: Vec<u8>,
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
-    info!("帧大小 {}", frame_data.len());
+    // 热路径：每帧日志降级为 trace，避免高频打印拖慢编码线程
+    log::trace!("帧大小 {}", frame_data.len());
     // 使用轻量级帧格式：5字节头部 + 原始数据，避免bincode序列化
     send_media_frame(MediaFrameType::Video, frame_data, target_uuid).await
 }
@@ -482,7 +483,8 @@ pub async fn send_p2p_audio_frame_service(
     audio_data: Vec<u8>,
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
-    info!("音频帧大小 {}", audio_data.len());
+    // 热路径：每帧日志降级为 trace，避免高频打印拖慢编码线程
+    log::trace!("音频帧大小 {}", audio_data.len());
     // 使用轻量级帧格式：5字节头部 + 原始数据，避免bincode序列化
     send_media_frame(MediaFrameType::Audio, audio_data, target_uuid).await
 }
