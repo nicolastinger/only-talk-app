@@ -5,6 +5,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use quinn::{RecvStream, SendStream};
 use tauri::Emitter;
+use tauri::ipc::InvokeResponseBody;
 use tokio::sync::Mutex;
 
 use crate::dao::app_log_db::log_quic_event;
@@ -27,7 +28,7 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
     MSG_TYPE_PING,
 };
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_MEDIA_CHANNELS, P2P_STREAM_SENDER};
 
 /// 获取P2P连接的发送流
 /// 根据目标用户UUID和通道类型获取对应的QUIC发送流
@@ -386,7 +387,11 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
 ///
 /// # 参数
 /// - `recv_stream`: QUIC接收流
-pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
+/// - `target_uuid`: 对端用户UUID，用于查找已注册的二进制接收Channel
+pub async fn process_media_data_channel(
+    mut recv_stream: RecvStream,
+    target_uuid: String,
+) {
     info!("MediaData通道接收循环启动（轻量级帧格式）");
     let _ = log_quic_event(
         LOG_LEVEL_INFO,
@@ -484,16 +489,25 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream) {
         info!("接收到媒体帧 {:?}", header.data_len);
 
         // 4. 根据帧类型分发处理
+        // 优先走二进制 Channel 直传（消除 JSON 序列化）；未注册 Channel 时回退到 emit
         match header.frame_type {
             MediaFrameType::Video => {
-                if let Some(handle) = APP_HANDLE.get() {
+                if let Some(channels) = P2P_MEDIA_CHANNELS.get(&target_uuid) {
+                    if let Err(e) = channels.video.send(InvokeResponseBody::Raw(data_buf.clone())) {
+                        error!("发送video帧Channel失败: {}", e);
+                    }
+                } else if let Some(handle) = APP_HANDLE.get() {
                     if let Err(e) = handle.emit("video_frame", &data_buf) {
                         error!("发送video_frame事件失败: {}", e);
                     }
                 }
             }
             MediaFrameType::Audio => {
-                if let Some(handle) = APP_HANDLE.get() {
+                if let Some(channels) = P2P_MEDIA_CHANNELS.get(&target_uuid) {
+                    if let Err(e) = channels.audio.send(InvokeResponseBody::Raw(data_buf.clone())) {
+                        error!("发送audio帧Channel失败: {}", e);
+                    }
+                } else if let Some(handle) = APP_HANDLE.get() {
                     if let Err(e) = handle.emit("audio_frame", &data_buf) {
                         error!("发送audio_frame事件失败: {}", e);
                     }

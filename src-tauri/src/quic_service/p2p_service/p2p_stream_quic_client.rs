@@ -308,8 +308,9 @@ pub async fn run_client(
 
     // ==================== 接收MediaData通道消息 ====================
     // MediaData通道使用轻量级帧格式，不走通用的TextQuicMsg反序列化
+    let media_data_target = target_uuid.clone();
     tokio::spawn(async move {
-        process_media_data_channel(recv_media_data).await;
+        process_media_data_channel(recv_media_data, media_data_target).await;
     });
 
     // ==================== 接收File通道消息 ====================

@@ -200,8 +200,9 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
 
         // MediaData通道使用轻量级帧格式，不走通用的TextQuicMsg反序列化
         if channel_type == P2pChannelType::MediaData {
+            let media_data_target = target_uuid.clone();
             tokio::spawn(async move {
-                process_media_data_channel(recv).await;
+                process_media_data_channel(recv, media_data_target).await;
             });
         } else {
             // 其他通道仍使用通用的HeadMsg + TextQuicMsg协议
