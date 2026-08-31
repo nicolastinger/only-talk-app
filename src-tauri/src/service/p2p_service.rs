@@ -445,6 +445,13 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
         }
     }
 
+    // 清理 P2P 媒体发送队列（触发消费者任务退出）
+    {
+        if crate::P2P_MEDIA_SEND_QUEUES.remove(&target_uuid).is_some() {
+            info!("已移除用户 {} 的P2P媒体发送队列", target_uuid);
+        }
+    }
+
     // 清理GLOBAL_QUIC_USER_INFO中的相关数据
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
