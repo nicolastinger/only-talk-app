@@ -1,3 +1,4 @@
+use tauri::ipc::Channel;
 use tauri::{generate_handler, AppHandle, Manager, Wry};
 mod quic_service;
 use std::collections::HashMap;
@@ -68,6 +69,7 @@ use crate::cmd::p2p_controller::{
     send_p2p_init_msg, send_p2p_media_config, send_p2p_media_control, send_p2p_media_info,
     send_p2p_media_ready, send_p2p_text_msg, send_p2p_video_call_end, send_p2p_video_call_invite,
     send_p2p_video_call_response, send_p2p_video_config, send_p2p_video_frame, send_video_frame,
+    start_video_channel,
 };
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
@@ -84,6 +86,14 @@ static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();
 // 创建CRC-16/X25计算器
 const X25: Crc<u16> = Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
 
+/// P2P 媒体数据接收通道（前端注册，用于二进制帧直传）
+/// 使用 `InvokeResponseBody`：`Vec<u8>` 的 `IpcResponse` 实现会序列化为 JSON number 数组，
+/// 而 `InvokeResponseBody::Raw(bytes)` 走二进制 octet-stream。
+pub struct P2pMediaChannels {
+    pub video: Channel<tauri::ipc::InvokeResponseBody>,
+    pub audio: Channel<tauri::ipc::InvokeResponseBody>,
+}
+
 lazy_static! {
     pub static ref GLOBAL_QUIC_SERVER_LIST: Arc<RwLock<HashMap<String, QuicConnection>>> =
         Arc::new(RwLock::new(HashMap::new()));
@@ -91,6 +101,8 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref P2P_STREAM_SENDER: DashMap<String, DashMap<String, TargetSendStream>> =
         DashMap::new();
+    // P2P 媒体接收通道注册表：key = friend_id(uuid)，value = 前端注册的视频/音频 Channel
+    pub static ref P2P_MEDIA_CHANNELS: DashMap<String, P2pMediaChannels> = DashMap::new();
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_PRIVATE_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
@@ -207,6 +219,7 @@ pub fn run() {
             send_p2p_file_data,
             send_p2p_file_transfer_request,
             send_p2p_file_transfer_response,
+            start_video_channel,
             get_chat_record_from_store,
             get_chat_record_by_type,
             get_webrtc_signal_records,

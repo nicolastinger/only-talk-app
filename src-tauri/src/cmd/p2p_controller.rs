@@ -1,5 +1,5 @@
 use log::info;
-use tauri::ipc::{InvokeBody, Request};
+use tauri::ipc::{InvokeBody, InvokeResponseBody, Request};
 
 use crate::entity::p2p_models::{
     MediaFrameType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg,
@@ -17,6 +17,26 @@ use crate::service::p2p_service::{
 };
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::DOMAIN_NAME;
+
+/// 注册 P2P 媒体接收通道
+/// 前端创建 Channel 后调用此命令，将视频/音频帧的接收通道注册到 Rust 端。
+/// 之后 MediaData 通道收到的帧通过 Channel.send 直传二进制，避免 JSON 序列化。
+#[tauri::command]
+pub async fn start_video_channel(
+    friend_id: String,
+    video_channel: tauri::ipc::Channel<InvokeResponseBody>,
+    audio_channel: tauri::ipc::Channel<InvokeResponseBody>,
+) -> Result<(), String> {
+    info!("注册P2P媒体接收通道: friend={}", friend_id);
+    crate::P2P_MEDIA_CHANNELS.insert(
+        friend_id,
+        crate::P2pMediaChannels {
+            video: video_channel,
+            audio: audio_channel,
+        },
+    );
+    Ok(())
+}
 
 /// 发送p2p请求给好友
 /// 用于建立P2P连接
