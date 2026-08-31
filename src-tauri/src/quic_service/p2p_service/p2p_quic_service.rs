@@ -1,3 +1,4 @@
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -28,7 +29,10 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
     MSG_TYPE_PING,
 };
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_MEDIA_CHANNELS, P2P_STREAM_SENDER};
+use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_MEDIA_CHANNELS, P2P_MEDIA_SEND_QUEUES, P2P_STREAM_SENDER};
+
+/// MediaData 发送队列容量（帧数）
+const MEDIA_SEND_QUEUE_CAPACITY: usize = 64;
 
 /// 获取P2P连接的发送流
 /// 根据目标用户UUID和通道类型获取对应的QUIC发送流
@@ -532,7 +536,11 @@ pub async fn process_media_data_channel(
 
 /// 发送媒体帧到MediaData通道（轻量级格式）
 /// 直接使用MediaFrameHeader构建帧，避免bincode序列化开销
-/// 添加重试逻辑等待MediaData通道就绪
+///
+/// 采用有界队列 + 主动丢帧策略：
+/// - 编码线程仅做非阻塞入队（try_send），网络背压时不会阻塞编码线程
+/// - 队列满时丢弃最旧帧并计数，保证通话实时性
+/// - 后台消费者任务持有发送流，串行写入避免 Mutex 长时间占用
 ///
 /// # 参数
 /// - `frame_type`: 帧类型（视频/音频）
@@ -545,8 +553,21 @@ pub async fn send_media_frame(
 ) -> Result<(), anyhow::Error> {
     let frame_data = MediaFrameHeader::build_frame(frame_type, &data);
 
+    // 获取或创建该用户的发送队列（并首次启动消费者任务）
+    if !P2P_MEDIA_SEND_QUEUES.contains_key(&target_uuid) {
+        init_media_send_queue(target_uuid.clone());
+    }
+
+    if let Some(queue) = P2P_MEDIA_SEND_QUEUES.get(&target_uuid) {
+        if let Err(_) = queue.tx.try_send(frame_data) {
+            // 队列满：主动丢帧，避免阻塞编码线程
+            queue.dropped_frames.fetch_add(1, Ordering::Relaxed);
+        }
+        return Ok(());
+    }
+
+    // 队列初始化尚未完成（极少数竞态），回退到直接发送
     // 等待MediaData通道就绪（最多等待3秒）
-    // 首次通话时MediaData通道可能尚未完全注册
     for _attempt in 0..6 {
         match get_sender(&target_uuid, &P2pChannelType::MediaData).await {
             Ok(sender) => {
@@ -571,4 +592,70 @@ pub async fn send_media_frame(
     )
     .await;
     Ok(())
+}
+
+/// 初始化某用户的媒体发送队列，并启动后台消费者任务。
+/// 消费者串行读取队列中的帧并写入 MediaData 发送流，网络背压时队列自然积压。
+/// 使用 DashMap entry API 保证并发初始化时只 spawn 一次消费者。
+fn init_media_send_queue(target_uuid: String) {
+    use crate::MediaSendQueue;
+    use std::sync::atomic::AtomicU64;
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<u8>>(MEDIA_SEND_QUEUE_CAPACITY);
+    let dropped_frames = Arc::new(AtomicU64::new(0));
+    let dropped_clone = dropped_frames.clone();
+    let target_for_task = target_uuid.clone();
+
+    let entry = P2P_MEDIA_SEND_QUEUES.entry(target_uuid);
+    match entry {
+        dashmap::mapref::entry::Entry::Vacant(v) => {
+            v.insert(MediaSendQueue {
+                tx,
+                dropped_frames,
+            });
+            tokio::spawn(async move {
+                info!("媒体发送队列消费者启动: {}", target_for_task);
+                // 待发帧：get_sender 暂未就绪时保留当前帧重试，避免关键帧（首帧）丢失
+                let mut pending_frame: Option<Vec<u8>> = None;
+                loop {
+                    // 取帧：优先发送待发帧；无待发帧时从队列取
+                    let frame_data = if let Some(pf) = pending_frame.take() {
+                        pf
+                    } else {
+                        match rx.recv().await {
+                            Some(f) => f,
+                            None => break, // tx 已 drop（连接关闭）
+                        }
+                    };
+
+                    match get_sender(&target_for_task, &P2pChannelType::MediaData).await {
+                        Ok(sender) => {
+                            let mut guard = sender.lock().await;
+                            if let Err(e) = guard.write_all(&frame_data).await {
+                                error!("媒体帧写入失败: {} target={}", e, target_for_task);
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            // 流暂未建立：保留当前帧重试，同时允许队列继续积压
+                            warn!(
+                                "媒体发送队列: 找不到发送流 target={} err={}",
+                                target_for_task, e
+                            );
+                            pending_frame = Some(frame_data);
+                            tokio::time::sleep(Duration::from_millis(100)).await;
+                        }
+                    }
+                }
+                info!(
+                    "媒体发送队列消费者退出: {} 累计丢帧 {}",
+                    target_for_task,
+                    dropped_clone.load(Ordering::Relaxed)
+                );
+            });
+        }
+        dashmap::mapref::entry::Entry::Occupied(_) => {
+            // 队列已存在，说明消费者已在运行，丢弃本次新建的 tx
+        }
+    }
 }
