@@ -11,16 +11,10 @@ export const sendP2pMediaConfig = (friendId: string, mediaConfig: string) =>
   invoke('send_p2p_media_config', { mediaConfig, uuid: friendId });
 
 export const sendP2pAudioFrame = (friendId: string, payload: Uint8Array) =>
-  invoke('send_p2p_audio_frame', {
-    audioData: Array.from(payload),
-    targetUuid: friendId,
-  });
+  invoke('send_p2p_audio_frame', payload);
 
 export const sendP2pVideoFrame = (friendId: string, payload: Uint8Array) =>
-  invoke('send_p2p_video_frame', {
-    frameData: Array.from(payload),
-    targetUuid: friendId,
-  });
+  invoke('send_p2p_video_frame', payload);
 
 export const sendP2pMediaInfo = (
   friendId: string,
