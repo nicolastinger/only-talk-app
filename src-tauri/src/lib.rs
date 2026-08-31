@@ -2,6 +2,7 @@ use tauri::ipc::Channel;
 use tauri::{generate_handler, AppHandle, Manager, Wry};
 mod quic_service;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, OnceLock};
 
 use crc::Crc;
@@ -94,6 +95,13 @@ pub struct P2pMediaChannels {
     pub audio: Channel<tauri::ipc::InvokeResponseBody>,
 }
 
+/// P2P 媒体发送队列：有界 mpsc 队列 + 丢帧计数器
+/// 用于发送路径非阻塞入队，网络背压时主动丢帧而非阻塞编码线程
+pub struct MediaSendQueue {
+    pub tx: tokio::sync::mpsc::Sender<Vec<u8>>,
+    pub dropped_frames: Arc<AtomicU64>,
+}
+
 lazy_static! {
     pub static ref GLOBAL_QUIC_SERVER_LIST: Arc<RwLock<HashMap<String, QuicConnection>>> =
         Arc::new(RwLock::new(HashMap::new()));
@@ -103,6 +111,8 @@ lazy_static! {
         DashMap::new();
     // P2P 媒体接收通道注册表：key = friend_id(uuid)，value = 前端注册的视频/音频 Channel
     pub static ref P2P_MEDIA_CHANNELS: DashMap<String, P2pMediaChannels> = DashMap::new();
+    // P2P 媒体发送队列注册表：key = friend_id(uuid)，value = 有界发送队列
+    pub static ref P2P_MEDIA_SEND_QUEUES: DashMap<String, MediaSendQueue> = DashMap::new();
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_PRIVATE_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
