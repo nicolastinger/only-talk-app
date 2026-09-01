@@ -37,6 +37,8 @@ pub struct SystemNotification {
     pub unread_count: Option<i32>,
     /// 通知优先级
     pub priority: Option<i32>,
+    /// 已读状态是否已同步到服务端
+    pub is_synced: Option<i32>,
 }
 
 impl SystemNotification {
@@ -114,6 +116,37 @@ impl SystemNotification {
         info!("批量已读系统通知完成，user_id: {}, effect_row: {}", user_id, effect_row);
 
         Ok(effect_row)
+    }
+
+    /// 查询本地已读但尚未同步到服务端的通知 id 列表（定时任务上报用）
+    pub async fn query_read_not_synced_ids(user_id: &str) -> Result<Vec<String>, anyhow::Error> {
+        let pool_sqlite = get_db_client().await?;
+        let ids: Vec<String> = sqlx::query_scalar(
+            r#"SELECT id FROM system_notification WHERE user_id = ? AND is_read = 1 AND (is_synced IS NULL OR is_synced = 0)"#,
+        )
+        .bind(user_id)
+        .fetch_all(&pool_sqlite)
+        .await?;
+        Ok(ids)
+    }
+
+    /// 将已上报的通知标记为已同步
+    pub async fn mark_read_synced(user_id: &str, ids: &[String]) -> Result<(), anyhow::Error> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let pool_sqlite = get_db_client().await?;
+        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+        let sql = format!(
+            "UPDATE system_notification SET is_synced = 1 WHERE user_id = ? AND id IN ({})",
+            placeholders.join(",")
+        );
+        let mut query = sqlx::query(&sql).bind(user_id);
+        for id in ids {
+            query = query.bind(id);
+        }
+        query.execute(&pool_sqlite).await?;
+        Ok(())
     }
 
     /// 按层级条件批量清除未读通知
@@ -228,7 +261,8 @@ impl SqliteStore for SystemNotification {
             level3 INTEGER,
             level4 INTEGER,
             unread_count INTEGER,
-            priority INTEGER NOT NULL DEFAULT 0
+            priority INTEGER NOT NULL DEFAULT 0,
+            is_synced INTEGER NOT NULL DEFAULT 0
         )"#,
         )
         .execute(pool_sqlite)
@@ -249,6 +283,17 @@ impl SqliteStore for SystemNotification {
         )
             .execute(pool_sqlite)
             .await?;
+
+        // 迁移：补充 is_synced 列（老库无此列，SQLite 不支持 ADD COLUMN IF NOT EXISTS）
+        let add_is_synced = sqlx::query(
+            r#"ALTER TABLE system_notification ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0"#,
+        )
+        .execute(pool_sqlite)
+        .await;
+        match add_is_synced {
+            Ok(_) => {}
+            Err(_) => {} // 列已存在，忽略
+        }
 
         Ok(())
     }

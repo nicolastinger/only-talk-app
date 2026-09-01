@@ -176,6 +176,11 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
     tokio::spawn(async move {
         send_read_message(read_task_key).await.expect("消息已读任务失败");
     });
+    let notify_task_key = schedule_key.clone();
+    // 系统通知已读上报任务
+    tokio::spawn(async move {
+        send_notify_read_message(notify_task_key).await.expect("通知已读上报任务失败");
+    });
     let mut count = 0u64;
     while count < 1000000000 {
         // 校验定时任务key
@@ -295,6 +300,58 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
                 }
                 Err(e) => {
                     error!("发送已读消息失败 {:?}", e);
+                }
+            }
+        }
+        count += 1;
+        tokio::time::sleep(Duration::from_secs(10)).await;
+    }
+    Ok(())
+}
+
+/// 定时上报系统通知已读状态到服务端
+pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+    let mut count = 0;
+    while count < 1000000 {
+        // 校验定时任务key
+        check_schedule_key(&key).await?;
+
+        // 同步中则跳过
+        {
+            let user_info = GLOBAL_QUIC_USER_INFO.read().await;
+            if user_info.get("is_syncing").map(|v| v == "true").unwrap_or(false) {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                count += 1;
+                continue;
+            }
+        }
+
+        // 查询本地已读但未同步的通知 id
+        let read_ids = SystemNotification::query_read_not_synced_ids(&uuid).await?;
+        if !read_ids.is_empty() {
+            info!("上报通知已读: {:?}", read_ids);
+            match post_request(
+                format!("{}/notify/mark_read", TALK_API),
+                serde_json::to_string(&read_ids).expect("序列化通知已读失败"),
+            )
+            .await
+            {
+                Ok(m) => {
+                    let result = serde_json::from_str::<HttpResult>(&m.body).unwrap_or(HttpResult {
+                        code: -1,
+                        message: String::new(),
+                        data: serde_json::Value::Null,
+                    });
+                    if result.code == 200 {
+                        SystemNotification::mark_read_synced(&uuid, &read_ids).await?;
+                        info!("通知已读上报成功: {:?}", read_ids);
+                    } else {
+                        error!("通知已读上报失败: {}", result.message);
+                    }
+                }
+                Err(e) => {
+                    error!("通知已读上报失败 {:?}", e);
                 }
             }
         }
