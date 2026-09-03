@@ -1,10 +1,13 @@
 :root {
-  /* ===== Brand Colors ===== */
-  --brand-blue: #4a90ff;
+  /* PC theme tokens, shared by all mobile pages. */
+  --bg-color: #fff;
+  --text-color: #121212;
+  --brand-blue: rgb(64, 150, 255);
   --brand-blue-dark: #1a5cff;
-  --brand-blue-light: #7eb8ff;
-  --brand-blue-pale: #a8d4ff;
-  --brand-blue-bg: #e8f4fd;
+  --brand-blue-light: #8cc4ff;
+  --brand-blue-pale: #b5dbff;
+  --brand-blue-bg: rgb(236, 242, 254);
+  --color-primary: rgb(64, 150, 255);
 
   /* ===== Primary Blue Scale ===== */
   --blue-50: #eff6ff;
@@ -12,88 +15,86 @@
   --blue-200: #bfdbfe;
   --blue-300: #93c5fd;
   --blue-400: #60a5fa;
-  --blue-500: #4a90ff;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-800: #1e40af;
-  --blue-900: #1e3a8a;
+  --blue-500: rgb(64, 150, 255);
+  --blue-600: rgb(18, 109, 255);
+  --blue-700: rgb(4, 79, 217);
+  --blue-800: rgb(0, 57, 179);
+  --blue-900: rgb(0, 40, 140);
 
   /* ===== Page Backgrounds ===== */
-  --page-bg: linear-gradient(180deg, #e8f4fd 0%, #f0f6ff 30%, #ffffff 100%);
-  --page-bg-alt: #f5f8fc;
+  --page-bg: #f5f8fd;
+  --page-bg-alt: #f5f5f5;
   --header-bg: rgba(255, 255, 255, 0.85);
-  --card-bg: rgba(255, 255, 255, 0.9);
-  --card-bg-hover: rgba(255, 255, 255, 0.95);
+  --card-bg: #fff;
+  --card-bg-hover: #fff;
 
   /* ===== Surfaces & Cards ===== */
   --surface: #ffffff;
-  --surface-alt: #f8fafd;
-  --surface-hover: #f0f5fa;
-  --surface-active: #e8f0f8;
+  --surface-alt: #f0f2f5;
+  --surface-hover: #f5f7fa;
+  --surface-active: #e8ecf1;
 
   /* ===== Text Colors ===== */
-  --text-primary: #1a2a3a;
-  --text-secondary: #4a5a6a;
-  --text-tertiary: #7a8a9a;
-  --text-placeholder: #aab5c0;
+  --text-primary: rgb(31, 37, 51);
+  --text-secondary: rgb(71, 83, 102);
+  --text-tertiary: rgb(122, 135, 153);
+  --text-placeholder: rgb(184, 192, 204);
   --text-inverse: #ffffff;
 
   /* ===== Glassmorphism ===== */
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-bg-light: rgba(255, 255, 255, 0.6);
   --glass-bg-dark: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(74, 144, 255, 0.12);
-  --glass-border-active: rgba(74, 144, 255, 0.35);
-  --glass-blur: blur(20px);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-border-active: rgba(64, 150, 255, 0.35);
+  --glass-blur: blur(10px);
 
   /* ===== Gradients ===== */
-  --gradient-primary: linear-gradient(135deg, #4a90ff 0%, #1a5cff 100%);
+  --gradient-primary: linear-gradient(135deg, #1a5cff 0%, #4a90ff 100%);
   --gradient-primary-light: linear-gradient(135deg, #7eb8ff 0%, #4a90ff 100%);
-  --gradient-accent: linear-gradient(135deg, #6366f1 0%, #4a90ff 100%);
-  --gradient-hero: linear-gradient(
-    135deg,
-    #e8f4fd 0%,
-    #dbeafe 50%,
-    #ffffff 100%
-  );
+  --gradient-accent: linear-gradient(135deg, #4a90ff 0%, #007bff 100%);
+  --gradient-hero: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
 
   /* ===== Shadows ===== */
-  --shadow-xs: 0 1px 3px rgba(26, 92, 255, 0.06);
-  --shadow-sm: 0 2px 8px rgba(26, 92, 255, 0.08);
-  --shadow-md: 0 4px 16px rgba(26, 92, 255, 0.1);
-  --shadow-lg: 0 8px 32px rgba(26, 92, 255, 0.12);
-  --shadow-xl: 0 12px 48px rgba(26, 92, 255, 0.15);
-  --shadow-glow: 0 0 20px rgba(74, 144, 255, 0.4);
-  --shadow-glow-sm: 0 0 8px rgba(74, 144, 255, 0.3);
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.15);
+  --shadow-glow: 0 0 20px rgba(100, 180, 255, 0.5);
+  --shadow-glow-sm: 0 0 8px rgba(64, 150, 255, 0.25);
 
   /* ===== Borders ===== */
-  --border-light: rgba(74, 144, 255, 0.06);
-  --border-medium: rgba(74, 144, 255, 0.1);
-  --border-strong: rgba(74, 144, 255, 0.2);
+  --border-light: rgba(0, 0, 0, 0.04);
+  --border-medium: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(64, 150, 255, 0.2);
 
   /* ===== Nav Bar ===== */
   --nav-bg: rgba(255, 255, 255, 0.92);
   --nav-border: rgba(74, 144, 255, 0.08);
   --nav-icon-size: 28px;
-  --nav-active-color: #4a90ff;
-  --nav-inactive-color: #b0c4de;
+  --nav-active-color: rgb(64, 150, 255);
+  --nav-inactive-color: rgb(122, 135, 153);
   --nav-active-glow: 0 0 16px rgba(74, 144, 255, 0.5);
 
   /* ===== Input Fields ===== */
   --input-bg: rgba(255, 255, 255, 0.95);
-  --input-border: rgba(74, 144, 255, 0.15);
-  --input-border-focus: rgba(74, 144, 255, 0.4);
-  --input-shadow-focus: 0 0 0 3px rgba(74, 144, 255, 0.1);
+  --input-border: rgba(0, 0, 0, 0.06);
+  --input-border-focus: rgba(64, 150, 255, 0.3);
+  --input-shadow-focus: 0 0 0 3px rgba(64, 150, 255, 0.1);
 
   /* ===== Status Colors ===== */
-  --color-success: #22c55e;
-  --color-error: #ef4444;
-  --color-warning: #f59e0b;
-  --color-info: #4a90ff;
+  --color-success: #52c41a;
+  --color-error: #ff4d4f;
+  --color-warning: #faad14;
+  --color-info: #1890ff;
+  --color-success-bg: rgba(82, 196, 26, 0.1);
+  --color-error-bg: rgba(255, 77, 79, 0.1);
+  --color-warning-bg: rgba(250, 173, 20, 0.1);
 
   /* ===== Online Indicator ===== */
-  --online-color: #22c55e;
-  --online-glow: 0 0 8px rgba(34, 197, 94, 0.4);
+  --online-color: #52c41a;
+  --online-glow: 0 0 8px rgba(82, 196, 26, 0.35);
 
   /* ===== Badge ===== */
   --badge-bg: #ef4444;
@@ -115,4 +116,74 @@
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s ease;
   --transition-slow: 0.5s ease;
+}
+
+:root[data-theme="dark"] {
+  --bg-color: #000;
+  --text-color: #fff;
+  --page-bg: #1a1a1a;
+  --page-bg-alt: #282c34;
+  --header-bg: rgba(30, 30, 30, 0.92);
+  --card-bg: rgb(50, 54, 62);
+  --card-bg-hover: rgb(58, 62, 70);
+  --surface: rgb(40, 44, 52);
+  --surface-alt: #23272e;
+  --surface-hover: #32363e;
+  --surface-active: #3a3f48;
+  --text-primary: #e6e6e6;
+  --text-secondary: #b3b3b3;
+  --text-tertiary: #808080;
+  --text-placeholder: #666c7a;
+  --text-inverse: #fff;
+  --glass-bg: rgba(30, 30, 30, 0.8);
+  --glass-bg-light: rgba(30, 30, 30, 0.6);
+  --glass-bg-dark: rgba(40, 40, 40, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(64, 150, 255, 0.3);
+  --nav-bg: rgba(30, 30, 30, 0.95);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-inactive-color: #808080;
+  --input-bg: rgba(40, 40, 40, 0.8);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-glow-sm: 0 0 8px rgba(64, 150, 255, 0.35);
+  --color-info-bg: rgba(64, 150, 255, 0.15);
+}
+
+html,
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button,
+input,
+textarea {
+  color: inherit;
+}
+
+/* Keep Vant controls on the same palette as the PC client. */
+:root {
+  --van-primary-color: var(--color-primary, rgb(64, 150, 255));
+  --van-success-color: var(--color-success);
+  --van-danger-color: var(--color-error);
+  --van-warning-color: var(--color-warning);
+  --van-text-color: var(--text-primary);
+  --van-text-color-2: var(--text-secondary);
+  --van-text-color-3: var(--text-tertiary);
+  --van-background: var(--surface);
+  --van-background-2: var(--surface-alt);
+  --van-border-color: var(--border-medium);
+  --van-cell-background: var(--surface);
+  --van-cell-text-color: var(--text-primary);
+  --van-cell-label-color: var(--text-secondary);
+  --van-nav-bar-background: var(--header-bg);
+  --van-nav-bar-title-text-color: var(--text-primary);
+  --van-field-input-text-color: var(--text-primary);
+  --van-field-placeholder-text-color: var(--text-placeholder);
 }

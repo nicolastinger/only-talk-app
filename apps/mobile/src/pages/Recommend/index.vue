@@ -97,9 +97,9 @@ const selectCategory = (index: number) => {
 };
 
 const getMatchColor = (rate: number) => {
-  if (rate >= 90) return "#22c55e";
-  if (rate >= 80) return "#6366f1";
-  return "#f59e0b";
+  if (rate >= 90) return "var(--color-success)";
+  if (rate >= 80) return "var(--color-primary)";
+  return "var(--color-warning)";
 };
 </script>
 
@@ -199,7 +199,7 @@ const getMatchColor = (rate: number) => {
 <style scoped lang="less">
 .recommend-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
+  background: var(--page-bg);
   padding: 16px;
   padding-bottom: 80px;
 }
@@ -211,13 +211,13 @@ const getMatchColor = (rate: number) => {
   h1 {
     font-size: 24px;
     font-weight: 700;
-    color: #f1f5f9;
+    color: var(--text-primary);
     margin: 0 0 4px 0;
   }
 
   p {
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-tertiary);
     margin: 0;
   }
 }
@@ -239,23 +239,23 @@ const getMatchColor = (rate: number) => {
   flex-shrink: 0;
   padding: 8px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: #94a3b8;
+  border: 1px solid var(--border-medium);
+  background: var(--surface);
+  color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(99, 102, 241, 0.1);
-    border-color: rgba(99, 102, 241, 0.3);
+    background: var(--color-info-bg);
+    border-color: var(--border-strong);
   }
 
   &.active {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--text-inverse);
     border-color: transparent;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    box-shadow: var(--shadow-primary, var(--shadow-md));
   }
 }
 
@@ -266,15 +266,15 @@ const getMatchColor = (rate: number) => {
 }
 
 .user-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
   transition: all 0.3s ease;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
   }
 }
 
@@ -294,7 +294,7 @@ const getMatchColor = (rate: number) => {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 3px solid rgba(99, 102, 241, 0.3);
+  border: 3px solid var(--border-strong);
 }
 
 .online-dot {
@@ -304,8 +304,8 @@ const getMatchColor = (rate: number) => {
   transform: translateX(20px);
   width: 16px;
   height: 16px;
-  background: #22c55e;
-  border: 3px solid #1a1a2e;
+  background: var(--color-success);
+  border: 3px solid var(--page-bg);
   border-radius: 50%;
 }
 
@@ -327,7 +327,7 @@ const getMatchColor = (rate: number) => {
 .user-name {
   font-size: 16px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
   margin: 0 0 4px 0;
   display: flex;
   align-items: center;
@@ -336,13 +336,13 @@ const getMatchColor = (rate: number) => {
 
 .user-age {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
   font-weight: 400;
 }
 
 .user-bio {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   margin: 0 0 10px 0;
   line-height: 1.4;
   display: -webkit-box;
@@ -361,8 +361,8 @@ const getMatchColor = (rate: number) => {
 .tag {
   font-size: 10px;
   padding: 3px 8px;
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+  background: var(--color-info-bg);
+  color: var(--color-primary);
   border-radius: 8px;
 }
 
@@ -378,7 +378,7 @@ const getMatchColor = (rate: number) => {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-tertiary);
 
   svg {
     width: 14px;
@@ -390,7 +390,7 @@ const getMatchColor = (rate: number) => {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--border-light);
 }
 
 .action-btn {
@@ -410,22 +410,22 @@ const getMatchColor = (rate: number) => {
   }
 
   &.pass {
-    background: rgba(255, 255, 255, 0.05);
-    color: #64748b;
+    background: var(--surface-alt);
+    color: var(--text-tertiary);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--surface-hover);
       transform: scale(1.05);
     }
   }
 
   &.like {
-    background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-    color: white;
+    background: var(--color-error);
+    color: var(--text-inverse);
 
     &:hover {
       transform: scale(1.05);
-      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+      box-shadow: var(--shadow-md);
     }
   }
 }
@@ -436,7 +436,7 @@ const getMatchColor = (rate: number) => {
   align-items: center;
   gap: 8px;
   padding: 20px;
-  color: #64748b;
+  color: var(--text-tertiary);
   font-size: 12px;
 
   svg {

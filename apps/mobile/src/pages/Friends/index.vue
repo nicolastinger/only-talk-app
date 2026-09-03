@@ -205,9 +205,9 @@ watch(activeTab, (v) => {
 
     <Tabs
       v-model:active="activeTab"
-      :color="'#4a90ff'"
-      :title-active-color="'#1a2a3a'"
-      :title-inactive-color="'#7a8a9a'"
+      color="var(--color-primary)"
+      title-active-color="var(--text-primary)"
+      title-inactive-color="var(--text-tertiary)"
       :line-width="24"
       :line-height="2"
       sticky
@@ -278,9 +278,9 @@ watch(activeTab, (v) => {
           ></template
         >
         <Tabs
-          :color="'#4a90ff'"
-          :title-active-color="'#1a2a3a'"
-          :title-inactive-color="'#7a8a9a'"
+          color="var(--color-primary)"
+          title-active-color="var(--text-primary)"
+          title-inactive-color="var(--text-tertiary)"
           :line-width="20"
           :line-height="2"
           class="request-subtabs"

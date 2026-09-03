@@ -219,7 +219,7 @@ const quickActions = [
 <style scoped lang="less">
 .discover-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
+  background: var(--page-bg);
   padding: 16px;
   padding-bottom: 80px;
 }
@@ -232,22 +232,22 @@ const quickActions = [
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 24px;
   padding: 12px 16px;
   transition: all 0.3s ease;
 
   &:focus-within {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    border-color: var(--color-primary);
+    box-shadow: var(--input-shadow-focus);
   }
 }
 
 .search-icon {
   width: 20px;
   height: 20px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .search-input {
@@ -255,11 +255,11 @@ const quickActions = [
   background: transparent;
   border: none;
   outline: none;
-  color: #f1f5f9;
+  color: var(--text-primary);
   font-size: 14px;
 
   &::placeholder {
-    color: #64748b;
+    color: var(--text-tertiary);
   }
 }
 
@@ -288,7 +288,7 @@ const quickActions = [
 
 .action-name {
   font-size: 12px;
-  color: #e2e8f0;
+  color: var(--text-secondary);
 }
 
 .section {
@@ -304,17 +304,17 @@ const quickActions = [
   h2 {
     font-size: 16px;
     font-weight: 600;
-    color: #f1f5f9;
+    color: var(--text-primary);
     margin: 0;
   }
 
   .more {
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-tertiary);
     cursor: pointer;
 
     &:hover {
-      color: #6366f1;
+      color: var(--color-primary);
     }
   }
 }
@@ -338,7 +338,7 @@ const quickActions = [
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-md);
   }
 }
 
@@ -351,12 +351,12 @@ const quickActions = [
 .topic-title {
   font-size: 14px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .topic-count {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .channels-grid {
@@ -371,15 +371,15 @@ const quickActions = [
   align-items: center;
   gap: 6px;
   padding: 16px 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(99, 102, 241, 0.1);
-    border-color: rgba(99, 102, 241, 0.3);
+    background: var(--color-info-bg);
+    border-color: var(--border-strong);
   }
 }
 
@@ -390,12 +390,12 @@ const quickActions = [
 .channel-name {
   font-size: 13px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .channel-desc {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .activities-list {
@@ -408,9 +408,9 @@ const quickActions = [
   display: flex;
   gap: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
 }
 
 .activity-image {
@@ -430,7 +430,7 @@ const quickActions = [
 .activity-title {
   font-size: 14px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -444,7 +444,7 @@ const quickActions = [
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-tertiary);
 
   svg {
     width: 14px;
@@ -455,8 +455,8 @@ const quickActions = [
 .join-btn {
   align-self: flex-start;
   padding: 6px 16px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
   border: none;
   border-radius: 14px;
   font-size: 12px;
@@ -466,7 +466,7 @@ const quickActions = [
 
   &:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    box-shadow: var(--shadow-primary, var(--shadow-md));
   }
 }
 
@@ -477,11 +477,11 @@ const quickActions = [
   padding: 16px;
   background: linear-gradient(
     135deg,
-    rgba(99, 102, 241, 0.2) 0%,
-    rgba(139, 92, 246, 0.2) 100%
+    var(--color-info-bg) 0%,
+    transparent 100%
   );
   border-radius: 16px;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid var(--border-strong);
 }
 
 .test-content {
@@ -498,21 +498,21 @@ const quickActions = [
   h3 {
     font-size: 15px;
     font-weight: 600;
-    color: #f1f5f9;
+    color: var(--text-primary);
     margin: 0 0 4px 0;
   }
 
   p {
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-tertiary);
     margin: 0;
   }
 }
 
 .test-btn {
   padding: 10px 20px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
   border: none;
   border-radius: 16px;
   font-size: 13px;
@@ -522,7 +522,7 @@ const quickActions = [
 
   &:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    box-shadow: var(--shadow-primary, var(--shadow-md));
   }
 }
 </style>

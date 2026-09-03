@@ -6,11 +6,18 @@ import { useAvatar } from "@/hooks/useAvatar";
 import { useAuthStore } from "@/stores/auth";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { getMyAccount } from "@/utils/api";
+import { useTheme, type ThemeMode } from "@/stores/theme";
 
 const router = useRouter();
 const { clearAuth } = useAuthStore();
 const { userInfo, loadUserInfo } = useUserStore();
 const { getAvatarUrl } = useAvatar();
+const { mode, setMode } = useTheme();
+const themeOptions: { value: ThemeMode; label: string }[] = [
+  { value: "light", label: "亮色" },
+  { value: "dark", label: "暗色" },
+  { value: "system", label: "跟随系统" },
+];
 
 const account = ref("");
 const avatarUrl = ref<string | null>(null);
@@ -50,7 +57,7 @@ const onMenuClick = () => {
     title: "提示",
     message: "该功能开发中",
     confirmButtonText: "知道了",
-    confirmButtonColor: "#4a90ff",
+    confirmButtonColor: "var(--color-primary)",
   });
 };
 
@@ -152,6 +159,21 @@ const onLogout = () => {
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
+      </div>
+    </div>
+
+    <div class="theme-section">
+      <span class="theme-label">主题</span>
+      <div class="theme-options">
+        <button
+          v-for="item in themeOptions"
+          :key="item.value"
+          class="theme-option"
+          :class="{ active: mode === item.value }"
+          @click="setMode(item.value)"
+        >
+          {{ item.label }}
+        </button>
       </div>
     </div>
 
@@ -301,6 +323,46 @@ const onLogout = () => {
 .logout-section {
   padding: 24px 16px;
   text-align: center;
+}
+
+.theme-section {
+  margin: 16px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.theme-label {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.theme-options {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-option {
+  flex: 1;
+  min-height: 36px;
+  padding: 0 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+
+  &.active {
+    background: var(--color-info-bg, rgba(64, 150, 255, 0.1));
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
 }
 
 .logout-btn {

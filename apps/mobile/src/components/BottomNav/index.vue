@@ -234,7 +234,7 @@ const onChange = (path: string) => {
   }
 
   &.active .nav-icon {
-    color: var(--nav-active-color, #4a90ff);
+    color: var(--nav-active-color);
     transform: scale(1.08);
   }
 
@@ -246,7 +246,7 @@ const onChange = (path: string) => {
     transform: translateX(-50%) scale(0);
     width: 4px;
     height: 4px;
-    background: var(--nav-active-color, #4a90ff);
+    background: var(--nav-active-color);
     border-radius: 50%;
     transition: transform 0.15s ease;
   }

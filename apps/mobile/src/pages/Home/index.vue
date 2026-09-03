@@ -258,7 +258,7 @@ const toggleLike = (postId: number) => {
 <style scoped lang="less">
 .home-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  background: var(--page-bg);
   padding-bottom: 70px;
 }
 
@@ -284,7 +284,7 @@ const toggleLike = (postId: number) => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid rgba(99, 102, 241, 0.5);
+  border: 2px solid var(--border-strong);
 }
 
 .online-badge {
@@ -292,8 +292,8 @@ const toggleLike = (postId: number) => {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.15);
+  color: var(--color-success);
+  background: var(--color-success-bg);
   padding: 4px 8px;
   border-radius: 10px;
 }
@@ -301,7 +301,7 @@ const toggleLike = (postId: number) => {
 .dot {
   width: 6px;
   height: 6px;
-  background: #22c55e;
+  background: var(--color-success);
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
@@ -325,7 +325,7 @@ const toggleLike = (postId: number) => {
 .msg-icon {
   width: 24px;
   height: 24px;
-  color: #e2e8f0;
+  color: var(--text-primary);
   cursor: pointer;
   position: relative;
 }
@@ -334,7 +334,7 @@ const toggleLike = (postId: number) => {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--color-error);
   color: white;
   font-size: 10px;
   width: 16px;
@@ -347,7 +347,7 @@ const toggleLike = (postId: number) => {
 
 .stories-section {
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .stories-scroll {
@@ -375,7 +375,7 @@ const toggleLike = (postId: number) => {
   height: 56px;
   border-radius: 50%;
   padding: 3px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   position: relative;
 
   &.online::after {
@@ -385,8 +385,8 @@ const toggleLike = (postId: number) => {
     right: 2px;
     width: 14px;
     height: 14px;
-    background: #22c55e;
-    border: 2px solid #0f0f23;
+    background: var(--color-success);
+    border: 2px solid var(--page-bg);
     border-radius: 50%;
   }
 }
@@ -395,13 +395,13 @@ const toggleLike = (postId: number) => {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: #1a1a2e;
+  background: var(--surface-alt);
   object-fit: cover;
 }
 
 .story-name {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   max-width: 56px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -413,15 +413,15 @@ const toggleLike = (postId: number) => {
 }
 
 .post-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--card-bg-hover);
   }
 }
 
@@ -448,17 +448,17 @@ const toggleLike = (postId: number) => {
 .post-user-name {
   font-size: 15px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .post-time {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .follow-btn {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
   border: none;
   padding: 6px 14px;
   border-radius: 16px;
@@ -469,7 +469,7 @@ const toggleLike = (postId: number) => {
 
   &:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    box-shadow: var(--shadow-primary, var(--shadow-md));
   }
 }
 
@@ -478,7 +478,7 @@ const toggleLike = (postId: number) => {
 
   p {
     font-size: 14px;
-    color: #e2e8f0;
+    color: var(--text-primary);
     line-height: 1.6;
     margin: 0 0 8px 0;
   }
@@ -491,7 +491,7 @@ const toggleLike = (postId: number) => {
 }
 
 .tag {
-  color: #818cf8;
+  color: var(--color-primary);
   font-size: 13px;
 }
 
@@ -521,7 +521,7 @@ const toggleLike = (postId: number) => {
   display: flex;
   justify-content: space-around;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--border-light);
 }
 
 .action-btn {
@@ -530,7 +530,7 @@ const toggleLike = (postId: number) => {
   gap: 6px;
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--text-tertiary);
   font-size: 13px;
   cursor: pointer;
   padding: 8px 16px;
@@ -543,14 +543,14 @@ const toggleLike = (postId: number) => {
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--surface-hover);
   }
 
   &.liked {
-    color: #ef4444;
+    color: var(--color-error);
 
     svg {
-      fill: #ef4444;
+      fill: var(--color-error);
       animation: heartBeat 0.3s ease;
     }
   }
@@ -572,12 +572,12 @@ const toggleLike = (postId: number) => {
   right: 20px;
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: var(--gradient-primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
+  box-shadow: var(--fab-shadow);
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 100;
@@ -589,7 +589,7 @@ const toggleLike = (postId: number) => {
 
   &:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 25px rgba(99, 102, 241, 0.6);
+    box-shadow: var(--shadow-primary-lg, var(--shadow-lg));
   }
 
   &:active {

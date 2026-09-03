@@ -2,8 +2,10 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import BottomNav from "@/components/BottomNav/index.vue";
+import { useTheme } from "@/stores/theme";
 
 const route = useRoute();
+useTheme();
 
 const showNav = computed(() => {
   const path = route.path;
@@ -38,8 +40,8 @@ body {
     "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #e8f4fd;
-  color: var(--text-primary, #1a2a3a);
+  background: var(--bg-color);
+  color: var(--text-primary);
 }
 
 #app {
