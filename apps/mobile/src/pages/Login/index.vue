@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { showToast, showLoadingToast, closeToast, Overlay } from "vant";
+import {
+  showToast,
+  showLoadingToast,
+  closeToast,
+  showConfirmDialog,
+  Overlay,
+} from "vant";
 import type { HttpResponse, ResponseData, UserInfo } from "@workspace/types";
 import { TALK_API } from "@workspace/types";
 import {
@@ -29,6 +35,157 @@ const passwordError = ref("");
 const accountAvatar = ref<string | null>(null);
 const searchingAvatar = ref(false);
 
+interface QuickLoginUser {
+  user_id: string;
+  username: string | null;
+  account: string | null;
+  icon: string | null;
+  refresh_token: string | null;
+  updated_at: number | null;
+}
+
+const quickUsers = ref<QuickLoginUser[]>([]);
+const currentUserIndex = ref(0);
+const quickLoginLoading = ref(false);
+const showQuickLogin = ref(true);
+const currentAvatar = ref<string | null>(null);
+const avatarCache = new Map<string, string | null>();
+
+const currentQuickUser = computed(
+  () => quickUsers.value[currentUserIndex.value] ?? null
+);
+const currentUserName = computed(
+  () =>
+    currentQuickUser.value?.username ||
+    currentQuickUser.value?.account ||
+    "用户"
+);
+
+const resolveAvatarFromIcon = async (
+  icon: string | null
+): Promise<string | null> => {
+  if (!icon) return null;
+  if (avatarCache.has(icon)) return avatarCache.get(icon)!;
+  try {
+    const files = await getFiles(icon);
+    const url = files?.[0]?.tauri_file_path || null;
+    avatarCache.set(icon, url);
+    return url;
+  } catch {
+    avatarCache.set(icon, null);
+    return null;
+  }
+};
+
+const loadQuickUsers = async () => {
+  try {
+    const users: QuickLoginUser[] = await invoke("get_quick_login_users");
+    quickUsers.value = users;
+    if (users.length) {
+      currentUserIndex.value = 0;
+      currentAvatar.value = await resolveAvatarFromIcon(users[0].icon);
+    }
+  } catch (e) {
+    console.log("加载免登录用户失败", e);
+  }
+};
+
+const selectQuickUser = async (idx: number) => {
+  if (idx < 0 || idx >= quickUsers.value.length) return;
+  currentUserIndex.value = idx;
+  const user = quickUsers.value[idx];
+  currentAvatar.value = await resolveAvatarFromIcon(user.icon);
+};
+
+const handlePrevUser = () => {
+  const len = quickUsers.value.length;
+  if (len <= 1) return;
+  selectQuickUser((currentUserIndex.value - 1 + len) % len);
+};
+
+const handleNextUser = () => {
+  const len = quickUsers.value.length;
+  if (len <= 1) return;
+  selectQuickUser((currentUserIndex.value + 1) % len);
+};
+
+const handleDeleteUser = async () => {
+  const user = currentQuickUser.value;
+  if (!user?.user_id) return;
+  try {
+    await showConfirmDialog({
+      title: "删除账号",
+      message: `确定删除「${user.username || user.account}」的免登录记录吗？`,
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      confirmButtonColor: "#ef4444",
+    });
+  } catch {
+    return;
+  }
+  try {
+    await invoke("delete_quick_login_user", { userId: user.user_id });
+    const next = quickUsers.value.filter((u) => u.user_id !== user.user_id);
+    quickUsers.value = next;
+    if (!next.length) {
+      currentAvatar.value = null;
+      showQuickLogin.value = false;
+      return;
+    }
+    const idx =
+      currentUserIndex.value >= next.length ? 0 : currentUserIndex.value;
+    currentUserIndex.value = idx;
+    currentAvatar.value = await resolveAvatarFromIcon(next[idx].icon);
+    showToast({ message: "已删除", icon: "success" });
+  } catch {
+    showToast({ message: "删除失败", icon: "fail" });
+  }
+};
+
+const handleQuickLogin = async () => {
+  const user = currentQuickUser.value;
+  if (!user?.refresh_token) return;
+  quickLoginLoading.value = true;
+  const failQuickLogin = () => {
+    showQuickLogin.value = false;
+    showToast({ message: "免登录失败，请手动登录", icon: "fail" });
+  };
+  try {
+    const response: HttpResponse = await invoke("quick_login", {
+      refreshToken: user.refresh_token,
+      url: TALK_API,
+    });
+    const data: ResponseData = JSON.parse(response.body);
+    if (data.code === 200) {
+      await enterApp();
+    } else {
+      failQuickLogin();
+    }
+  } catch (error) {
+    console.log(error);
+    failQuickLogin();
+  } finally {
+    quickLoginLoading.value = false;
+  }
+};
+
+const toPasswordLogin = () => {
+  showQuickLogin.value = false;
+  accountAvatar.value = null;
+};
+
+const toQuickLogin = async () => {
+  showQuickLogin.value = true;
+  const user = currentQuickUser.value;
+  if (user) {
+    currentAvatar.value = await resolveAvatarFromIcon(user.icon);
+  }
+};
+
+const toRegister = () => {
+  router.push("/signup");
+};
+
 const validateAccount = (value: string): boolean => {
   if (!value) {
     accountError.value = "请输入账号";
@@ -53,12 +210,25 @@ const validatePassword = (value: string): boolean => {
   passwordError.value = "";
   return true;
 };
-const onAccountInput = () => {
+const onAccountInput = async () => {
   if (accountError.value) validateAccount(form.account);
+  const matched = quickUsers.value.find(
+    (u) => u.account === form.account || u.username === form.account
+  );
+  accountAvatar.value = matched
+    ? await resolveAvatarFromIcon(matched.icon)
+    : null;
 };
 const onAccountBlur = async () => {
   if (!validateAccount(form.account)) return;
   if (searchingAvatar.value) return;
+  const matched = quickUsers.value.find(
+    (u) => u.account === form.account || u.username === form.account
+  );
+  if (matched) {
+    accountAvatar.value = await resolveAvatarFromIcon(matched.icon);
+    return;
+  }
   searchingAvatar.value = true;
   try {
     let userInfo = await get_cached_user_info_by_account(form.account);
@@ -67,8 +237,7 @@ const onAccountBlur = async () => {
       userInfo = result?.data ?? result;
     }
     if (userInfo?.icon) {
-      const files = await getFiles(userInfo.icon);
-      accountAvatar.value = files?.[0]?.tauri_file_path || null;
+      accountAvatar.value = await resolveAvatarFromIcon(userInfo.icon);
     } else {
       accountAvatar.value = null;
     }
@@ -80,6 +249,37 @@ const onAccountBlur = async () => {
 };
 const onPasswordInput = () => {
   if (passwordError.value) validatePassword(form.password);
+};
+
+const enterApp = async () => {
+  setLoggedIn();
+
+  get_quic_servers().then((servers) => {
+    console.log("QUIC外网节点信息:", servers);
+  });
+
+  try {
+    const res: HttpResponse = await invoke("post_request", {
+      url: TALK_API + "/user/me",
+      body: "",
+    });
+    const data: ResponseData = JSON.parse(res.body);
+    if (data.code === 200 && data.data) {
+      const info: UserInfo = data.data;
+      const cached = await get_cached_user_info(info.uuid).catch(() => null);
+      const isDifferent =
+        !cached || JSON.stringify(cached) !== JSON.stringify(info);
+      if (isDifferent) {
+        await cache_user_info(info);
+      }
+    }
+  } catch {
+    /* cache user info silently */
+  }
+
+  closeToast();
+  showToast({ message: "登录成功", icon: "success" });
+  router.replace("/chats");
 };
 
 const onLogin = async () => {
@@ -104,36 +304,7 @@ const onLogin = async () => {
     const data: ResponseData = JSON.parse(response.body);
 
     if (data.code === 200) {
-      setLoggedIn();
-
-      get_quic_servers().then((servers) => {
-        console.log("QUIC外网节点信息:", servers);
-      });
-
-      try {
-        const res: HttpResponse = await invoke("post_request", {
-          url: TALK_API + "/user/me",
-          body: "",
-        });
-        const data: ResponseData = JSON.parse(res.body);
-        if (data.code === 200 && data.data) {
-          const info: UserInfo = data.data;
-          const cached = await get_cached_user_info(info.uuid).catch(
-            () => null
-          );
-          const isDifferent =
-            !cached || JSON.stringify(cached) !== JSON.stringify(info);
-          if (isDifferent) {
-            await cache_user_info(info);
-          }
-        }
-      } catch {
-        /* cache user info silently */
-      }
-
-      closeToast();
-      showToast({ message: "登录成功", icon: "success" });
-      router.replace("/chats");
+      await enterApp();
     } else {
       closeToast();
       showToast({ message: "账号或密码错误", icon: "fail" });
@@ -168,6 +339,7 @@ const onOpenPrivacy = async () => {
 onMounted(() => {
   clearAuth();
   accountAvatar.value = null;
+  loadQuickUsers();
 });
 </script>
 
@@ -179,7 +351,84 @@ onMounted(() => {
       <div class="bg-blob bg-blob-3"></div>
     </div>
     <div class="login-container">
-      <div class="logo-section">
+      <template v-if="showQuickLogin && quickUsers.length">
+        <div class="quick-login-section">
+          <div class="quick-avatar-row">
+            <button
+              v-if="quickUsers.length > 1"
+              class="switch-btn"
+              aria-label="上一个账号"
+              @click="handlePrevUser"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+              </svg>
+            </button>
+            <div class="avatar-box">
+              <div class="app-logo">
+                <img
+                  v-if="currentAvatar"
+                  :src="currentAvatar"
+                  class="user-avatar-img"
+                  alt="用户头像"
+                  @error="currentAvatar = null"
+                />
+                <img
+                  v-else
+                  src="/images/default.jpg"
+                  class="user-avatar-img"
+                  alt="默认头像"
+                />
+              </div>
+              <button
+                class="delete-badge"
+                aria-label="删除免登录账号"
+                @click="handleDeleteUser"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12z"
+                  />
+                </svg>
+              </button>
+            </div>
+            <button
+              v-if="quickUsers.length > 1"
+              class="switch-btn"
+              aria-label="下一个账号"
+              @click="handleNextUser"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L12.17 12z" />
+              </svg>
+            </button>
+          </div>
+          <p class="quick-name">{{ currentUserName }}</p>
+          <div v-if="quickUsers.length > 1" class="user-indicator">
+            <span
+              v-for="(u, idx) in quickUsers"
+              :key="u.user_id"
+              class="dot"
+              :class="{ active: idx === currentUserIndex }"
+              @click="selectQuickUser(idx)"
+            ></span>
+          </div>
+          <button
+            class="login-btn quick-btn"
+            :disabled="quickLoginLoading"
+            @click="handleQuickLogin"
+          >
+            <span v-if="quickLoginLoading" class="loading-dots"
+              ><span class="dot"></span><span class="dot"></span
+              ><span class="dot"></span
+            ></span>
+            <span v-else>一键登录</span>
+          </button>
+          <a class="switch-link" @click="toPasswordLogin">使用密码登录</a>
+        </div>
+      </template>
+      <template v-else>
+        <div class="logo-section">
         <div class="app-logo">
           <img
             v-if="accountAvatar"
@@ -271,7 +520,15 @@ onMounted(() => {
           ></span>
           <span v-else>登 录</span>
         </button>
+        <div class="form-footer">
+          <template v-if="quickUsers.length">
+            <a class="switch-link" @click="toQuickLogin">免登录</a>
+            <span class="divider">|</span>
+          </template>
+          <a class="switch-link" @click="toRegister">注册账号</a>
+        </div>
       </div>
+      </template>
     </div>
     <Overlay :show="showPrivacy" @click="showPrivacy = false">
       <div class="privacy-modal" @click.stop>
@@ -680,5 +937,123 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
+}
+.quick-login-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  .quick-btn {
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
+}
+.quick-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.switch-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-medium);
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+  &:active {
+    color: var(--brand-blue);
+    border-color: var(--brand-blue);
+    transform: scale(0.94);
+  }
+}
+.avatar-box {
+  position: relative;
+}
+.delete-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+  &:active {
+    background: #ef4444;
+    transform: scale(0.9);
+  }
+}
+.quick-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 20px 0 4px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 22px;
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    &.active {
+      width: 18px;
+      border-radius: 3px;
+      background: var(--brand-blue);
+    }
+  }
+}
+.switch-link {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--brand-blue);
+  text-decoration: none;
+  cursor: pointer;
+  &:active {
+    opacity: 0.7;
+  }
+}
+.form-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: -8px;
+  .switch-link {
+    margin-top: 0;
+  }
+  .divider {
+    color: var(--text-placeholder);
+    font-size: 13px;
+  }
 }
 </style>
