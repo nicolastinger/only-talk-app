@@ -125,6 +125,9 @@ pub const NOTIFY_TYPE_MSG: u16 = 1024;
 /// 系统消息
 pub const MSG_TYPE_SYSTEM: u16 = 10001;
 
+/// 同平台新连接建立后，通知旧客户端退出登录
+pub const MSG_TYPE_FORCE_LOGOUT: u16 = 10002;
+
 /// 当前会话好友
 pub const CURRENT_SESSION_FRIEND: &str = "current_session_friend";
 

@@ -22,8 +22,9 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { Window } from '@tauri-apps/api/window';
-import { Outlet, useIntl } from '@umijs/max';
+import { Outlet, history, useIntl } from '@umijs/max';
 import { cache_user_info, get_cached_user_info } from '@workspace/services';
 import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
 import { Modal } from 'antd';
@@ -36,9 +37,28 @@ const HomeLayout = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [closeModalVisible, setCloseModalVisible] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const setIsLogin = useBearStore((state) => state.setIsLogin);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
   const { isConnected, resetConnection } = useQuicDisconnect();
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen<string>('force_logout', async (event) => {
+      try {
+        await invoke('logout');
+        await invoke('clear_user_info');
+        setIsLogin(false);
+        setUserInfo({ uuid: '' });
+        history.push('/signIn');
+      } catch (error) {
+        console.error('强制退出登录失败:', error, event.payload);
+      }
+    }).then((stop) => {
+      unlisten = stop;
+    }).catch(console.error);
+    return () => unlisten?.();
+  }, [setIsLogin, setUserInfo]);
 
   // 使用系统通知hook
   useSystemNotify(userInfo.uuid);

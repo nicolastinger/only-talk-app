@@ -28,7 +28,7 @@ use crate::service::chat_service::{
     process_no_send_success_msg,
 };
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
-use crate::service::user_service::{get_user_info, insert_user_info};
+use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
 use crate::service::{friend_service, group_service};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
@@ -36,7 +36,8 @@ use crate::utils::message_types::{
     MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_NOTIFICATION, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE,
     MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER,
     MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
-    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM,
+    MSG_TYPE_FORCE_LOGOUT, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS,
+    MSG_TYPE_SYSTEM,
     MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
@@ -152,6 +153,9 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 process_notify_message(msg).await?;
             }
             // 收到系统消息
+            MSG_TYPE_FORCE_LOGOUT => {
+                process_force_logout(msg).await?;
+            }
             MSG_TYPE_SYSTEM => {
                 info!("接收到系统通知 {:?}", msg);
                 process_system_message(msg).await?;
@@ -160,6 +164,20 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 warn!("接收到来源之外的消息 {:?}", msg);
             }
         }
+    }
+    Ok(())
+}
+
+/// 处理服务端的同平台挤下线通知。设置 Idle 是为了阻止 run_client 自动重连。
+async fn process_force_logout(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let reason = String::from_utf8_lossy(&text_quic_msg.raw).to_string();
+    info!("收到强制退出通知: {}", reason);
+
+    disconnect_quic().await?;
+    GLOBAL_QUIC_USER_INFO.write().await.clear();
+
+    if let Some(handle) = APP_HANDLE.get() {
+        handle.emit("force_logout", reason)?;
     }
     Ok(())
 }

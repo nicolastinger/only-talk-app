@@ -436,6 +436,9 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     // 清除服务器连接列表
     {
         let mut server_list = GLOBAL_QUIC_SERVER_LIST.write().await;
+        for connection in server_list.values() {
+            connection.conn.close(0u32.into(), b"client disconnect");
+        }
         server_list.clear();
         info!("已清理QUIC服务器连接列表");
         let _ =
