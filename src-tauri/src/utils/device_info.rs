@@ -2,6 +2,55 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, Motherboard, Product, RefreshKind, System};
 
+/// 桌面/BSD/illumos 平台：machine-uid 支持列表，直接使用该 crate
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+fn get_machine_id() -> String {
+    machine_uid::get().unwrap_or_default()
+}
+
+/// Android：machine-uid 不支持移动端(无法编译)，改用系统属性构造稳定机器标识
+#[cfg(target_os = "android")]
+fn get_machine_id() -> String {
+    platform_machine_id::get()
+}
+
+/// iOS 等其余移动端：暂无原生机器唯一标识，返回空串由其它字段兜底
+#[cfg(all(not(target_os = "android"), target_os = "ios"))]
+fn get_machine_id() -> String {
+    String::new()
+}
+
+#[cfg(target_os = "android")]
+mod platform_machine_id {
+    use std::ffi::CString;
+    use std::os::raw::{c_char, c_int};
+
+    #[link(name = "android")]
+    extern "C" {
+        fn __system_property_get(name: *const c_char, value: *mut c_char) -> c_int;
+    }
+
+    fn get_prop(name: &str) -> Option<String> {
+        let c_name = CString::new(name).ok()?;
+        let mut buf = [0 as c_char; 128];
+        let len = unsafe { __system_property_get(c_name.as_ptr(), buf.as_mut_ptr()) };
+        if len <= 0 {
+            return None;
+        }
+        let slice = unsafe {
+            std::slice::from_raw_parts(buf.as_ptr() as *const u8, len as usize)
+        };
+        Some(String::from_utf8_lossy(slice).into_owned())
+    }
+
+    /// 优先 ro.serialno，缺失时回退 ro.build.fingerprint
+    pub fn get() -> String {
+        get_prop("ro.serialno")
+            .or_else(|| get_prop("ro.build.fingerprint"))
+            .unwrap_or_default()
+    }
+}
+
 /// 采集到的本机设备信息
 #[derive(Debug, Clone, Serialize)]
 pub struct DeviceInfo {
@@ -75,7 +124,7 @@ pub fn collect_device_info() -> DeviceInfo {
     let product_serial = Product::serial_number();
     let product_uuid = Product::uuid();
 
-    let machine_uid = machine_uid::get().unwrap_or_default();
+    let machine_uid = get_machine_id();
 
     let parts: Vec<String> = [
         machine_uid.clone(),

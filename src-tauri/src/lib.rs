@@ -27,9 +27,10 @@ mod vo;
 use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
-    compress_image_to_webp_command, delete_request, get_request, post_form_data_request,
-    post_request, put_request, upload_file_request, upload_file_with_extra_fields_request,
-    upload_multiple_files_request, upload_multiple_files_with_extra_fields_request,
+    compress_image_to_webp_command, copy_file_to_temp, delete_request, get_request,
+    post_form_data_request, post_request, put_request, upload_file_request,
+    upload_file_with_extra_fields_request, upload_multiple_files_request,
+    upload_multiple_files_with_extra_fields_request,
 };
 use crate::cmd::auth_controller::{
     clear_user_info, delete_quick_login_user, get_quick_login_users, logout, quick_login,
@@ -139,13 +140,21 @@ pub fn run() {
         std::env::set_var("RUST_BACKTRACE", "full");
     }
 
-    tauri::Builder::default()
+    #[cfg(desktop)]
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
-        ))
+        ));
+
+    #[cfg(not(desktop))]
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init());
+
+    builder
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
             let handle = app.handle().clone();
@@ -166,6 +175,7 @@ pub fn run() {
 
             // 窗口初始为隐藏(visible:false)，由前端首帧渲染后调用 show()
             // 兜底：5 秒后若前端仍未显示（如 JS 异常），强制显示，避免窗口永久不可见
+            #[cfg(desktop)]
             {
                 let win = app.get_webview_window("main");
                 tauri::async_runtime::spawn(async move {
@@ -200,6 +210,7 @@ pub fn run() {
             upload_multiple_files_with_extra_fields_request,
             post_form_data_request,
             compress_image_to_webp_command,
+            copy_file_to_temp,
             get_device_info,
             sign_in,
             refresh_token_command,

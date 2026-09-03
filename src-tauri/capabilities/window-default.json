@@ -25,7 +25,6 @@
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
-    "autostart:default",
     {
       "identifier": "opener:allow-open-path",
       "allow": [

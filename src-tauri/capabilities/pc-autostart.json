@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "pc-autostart",
+  "description": "PC 端开机自启能力 (tauri-plugin-autostart 仅在桌面端编译，移动端跳过该能力)",
+  "windows": ["*"],
+  "platforms": ["windows", "macOS", "linux"],
+  "permissions": ["autostart:default"]
+}

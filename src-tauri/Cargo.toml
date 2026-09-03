@@ -31,6 +31,7 @@ windows = { version = "0.58.0", features = [
 ] }
 tauri-plugin-opener = "2"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "multipart"] }
+url = "2"
 quinn = {version = "0.10.2"}
 rustls = { version = "0.21", features = ["dangerous_configuration"] }
 rustls-pemfile = "1.0.4"
@@ -51,7 +52,6 @@ tauri-plugin-dialog = "2.0.0-rc"
 tauri-plugin-fs = "2"
 sha2 = "0.10"
 sysinfo = { version = "0.38", default-features = false, features = ["system"] }
-machine-uid = "0.6"
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6.0"
 image = "0.25"
@@ -69,3 +69,4 @@ tauri = { version = "2.5.1", features = [ "image-ico", "tray-icon", "protocol-as
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2.0.0-rc"
+machine-uid = "0.6"

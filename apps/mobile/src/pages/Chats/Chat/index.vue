@@ -3,10 +3,10 @@ import { ref, reactive, onMounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { showToast, showLoadingToast, closeToast } from "vant";
-import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { useMessageApi } from "@/hooks/useMessageApi";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
+import { resolveContentToTempFile } from "@/utils/tempImage";
 import { formatMessageTime } from "@/utils/time";
 import {
   getChatFileByBizId,
@@ -215,18 +215,17 @@ const sendImage = async () => {
     if (!filePaths || filePaths.length === 0) return;
 
     let filePath = filePaths[0];
-    
-    // 处理 Android content:// URI
+    let localPreview: string | null = null;
+
+    // 处理 Android content:// URI：fetch 字节 -> 落盘到缓存目录，返回 Rust 可读的绝对路径
     if (filePath.startsWith("content://")) {
       try {
-        const fileData = await readFile(filePath);
-        const timestamp = Date.now();
-        const tempPath = `umi_gitee_temp/image_${timestamp}.jpg`;
-        
-        await writeFile(tempPath, fileData);
+        const { tempPath, preview } = await resolveContentToTempFile(filePath);
         filePath = tempPath;
+        localPreview = preview;
         console.log("Content URI resolved to:", filePath);
       } catch (e) {
+        console.error("读取图片失败:", e);
         showToast({ message: "读取图片失败", icon: "fail" });
         return;
       }
@@ -248,7 +247,8 @@ const sendImage = async () => {
       send_user: "",
       timestamp: Date.now(),
     };
-    const previewUrl = convertPathToTauriUrl(filePath);
+    const previewUrl =
+      localPreview || convertPathToTauriUrl(filePath) || null;
     const tempMsg: ChatMessage = {
       from: "mine",
       textMsg,

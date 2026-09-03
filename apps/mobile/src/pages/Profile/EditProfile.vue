@@ -3,7 +3,6 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { showToast, showLoadingToast, closeToast } from "vant";
 import { invoke } from "@tauri-apps/api/core";
-import { writeFile } from "@tauri-apps/plugin-fs";
 import {
   selectFile,
   convertPathToTauriUrl,
@@ -11,6 +10,7 @@ import {
 } from "@workspace/services";
 import { TALK_API } from "@workspace/types";
 import type { UserInfo } from "@workspace/types";
+import { resolveContentToTempFile } from "@/utils/tempImage";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { useAvatar } from "@/hooks/useAvatar";
 
@@ -138,41 +138,20 @@ const pickAndUploadAvatar = async () => {
     // 处理 Android content:// URI
     if (filePath.startsWith("content://")) {
       showLoadingToast({ message: "读取文件中...", forbidClick: true, duration: 0 });
-      
+
       console.log("[DEBUG] Detected content URI, starting read...");
-      
+
       try {
-        // 使用 fetch API 读取 content URI
-        console.log("[DEBUG] Trying fetch:", filePath);
-        const response = await fetch(filePath);
-        console.log("[DEBUG] Fetch response status:", response.status);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        console.log("[DEBUG] Blob size:", blob.size, "type:", blob.type);
-        
-        const buffer = await blob.arrayBuffer();
-        const fileData = new Uint8Array(buffer);
-        console.log("[DEBUG] ArrayBuffer size:", fileData.length);
-        
-        // 写入临时文件
-        const timestamp = Date.now();
-        const tempPath = `umi_gitee_temp/avatar_${timestamp}.jpg`;
-        console.log("[DEBUG] Writing to temp file:", tempPath);
-        
-        await writeFile(tempPath, fileData);
+        const { tempPath } = await resolveContentToTempFile(filePath);
         filePath = tempPath;
         console.log("[DEBUG] Success! Resolved to:", filePath);
       } catch (error: any) {
         console.error("[DEBUG] ERROR:", error?.message || error?.toString() || error);
         console.error("[DEBUG] ERROR stack:", error?.stack);
         closeToast();
-        showToast({ 
-          message: `读取失败: ${error?.message || 'Unknown error'}`, 
-          icon: "fail" 
+        showToast({
+          message: `读取失败: ${error?.message || "Unknown error"}`,
+          icon: "fail",
         });
         return;
       }
