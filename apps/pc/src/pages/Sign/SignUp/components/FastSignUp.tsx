@@ -31,14 +31,14 @@ const FastSignUp: React.FC = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [account, setAccount] = useState('');
-  const [nickname, setNickname] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [regToken, setRegToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [accountError, setAccountError] = useState('');
-  const [nicknameError, setNicknameError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [codeError, setCodeError] = useState('');
@@ -77,16 +77,12 @@ const FastSignUp: React.FC = () => {
     return true;
   };
 
-  const validateNickname = (value: string): boolean => {
+  const validateUsername = (value: string): boolean => {
     if (!value) {
-      setNicknameError(intl.formatMessage({ id: 'signUp.nicknameRequired' }));
+      setUsernameError(intl.formatMessage({ id: 'signUp.usernameRequired' }));
       return false;
     }
-    if (value.length < 5) {
-      setNicknameError(intl.formatMessage({ id: 'signUp.nicknameMinLength' }));
-      return false;
-    }
-    setNicknameError('');
+    setUsernameError('');
     return true;
   };
 
@@ -135,10 +131,10 @@ const FastSignUp: React.FC = () => {
     if (accountError) validateAccount(value);
   };
 
-  const handleNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setNickname(value);
-    if (nicknameError) validateNickname(value);
+    setUsername(value);
+    if (usernameError) validateUsername(value);
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,10 +246,10 @@ const FastSignUp: React.FC = () => {
 
   const onFinish = async () => {
     const isAccountValid = validateAccount(account);
-    const isNicknameValid = validateNickname(nickname);
+    const isUsernameValid = validateUsername(username);
     const isPasswordValid = validatePassword(password);
 
-    if (!isAccountValid || !isNicknameValid || !isPasswordValid) {
+    if (!isAccountValid || !isUsernameValid || !isPasswordValid) {
       return;
     }
 
@@ -265,12 +261,12 @@ const FastSignUp: React.FC = () => {
         email,
         account,
         password,
-        username: nickname,
+        username,
       };
       const res = await complete_profile(completeProfileRequest);
       if (res.netSuccess && res.res.status === 200) {
         message.success(
-          intl.formatMessage({ id: 'signUp.success' }, { username: nickname }),
+          intl.formatMessage({ id: 'signUp.success' }, { username }),
         );
       } else if (isTokenExpired(res)) {
         message.warning(intl.formatMessage({ id: 'signUp.tokenExpired' }));
@@ -417,7 +413,7 @@ const FastSignUp: React.FC = () => {
           <div className={styles.inputWrapper}>
             <div
               className={`${styles.inputGroup} ${
-                nicknameError ? styles.inputError : ''
+                usernameError ? styles.inputError : ''
               }`}
             >
               <SmileOutlined className={styles.inputIcon} />
@@ -425,20 +421,20 @@ const FastSignUp: React.FC = () => {
                 type="text"
                 className={styles.input}
                 placeholder={intl.formatMessage({
-                  id: 'signUp.nicknamePlaceholder',
+                  id: 'signUp.usernamePlaceholder',
                 })}
-                value={nickname}
-                onChange={handleNicknameChange}
-                onBlur={() => validateNickname(nickname)}
+                value={username}
+                onChange={handleUsernameChange}
+                onBlur={() => validateUsername(username)}
               />
             </div>
-            {!nicknameError && (
+            {!usernameError && (
               <span className={styles.hintText}>
-                {intl.formatMessage({ id: 'signUp.nicknameHint' })}
+                {intl.formatMessage({ id: 'signUp.usernameHint' })}
               </span>
             )}
-            {nicknameError && (
-              <span className={styles.errorText}>{nicknameError}</span>
+            {usernameError && (
+              <span className={styles.errorText}>{usernameError}</span>
             )}
           </div>
 
