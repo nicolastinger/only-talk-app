@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   showToast,
   showConfirmDialog,
   PullRefresh,
-  Tabs,
-  Tab,
-  Badge,
   SwipeCell,
   Empty,
 } from "vant";
 import {
   get_accept_friend_request_list,
-  get_friend_request_list,
-  process_friend_request,
+  get_pending_invitations,
+  get_group_list,
   delete_friend,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
@@ -23,6 +21,7 @@ import { parseResponse } from "@/utils/api";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type {
   FriendVo,
+  GroupVo,
   FriendRequestInfo,
   FriendRequestInfoDTO,
 } from "@workspace/types";
@@ -31,12 +30,14 @@ const router = useRouter();
 const { getAvatarUrl } = useAvatar();
 
 const friends = ref<FriendVo[]>([]);
+const groups = ref<GroupVo[]>([]);
 const refreshing = ref(false);
-const activeTab = ref(0);
-const receivedRequests = ref<FriendRequestInfo[]>([]);
-const sentRequests = ref<FriendRequestInfo[]>([]);
+const sectionTab = ref(0);
+const pendingRequestCount = ref(0);
+const pendingGroupCount = ref(0);
 
 const avatarMap = ref<Record<string, string | null>>({});
+const groupAvatarMap = ref<Record<string, string | null>>({});
 
 const resolveFriendAvatars = async () => {
   for (const f of friends.value) {
@@ -54,11 +55,20 @@ watch(
   { immediate: true }
 );
 
-const pendingReceivedCount = computed(
-  () => receivedRequests.value.filter((r) => r.accept_status === 0).length
-);
-const pendingSentCount = computed(
-  () => sentRequests.value.filter((r) => r.accept_status === 0).length
+const resolveGroupAvatars = async () => {
+  for (const g of groups.value) {
+    const icon = g.avatar;
+    if (!icon || groupAvatarMap.value[icon] !== undefined) continue;
+    const url = await getAvatarUrl(icon);
+    groupAvatarMap.value[icon] = url;
+  }
+};
+watch(
+  groups,
+  () => {
+    resolveGroupAvatars();
+  },
+  { immediate: true }
 );
 
 const loadFriendList = async () => {
@@ -69,62 +79,45 @@ const loadFriendList = async () => {
   }
 };
 
-const onRefresh = async () => {
-  refreshing.value = true;
-  await loadFriendList();
-  refreshing.value = false;
+const loadGroups = async () => {
+  try {
+    groups.value = (await get_group_list()) || [];
+  } catch (e) {
+    console.error(e);
+  }
 };
-
-const loadFriendRequests = async () => {
+const loadPendingRequestCount = async () => {
   try {
     const dto: FriendRequestInfoDTO = {};
-    const [receivedRes, sentRes] = await Promise.all([
-      get_accept_friend_request_list(dto).catch(() => null),
-      get_friend_request_list(dto).catch(() => null),
-    ]);
-    receivedRequests.value = receivedRes?.netSuccess
-      ? parseResponse<FriendRequestInfo[]>(receivedRes)
-      : [];
-    sentRequests.value = sentRes?.netSuccess
-      ? parseResponse<FriendRequestInfo[]>(sentRes)
-      : [];
+    const res = await get_accept_friend_request_list(dto);
+    const list = res?.netSuccess ? parseResponse<FriendRequestInfo[]>(res) : [];
+    pendingRequestCount.value = list.filter(
+      (r) => r.accept_status === 0
+    ).length;
   } catch (e) {
     console.error(e);
   }
 };
 
-const handleAccept = async (req: FriendRequestInfo) => {
+const loadPendingGroupCount = async () => {
   try {
-    await process_friend_request({
-      accept_message: "",
-      request_user: req.request_user,
-      add_type: "card",
-      version: 0,
-      accept_status: 1,
-    });
-    showToast({ message: "已接受", icon: "success" });
-    await Promise.all([loadFriendList(), loadFriendRequests()]);
+    const list = await get_pending_invitations();
+    pendingGroupCount.value = (list || []).filter((i) => i.status === 1).length;
   } catch (e) {
-    showToast({ message: "操作失败", icon: "fail" });
+    console.error(e);
   }
 };
 
-const handleReject = async (req: FriendRequestInfo) => {
-  try {
-    await process_friend_request({
-      accept_message: "",
-      request_user: req.request_user,
-      add_type: "card",
-      version: 0,
-      accept_status: 2,
-    });
-    showToast({ message: "已拒绝", icon: "success" });
-    await loadFriendRequests();
-  } catch (e) {
-    showToast({ message: "操作失败", icon: "fail" });
-  }
+const onRefresh = async () => {
+  refreshing.value = true;
+  await Promise.all([
+    loadFriendList(),
+    loadGroups(),
+    loadPendingRequestCount(),
+    loadPendingGroupCount(),
+  ]);
+  refreshing.value = false;
 };
-
 const handleDelete = async (friend: FriendVo) => {
   try {
     await showConfirmDialog({
@@ -143,6 +136,8 @@ const handleDelete = async (friend: FriendVo) => {
 };
 
 const goSearch = () => router.push("/friends/search");
+const goRequests = () => router.push("/friends/requests");
+const goGroupRequests = () => router.push("/friends/group-requests");
 const goDetail = (friend: FriendVo) =>
   router.push(`/friends/detail/${friend.friend_id}`);
 const goChat = async (friend: FriendVo) => {
@@ -153,6 +148,16 @@ const goChat = async (friend: FriendVo) => {
   }
   router.push(`/chats/chat/${friend.friend_id}`);
 };
+const goGroupChat = async (group: GroupVo) => {
+  try {
+    await invoke("create_group_chat_session_command", {
+      groupId: group.group_uuid,
+    });
+  } catch {
+    /* 会话可能已存在 */
+  }
+  router.push(`/chats/group-chat/${group.group_uuid}`);
+};
 
 const getAvatar = (friend: FriendVo) => {
   const icon = friend.friend_icon;
@@ -162,29 +167,37 @@ const getAvatar = (friend: FriendVo) => {
   return DEFAULT_AVATAR;
 };
 
-const getRequestAvatar = (req: any) => {
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${
-    req.request_user || req.accept_user || "user"
-  }`;
+const getGroupAvatar = (group: GroupVo) => {
+  const icon = group.avatar;
+  if (icon && groupAvatarMap.value[icon] != null) {
+    return groupAvatarMap.value[icon];
+  }
+  return null;
 };
 
-const getRequestTime = (ts: number) => {
-  if (!ts) return "";
-  const d = new Date(ts);
-  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(
-    d.getMinutes()
-  ).padStart(2, "0")}`;
-};
-const isPending = (s?: number) => s === 0;
-const isAccepted = (s?: number) => s === 1;
-const isRejected = (s?: number) => s === 2;
+const hasGroupAvatar = (group: GroupVo) => !!getGroupAvatar(group);
 
-onMounted(() => {
+let unlistenFriends: UnlistenFn | undefined;
+
+onMounted(async () => {
   loadFriendList();
-  loadFriendRequests();
+  loadGroups();
+  loadPendingRequestCount();
+  loadPendingGroupCount();
+  try {
+    unlistenFriends = await listen("friend_list_changed", () => {
+      loadFriendList();
+      loadGroups();
+      loadPendingRequestCount();
+      loadPendingGroupCount();
+    });
+  } catch (e) {
+    console.error("监听好友列表变更失败", e);
+  }
 });
-watch(activeTab, (v) => {
-  if (v === 1) loadFriendRequests();
+
+onUnmounted(() => {
+  if (unlistenFriends) unlistenFriends();
 });
 </script>
 
@@ -203,202 +216,170 @@ watch(activeTab, (v) => {
       </div>
     </div>
 
-    <Tabs
-      v-model:active="activeTab"
-      color="var(--color-primary)"
-      title-active-color="var(--text-primary)"
-      title-inactive-color="var(--text-tertiary)"
-      :line-width="24"
-      :line-height="2"
-      sticky
-      class="friends-tabs"
-    >
-      <Tab title="好友列表">
-        <PullRefresh
-          v-model="refreshing"
-          :head-height="80"
-          pulling-text="下拉刷新"
-          loosing-text="释放刷新"
-          loading-text="加载中..."
-          @refresh="onRefresh"
-        >
-          <div v-if="friends.length > 0" class="friend-list">
-            <SwipeCell v-for="friend in friends" :key="friend.friend_id">
-              <div class="friend-item" @click="goDetail(friend)">
+    <div class="entries">
+      <div class="entry-card" @click="goRequests">
+        <div class="entry-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+            />
+          </svg>
+        </div>
+        <div class="entry-info">
+          <span class="entry-title">好友请求</span>
+          <span class="entry-desc">查看新的好友申请</span>
+        </div>
+        <span v-if="pendingRequestCount > 0" class="entry-badge">{{
+          pendingRequestCount > 99 ? "99+" : pendingRequestCount
+        }}</span>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+        </svg>
+      </div>
+
+      <div class="entry-card" @click="goGroupRequests">
+        <div class="entry-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+            />
+          </svg>
+        </div>
+        <div class="entry-info">
+          <span class="entry-title">群组通知</span>
+          <span class="entry-desc">查看群组邀请</span>
+        </div>
+        <span v-if="pendingGroupCount > 0" class="entry-badge">{{
+          pendingGroupCount > 99 ? "99+" : pendingGroupCount
+        }}</span>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="seg-tabs">
+      <button
+        class="seg-tab"
+        :class="{ active: sectionTab === 0 }"
+        @click="sectionTab = 0"
+      >
+        好友
+      </button>
+      <button
+        class="seg-tab"
+        :class="{ active: sectionTab === 1 }"
+        @click="sectionTab = 1"
+      >
+        群组
+      </button>
+    </div>
+
+    <div v-show="sectionTab === 0" class="tab-panel">
+      <PullRefresh
+        v-model="refreshing"
+        :head-height="80"
+        pulling-text="下拉刷新"
+        loosing-text="释放刷新"
+        loading-text="加载中..."
+        @refresh="onRefresh"
+      >
+        <div v-if="friends.length > 0" class="friend-list">
+          <SwipeCell v-for="friend in friends" :key="friend.friend_id">
+            <div class="friend-item" @click="goDetail(friend)">
+              <div class="friend-avatar-wrap">
                 <img
                   :src="getAvatar(friend) || DEFAULT_AVATAR"
-                  class="avatar"
+                  class="friend-avatar"
                   @error="
                     ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
                   "
                 />
-                <div class="friend-info">
-                  <span class="friend-name">{{ friend.friend_name }}</span>
-                  <span class="friend-account"
-                    >@{{ friend.friend_account }}</span
-                  >
-                </div>
-                <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+              </div>
+              <div class="friend-info">
+                <span class="friend-name">{{ friend.friend_name }}</span>
+                <span class="friend-account">@{{ friend.friend_account }}</span>
+              </div>
+              <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+                />
+              </svg>
+            </div>
+            <template #right>
+              <div class="swipe-chat" @click="goChat(friend)">
+                <svg viewBox="0 0 24 24" fill="currentColor">
                   <path
-                    d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+                    d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
                   />
                 </svg>
+                <span>发消息</span>
               </div>
-              <template #right>
-                <div class="swipe-chat" @click="goChat(friend)">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-                    />
-                  </svg>
-                  <span>发消息</span>
-                </div>
-                <div class="swipe-delete" @click="handleDelete(friend)">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-                    />
-                  </svg>
-                  <span>删除</span>
-                </div>
-              </template>
-            </SwipeCell>
-          </div>
-          <Empty v-else description="暂无好友" />
-        </PullRefresh>
-      </Tab>
+              <div class="swipe-delete" @click="handleDelete(friend)">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                  />
+                </svg>
+                <span>删除</span>
+              </div>
+            </template>
+          </SwipeCell>
+        </div>
+        <Empty v-else description="暂无好友" />
+      </PullRefresh>
+    </div>
 
-      <Tab>
-        <template #title
-          ><Badge
-            :content="pendingReceivedCount"
-            :show-zero="false"
-            :offset="[10, -2]"
-            ><span>好友请求</span></Badge
-          ></template
-        >
-        <Tabs
-          color="var(--color-primary)"
-          title-active-color="var(--text-primary)"
-          title-inactive-color="var(--text-tertiary)"
-          :line-width="20"
-          :line-height="2"
-          class="request-subtabs"
-        >
-          <Tab>
-            <template #title
-              ><Badge
-                :content="pendingReceivedCount"
-                :show-zero="false"
-                :offset="[8, -2]"
-                ><span>收到的</span></Badge
-              ></template
-            >
-            <div v-if="receivedRequests.length > 0" class="request-list">
-              <div
-                v-for="req in receivedRequests"
-                :key="req.uuid"
-                class="request-item"
-              >
+    <div v-show="sectionTab === 1" class="tab-panel">
+      <PullRefresh
+        v-model="refreshing"
+        :head-height="80"
+        pulling-text="下拉刷新"
+        loosing-text="释放刷新"
+        loading-text="加载中..."
+        @refresh="onRefresh"
+      >
+        <div v-if="groups.length > 0" class="friend-list">
+          <div
+            v-for="group in groups"
+            :key="group.group_uuid"
+            class="friend-item"
+            @click="goGroupChat(group)"
+          >
+            <template v-if="hasGroupAvatar(group)">
+              <div class="friend-avatar-wrap">
                 <img
-                  :src="getRequestAvatar(req)"
-                  class="request-avatar"
+                  :src="getGroupAvatar(group)!"
+                  class="friend-avatar"
                   @error="
                     ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
                   "
                 />
-                <div class="request-info">
-                  <span class="request-name">{{
-                    req.request_user || "未知"
-                  }}</span>
-                  <span v-if="req.request_message" class="request-msg">{{
-                    req.request_message
-                  }}</span>
-                  <span class="request-time">{{
-                    getRequestTime(req.created_at)
-                  }}</span>
-                </div>
-                <div
-                  class="request-actions"
-                  v-if="isPending(req.accept_status)"
-                >
-                  <button class="accept-btn" @click="handleAccept(req)">
-                    接受
-                  </button>
-                  <button class="reject-btn" @click="handleReject(req)">
-                    拒绝
-                  </button>
-                </div>
-                <span
-                  v-else
-                  class="request-status"
-                  :class="{
-                    accepted: isAccepted(req.accept_status),
-                    rejected: isRejected(req.accept_status),
-                  }"
-                  >{{
-                    isAccepted(req.accept_status) ? "已接受" : "已拒绝"
-                  }}</span
-                >
               </div>
-            </div>
-            <Empty v-else description="暂无收到的请求" />
-          </Tab>
-          <Tab>
-            <template #title
-              ><Badge
-                :content="pendingSentCount"
-                :show-zero="false"
-                :offset="[8, -2]"
-                ><span>发出的</span></Badge
-              ></template
-            >
-            <div v-if="sentRequests.length > 0" class="request-list">
-              <div
-                v-for="req in sentRequests"
-                :key="req.uuid"
-                class="request-item"
-              >
-                <img
-                  :src="getRequestAvatar(req)"
-                  class="request-avatar"
-                  @error="
-                    ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
-                  "
+            </template>
+            <div v-else class="group-avatar-fallback">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
                 />
-                <div class="request-info">
-                  <span class="request-name">{{
-                    req.accept_user || "未知"
-                  }}</span>
-                  <span v-if="req.request_message" class="request-msg">{{
-                    req.request_message
-                  }}</span>
-                  <span class="request-time">{{
-                    getRequestTime(req.created_at)
-                  }}</span>
-                </div>
-                <span
-                  class="request-status"
-                  :class="{
-                    accepted: isAccepted(req.accept_status),
-                    rejected: isRejected(req.accept_status),
-                    pending: isPending(req.accept_status),
-                  }"
-                  >{{
-                    isAccepted(req.accept_status)
-                      ? "已接受"
-                      : isRejected(req.accept_status)
-                      ? "已拒绝"
-                      : "待确认"
-                  }}</span
-                >
-              </div>
+              </svg>
             </div>
-            <Empty v-else description="暂无发出的请求" />
-          </Tab>
-        </Tabs>
-      </Tab>
-    </Tabs>
+            <div class="friend-info">
+              <span class="friend-name">{{ group.group_name }}</span>
+              <span class="friend-account"
+                >{{ group.member_count }} 位成员</span
+              >
+            </div>
+            <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+              />
+            </svg>
+          </div>
+        </div>
+        <Empty v-else description="暂无群聊" />
+      </PullRefresh>
+    </div>
 
     <div class="fab" @click="goSearch">
       <svg viewBox="0 0 24 24" fill="white">
@@ -465,38 +446,174 @@ watch(activeTab, (v) => {
   color: var(--text-placeholder);
 }
 
-.friends-tabs {
-  :deep(.van-tabs__nav) {
-    background: transparent !important;
-    padding: 0 12px;
-  }
-  :deep(.van-tabs__content) {
-    min-height: 50vh;
+.seg-tabs {
+  margin: 6px 12px 10px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.seg-tab {
+  flex: 1;
+  height: 34px;
+  border: none;
+  border-radius: calc(var(--radius-lg) - 5px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+
+  &.active {
+    background: var(--gradient-primary);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
   }
 }
 
+.tab-panel {
+  min-height: 55vh;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px 10px;
+}
+
+.entry-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.entry-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.entry-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.entry-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.entry-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.entry-badge {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--badge-text);
+  background: var(--badge-bg);
+  border-radius: var(--radius-full);
+}
+
 .friend-list {
-  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 12px 12px;
 }
 
 .friend-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 20px;
+  gap: 12px;
+  padding: 14px 16px;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: transform var(--transition-fast);
+
   &:active {
-    background: var(--surface-hover);
+    transform: scale(0.98);
   }
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
+.friend-avatar-wrap {
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+}
+
+.friend-avatar {
+  display: block;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: var(--shadow-xs);
+  background: var(--card-bg);
+}
+
+.group-avatar-fallback {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .friend-info {
@@ -508,12 +625,18 @@ watch(activeTab, (v) => {
 }
 .friend-name {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .friend-account {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .arrow {
@@ -557,105 +680,6 @@ watch(activeTab, (v) => {
     width: 20px;
     height: 20px;
   }
-}
-
-.request-subtabs {
-  :deep(.van-tabs__nav) {
-    background: transparent !important;
-    padding: 0 12px;
-  }
-}
-
-.request-list {
-  padding: 4px 0;
-}
-
-.request-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.request-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-.request-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.request-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-.request-msg {
-  font-size: 13px;
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: var(--blue-50);
-  padding: 4px 10px;
-  border-radius: 8px;
-  align-self: flex-start;
-}
-.request-time {
-  font-size: 11px;
-  color: var(--text-placeholder);
-}
-
-.request-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.accept-btn,
-.reject-btn {
-  padding: 8px 16px;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: all var(--transition-fast);
-  &:active {
-    transform: scale(0.96);
-  }
-}
-.accept-btn {
-  background: var(--gradient-primary);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
-}
-.reject-btn {
-  background: var(--surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-medium);
-}
-
-.request-status {
-  font-size: 12px;
-  font-weight: 500;
-  flex-shrink: 0;
-}
-.request-status.accepted {
-  color: var(--color-success);
-}
-.request-status.rejected {
-  color: var(--color-error);
-}
-.request-status.pending {
-  color: var(--color-warning);
 }
 
 .fab {

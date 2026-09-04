@@ -172,14 +172,70 @@ const onScroll = () => {
 };
 
 const EMOJI_LIST = [
-  "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂",
-  "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩",
-  "😘", "😗", "😚", "😙", "🥲", "😋", "😛", "😜",
-  "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐",
-  "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬",
-  "😮‍💨", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷",
-  "👍", "👎", "👏", "🙌", "🤝", "🙏", "💪", "🤘",
-  "❤️", "💔", "💯", "🔥", "⭐", "✨", "💥", "🎉",
+  "😀",
+  "😃",
+  "😄",
+  "😁",
+  "😆",
+  "😅",
+  "🤣",
+  "😂",
+  "🙂",
+  "🙃",
+  "😉",
+  "😊",
+  "😇",
+  "🥰",
+  "😍",
+  "🤩",
+  "😘",
+  "😗",
+  "😚",
+  "😙",
+  "🥲",
+  "😋",
+  "😛",
+  "😜",
+  "🤪",
+  "😝",
+  "🤑",
+  "🤗",
+  "🤭",
+  "🤫",
+  "🤔",
+  "🤐",
+  "🤨",
+  "😐",
+  "😑",
+  "😶",
+  "😏",
+  "😒",
+  "🙄",
+  "😬",
+  "😮‍💨",
+  "🤥",
+  "😌",
+  "😔",
+  "😪",
+  "🤤",
+  "😴",
+  "😷",
+  "👍",
+  "👎",
+  "👏",
+  "🙌",
+  "🤝",
+  "🙏",
+  "💪",
+  "🤘",
+  "❤️",
+  "💔",
+  "💯",
+  "🔥",
+  "⭐",
+  "✨",
+  "💥",
+  "🎉",
 ];
 
 const toggleToolPanel = () => {
@@ -276,8 +332,7 @@ const sendImage = async () => {
       send_user: "",
       timestamp: Date.now(),
     };
-    const previewUrl =
-      localPreview || convertPathToTauriUrl(filePath) || null;
+    const previewUrl = localPreview || convertPathToTauriUrl(filePath) || null;
     const tempMsg: ChatMessage = {
       from: "mine",
       textMsg,
@@ -441,24 +496,13 @@ const handleStartCall = async (media: "audio" | "video") => {
       </div>
       <div class="header-actions">
         <button
-          class="call-entry-btn"
-          aria-label="语音通话"
-          @click="handleStartCall('audio')"
+          class="header-more"
+          aria-label="好友设置"
+          @click="router.push(`/friends/detail/${friendId}`)"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path
-              d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
-            />
-          </svg>
-        </button>
-        <button
-          class="call-entry-btn"
-          aria-label="视频通话"
-          @click="handleStartCall('video')"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
+              d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
             />
           </svg>
         </button>
@@ -583,6 +627,26 @@ const handleStartCall = async (media: "audio" | "video") => {
             </span>
             <span class="tool-label">图片</span>
           </div>
+          <div class="tool-item" @click="handleStartCall('audio')">
+            <span class="tool-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
+                />
+              </svg>
+            </span>
+            <span class="tool-label">语音通话</span>
+          </div>
+          <div class="tool-item" @click="handleStartCall('video')">
+            <span class="tool-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
+                />
+              </svg>
+            </span>
+            <span class="tool-label">视频通话</span>
+          </div>
         </div>
         <div v-if="showEmojiGrid" class="emoji-grid">
           <span
@@ -605,9 +669,7 @@ const handleStartCall = async (media: "audio" | "video") => {
         @click="toggleToolPanel"
       >
         <svg viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
-          />
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
         </svg>
       </button>
       <input
@@ -688,7 +750,7 @@ const handleStartCall = async (media: "audio" | "video") => {
   gap: 8px;
   flex-shrink: 0;
 }
-.call-entry-btn {
+.header-more {
   width: 34px;
   height: 34px;
   display: flex;

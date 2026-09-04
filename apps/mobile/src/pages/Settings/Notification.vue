@@ -76,7 +76,7 @@ const goBack = () => router.back();
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="消息通知" left-arrow @click-left="goBack" />
+    <van-nav-bar title="通知" left-arrow @click-left="goBack" />
 
     <div class="section-card">
       <div class="section-title">新消息通知</div>
@@ -98,7 +98,9 @@ const goBack = () => router.back();
         <div v-for="item in detailItems" :key="item.key" class="notify-row">
           <div class="notify-text">
             <span class="notify-name">{{ item.name }}</span>
-            <span class="notify-desc">关闭后通知将不展示消息内容，保护隐私</span>
+            <span class="notify-desc"
+              >关闭后通知将不展示消息内容，保护隐私</span
+            >
           </div>
           <van-switch
             :model-value="prefs[item.key as keyof NotifyPrefs]"
@@ -115,7 +117,9 @@ const goBack = () => router.back();
         <div v-for="item in dndItems" :key="item.key" class="notify-row">
           <div class="notify-text">
             <span class="notify-name">{{ item.name }}</span>
-            <span class="notify-desc">夜间（23:00 - 次日 08:00）不推送提醒</span>
+            <span class="notify-desc"
+              >夜间（23:00 - 次日 08:00）不推送提醒</span
+            >
           </div>
           <van-switch
             :model-value="prefs[item.key as keyof NotifyPrefs]"

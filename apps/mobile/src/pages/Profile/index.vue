@@ -1,23 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { showDialog, showToast } from "vant";
 import { useAvatar } from "@/hooks/useAvatar";
-import { useAuthStore } from "@/stores/auth";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { getMyAccount } from "@/utils/api";
-import { useTheme, type ThemeMode } from "@/stores/theme";
 
 const router = useRouter();
-const { clearAuth } = useAuthStore();
 const { userInfo, loadUserInfo } = useUserStore();
 const { getAvatarUrl } = useAvatar();
-const { mode, setMode } = useTheme();
-const themeOptions: { value: ThemeMode; label: string }[] = [
-  { value: "light", label: "亮色" },
-  { value: "dark", label: "暗色" },
-  { value: "system", label: "跟随系统" },
-];
 
 const account = ref("");
 const avatarUrl = ref<string | null>(null);
@@ -45,28 +35,8 @@ const goToEditProfile = () => {
   router.push("/profile/edit");
 };
 
-const menuItems = [
-  { icon: "setting", name: "设置" },
-];
-
 const onMenuClick = () => {
   router.push("/settings");
-};
-
-const onLogout = () => {
-  showDialog({
-    title: "退出登录",
-    message: "确定要退出登录吗？",
-    confirmButtonText: "退出",
-    confirmButtonColor: "#ef4444",
-    cancelButtonText: "取消",
-  })
-    .then(() => {
-      clearAuth();
-      showToast({ message: "已退出登录", icon: "success" });
-      router.replace("/login");
-    })
-    .catch(() => {});
 };
 </script>
 
@@ -99,24 +69,14 @@ const onLogout = () => {
     </div>
 
     <div class="menu-section">
-      <div
-        v-for="item in menuItems"
-        :key="item.name"
-        class="menu-item"
-        @click="onMenuClick"
-      >
+      <div class="menu-item">
         <div class="menu-left">
-          <svg
-            v-if="item.icon === 'setting'"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            class="menu-icon"
-          >
+          <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
             <path
-              d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+              d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
             />
           </svg>
-          <span class="menu-name">{{ item.name }}</span>
+          <span class="menu-name">收藏</span>
         </div>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
@@ -124,23 +84,36 @@ const onLogout = () => {
       </div>
     </div>
 
-    <div class="theme-section">
-      <span class="theme-label">主题</span>
-      <div class="theme-options">
-        <button
-          v-for="item in themeOptions"
-          :key="item.value"
-          class="theme-option"
-          :class="{ active: mode === item.value }"
-          @click="setMode(item.value)"
-        >
-          {{ item.label }}
-        </button>
+    <div class="menu-section">
+      <div class="menu-item">
+        <div class="menu-left">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
+            <path
+              d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"
+            />
+          </svg>
+          <span class="menu-name">文件管理</span>
+        </div>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+        </svg>
       </div>
     </div>
 
-    <div class="logout-section">
-      <button class="logout-btn" @click="onLogout">退出登录</button>
+    <div class="menu-section">
+      <div class="menu-item" @click="onMenuClick">
+        <div class="menu-left">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
+            <path
+              d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+            />
+          </svg>
+          <span class="menu-name">设置</span>
+        </div>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+        </svg>
+      </div>
     </div>
   </div>
 </template>
@@ -242,7 +215,7 @@ const onLogout = () => {
 }
 
 .menu-section {
-  margin: 0 16px;
+  margin: 0 16px 12px;
   background: var(--surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
@@ -280,69 +253,5 @@ const onLogout = () => {
 .menu-name {
   font-size: 15px;
   color: var(--text-primary);
-}
-
-.logout-section {
-  padding: 24px 16px;
-  text-align: center;
-}
-
-.theme-section {
-  margin: 16px;
-  padding: 16px 20px;
-  background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xs);
-}
-
-.theme-label {
-  display: block;
-  margin-bottom: 12px;
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.theme-options {
-  display: flex;
-  gap: 8px;
-}
-
-.theme-option {
-  flex: 1;
-  min-height: 36px;
-  padding: 0 8px;
-  background: var(--surface-alt);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-
-  &.active {
-    background: var(--color-info-bg, rgba(64, 150, 255, 0.1));
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-}
-
-.logout-btn {
-  width: 100%;
-  max-width: 300px;
-  height: 48px;
-  background: var(--surface);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-xs);
-  &:active {
-    background: rgba(239, 68, 68, 0.05);
-    border-color: rgba(239, 68, 68, 0.4);
-  }
 }
 </style>

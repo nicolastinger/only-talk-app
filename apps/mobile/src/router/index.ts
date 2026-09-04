@@ -49,9 +49,27 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/moments",
-    name: "Moments",
-    component: () => import("@/pages/Moments/index.vue"),
+    path: "/friends/requests",
+    name: "FriendRequests",
+    component: () => import("@/pages/Friends/Requests.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/friends/group-requests",
+    name: "GroupInvitations",
+    component: () => import("@/pages/Friends/GroupInvitations.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plaza",
+    name: "Plaza",
+    component: () => import("@/pages/Plaza/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plaza/moment/:id",
+    name: "MomentDetail",
+    component: () => import("@/pages/Plaza/feed/MomentDetail.vue"),
     meta: { requiresAuth: true },
   },
   {

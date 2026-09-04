@@ -15,8 +15,7 @@ const state = reactive<UserState>({
   loading: false,
 });
 
-export const DEFAULT_AVATAR =
-  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiNFNUU3RUIiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjM2IiByPSIxNiIgZmlsbD0iIzlDQTNBRiIvPjxwYXRoIGQ9Ik0xOCA4MmMwLTE3LjY3MyAxNC4zMjctMzIgMzItMzJzMzIgMTQuMzI3IDMyIDMyIiBmaWxsPSIjOUNBM0FGIi8+PC9zdmc+";
+export const DEFAULT_AVATAR = "/images/default.jpg";
 
 async function fetchUserFromServer(): Promise<UserInfo | null> {
   try {

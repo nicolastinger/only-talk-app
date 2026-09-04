@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import BottomNav from "@/components/BottomNav/index.vue";
+import QuicStatusBar from "@/components/QuicStatusBar/index.vue";
+import SyncOverlay from "@/components/SyncOverlay/index.vue";
+import { startQuicMonitor, stopQuicMonitor } from "@/stores/quic";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
 
@@ -15,7 +18,18 @@ const showNav = computed(() => {
   if (path.startsWith("/chats/chat/")) return false;
   if (path === "/friends/search" || path.startsWith("/friends/detail/"))
     return false;
-  return ["/chats", "/friends", "/moments", "/profile"].includes(path);
+  if (path === "/friends/requests" || path === "/friends/group-requests")
+    return false;
+  if (path.startsWith("/plaza/moment/")) return false;
+  return ["/chats", "/friends", "/plaza", "/profile"].includes(path);
+});
+
+onMounted(() => {
+  startQuicMonitor();
+});
+
+onUnmounted(() => {
+  stopQuicMonitor();
 });
 </script>
 
@@ -27,6 +41,8 @@ const showNav = computed(() => {
       </transition>
     </router-view>
     <BottomNav v-if="showNav" />
+    <QuicStatusBar />
+    <SyncOverlay />
   </div>
 </template>
 

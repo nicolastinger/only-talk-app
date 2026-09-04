@@ -33,11 +33,7 @@ const onComingSoon = (row: string) => {
 
     <div class="about-header">
       <div class="logo">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-1.2 1.5-2.4 3-3.6 4.5 1.3 1.9 2.6 3.8 3.9 5.7-.9-.1-1.8-.4-2.6-.9-.9-.5-1.7-1.1-2.5-1.8-.8.7-1.6 1.3-2.5 1.8-.8.5-1.7.8-2.6.9 1.3-1.9 2.6-3.8 3.9-5.7-1.2-1.5-2.4-3-3.6-4.5.9.1 1.8.4 2.6.9.9.5 1.7 1.1 2.5 1.8.8-.7 1.6-1.3 2.5-1.8.8-.5 1.7-.8 2.6-.9z"
-          />
-        </svg>
+        <img src="/images/app-icon.png" alt="Only Talk" class="logo-img" />
       </div>
       <div class="app-name">Only Talk</div>
       <div class="app-slogan">极速 · 安全 · 畅聊无限</div>
@@ -97,19 +93,18 @@ const onComingSoon = (row: string) => {
 }
 
 .logo {
-  width: 72px;
-  height: 72px;
+  width: 76px;
+  height: 76px;
   border-radius: var(--radius-lg);
   background: var(--gradient-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   box-shadow: var(--shadow-glow-sm);
 
-  svg {
-    width: 40px;
-    height: 40px;
-    color: #fff;
+  .logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 }
 

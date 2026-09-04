@@ -13,7 +13,7 @@ const router = useRouter();
 const navItems: NavItem[] = [
   { name: "chat", path: "/chats" },
   { name: "friends", path: "/friends" },
-  { name: "moments", path: "/moments" },
+  { name: "plaza", path: "/plaza" },
   { name: "profile", path: "/profile" },
 ];
 
@@ -106,9 +106,9 @@ const onChange = (path: string) => {
         />
       </svg>
 
-      <!-- Moments: globe with orbiting ring -->
+      <!-- Plaza: globe with orbiting ring -->
       <svg
-        v-else-if="item.name === 'moments'"
+        v-else-if="item.name === 'plaza'"
         class="nav-icon"
         viewBox="0 0 32 32"
         fill="none"
@@ -331,7 +331,7 @@ const onChange = (path: string) => {
   }
 }
 
-// ===== Moments icon animations =====
+// ===== Plaza icon animations =====
 .orbit-ring {
   transform-origin: 16px 16px;
 }

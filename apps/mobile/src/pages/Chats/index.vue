@@ -10,6 +10,7 @@ import {
   Empty,
 } from "vant";
 import { invoke } from "@tauri-apps/api/core";
+import { clearAllUnreadSessions } from "@workspace/services";
 import { useChatSessions } from "@/hooks/useChatSession";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
@@ -43,7 +44,8 @@ watch(
   { immediate: true }
 );
 
-const filteredSessions = computed(() => {
+const sectionTab = ref(0);
+const searchList = computed(() => {
   if (!searchText.value.trim()) return sessions.value;
   const keyword = searchText.value.trim().toLowerCase();
   return sessions.value.filter((s) =>
@@ -51,14 +53,42 @@ const filteredSessions = computed(() => {
   );
 });
 
+const isGroupChat = (item: ChatSessionVo) => item.session_type === 2;
+
+const visibleSessions = computed(() =>
+  searchList.value.filter((s) =>
+    sectionTab.value === 1 ? isGroupChat(s) : !isGroupChat(s)
+  )
+);
+
 const totalUnread = computed(() =>
-  filteredSessions.value.reduce((sum, s) => sum + (s.unread_count || 0), 0)
+  visibleSessions.value.reduce((sum, s) => sum + (s.unread_count || 0), 0)
+);
+
+const emptyText = computed(() =>
+  sectionTab.value === 1 ? "暂无群聊会话" : "暂无单聊会话"
 );
 
 const onRefresh = async () => {
   refreshing.value = true;
   await refresh();
   refreshing.value = false;
+};
+
+const onClearAllUnread = async () => {
+  try {
+    await showConfirmDialog({
+      title: "全部已读",
+      message: "确定将所有会话标记为已读吗？",
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+    });
+  } catch {
+    return;
+  }
+  await clearAllUnreadSessions();
+  await refresh();
+  showToast({ message: "已全部标记为已读", icon: "success" });
 };
 
 const openChat = async (item: ChatSessionVo) => {
@@ -109,6 +139,12 @@ const getAvatar = (item: ChatSessionVo) => {
   return DEFAULT_AVATAR;
 };
 
+const hasResolvedAvatar = (item: ChatSessionVo) => {
+  if (isSelfChat(item)) return false;
+  const icon = item.friend_icon;
+  return !!icon && avatarMap.value[icon] != null;
+};
+
 const getDisplayName = (item: ChatSessionVo) => {
   if (isSelfChat(item)) return "我的笔记";
   return item.friend_name || item.send_user || "未知";
@@ -128,13 +164,27 @@ const getDisplayMessage = (item: ChatSessionVo) =>
             totalUnread > 99 ? "99+" : totalUnread
           }}</span>
         </h1>
-        <button class="add-btn" @click="router.push('/friends/search')">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-            />
-          </svg>
-        </button>
+        <div class="header-actions">
+          <button
+            class="hdr-btn"
+            aria-label="全部已读"
+            title="全部已读"
+            @click="onClearAllUnread"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"
+              />
+            </svg>
+          </button>
+          <button class="hdr-btn" @click="router.push('/friends/search')">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="search-section">
         <div class="search-bar">
@@ -160,6 +210,23 @@ const getDisplayMessage = (item: ChatSessionVo) =>
       </div>
     </div>
 
+    <div class="seg-tabs">
+      <button
+        class="seg-tab"
+        :class="{ active: sectionTab === 0 }"
+        @click="sectionTab = 0"
+      >
+        单聊
+      </button>
+      <button
+        class="seg-tab"
+        :class="{ active: sectionTab === 1 }"
+        @click="sectionTab = 1"
+      >
+        群聊
+      </button>
+    </div>
+
     <PullRefresh
       v-model="refreshing"
       :head-height="80"
@@ -168,16 +235,25 @@ const getDisplayMessage = (item: ChatSessionVo) =>
       loading-text="加载中..."
       @refresh="onRefresh"
     >
-      <div v-if="filteredSessions.length > 0" class="session-list">
-        <SwipeCell v-for="item in filteredSessions" :key="item.nano_id">
+      <div v-if="visibleSessions.length > 0" class="session-list">
+        <SwipeCell v-for="item in visibleSessions" :key="item.nano_id">
           <div
             class="session-item"
             :class="{ self: isSelfChat(item) }"
             @click="openChat(item)"
           >
-            <div class="avatar-wrapper">
+            <div
+              class="avatar-wrapper"
+              :class="{
+                self: isSelfChat(item),
+                group: isGroupChat(item) && !hasResolvedAvatar(item),
+              }"
+            >
               <img
-                v-if="!isSelfChat(item)"
+                v-if="
+                  !isSelfChat(item) &&
+                  (!isGroupChat(item) || hasResolvedAvatar(item))
+                "
                 :src="getAvatar(item)"
                 :alt="getDisplayName(item)"
                 class="avatar"
@@ -185,7 +261,16 @@ const getDisplayMessage = (item: ChatSessionVo) =>
                   ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
                 "
               />
-              <div v-else class="avatar self-avatar">📝</div>
+              <div v-else-if="isSelfChat(item)" class="avatar self-avatar">
+                📝
+              </div>
+              <div v-else class="avatar group-avatar-fallback">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+                  />
+                </svg>
+              </div>
             </div>
             <div class="session-info">
               <div class="session-top">
@@ -216,7 +301,7 @@ const getDisplayMessage = (item: ChatSessionVo) =>
           </template>
         </SwipeCell>
       </div>
-      <Empty v-else description="暂无聊天消息">
+      <Empty v-else :description="emptyText">
         <template #image>
           <svg
             viewBox="0 0 24 24"
@@ -230,12 +315,6 @@ const getDisplayMessage = (item: ChatSessionVo) =>
         </template>
       </Empty>
     </PullRefresh>
-
-    <div class="fab" @click="router.push('/friends/search')">
-      <svg viewBox="0 0 24 24" fill="white">
-        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-      </svg>
-    </div>
   </div>
 </template>
 
@@ -287,7 +366,13 @@ const getDisplayMessage = (item: ChatSessionVo) =>
   justify-content: center;
 }
 
-.add-btn {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hdr-btn {
   width: 40px;
   height: 40px;
   display: flex;
@@ -370,44 +455,113 @@ const getDisplayMessage = (item: ChatSessionVo) =>
   }
 }
 
+.seg-tabs {
+  margin: 8px 12px 10px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.seg-tab {
+  flex: 1;
+  height: 34px;
+  border: none;
+  border-radius: calc(var(--radius-lg) - 5px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+
+  &.active {
+    background: var(--gradient-primary);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+}
+
 .session-list {
-  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 12px 12px;
 }
 
 .session-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 20px;
+  gap: 12px;
+  padding: 14px 16px;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: transform var(--transition-fast);
+
   &:active {
-    background: var(--surface-hover);
+    transform: scale(0.98);
   }
 }
 
 .avatar-wrapper {
-  position: relative;
   flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  &.self {
+    padding: 0;
+    background: none;
+  }
+  &.group {
+    padding: 0;
+    background: none;
+  }
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
+  display: block;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: var(--shadow-sm);
+  background: var(--card-bg);
 }
 
 .self-avatar {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
+}
+
+.group-avatar-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .session-info {
@@ -424,8 +578,11 @@ const getDisplayMessage = (item: ChatSessionVo) =>
 
 .session-name {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .session-time {
@@ -470,30 +627,6 @@ const getDisplayMessage = (item: ChatSessionVo) =>
   svg {
     width: 20px;
     height: 20px;
-  }
-}
-
-.fab {
-  position: fixed;
-  bottom: 84px;
-  right: 20px;
-  width: 52px;
-  height: 52px;
-  background: var(--fab-bg);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--fab-shadow);
-  cursor: pointer;
-  z-index: 100;
-  transition: all var(--transition-normal);
-  svg {
-    width: 26px;
-    height: 26px;
-  }
-  &:active {
-    transform: scale(0.95);
   }
 }
 

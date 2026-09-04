@@ -81,3 +81,38 @@ export function getMessagePreview(
       return lastMessage || "";
   }
 }
+
+/** 动态/广场时间展示（入参为秒时间戳） */
+export function formatMomentTime(timestampSeconds?: number): string {
+  if (!timestampSeconds) return "";
+  const date = new Date(timestampSeconds * 1000);
+  const now = new Date();
+
+  const startToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
+  const startDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  ).getTime();
+  const dayDiff = Math.floor((startToday - startDate) / (24 * 60 * 60 * 1000));
+  const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
+
+  if (diffMin < 1) return "刚刚";
+  if (diffMin < 60) return `${diffMin} 分钟前`;
+  if (dayDiff === 0) {
+    const diffHour = Math.floor(diffMin / 60);
+    return `${diffHour} 小时前`;
+  }
+  if (dayDiff === 1) return "昨天";
+  if (dayDiff > 1 && dayDiff < 7) return `${dayDiff} 天前`;
+
+  const sameYear = now.getFullYear() === date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  if (sameYear) return `${mm}-${dd}`;
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
