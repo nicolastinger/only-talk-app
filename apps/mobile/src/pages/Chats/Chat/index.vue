@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { showToast, showLoadingToast, closeToast } from "vant";
 import { useMessageApi } from "@/hooks/useMessageApi";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useCallManager } from "@/webrtc/callManager";
 import { getMyUuid } from "@/utils/api";
 import { resolveContentToTempFile } from "@/utils/tempImage";
 import { formatMessageTime } from "@/utils/time";
@@ -32,6 +33,9 @@ interface ChatMessage {
 
 const messages = ref<ChatMessage[]>([]);
 const inputText = ref("");
+const inputRef = ref<HTMLInputElement | null>(null);
+const showToolPanel = ref(false);
+const showEmojiGrid = ref(false);
 const loading = ref(true);
 const loadingMore = ref(false);
 const currentPage = ref(1);
@@ -165,6 +169,31 @@ const onScroll = () => {
     currentPage.value = nextPage;
     loadMessages(nextPage, true);
   }
+};
+
+const EMOJI_LIST = [
+  "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂",
+  "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩",
+  "😘", "😗", "😚", "😙", "🥲", "😋", "😛", "😜",
+  "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐",
+  "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬",
+  "😮‍💨", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷",
+  "👍", "👎", "👏", "🙌", "🤝", "🙏", "💪", "🤘",
+  "❤️", "💔", "💯", "🔥", "⭐", "✨", "💥", "🎉",
+];
+
+const toggleToolPanel = () => {
+  showToolPanel.value = !showToolPanel.value;
+  if (showToolPanel.value) {
+    showEmojiGrid.value = false;
+    inputRef.value?.blur();
+  }
+};
+
+const selectEmojiItem = (emoji: string) => {
+  inputText.value += emoji;
+  showEmojiGrid.value = false;
+  inputRef.value?.focus();
 };
 
 const sendMessage = async () => {
@@ -358,7 +387,22 @@ const getMessageText = (msg: TextQuicMsgVo): string => {
       return "[文件]";
     case 5:
       return "[视频通话]";
+    case 12:
+      return "[视频通话邀请]";
+    case 13:
+      return "[已接听]";
+    case 14:
+      return "[已拒绝]";
+    case 15:
+      return "[通话结束]";
     case 100:
+      try {
+        const parsed = JSON.parse(msg.raw);
+        const type = parsed?.type as string | undefined;
+        if (type === "offer") return "[视频通话]";
+        if (type === "answer") return "[已接听]";
+        if (type === "end") return "[通话结束]";
+      } catch {}
       return "[WebRTC信令]";
     default:
       return msg.raw || "";
@@ -367,6 +411,14 @@ const getMessageText = (msg: TextQuicMsgVo): string => {
 
 const getFriendAvatar = () => chatAvatar.value || DEFAULT_AVATAR;
 const goBack = () => router.back();
+
+const { startCall } = useCallManager();
+const handleStartCall = async (media: "audio" | "video") => {
+  showToolPanel.value = false;
+  showEmojiGrid.value = false;
+  inputRef.value?.blur();
+  await startCall(friendId, media);
+};
 </script>
 
 <template>
@@ -386,6 +438,30 @@ const goBack = () => router.back();
       />
       <div class="header-info">
         <span class="header-name">{{ friendInfo.name || friendId }}</span>
+      </div>
+      <div class="header-actions">
+        <button
+          class="call-entry-btn"
+          aria-label="语音通话"
+          @click="handleStartCall('audio')"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
+            />
+          </svg>
+        </button>
+        <button
+          class="call-entry-btn"
+          aria-label="视频通话"
+          @click="handleStartCall('video')"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
+            />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -480,11 +556,57 @@ const goBack = () => router.back();
       </div>
     </div>
 
+    <transition name="tool-panel">
+      <div v-if="showToolPanel" class="tool-panel">
+        <div class="tool-grid">
+          <div
+            class="tool-item"
+            :class="{ active: showEmojiGrid }"
+            @click="showEmojiGrid = !showEmojiGrid"
+          >
+            <span class="tool-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"
+                />
+              </svg>
+            </span>
+            <span class="tool-label">表情包</span>
+          </div>
+          <div class="tool-item" @click="sendImage">
+            <span class="tool-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+                />
+              </svg>
+            </span>
+            <span class="tool-label">图片</span>
+          </div>
+        </div>
+        <div v-if="showEmojiGrid" class="emoji-grid">
+          <span
+            v-for="(emoji, index) in EMOJI_LIST"
+            :key="index"
+            class="emoji-item"
+            @click="selectEmojiItem(emoji)"
+          >
+            {{ emoji }}
+          </span>
+        </div>
+      </div>
+    </transition>
+
     <div class="input-bar" v-if="!loading">
-      <button class="img-btn" @click="sendImage">
+      <button
+        class="tool-btn"
+        :class="{ open: showToolPanel }"
+        :aria-label="showToolPanel ? '收起工具面板' : '展开工具面板'"
+        @click="toggleToolPanel"
+      >
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path
-            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+            d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
           />
         </svg>
       </button>
@@ -559,6 +681,33 @@ const goBack = () => router.back();
 .header-info {
   flex: 1;
   min-width: 0;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.call-entry-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+  &:active {
+    background: var(--surface-hover);
+    color: var(--brand-blue);
+  }
 }
 .header-name {
   font-size: 16px;
@@ -748,7 +897,7 @@ const goBack = () => router.back();
   border-top: 1px solid var(--border-light);
   flex-shrink: 0;
 }
-.img-btn {
+.tool-btn {
   width: 40px;
   height: 40px;
   display: flex;
@@ -761,13 +910,115 @@ const goBack = () => router.back();
   cursor: pointer;
   box-shadow: var(--shadow-xs);
   flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
   svg {
     width: 22px;
     height: 22px;
   }
+  &.open {
+    transform: rotate(45deg);
+    color: var(--brand-blue);
+    border-color: var(--brand-blue);
+  }
   &:active {
     background: var(--surface-hover);
-    color: var(--brand-blue);
+  }
+}
+
+// ===== 展开/收起 工具面板 =====
+.tool-panel {
+  background: var(--header-bg);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+.tool-panel-enter-active,
+.tool-panel-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.tool-panel-enter-from,
+.tool-panel-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.tool-grid {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 14px 16px 12px;
+}
+.tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  .tool-icon {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border-medium);
+    border-radius: 16px;
+    color: var(--text-tertiary);
+    box-shadow: var(--shadow-xs);
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    svg {
+      width: 26px;
+      height: 26px;
+    }
+  }
+  .tool-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+  &:active {
+    .tool-icon {
+      transform: scale(0.92);
+      background: var(--surface-hover);
+    }
+  }
+  &.active {
+    .tool-icon {
+      color: var(--brand-blue);
+      border-color: var(--brand-blue);
+      box-shadow: var(--shadow-glow-sm);
+    }
+  }
+}
+.emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 12px 14px;
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-light);
+  animation: emoji-in 0.15s ease;
+  .emoji-item {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    border-radius: 8px;
+    cursor: pointer;
+    &:active {
+      background: var(--surface-hover);
+      transform: scale(0.9);
+    }
+  }
+}
+@keyframes emoji-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 .text-input {

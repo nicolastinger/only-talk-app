@@ -3,12 +3,15 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import BottomNav from "@/components/BottomNav/index.vue";
 import { useTheme } from "@/stores/theme";
+import { useCallManager } from "@/webrtc/callManager";
 
 const route = useRoute();
 useTheme();
+useCallManager();
 
 const showNav = computed(() => {
   const path = route.path;
+  if (path === "/call") return false;
   if (path.startsWith("/chats/chat/")) return false;
   if (path === "/friends/search" || path.startsWith("/friends/detail/"))
     return false;

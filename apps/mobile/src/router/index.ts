@@ -67,6 +67,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/call",
+    name: "Call",
+    component: () => import("@/pages/Call/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/",
     redirect: "/chats",
   },

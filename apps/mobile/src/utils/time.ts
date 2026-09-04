@@ -56,12 +56,23 @@ export function getMessagePreview(
       return "[图片]";
     case 3:
       return "[文件]";
+    case 5:
+      return "[视频通话]";
+    case 12:
+      return "[视频通话邀请]";
+    case 13:
+      return "[已接听]";
+    case 14:
+      return "[已拒绝]";
+    case 15:
+      return "[通话结束]";
     case 100:
       try {
         const parsed = JSON.parse(lastMessage);
-        if (parsed?.type === "offer") return "[视频通话]";
-        if (parsed?.type === "answer") return "[已接听]";
-        if (parsed?.type === "end") return "[通话结束]";
+        const type = parsed?.type as string | undefined;
+        if (type === "offer") return "[视频通话]";
+        if (type === "answer") return "[已接听]";
+        if (type === "end") return "[通话结束]";
       } catch {
         // 解析失败则回退到通用文案
       }
