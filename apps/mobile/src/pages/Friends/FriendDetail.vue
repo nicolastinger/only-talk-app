@@ -183,7 +183,7 @@ onMounted(loadDetail);
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: max(16px, env(safe-area-inset-top)) 20px;
   background: var(--header-bg);
   backdrop-filter: blur(20px);
   position: sticky;

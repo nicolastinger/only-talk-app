@@ -332,7 +332,7 @@ const getDisplayMessage = (item: ChatSessionVo) =>
   top: 0;
   z-index: 50;
   border-bottom: 1px solid var(--border-light);
-  padding: 16px 20px 0;
+  padding: max(16px, env(safe-area-inset-top)) 20px 0;
 }
 
 .header-top {

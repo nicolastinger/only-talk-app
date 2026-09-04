@@ -187,3 +187,9 @@ textarea {
   --van-field-input-text-color: var(--text-primary);
   --van-field-placeholder-text-color: var(--text-placeholder);
 }
+
+/* Edge-to-edge: let fixed nav bars sit below the status bar. */
+.van-nav-bar {
+  height: calc(46px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+}

@@ -423,7 +423,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: max(12px, env(safe-area-inset-top)) 16px;
   background: var(--header-bg);
   backdrop-filter: blur(20px);
   position: sticky;
