@@ -67,6 +67,48 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/settings",
+    component: () => import("@/pages/Settings/_layout.vue"),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: "",
+        name: "Settings",
+        component: () => import("@/pages/Settings/index.vue"),
+      },
+      {
+        path: "general",
+        name: "SettingsGeneral",
+        component: () => import("@/pages/Settings/General.vue"),
+      },
+      {
+        path: "notification",
+        name: "SettingsNotification",
+        component: () => import("@/pages/Settings/Notification.vue"),
+      },
+      {
+        path: "account",
+        name: "SettingsAccount",
+        component: () => import("@/pages/Settings/Account.vue"),
+      },
+      {
+        path: "blacklist",
+        name: "SettingsBlacklist",
+        component: () => import("@/pages/Settings/BlackList.vue"),
+      },
+      {
+        path: "plaza",
+        name: "SettingsPlaza",
+        component: () => import("@/pages/Settings/Plaza.vue"),
+      },
+      {
+        path: "about",
+        name: "SettingsAbout",
+        component: () => import("@/pages/Settings/About.vue"),
+      },
+    ],
+  },
+  {
     path: "/call",
     name: "Call",
     component: () => import("@/pages/Call/index.vue"),

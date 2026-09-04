@@ -16,6 +16,7 @@ import {
   Loading,
   Overlay,
   Dialog,
+  Switch,
 } from "vant";
 
 const app = createApp(App);
@@ -33,5 +34,6 @@ app.use(Toast);
 app.use(Loading);
 app.use(Overlay);
 app.use(Dialog);
+app.use(Switch);
 
 app.mount("#app");
