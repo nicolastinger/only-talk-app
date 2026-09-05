@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import BottomNav from "@/components/BottomNav/index.vue";
 import QuicStatusBar from "@/components/QuicStatusBar/index.vue";
+import ReconnectOverlay from "@/components/ReconnectOverlay/index.vue";
 import SyncOverlay from "@/components/SyncOverlay/index.vue";
 import { startQuicMonitor, stopQuicMonitor } from "@/stores/quic";
 import { useTheme } from "@/stores/theme";
@@ -42,6 +43,7 @@ onUnmounted(() => {
     </router-view>
     <BottomNav v-if="showNav" />
     <QuicStatusBar />
+    <ReconnectOverlay />
     <SyncOverlay />
   </div>
 </template>
