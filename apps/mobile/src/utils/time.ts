@@ -1,3 +1,5 @@
+import { getMessageDisplayText } from "@/chat/messageParse";
+
 export function formatMessageTime(timestamp: number): string {
   const now = new Date();
   const date = new Date(timestamp);
@@ -44,42 +46,7 @@ export function getMessagePreview(
   text_type: number,
   lastMessage: string
 ): string {
-  switch (text_type) {
-    case 1:
-      try {
-        const parsed = JSON.parse(lastMessage);
-        return parsed.text || lastMessage;
-      } catch {
-        return lastMessage;
-      }
-    case 2:
-      return "[图片]";
-    case 3:
-      return "[文件]";
-    case 5:
-      return "[视频通话]";
-    case 12:
-      return "[视频通话邀请]";
-    case 13:
-      return "[已接听]";
-    case 14:
-      return "[已拒绝]";
-    case 15:
-      return "[通话结束]";
-    case 100:
-      try {
-        const parsed = JSON.parse(lastMessage);
-        const type = parsed?.type as string | undefined;
-        if (type === "offer") return "[视频通话]";
-        if (type === "answer") return "[已接听]";
-        if (type === "end") return "[通话结束]";
-      } catch {
-        // 解析失败则回退到通用文案
-      }
-      return "[WebRTC信令]";
-    default:
-      return lastMessage || "";
-  }
+  return getMessageDisplayText(text_type, lastMessage);
 }
 
 /** 动态/广场时间展示（入参为秒时间戳） */

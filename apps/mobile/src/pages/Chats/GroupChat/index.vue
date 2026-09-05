@@ -1,58 +1,99 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick, watch } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { showToast, showConfirmDialog } from "vant";
 import { useMessageApi } from "@/hooks/useMessageApi";
+import { useGroupMessageAck } from "@/hooks/useGroupMessageAck";
+import { useGroupMemberInfo } from "@/hooks/useGroupMemberInfo";
 import { useAvatar } from "@/hooks/useAvatar";
-import { formatMessageTime } from "@/utils/time";
-import { getChatFileByBizId } from "@workspace/services";
-import { DEFAULT_AVATAR } from "@/stores/user";
-import { useUserStore } from "@/stores/user";
-import type { TextQuicMsgVo, GroupVo } from "@workspace/types";
 import { getMyUuid } from "@/utils/api";
+import { attachViewportHeight } from "@/utils/viewport";
+import { resolveContentToTempFile } from "@/utils/tempImage";
+import { convertPathToTauriUrl, selectFile } from "@workspace/services";
+import { DEFAULT_AVATAR } from "@/stores/user";
+import { useMyAvatar } from "@/hooks/useMyAvatar";
+import type { TextQuicMsgVo, GroupVo } from "@workspace/types";
+import type { UiChatMessage } from "@/chat/types";
+import {
+  MSG_TYPE_GROUP_IMAGE,
+  MSG_TYPE_GROUP_TEXT,
+  MSG_TYPE_GROUP_FILE,
+  MSG_TYPE_RECALL_SUCCESS,
+  MSG_TYPE_RECALL_FAILURE,
+  RELOAD_ON_ACK_TYPES,
+} from "@/chat/messageTypes";
+import { needTimeDivider, parseGroupImageBizId } from "@/chat/messageParse";
+import { loadImageUrl } from "@/chat/media";
+import { genNanoId } from "@/chat/id";
+import MessageList from "@/components/chat/MessageList.vue";
+import MessageInputBar from "@/components/chat/MessageInputBar.vue";
+import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 
 const route = useRoute();
 const router = useRouter();
 const groupId = route.params.groupId as string;
 
-interface ChatMessage {
-  from: "mine" | "friend" | "system";
-  textMsg: TextQuicMsgVo;
-  ack: boolean | undefined;
-  showTime: boolean;
-  imageUrl?: string | null;
-  senderName?: string;
-}
-
-const messages = ref<ChatMessage[]>([]);
+const messages = ref<UiChatMessage[]>([]);
 const inputText = ref("");
 const loading = ref(true);
 const loadingMore = ref(false);
 const currentPage = ref(1);
 const hasMore = ref(true);
 const pageSize = 20;
-const groupInfo = reactive<Partial<GroupVo>>({ group_name: "", avatar: "", member_count: 0 });
+const groupInfo = reactive<Partial<GroupVo>>({
+  group_name: "",
+  avatar: "",
+  member_count: 0,
+});
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
 const meUuid = ref("");
 
 const { textMessage } = useMessageApi(() => groupId, undefined, true);
+const { groupAckMessage } = useGroupMessageAck(groupId);
 const { getAvatarUrl } = useAvatar();
-const { userInfo } = useUserStore();
+const { myAvatar, ensureMyAvatar } = useMyAvatar(() => meUuid.value);
 
-const myAvatar = ref<string | null>(null);
 const groupAvatar = ref<string | null>(null);
+const ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
+let viewportCleanup: (() => void) | null = null;
 
-const imageCache = new Map<string, string>();
+const senderUuids = computed(() => {
+  const set = new Set<string>();
+  for (const m of messages.value) {
+    const uuid = m.textMsg.send_user;
+    if (uuid && uuid !== meUuid.value && uuid !== "system") set.add(uuid);
+  }
+  return [...set];
+});
 
-const shortUuid = (uuid: string) => uuid.slice(0, 8);
+const { memberMap, avatarUrlMap } = useGroupMemberInfo(() => senderUuids.value);
+
+const isGroupImage = (t: number) => t === MSG_TYPE_GROUP_IMAGE;
+
+const startAckTimer = (nanoId: string) => {
+  clearAckTimer(nanoId);
+  const timer = setTimeout(() => {
+    const idx = messages.value.findIndex((m) => m.textMsg.nano_id === nanoId);
+    if (idx !== -1 && messages.value[idx].ack === false) {
+      messages.value[idx].failed = true;
+    }
+    ackTimers.delete(nanoId);
+  }, 10000);
+  ackTimers.set(nanoId, timer);
+};
+
+const clearAckTimer = (nanoId: string) => {
+  const timer = ackTimers.get(nanoId);
+  if (timer) {
+    clearTimeout(timer);
+    ackTimers.delete(nanoId);
+  }
+};
 
 const loadAvatars = async () => {
-  if (userInfo.value?.icon) {
-    const url = await getAvatarUrl(userInfo.value.icon);
-    if (url) myAvatar.value = url;
-  }
+  await ensureMyAvatar();
   if (groupInfo.avatar) {
     const url = await getAvatarUrl(groupInfo.avatar);
     if (url) groupAvatar.value = url;
@@ -61,16 +102,16 @@ const loadAvatars = async () => {
 
 const loadGroupInfo = async () => {
   try {
-    const data: GroupVo = await invoke("get_group_info_command", { groupId });
+    const data = (await invoke("get_group_info_command", {
+      groupId,
+    })) as GroupVo;
     groupInfo.group_name = data.group_name;
     groupInfo.avatar = data.avatar;
     groupInfo.member_count = data.member_count;
   } catch {
     try {
-      const localGroups: GroupVo[] = await invoke("get_group_list");
-      const found = localGroups.find(
-        (g: any) => g.group_uuid === groupId || g.group_id === groupId
-      );
+      const localGroups = (await invoke("get_group_list")) as GroupVo[];
+      const found = localGroups.find((g) => g.group_uuid === groupId);
       if (found) {
         groupInfo.group_name = found.group_name;
         groupInfo.avatar = found.avatar;
@@ -82,69 +123,58 @@ const loadGroupInfo = async () => {
   }
 };
 
-const loadImageMessage = async (msg: TextQuicMsgVo): Promise<string | null> => {
-  try {
-    // 群聊图片消息 raw 被双层序列化: {"text":"{...GroupImageRecord...}","send_user":"..."}
-    // 需要先解外层 GroupTextRecord，再解内层 GroupImageRecord
-    let parsed = JSON.parse(msg.raw);
-    if (parsed.text) {
-      parsed = JSON.parse(parsed.text);
-    }
-    const bizId = parsed.biz_id;
-    if (!bizId) return null;
-    if (imageCache.has(bizId)) return imageCache.get(bizId)!;
-    const files = await getChatFileByBizId(bizId, msg.nano_id);
-    if (files && files.length > 0) {
-      const url = files[0].tauri_file_path;
-      if (url) {
-        imageCache.set(bizId, url);
-        return url;
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
+const resolveGroupImageUrl = async (
+  msg: TextQuicMsgVo
+): Promise<string | null> => {
+  const bizId = parseGroupImageBizId(msg.raw);
+  if (!bizId) return null;
+  return loadImageUrl(bizId, msg.nano_id);
 };
 
-const loadMessages = async (page: number = 1, prepend: boolean = false) => {
+const makeUiMessage = (
+  msg: TextQuicMsgVo,
+  index: number,
+  arr: TextQuicMsgVo[]
+): UiChatMessage => {
+  const mine = msg.send_user === meUuid.value;
+  const system = msg.send_user === "system";
+  return {
+    from: mine ? "mine" : system ? "system" : "friend",
+    textMsg: msg,
+    ack: undefined,
+    failed: false,
+    showTime: index === 0 || needTimeDivider(arr[index - 1].timestamp, msg.timestamp),
+    senderUuid: msg.send_user,
+  };
+};
+
+const loadMessages = async (page = 1, prepend = false) => {
   if (page === 1) loading.value = true;
   else loadingMore.value = true;
   try {
-    const data: TextQuicMsgVo[] = await invoke(
-      "get_group_chat_record_from_store",
-      {
-        groupId,
-        page: { size: pageSize, current: page, total: 0 },
-      }
-    );
+    const data = (await invoke("get_group_chat_record_from_store", {
+      groupId,
+      page: { size: pageSize, current: page, total: 0 },
+    })) as TextQuicMsgVo[];
     if (data.length < pageSize) hasMore.value = false;
 
-    const chatMessages: ChatMessage[] = data
-      .filter((m) => m.text_type !== 201)
-      .map((item, index, arr) => {
-        const isMine = item.send_user === meUuid.value;
-        const msg: ChatMessage = {
-          from: isMine ? "mine" : item.send_user === "system" ? "system" : "friend",
-          textMsg: item,
-          ack: undefined,
-          showTime:
-            index === 0 ||
-            item.timestamp - arr[index - 1].timestamp > 10 * 60 * 1000,
-          senderName: !isMine && item.send_user !== "system" ? shortUuid(item.send_user) : undefined,
-        };
-        return msg;
-      });
-
-    for (const msg of chatMessages) {
-      // 群聊图片消息类型是 2002
-      if (msg.textMsg.text_type === 2002) {
-        msg.imageUrl = await loadImageMessage(msg.textMsg);
+    const list = data.filter(
+      (m) =>
+        m.text_type !== MSG_TYPE_RECALL_SUCCESS &&
+        m.text_type !== MSG_TYPE_RECALL_FAILURE
+    );
+    const chatMessages: UiChatMessage[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const ui = makeUiMessage(list[i], i, list);
+      if (isGroupImage(list[i].text_type)) {
+        ui.imageUrl = await resolveGroupImageUrl(list[i]);
       }
+      chatMessages.push(ui);
     }
 
-    if (prepend) messages.value = [...chatMessages, ...messages.value];
-    else {
+    if (prepend) {
+      messages.value = [...chatMessages, ...messages.value];
+    } else {
       messages.value = chatMessages;
       currentPage.value = 1;
       await nextTick();
@@ -158,84 +188,292 @@ const loadMessages = async (page: number = 1, prepend: boolean = false) => {
   }
 };
 
+const reloadFirstPage = () => {
+  hasMore.value = true;
+  loadMessages(1, false).catch(() => {});
+};
+
 const onScroll = () => {
   const el = containerRef.value;
   if (!el || loadingMore.value || !hasMore.value) return;
   if (el.scrollTop <= 80) {
     const nextPage = currentPage.value + 1;
     currentPage.value = nextPage;
-    loadMessages(nextPage, true);
+    loadMessages(nextPage, true).catch(() => {});
   }
 };
 
-const sendMessage = async () => {
+const scrollToBottom = (smooth: boolean) => {
+  const el = containerRef.value;
+  if (!el) return;
+  el.scrollTo({
+    top: el.scrollHeight,
+    behavior: smooth ? "smooth" : ("instant" as ScrollBehavior),
+  });
+};
+
+const pushMessage = async (msg: TextQuicMsgVo) => {
+  if (messages.value.find((m) => m.textMsg.nano_id === msg.nano_id)) return;
+  const prev = messages.value[messages.value.length - 1];
+  const mine = msg.send_user === meUuid.value;
+  const system = msg.send_user === "system";
+  const ui: UiChatMessage = {
+    from: mine ? "mine" : system ? "system" : "friend",
+    textMsg: msg,
+    ack: undefined,
+    failed: false,
+    showTime: !prev || needTimeDivider(prev.textMsg.timestamp, msg.timestamp),
+    senderUuid: msg.send_user,
+  };
+  if (isGroupImage(msg.text_type)) {
+    ui.imageUrl = await resolveGroupImageUrl(msg);
+  }
+  messages.value.push(ui);
+};
+
+/* ============ 发送 ============ */
+
+const sendGroupText = async () => {
   const text = inputText.value.trim();
   if (!text) return;
-  const nanoId = [...Array(21)]
-    .map(
-      () =>
-        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-"[
-          Math.floor(Math.random() * 64)
-        ]
-    )
-    .join("");
   const textMsg: TextQuicMsgVo = {
-    nano_id: nanoId,
-    text_type: 2001, // 群聊文本消息类型是 2001
-    raw: text, // 群聊文本消息直接发送文本内容
+    nano_id: genNanoId(),
+    text_type: MSG_TYPE_GROUP_TEXT,
+    raw: text,
     recv_user: groupId,
     send_user: "",
     timestamp: Date.now(),
   };
-  const tempMsg: ChatMessage = {
+  const ui: UiChatMessage = {
     from: "mine",
     textMsg,
     ack: false,
+    failed: false,
     showTime:
       messages.value.length === 0 ||
-      Date.now() -
-        messages.value[messages.value.length - 1].textMsg.timestamp >
-        10 * 60 * 1000,
+      needTimeDivider(
+        messages.value[messages.value.length - 1].textMsg.timestamp,
+        Date.now()
+      ),
+    senderUuid: meUuid.value,
   };
-  messages.value.push(tempMsg);
+  messages.value.push(ui);
   inputText.value = "";
   await nextTick();
   scrollToBottom(true);
+  startAckTimer(textMsg.nano_id);
   try {
-    // 群聊使用 send_group_text_msg 命令
     await invoke("send_group_text_msg", { textQuicMsg: textMsg });
   } catch (e) {
-    tempMsg.ack = undefined;
-    showToast({ message: "发送失败", icon: "fail" });
+    console.error("群消息发送失败:", e);
+    const idx = messages.value.findIndex(
+      (m) => m.textMsg.nano_id === textMsg.nano_id
+    );
+    if (idx !== -1) messages.value[idx].failed = true;
+    showToast({ message: "发送失败，点击消息重试", icon: "fail" });
   }
 };
 
+const selectAndSendGroup = async (
+  media: "image" | "file",
+  type: number,
+  command: string
+) => {
+  try {
+    const filters =
+      media === "image"
+        ? [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
+        : undefined;
+    const filePaths = await selectFile(false, false, filters);
+    if (!filePaths || filePaths.length === 0) return;
+
+    let filePath = filePaths[0];
+    let localPreview: string | null = null;
+    if (filePath.startsWith("content://")) {
+      try {
+        const { tempPath, preview } = await resolveContentToTempFile(filePath);
+        filePath = tempPath;
+        localPreview = preview;
+      } catch (e) {
+        console.error("读取文件失败:", e);
+        showToast({ message: "读取文件失败", icon: "fail" });
+        return;
+      }
+    }
+
+    const textMsg: TextQuicMsgVo = {
+      nano_id: genNanoId(),
+      text_type: type,
+      raw: filePath,
+      recv_user: groupId,
+      send_user: "",
+      timestamp: Date.now(),
+    };
+    const ui: UiChatMessage = {
+      from: "mine",
+      textMsg,
+      ack: false,
+      failed: false,
+      showTime:
+        messages.value.length === 0 ||
+        needTimeDivider(
+          messages.value[messages.value.length - 1].textMsg.timestamp,
+          Date.now()
+        ),
+      senderUuid: meUuid.value,
+    };
+    if (media === "image") {
+      ui.imageUrl = localPreview || convertPathToTauriUrl(filePath);
+      ui.sendingImage = true;
+    }
+    messages.value.push(ui);
+    await nextTick();
+    scrollToBottom(true);
+    startAckTimer(textMsg.nano_id);
+    try {
+      await invoke(command, { textQuicMsg: textMsg });
+    } catch (e) {
+      console.error("群媒体发送失败:", e);
+      const idx = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
+      if (idx !== -1) {
+        messages.value[idx].failed = true;
+        messages.value[idx].sendingImage = false;
+      }
+      showToast({
+        message: media === "image" ? "图片发送失败" : "文件发送失败",
+        icon: "fail",
+      });
+    }
+  } catch (e) {
+    console.error("选择文件失败:", e);
+  }
+};
+
+const sendGroupImage = () =>
+  selectAndSendGroup("image", MSG_TYPE_GROUP_IMAGE, "send_group_image_msg");
+const sendGroupFile = () =>
+  selectAndSendGroup("file", MSG_TYPE_GROUP_FILE, "send_group_file_msg");
+
+/** 群聊失败重发：群消息无 retry_send_msg 通道，重新以新 nano_id 发送 */
+const handleRetry = async (msg: UiChatMessage) => {
+  const idx = messages.value.findIndex(
+    (m) => m.textMsg.nano_id === msg.textMsg.nano_id
+  );
+  if (idx !== -1) {
+    messages.value.splice(idx, 1);
+  }
+  const raw = msg.textMsg.raw;
+  const type = msg.textMsg.text_type;
+  const textMsg: TextQuicMsgVo = {
+    nano_id: genNanoId(),
+    text_type: type,
+    raw,
+    recv_user: groupId,
+    send_user: "",
+    timestamp: Date.now(),
+  };
+  const ui: UiChatMessage = {
+    from: "mine",
+    textMsg,
+    ack: false,
+    failed: false,
+    showTime:
+      messages.value.length === 0 ||
+      needTimeDivider(
+        messages.value[messages.value.length - 1].textMsg.timestamp,
+        Date.now()
+      ),
+    senderUuid: meUuid.value,
+  };
+  if (type === MSG_TYPE_GROUP_IMAGE) {
+    ui.imageUrl = convertPathToTauriUrl(raw);
+    ui.sendingImage = true;
+  }
+  messages.value.push(ui);
+  await nextTick();
+  scrollToBottom(true);
+  startAckTimer(textMsg.nano_id);
+
+  const command =
+    type === MSG_TYPE_GROUP_TEXT
+      ? "send_group_text_msg"
+      : type === MSG_TYPE_GROUP_IMAGE
+      ? "send_group_image_msg"
+      : "send_group_file_msg";
+  try {
+    await invoke(command, { textQuicMsg: textMsg });
+  } catch (e) {
+    console.error("群消息重发失败:", e);
+    const i = messages.value.findIndex(
+      (m) => m.textMsg.nano_id === textMsg.nano_id
+    );
+    if (i !== -1) {
+      messages.value[i].failed = true;
+      messages.value[i].sendingImage = false;
+    }
+    showToast({ message: "重发失败", icon: "fail" });
+  }
+};
+
+/* ============ 实时消息 ============ */
+
 watch(textMessage, async (msg) => {
   if (!msg) return;
-  if (msg.text_type === 201) {
+  if (msg.text_type === MSG_TYPE_RECALL_SUCCESS) {
     const idx = messages.value.findIndex((m) => m.textMsg.nano_id === msg.raw);
-    if (idx !== -1) messages.value[idx].ack = true;
-  } else {
-    if (messages.value.find((m) => m.textMsg.nano_id === msg.nano_id)) return;
-    const isMine = msg.send_user === meUuid.value;
-    const from = isMine ? "mine" : msg.send_user === "system" ? "system" : "friend";
-    const prev = messages.value[messages.value.length - 1];
-    const newMsg: ChatMessage = {
-      from: from as ChatMessage["from"],
-      textMsg: msg,
-      ack: undefined,
-      showTime:
-        !prev || msg.timestamp - prev.textMsg.timestamp > 10 * 60 * 1000,
-      senderName: !isMine && msg.send_user !== "system" ? shortUuid(msg.send_user) : undefined,
-    };
-    // 群聊图片消息类型是 2002
-    if (msg.text_type === 2002) {
-      newMsg.imageUrl = await loadImageMessage(msg);
+    if (idx !== -1) {
+      clearAckTimer(msg.raw);
+      messages.value[idx].ack = true;
+      messages.value[idx].failed = false;
+      if (RELOAD_ON_ACK_TYPES.includes(messages.value[idx].textMsg.text_type)) {
+        reloadFirstPage();
+      }
     }
-    messages.value.push(newMsg);
-    nextTick(() => scrollToBottom(true));
+    return;
+  }
+  if (msg.text_type === MSG_TYPE_RECALL_FAILURE) {
+    const idx = messages.value.findIndex((m) => m.textMsg.nano_id === msg.raw);
+    if (idx !== -1) messages.value[idx].failed = true;
+    return;
+  }
+  await pushMessage(msg);
+  nextTick(() => scrollToBottom(true));
+  invoke("mark_read_chat_session", { friendUuid: groupId }).catch(() => {});
+});
+
+// 群消息 ack（2201 → group_message_ack 事件）
+watch(groupAckMessage, async (ack) => {
+  if (!ack) return;
+  const idx = messages.value.findIndex((m) => m.textMsg.nano_id === ack.raw);
+  if (idx !== -1) {
+    clearAckTimer(ack.raw);
+    messages.value[idx].ack = true;
+    messages.value[idx].failed = false;
+    if (RELOAD_ON_ACK_TYPES.includes(messages.value[idx].textMsg.text_type)) {
+      reloadFirstPage();
+    }
   }
 });
+
+// 对齐 PC：列表末尾消息变化且无 ack 时打群已读
+watch(
+  messages,
+  (list) => {
+    if (list.length > 1) {
+      const last = list[list.length - 1];
+      if (last.textMsg.nano_id && last.ack === undefined) {
+        invoke("mark_group_read", {
+          groupUuid: groupId,
+          nanoId: last.textMsg.nano_id,
+          timestamp: last.textMsg.timestamp,
+        }).catch(() => {});
+      }
+    }
+  },
+  { deep: false }
+);
 
 const handleLeaveGroup = async () => {
   try {
@@ -246,11 +484,20 @@ const handleLeaveGroup = async () => {
       confirmButtonColor: "#ef4444",
       cancelButtonText: "取消",
     });
+  } catch {
+    return;
+  }
+  try {
     await invoke("leave_group_command", { groupId });
     router.back();
   } catch (e) {
-    if (e !== "cancel") console.error("退出群聊失败:", e);
+    console.error("退出群聊失败:", e);
+    showToast({ message: "退出群聊失败", icon: "fail" });
   }
+};
+
+const markReadSession = () => {
+  invoke("mark_read_chat_session", { friendUuid: groupId }).catch(() => {});
 };
 
 onMounted(async () => {
@@ -262,54 +509,46 @@ onMounted(async () => {
   await loadGroupInfo();
   await loadAvatars();
   await loadMessages(1);
-  invoke("mark_read_chat_session", { friendUuid: groupId }).catch(() => {});
+  markReadSession();
+  invoke("add_user_map", {
+    map: { current_session_friend: groupId },
+  }).catch(() => {});
 
-  if (window.visualViewport) {
-    const vv = window.visualViewport;
-    const handleViewportChange = () => {
-      if (chatPageRef.value) {
-        chatPageRef.value.style.height = `${vv.height}px`;
-      }
-    };
-    vv.addEventListener("resize", handleViewportChange);
-  }
+  viewportCleanup = attachViewportHeight(() => chatPageRef.value);
 });
 
-const scrollToBottom = (smooth: boolean) => {
-  const el = containerRef.value;
-  if (!el) return;
-  el.scrollTo({
-    top: el.scrollHeight,
-    behavior: smooth ? "smooth" : ("instant" as any),
-  });
-};
-
-const getMessageText = (msg: TextQuicMsgVo): string => {
-  switch (msg.text_type) {
-    case 1: // 单聊文本
-    case 2001: // 群聊文本
-      try {
-        // 群聊文本消息 raw 是双层 JSON: {"text":"消息内容","send_user":"..."}
-        return JSON.parse(msg.raw).text || msg.raw || "";
-      } catch {
-        return msg.raw || "";
-      }
-    case 2: // 单聊图片
-    case 2002: // 群聊图片
-      return "[图片]";
-    case 3: // 单聊文件
-    case 2003: // 群聊文件
-      return "[文件]";
-    case 5:
-      return "[视频通话]";
-    case 100:
-      return "[WebRTC信令]";
-    default:
-      return msg.raw || "";
-  }
-};
+onUnmounted(() => {
+  ackTimers.forEach((t) => clearTimeout(t));
+  ackTimers.clear();
+  viewportCleanup?.();
+  invoke("add_user_map", {
+    map: { current_session_friend: "-1" },
+  }).catch(() => {});
+});
 
 const goBack = () => router.back();
+
+/* ============ 图片预览 ============ */
+const preview = ref<{ urls: string[]; index: number } | null>(null);
+
+const handlePreview = async (msg: UiChatMessage) => {
+  if (preview.value) return;
+  const bizId = parseGroupImageBizId(msg.textMsg.raw);
+  if (!bizId) return;
+  try {
+    const { getGroupImageMessages } = await import("@workspace/services");
+    const result = await getGroupImageMessages(
+      groupId,
+      bizId,
+      msg.textMsg.nano_id
+    );
+    if (result.imageUrls.length > 0) {
+      preview.value = { urls: result.imageUrls, index: result.currentIndex };
+    }
+  } catch (e) {
+    console.error("获取群图片列表失败:", e);
+  }
+};
 </script>
 
 <template>
@@ -325,16 +564,17 @@ const goBack = () => router.back();
       <img
         :src="groupAvatar || DEFAULT_AVATAR"
         class="header-avatar"
+        alt="群头像"
         @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
       />
       <div class="header-info">
         <span class="header-name">{{ groupInfo.group_name || groupId }}</span>
-        <span class="header-count" v-if="groupInfo.member_count"
+        <span v-if="groupInfo.member_count" class="header-count"
           >{{ groupInfo.member_count }}人</span
         >
       </div>
-      <button class="more-btn" @click="handleLeaveGroup">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px">
+      <button class="more-btn" aria-label="群聊设置" @click="handleLeaveGroup">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 20px; height: 20px">
           <path
             d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
           />
@@ -351,110 +591,35 @@ const goBack = () => router.back();
       <div v-if="loadingMore" class="loading-more">
         <div class="loading-spinner small"></div>
       </div>
-      <div class="message-list">
-        <template v-for="msg in messages" :key="msg.textMsg.nano_id">
-          <div v-if="msg.showTime" class="time-divider">
-            <span>{{ formatMessageTime(msg.textMsg.timestamp) }}</span>
-          </div>
-          <div v-if="msg.from === 'system'" class="system-msg">
-            {{ getMessageText(msg.textMsg) }}
-          </div>
-
-          <!-- Other member's message: avatar on left, sender name above -->
-          <div v-else-if="msg.from === 'friend'" class="msg-row msg-friend">
-            <img
-              :src="groupAvatar || DEFAULT_AVATAR"
-              class="msg-avatar"
-              @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
-            />
-            <div class="msg-content">
-              <span class="sender-name" v-if="msg.senderName">{{
-                msg.senderName
-              }}</span>
-              <!-- 群聊图片消息类型是 2002 -->
-              <template v-if="msg.textMsg.text_type === 2002 && msg.imageUrl">
-                <img :src="msg.imageUrl" class="msg-image" alt="图片消息" />
-              </template>
-              <template v-else>
-                <div class="bubble bubble-friend">
-                  {{ getMessageText(msg.textMsg) }}
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- My message: avatar on right -->
-          <div v-else class="msg-row msg-mine">
-            <img
-              :src="myAvatar || DEFAULT_AVATAR"
-              class="msg-avatar"
-              @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
-            />
-            <div class="msg-content">
-              <!-- 群聊图片消息类型是 2002 -->
-              <template
-                v-if="
-                  msg.textMsg.text_type === 2002 &&
-                  (msg.imageUrl || (msg as any).sendingImage)
-                "
-              >
-                <div class="msg-image-wrapper">
-                  <img
-                    v-if="msg.imageUrl"
-                    :src="msg.imageUrl"
-                    class="msg-image"
-                    alt="图片消息"
-                  />
-                  <div v-else class="msg-image-placeholder">发送中...</div>
-                </div>
-              </template>
-              <template v-else>
-                <div
-                  class="bubble bubble-mine"
-                  :class="{ 'has-ack': msg.ack === true }"
-                >
-                  {{ getMessageText(msg.textMsg) }}
-                  <span v-if="msg.ack === true" class="sent-badge">
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path
-                        d="M1 4L3.5 6.5L9 1"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </div>
-              </template>
-              <span
-                v-if="msg.ack === false && !(msg as any).sendingImage"
-                class="ack-label ack-pending"
-                >发送中</span
-              >
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <div class="input-bar" v-if="!loading">
-      <input
-        v-model="inputText"
-        class="text-input"
-        placeholder="输入消息..."
-        @keyup.enter="sendMessage"
+      <MessageList
+        mode="group"
+        :messages="messages"
+        :my-avatar="myAvatar || DEFAULT_AVATAR"
+        :peer-avatar="groupAvatar || DEFAULT_AVATAR"
+        :fallback-avatar="DEFAULT_AVATAR"
+        :member-map="memberMap"
+        :avatar-url-map="avatarUrlMap"
+        @preview="handlePreview"
+        @retry="handleRetry"
       />
-      <button
-        class="send-btn"
-        :disabled="!inputText.trim()"
-        @click="sendMessage"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-        </svg>
-      </button>
     </div>
+
+    <MessageInputBar
+      v-if="!loading"
+      v-model="inputText"
+      :tools="['emoji', 'image', 'file']"
+      placeholder="输入消息..."
+      @send="sendGroupText"
+      @pick-image="sendGroupImage"
+      @pick-file="sendGroupFile"
+    />
+
+    <ImagePreviewer
+      v-if="preview"
+      :urls="preview.urls"
+      :initial-index="preview.index"
+      @close="preview = null"
+    />
   </div>
 </template>
 
@@ -466,7 +631,6 @@ const goBack = () => router.back();
   height: 100dvh;
   background: var(--page-bg);
 }
-
 .header {
   display: flex;
   align-items: center;
@@ -492,8 +656,13 @@ const goBack = () => router.back();
   cursor: pointer;
   box-shadow: var(--shadow-xs);
   flex-shrink: 0;
-  svg { width: 20px; height: 20px; }
-  &:active { background: var(--surface-hover); }
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+  &:active {
+    background: var(--surface-hover);
+  }
 }
 .header-avatar {
   width: 36px;
@@ -510,6 +679,10 @@ const goBack = () => router.back();
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .header-count {
   font-size: 12px;
@@ -528,8 +701,14 @@ const goBack = () => router.back();
   color: var(--text-tertiary);
   cursor: pointer;
   flex-shrink: 0;
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+  &:active {
+    background: var(--surface-hover);
+  }
 }
-
 .loading-state {
   flex: 1;
   display: flex;
@@ -538,7 +717,9 @@ const goBack = () => router.back();
   justify-content: center;
   gap: 12px;
   color: var(--text-tertiary);
-  p { font-size: 14px; }
+  p {
+    font-size: 14px;
+  }
 }
 .loading-spinner {
   width: 32px;
@@ -547,10 +728,17 @@ const goBack = () => router.back();
   border-top-color: var(--brand-blue);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  &.small { width: 20px; height: 20px; border-width: 2px; }
+  &.small {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+  }
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .message-container {
   flex: 1;
   overflow-y: auto;
@@ -561,170 +749,6 @@ const goBack = () => router.back();
 .loading-more {
   display: flex;
   justify-content: center;
-  padding: 12px;
-}
-.message-list {
-  padding: 0 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.time-divider {
-  display: flex;
-  justify-content: center;
-  padding: 12px 0;
-  span {
-    font-size: 11px;
-    color: var(--text-placeholder);
-    background: var(--surface);
-    padding: 4px 12px;
-    border-radius: var(--radius-full);
-    box-shadow: var(--shadow-xs);
-  }
-}
-.system-msg {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-placeholder);
-  padding: 6px 0;
-}
-
-.msg-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.msg-friend { flex-direction: row; }
-.msg-mine { flex-direction: row-reverse; }
-.msg-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  box-shadow: var(--shadow-xs);
-}
-.msg-content {
-  max-width: calc(100% - 50px);
-  display: flex;
-  flex-direction: column;
-}
-.sender-name {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 2px;
-  margin-left: 4px;
-}
-
-.bubble {
-  padding: 10px 14px;
-  border-radius: 18px;
-  word-break: break-word;
-  line-height: 1.5;
-  font-size: 15px;
-  position: relative;
-}
-.bubble-friend {
-  background: var(--surface);
-  border-bottom-left-radius: 6px;
-  box-shadow: var(--shadow-xs);
-  border: 1px solid var(--border-light);
-  color: var(--text-primary);
-}
-.bubble-mine {
-  background: var(--gradient-primary);
-  border-bottom-right-radius: 6px;
-  box-shadow: var(--shadow-sm);
-  color: #fff;
-  &.has-ack { padding-right: 26px; }
-}
-
-.sent-badge {
-  position: absolute;
-  bottom: 4px;
-  right: 6px;
-  width: 14px;
-  height: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.55);
-  pointer-events: none;
-}
-
-.ack-label {
-  font-size: 11px;
-  margin-top: 2px;
-  align-self: flex-end;
-}
-.ack-pending { color: var(--text-placeholder); }
-
-.msg-image {
-  max-width: 240px;
-  max-height: 320px;
-  border-radius: 10px;
-  box-shadow: var(--shadow-md);
-  object-fit: cover;
-  display: block;
-}
-.msg-image-wrapper { position: relative; }
-.msg-image-placeholder {
-  width: 160px;
-  height: 120px;
-  border-radius: 10px;
-  background: var(--surface-alt);
-  border: 1px dashed var(--border-medium);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: var(--text-placeholder);
-}
-
-.input-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
-  background: var(--header-bg);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border-light);
-  flex-shrink: 0;
-}
-.text-input {
-  flex: 1;
-  height: 40px;
-  padding: 0 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-medium);
-  border-radius: 20px;
-  outline: none;
-  font-size: 15px;
-  color: var(--text-primary);
-  box-shadow: var(--shadow-xs);
-  &::placeholder { color: var(--text-placeholder); }
-  &:focus {
-    border-color: var(--brand-blue);
-    box-shadow: var(--shadow-glow-sm);
-  }
-}
-.send-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--gradient-primary);
-  border: none;
-  border-radius: 50%;
-  color: #fff;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  flex-shrink: 0;
-  svg { width: 20px; height: 20px; }
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-  &:active:not(:disabled) { transform: scale(0.95); }
+  padding: 8px;
 }
 </style>

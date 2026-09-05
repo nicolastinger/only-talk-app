@@ -41,6 +41,9 @@ importers:
       '@tauri-apps/plugin-fs':
         specifier: ^2.5.1
         version: 2.5.1
+      '@tauri-apps/plugin-opener':
+        specifier: ^2.5.3
+        version: 2.5.3
       '@workspace/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -9065,7 +9068,7 @@ snapshots:
 
   '@tauri-apps/plugin-opener@2.5.3':
     dependencies:
-      '@tauri-apps/api': 2.9.1
+      '@tauri-apps/api': 2.11.0
 
   '@trysound/sax@0.2.0': {}
 

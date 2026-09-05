@@ -13,6 +13,7 @@
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
+    "opener:default",
     "core:default"
   ]
 }
