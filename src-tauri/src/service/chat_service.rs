@@ -473,7 +473,11 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
         )?;
         let conn = {
             let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-            server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+            server_book
+                .get("SERVER_TEXT")
+                .ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?
+                .conn
+                .clone()
         };
         return send_msg(test_msg, &conn).await;
     }
@@ -566,7 +570,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     )?;
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
     };
 
     send_msg(test_msg, &conn).await
@@ -608,7 +612,7 @@ pub async fn send_webrtc_signal_service(
 
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
     };
 
     send_msg(test_msg, &conn).await
@@ -662,7 +666,7 @@ pub async fn send_group_text_msg_service(
 
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
     };
 
     send_msg(test_msg, &conn).await
@@ -1054,7 +1058,13 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
             )?;
             let conn = {
                 let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-                server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+                match server_book.get("SERVER_TEXT") {
+                    Some(c) => c.conn.clone(),
+                    None => {
+                        info!("QUIC 未连接，跳过补发，等待重连后下一轮");
+                        return Ok(());
+                    }
+                }
             };
 
             send_msg(test_msg, &conn).await?;
