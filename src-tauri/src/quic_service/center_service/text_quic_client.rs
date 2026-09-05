@@ -31,6 +31,9 @@ use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 const RECONNECT_DELAY_SECS: u64 = 5;
 /// 断开广播间隔（秒）
 const DISCONNECT_BROADCAST_SECS: u64 = 3;
+/// 单次连接握手超时（秒）：UDP 黑洞/服务端假死时 connect() 不会自然返回，
+/// 必须超时兜底，失败后进入 Disconnected → 按 RECONNECT_DELAY_SECS 自动重试
+const HANDSHAKE_TIMEOUT_SECS: u64 = 10;
 /// PONG 超时（毫秒）：超过该时长未收到服务端 PONG 判定连接异常
 const PONG_TIMEOUT_MS: i64 = 50_000;
 
@@ -124,13 +127,25 @@ pub async fn run_client(
             .await;
         }
 
-        // 尝试连接（可被取消：取消时丢弃 in-flight 握手与 endpoint）
+        // 尝试连接（可被取消：取消时丢弃 in-flight 握手与 endpoint；
+        // 带握手超时：UDP 黑洞/服务端假死时 connect() 不会自行返回，超时后进入重试）
         let connect_result = tokio::select! {
             _ = cancel.cancelled() => {
                 info!("QUIC 连接代次被取消，退出连接循环");
                 return Ok(());
             }
-            r = try_connect_once(server_addr) => r,
+            r = tokio::time::timeout(
+                Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),
+                try_connect_once(server_addr),
+            ) => {
+                match r {
+                    Ok(res) => res,
+                    Err(_) => Err(anyhow!(
+                        "QUIC 连接握手超时（{}s），服务端可能未响应",
+                        HANDSHAKE_TIMEOUT_SECS
+                    )),
+                }
+            }
         };
 
         // 单次连接结果
