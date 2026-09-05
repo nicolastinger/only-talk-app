@@ -17,12 +17,12 @@ use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
 use crate::dto::add_read_chat_record::AddReadChatRecord;
 use crate::dto::http_result::HttpResult;
-use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO};
+use crate::entity::app_log::LOG_LEVEL_INFO;
 use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
-use crate::quic_service::center_service::text_quic_client::run_client;
+use crate::quic_service::center_service::text_quic_client::{spawn_client_loop, stop_client_loop};
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
@@ -52,12 +52,12 @@ pub async fn user_login() -> Result<(), anyhow::Error> {
     get_unread_message().await.unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
     //4、获取未读通知
     get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
-    //启动quic服务（带状态机和自动重连）
+    //启动quic服务（带状态机和自动重连，单代连接管理）
     {
         *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
         tokio::spawn(async move {
             let addr = discover_quic_server_addr().await;
-            run_client(addr).await.expect("quic服务启动失败");
+            spawn_client_loop(addr).await;
         });
     }
     //启动定时任务
@@ -456,6 +456,9 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
         info!("已标记QUIC断开状态");
     }
 
+    // 作废代次 + 取消 in-flight 握手/等待，确保连接循环彻底退出（旧 endpoint 已 drop）
+    stop_client_loop().await;
+
     info!("QUIC连接已断开（状态: Idle）");
     let _ =
         log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC连接已断开（状态: Idle）", "").await;
@@ -477,32 +480,13 @@ pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
         user_info.insert("quic_disconnected".to_string(), "false".to_string());
     }
 
-    // 重新启动连接循环
+    // 重新启动连接循环（disconnect_quic 已保证旧循环彻底退出）
     *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
     tokio::spawn(async move {
         let addr = discover_quic_server_addr().await;
-        match run_client(addr).await {
-            Ok(_) => {
-                info!("QUIC连接循环正常退出");
-                let _ = log_quic_event(
-                    LOG_LEVEL_INFO,
-                    "user_service",
-                    "QUIC连接循环正常退出",
-                    &addr.to_string(),
-                )
-                .await;
-            }
-            Err(e) => {
-                error!("QUIC连接循环异常退出: {}", e);
-                let _ = log_quic_event(
-                    LOG_LEVEL_ERROR,
-                    "user_service",
-                    &format!("QUIC连接循环异常退出: {}", e),
-                    &addr.to_string(),
-                )
-                .await;
-            }
-        }
+        spawn_client_loop(addr).await;
+        info!("QUIC连接循环已启动/重建");
+        let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC连接循环已启动/重建", "").await;
     });
 
     info!("QUIC重连请求已发送");

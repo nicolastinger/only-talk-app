@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::sync::LazyLock;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,6 +8,8 @@ use log::{error, info, warn};
 use quinn::{Connection, Endpoint, SendStream};
 use tauri::Emitter;
 use tokio::sync::{watch, Mutex};
+use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::dao::app_log_db::log_quic_event;
@@ -14,7 +17,9 @@ use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
 use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
-use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
+use crate::quic_service::connection_state::{
+    QuicConnectionState, current_quic_epoch, invalidate_quic_epoch, GLOBAL_QUIC_STATE,
+};
 use crate::quic_service::safe_configuration::configure_client;
 use crate::service::user_service::{get_user_info, insert_user_info, sync_offline_messages};
 use crate::utils::global_static_str::{PING, SYSTEM};
@@ -29,15 +34,74 @@ const DISCONNECT_BROADCAST_SECS: u64 = 3;
 /// PONG 超时（毫秒）：超过该时长未收到服务端 PONG 判定连接异常
 const PONG_TIMEOUT_MS: i64 = 50_000;
 
+/// 正在运行中的连接循环（单例）。保证同一时刻只有一代连接存活，
+/// 避免“旧代”与“新代”并存被服务端误判为两台设备互相踢下线。
+struct RunningLoop {
+    cancel: CancellationToken,
+    task: JoinHandle<()>,
+}
+
+static CURRENT_CLIENT_LOOP: LazyLock<Mutex<Option<RunningLoop>>> =
+    LazyLock::new(|| Mutex::new(None));
+
+/// 代次已过期（被取消，或全局代次号已递增）
+fn epoch_stale(epoch: u64, cancel: &CancellationToken) -> bool {
+    cancel.is_cancelled() || current_quic_epoch() != epoch
+}
+
+/// 停止当前连接循环：作废代次 + 取消 in-flight 握手/等待 + 等待旧任务完全退出。
+/// 旧任务退出即旧 endpoint 已 drop，旧连接不再存活。
+pub async fn stop_client_loop() {
+    invalidate_quic_epoch();
+    let old = {
+        let mut guard = CURRENT_CLIENT_LOOP.lock().await;
+        guard.take()
+    };
+    if let Some(old) = old {
+        old.cancel.cancel();
+        let _ = old.task.await;
+        info!("QUIC 连接循环已停止");
+    }
+}
+
+/// 启动/重建连接循环（单例）。
+/// 先停掉旧代（保证旧连接先于新连接关闭），再启动新代。
+pub async fn spawn_client_loop(server_addr: SocketAddr) {
+    let mut guard = CURRENT_CLIENT_LOOP.lock().await;
+    if let Some(old) = guard.take() {
+        invalidate_quic_epoch();
+        old.cancel.cancel();
+        let _ = old.task.await;
+        info!("QUIC 连接循环已重建（旧代已退出）");
+    }
+    // 递增代次，确保后续任何残留逻辑都判定过期
+    invalidate_quic_epoch();
+    let epoch = current_quic_epoch();
+    let cancel = CancellationToken::new();
+    let run_cancel = cancel.clone();
+    let task = tokio::spawn(async move {
+        if let Err(e) = run_client(server_addr, epoch, run_cancel).await {
+            error!("QUIC 连接循环退出: {}", e);
+        }
+    });
+    *guard = Some(RunningLoop { cancel, task });
+}
+
 /// 客户端连接主循环（带状态机 + 自动重连）
-/// 该函数不返回，持续维护连接
-pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
+/// 该函数不返回，持续维护连接。
+/// - `epoch`：启动时捕获的代次号，与全局代次不一致即退出（保证单代连接）。
+/// - `cancel`：外部断开/重建时取消 in-flight 握手与等待，使旧代快速退出。
+pub async fn run_client(
+    server_addr: SocketAddr,
+    epoch: u64,
+    cancel: CancellationToken,
+) -> Result<(), anyhow::Error> {
     loop {
         // 检查是否需要停止（手动调用 disconnect_quic 会将状态设为 Idle）
         {
             let state = *GLOBAL_QUIC_STATE.read().await;
-            if state == QuicConnectionState::Idle {
-                info!("QUIC 状态为 Idle，停止重连循环");
+            if state == QuicConnectionState::Idle || epoch_stale(epoch, &cancel) {
+                info!("QUIC 状态为 Idle 或代次过期，停止重连循环");
                 return Ok(());
             }
         }
@@ -46,7 +110,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
         {
             let mut state = GLOBAL_QUIC_STATE.write().await;
             // 只有从 Disconnected 或 Idle 才允许进入 Connecting
-            if *state == QuicConnectionState::Idle {
+            if *state == QuicConnectionState::Idle || epoch_stale(epoch, &cancel) {
                 return Ok(());
             }
             *state = QuicConnectionState::Connecting;
@@ -60,9 +124,33 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             .await;
         }
 
-        // 尝试连接
-        match try_connect_once(server_addr).await {
+        // 尝试连接（可被取消：取消时丢弃 in-flight 握手与 endpoint）
+        let connect_result = tokio::select! {
+            _ = cancel.cancelled() => {
+                info!("QUIC 连接代次被取消，退出连接循环");
+                return Ok(());
+            }
+            r = try_connect_once(server_addr) => r,
+        };
+
+        // 单次连接结果
+        match connect_result {
             Ok((_disconnect_rx, _endpoint)) => {
+                // 连接成功，但若代次已过期/已置 Idle，则不应继续使用该连接
+                if epoch_stale(epoch, &cancel) {
+                    info!("QUIC 连接已建立但代次过期，关闭新连接");
+                    drop(_endpoint);
+                    return Ok(());
+                }
+                {
+                    let state_now = *GLOBAL_QUIC_STATE.read().await;
+                    if state_now == QuicConnectionState::Idle {
+                        info!("QUIC 状态已置 Idle，关闭刚建立的连接");
+                        drop(_endpoint);
+                        return Ok(());
+                    }
+                }
+
                 // 连接成功 → Connected
                 {
                     let mut state = GLOBAL_QUIC_STATE.write().await;
@@ -95,8 +183,17 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
 
                 // 等待断开信号（_endpoint 必须保持存活直到断开）
                 let mut rx = _disconnect_rx;
-                let _ = rx.changed().await;
-                info!("收到断开信号");
+                tokio::select! {
+                    _ = cancel.cancelled() => {
+                        info!("QUIC 代次取消，断开当前连接");
+                        drop(_endpoint);
+                        return Ok(());
+                    }
+                    r = rx.changed() => {
+                        let _ = r;
+                        info!("收到断开信号");
+                    }
+                }
                 drop(_endpoint);
             }
             Err(e) => {
@@ -125,7 +222,7 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             }
 
             let mut state = GLOBAL_QUIC_STATE.write().await;
-            if *state == QuicConnectionState::Idle {
+            if *state == QuicConnectionState::Idle || epoch_stale(epoch, &cancel) {
                 return Ok(());
             }
             *state = QuicConnectionState::Disconnected;
@@ -158,8 +255,14 @@ pub async fn run_client(server_addr: SocketAddr) -> Result<(), anyhow::Error> {
             });
         }
 
-        // 等待后重试
-        tokio::time::sleep(Duration::from_secs(RECONNECT_DELAY_SECS)).await;
+        // 等待后重试（可被取消）
+        tokio::select! {
+            _ = cancel.cancelled() => {
+                info!("QUIC 代次取消，退出重连等待");
+                return Ok(());
+            }
+            _ = tokio::time::sleep(Duration::from_secs(RECONNECT_DELAY_SECS)) => {}
+        }
     }
 }
 
