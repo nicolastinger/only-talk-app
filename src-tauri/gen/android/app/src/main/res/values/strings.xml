@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">only-talk</string>
+    <string name="main_activity_title">only-talk</string>
+    <string name="keep_alive_channel_name">后台连接保活</string>
+    <string name="keep_alive_channel_desc">保持即时通讯后台在线，及时接收消息</string>
+    <string name="keep_alive_notify_title">only-talk 连接保活中</string>
+    <string name="keep_alive_notify_text">保持后台在线，消息实时送达</string>
+</resources>
