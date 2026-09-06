@@ -22,6 +22,16 @@ pub struct ChatSession {
 }
 
 impl ChatSession {
+    /// 单聊会话归一化：确保 send_user=对方、recv_user=我（与我方库内规范一致）。
+    /// 群聊(session_type=2)以群id作 send_user，系统/公众号不会等于我，均原样返回；
+    /// 自己的笔记会话 send==recv==我，无需交换。
+    pub fn to_canonical(mut self, me: &str) -> ChatSession {
+        if self.session_type != 2 && self.send_user == me && self.send_user != self.recv_user {
+            std::mem::swap(&mut self.send_user, &mut self.recv_user);
+        }
+        self
+    }
+
     pub fn from(chat_session_vo: ChatSessionVo) -> Result<Self, anyhow::Error> {
         Ok(ChatSession {
             id: 0,

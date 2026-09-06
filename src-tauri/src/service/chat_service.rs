@@ -130,9 +130,13 @@ pub async fn get_chat_record_by_type_service(
 pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow::Error> {
     update_chat_session_local_db(&chat_session).await?;
 
-    //发送会话消息给前端
-    let chat_session_event =
-        ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+    // 清空/清理会话事件统一为规范方向（send_user=对方、recv_user=我），
+    // 避免 ack 等路径把方向写反、前端误判
+    let me = get_user_info("uuid").await?;
+    let chat_session_event = ChatSessionEvent {
+        r#type: 0,
+        data: ChatSessionVo::from(chat_session.to_canonical(&me))?,
+    };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;

@@ -24,7 +24,7 @@ use crate::entity::p2p_models::P2pInitMsg;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{
-    clear_chat_session, create_chat_session_service, create_group_chat_session_service,
+    clear_chat_session, create_group_chat_session_service,
     process_no_send_success_msg,
 };
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
@@ -272,8 +272,12 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
 
     insert_chat_record(&msg).await?;
 
+    // 自己另一台设备同步回推的消息(self-echo)：由 send_user == me 标识，
+    // 会话对象是 recv_user，而非 send_user（见下方 peer_uuid）。
+    let is_self = msg.send_user == me;
+
     // 发送者已被拉黑：消息仍落库，但不展示、不进会话列表、不计未读（对方可发送，本地不显示）
-    if is_blocked_db(&me, &msg.send_user).await? {
+    if !is_self && is_blocked_db(&me, &msg.send_user).await? {
         info!("发送者已被拉黑，仅落库不展示: {}", msg.send_user);
         return Ok(());
     }
@@ -283,34 +287,40 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
 
     // 视频通话控制消息(12-15)不在此提前返回：仍更新会话列表，
     // 便于会话列表预览 [视频通话邀请]/[已接听]/[已拒绝]/[通话结束]（前端聊天窗对 12-15 不渲染气泡）
-    let friend_uuid = &msg.send_user;
+    // 单聊会话对象：普通入站消息为 send_user（对方），自己另一台设备的回推为 recv_user（对方）。
+    let peer_uuid = if is_self { &msg.recv_user } else { &msg.send_user };
     let mut flag = false;
     let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
-    if current_session_friend.is_ok() && current_session_friend? == *friend_uuid {
+    if current_session_friend.is_ok() && current_session_friend? == *peer_uuid {
         flag = true;
     }
 
-    // 新消息到达提醒(系统通知/桌面可点横幅)，不阻塞主流程
-    message_alert::on_incoming_message(&me, &msg, false, flag).await;
+    // 新消息到达提醒(系统通知/桌面可点横幅)，不阻塞主流程；自己另一台设备回推的消息不提醒自己
+    if !is_self {
+        message_alert::on_incoming_message(&me, &msg, false, flag).await;
+    }
 
-    let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
+    let mut friend_session = query_chat_session_by_user_db(&me, peer_uuid).await?;
     if friend_session.is_empty() {
-        create_chat_session_service(friend_uuid.to_string()).await?;
+        // 规范方向入库：recv_user = 我，send_user = 对方
         let mut chat_session = ChatSession {
             id: 0,
             nano_id: msg.nano_id,
             timestamp: msg.timestamp,
             text_type: msg.text_type,
-            unread_count: 1,
+            unread_count: if is_self { 0 } else { 1 },
             last_message: msg.raw,
-            recv_user: msg.recv_user,
-            send_user: msg.send_user,
-            session_type: 0,
-            is_show: 0,
+            recv_user: me.clone(),
+            send_user: peer_uuid.clone(),
+            session_type: 1,
+            is_show: 1,
             is_top: 0,
             group_id: None,
         };
-        if flag {
+        if is_self {
+            // 自己另一台设备回推：仅落库，不弹未读（列表预览由轮询/重进刷新）
+            update_chat_session_db(&chat_session).await?;
+        } else if flag {
             chat_session.unread_count = 0;
             update_chat_session_db(&chat_session).await?;
             clear_chat_session(chat_session).await?;
@@ -323,7 +333,10 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
         chat_session.timestamp = msg.timestamp;
         chat_session.text_type = msg.text_type;
         chat_session.nano_id = msg.nano_id;
-        if flag {
+        if is_self {
+            // 自己另一台设备回推：只更新预览与内容，未读保持不变
+            update_chat_session_db(&chat_session).await?;
+        } else if flag {
             chat_session.unread_count = 0;
             update_chat_session_db(&chat_session).await?;
             clear_chat_session(chat_session).await?;
@@ -413,9 +426,13 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
 pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow::Error> {
     update_chat_session_db(&chat_session).await?;
 
-    //发送会话消息给前端
-    let chat_session_event =
-        ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session)? };
+    // 向前的会话事件统一为规范方向（send_user=对方、recv_user=我），
+    // 避免 ack/self-echo 等路径把方向写反、前端误判未读
+    let me = get_user_info("uuid").await?;
+    let chat_session_event = ChatSessionEvent {
+        r#type: 1,
+        data: ChatSessionVo::from(chat_session.to_canonical(&me))?,
+    };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
