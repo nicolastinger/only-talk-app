@@ -1,17 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { showDialog } from "vant";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import BottomNav from "@/components/BottomNav/index.vue";
 import QuicStatusBar from "@/components/QuicStatusBar/index.vue";
 import ReconnectOverlay from "@/components/ReconnectOverlay/index.vue";
 import SyncOverlay from "@/components/SyncOverlay/index.vue";
 import { startQuicMonitor, stopQuicMonitor } from "@/stores/quic";
+import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
 
 const route = useRoute();
+const router = useRouter();
+const { clearAuth } = useAuthStore();
 useTheme();
 useCallManager();
+
+let unlistenForceLogout: UnlistenFn | undefined;
 
 const showNav = computed(() => {
   const path = route.path;
@@ -27,9 +34,35 @@ const showNav = computed(() => {
 
 onMounted(() => {
   startQuicMonitor();
+  // 收到服务端"账号已在其他设备登录"通知:弹窗确认后再退出登录
+  listen<string>("force_logout", (event) => {
+    const reason =
+      event.payload ||
+      "您的账号已在其他设备登录，本机已被强制下线。";
+    showDialog({
+      title: "账号已在其他设备登录",
+      message: reason,
+      showCancelButton: false,
+      confirmButtonText: "退出登录",
+      confirmButtonColor: "#ef4444",
+      closeOnClickOverlay: false,
+    })
+      .then(() => {
+        clearAuth();
+        router.replace("/login");
+      })
+      .catch(() => {});
+  })
+    .then((stop) => {
+      unlistenForceLogout = stop;
+    })
+    .catch((e) => {
+      console.error("force_logout 监听失败:", e);
+    });
 });
 
 onUnmounted(() => {
+  unlistenForceLogout?.();
   stopQuicMonitor();
 });
 </script>

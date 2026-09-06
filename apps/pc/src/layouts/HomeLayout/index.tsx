@@ -37,6 +37,8 @@ const HomeLayout = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [closeModalVisible, setCloseModalVisible] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [forceLogoutVisible, setForceLogoutVisible] = useState(false);
+  const [forceLogoutReason, setForceLogoutReason] = useState('');
   const setIsLogin = useBearStore((state) => state.setIsLogin);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
@@ -44,21 +46,30 @@ const HomeLayout = () => {
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    listen<string>('force_logout', async (event) => {
-      try {
-        await invoke('logout');
-        await invoke('clear_user_info');
-        setIsLogin(false);
-        setUserInfo({ uuid: '' });
-        history.push('/signIn');
-      } catch (error) {
-        console.error('强制退出登录失败:', error, event.payload);
-      }
+    // 收到服务端"账号已在其他设备登录"通知后弹出确认框，
+    // 由用户点击"退出登录"确认后再执行登出（避免误触自动下线）。
+    listen<string>('force_logout', (event) => {
+      setForceLogoutReason(event.payload || '');
+      setForceLogoutVisible(true);
     }).then((stop) => {
       unlisten = stop;
     }).catch(console.error);
     return () => unlisten?.();
-  }, [setIsLogin, setUserInfo]);
+  }, []);
+
+  // 确认强制退出：先关闭弹窗，再执行登出（无论登出成功与否弹窗都能关闭）
+  const confirmForceLogout = async () => {
+    setForceLogoutVisible(false);
+    try {
+      await invoke('logout');
+      await invoke('clear_user_info');
+      setIsLogin(false);
+      setUserInfo({ uuid: '' });
+      history.push('/signIn');
+    } catch (error) {
+      console.error('强制退出登录失败:', error);
+    }
+  };
 
   // 使用系统通知hook
   useSystemNotify(userInfo.uuid);
@@ -284,6 +295,20 @@ const HomeLayout = () => {
             </button>
           </div>
         </div>
+      </Modal>
+      <Modal
+        title={intl.formatMessage({ id: 'homeLayout.forceLogoutTitle' })}
+        open={forceLogoutVisible}
+        onOk={confirmForceLogout}
+        okText={intl.formatMessage({ id: 'homeLayout.forceLogout' })}
+        okCancel={false}
+        closable={false}
+        maskClosable={false}
+        centered
+      >
+        <p style={{ padding: '16px 0' }}>
+          {forceLogoutReason || intl.formatMessage({ id: 'homeLayout.forceLogoutContent' })}
+        </p>
       </Modal>
     </div>
   );

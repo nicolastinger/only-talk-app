@@ -599,6 +599,9 @@ export default {
     selectCloseMethod: '请选择关闭方式：',
     minimizeToTray: '最小化到托盘',
     quitApp: '退出应用',
+    forceLogoutTitle: '账号已在其他设备登录',
+    forceLogoutContent: '您的账号已在其他设备登录，本机已被强制下线。',
+    forceLogout: '退出登录',
   },
   chatsLayout: {
     privateChat: '单聊',

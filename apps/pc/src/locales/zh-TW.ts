@@ -599,6 +599,9 @@ export default {
     selectCloseMethod: '請選擇關閉方式：',
     minimizeToTray: '最小化到托盤',
     quitApp: '退出應用',
+    forceLogoutTitle: '帳號已在其他裝置登入',
+    forceLogoutContent: '您的帳號已在其他裝置登入，本機已被強制下線。',
+    forceLogout: '退出登入',
   },
   chatsLayout: {
     privateChat: '單聊',

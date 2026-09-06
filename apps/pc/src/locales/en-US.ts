@@ -608,6 +608,9 @@ export default {
     selectCloseMethod: 'Please select close method:',
     minimizeToTray: 'Minimize to tray',
     quitApp: 'Quit app',
+    forceLogoutTitle: 'Signed in on another device',
+    forceLogoutContent: 'Your account has been signed in on another device, so this device was signed out.',
+    forceLogout: 'Log out',
   },
   chatsLayout: {
     privateChat: 'Private Chat',
