@@ -343,7 +343,7 @@ pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> 
                         message: String::new(),
                         data: serde_json::Value::Null,
                     });
-                    if result.code == 200 {
+                    if result.code == 200 || result.code == 204 {
                         SystemNotification::mark_read_synced(&uuid, &read_ids).await?;
                         info!("通知已读上报成功: {:?}", read_ids);
                     } else {
