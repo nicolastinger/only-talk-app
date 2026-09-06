@@ -12,6 +12,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { clearAllUnreadSessions, get_friend_list } from "@workspace/services";
 import { useChatSessions } from "@/hooks/useChatSession";
+import { useUnreadStore } from "@/stores/unread";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { formatMessageTime, getMessagePreview } from "@/utils/time";
@@ -20,6 +21,7 @@ import type { ChatSessionVo, FriendVo } from "@workspace/types";
 
 const router = useRouter();
 const { sessions, refresh } = useChatSessions();
+const { chatBadge } = useUnreadStore();
 const { getAvatarUrl } = useAvatar();
 const refreshing = ref(false);
 const searchText = ref("");
@@ -189,7 +191,7 @@ const visibleSessions = computed(() =>
 
 const totalUnread = computed(() => {
   if (debouncedSearch.value) return 0;
-  return sessions.value.reduce((sum, s) => sum + (s.unread_count || 0), 0);
+  return chatBadge.value;
 });
 
 const emptyText = computed(() => {
@@ -428,15 +430,11 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
       </div>
       <Empty v-else :description="emptyText">
         <template #image>
-          <svg
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            style="width: 80px; height: 80px; color: var(--border-medium)"
-          >
-            <path
-              d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-            />
-          </svg>
+          <img
+            src="@/assets/empty-state.svg"
+            class="empty-state-img"
+            alt="暂无内容"
+          />
         </template>
       </Empty>
     </PullRefresh>
@@ -791,5 +789,9 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
 }
 :deep(.van-empty__description) {
   color: var(--text-tertiary);
+}
+.empty-state-img {
+  width: 120px;
+  height: 96px;
 }
 </style>

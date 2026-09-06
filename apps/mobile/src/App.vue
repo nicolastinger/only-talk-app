@@ -10,6 +10,11 @@ import QuicStatusBar from "@/components/QuicStatusBar/index.vue";
 import ReconnectOverlay from "@/components/ReconnectOverlay/index.vue";
 import SyncOverlay from "@/components/SyncOverlay/index.vue";
 import { startQuicMonitor, stopQuicMonitor } from "@/stores/quic";
+import {
+  startUnreadMonitor,
+  stopUnreadMonitor,
+  useUnreadStore,
+} from "@/stores/unread";
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
@@ -87,10 +92,17 @@ const registerNotificationClick = async () => {
 const setupForegroundTracking = () => {
   setForeground("1");
   const onVisibility = () => {
-    setForeground(document.visibilityState === "visible" ? "1" : "0");
+    const visible = document.visibilityState === "visible";
+    setForeground(visible ? "1" : "0");
+    if (visible) {
+      useUnreadStore().refresh().catch(console.error);
+    }
   };
   document.addEventListener("visibilitychange", onVisibility);
-  window.addEventListener("pageshow", () => setForeground("1"));
+  window.addEventListener("pageshow", () => {
+    setForeground("1");
+    useUnreadStore().refresh().catch(console.error);
+  });
   return () => {
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("pageshow", () => setForeground("1"));
@@ -99,6 +111,7 @@ const setupForegroundTracking = () => {
 
 onMounted(() => {
   startQuicMonitor();
+  startUnreadMonitor();
   registerNotificationClick();
   setupForegroundTracking();
   // 收到服务端"账号已在其他设备登录"通知:弹窗确认后再退出登录
@@ -131,6 +144,7 @@ onMounted(() => {
 onUnmounted(() => {
   unlistenForceLogout?.();
   stopQuicMonitor();
+  stopUnreadMonitor();
 });
 </script>
 

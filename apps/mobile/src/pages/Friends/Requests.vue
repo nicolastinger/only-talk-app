@@ -13,6 +13,7 @@ import {
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { parseResponse } from "@/utils/api";
+import { useUnreadStore } from "@/stores/unread";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type {
   FriendRequestInfo,
@@ -22,6 +23,7 @@ import type {
 
 const router = useRouter();
 const { getAvatarUrl } = useAvatar();
+const { refreshFriendCounts } = useUnreadStore();
 const goBack = () => router.back();
 
 const DEFAULT_REQUEST_MESSAGE = "请求添加你为好友";
@@ -143,6 +145,7 @@ const handleAccept = async (req: FriendRequestInfo) => {
     showToast({ message: "已接受", icon: "success" });
     await invoke("update_local_friend_list", {}).catch(() => {});
     await loadFriendRequests();
+    await refreshFriendCounts();
   } catch (e) {
     showToast({ message: "操作失败", icon: "fail" });
   }
@@ -159,6 +162,7 @@ const handleReject = async (req: FriendRequestInfo) => {
     });
     showToast({ message: "已拒绝", icon: "success" });
     await loadFriendRequests();
+    await refreshFriendCounts();
   } catch (e) {
     showToast({ message: "操作失败", icon: "fail" });
   }
@@ -209,6 +213,7 @@ onMounted(async () => {
   try {
     unlistenRequests = await listen("friend_list_changed", () => {
       loadFriendRequests();
+      refreshFriendCounts();
     });
   } catch (e) {
     console.error("监听好友列表变更失败", e);

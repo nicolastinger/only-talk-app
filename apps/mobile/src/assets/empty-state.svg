@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="160" viewBox="0 0 200 160" fill="none" role="img" aria-label="暂无内容">
+  <!-- soft ground shadow -->
+  <ellipse cx="100" cy="138" rx="52" ry="9" fill="var(--empty-shadow, rgba(31,37,51,0.06))"/>
+
+  <!-- floating chat bubble -->
+  <g>
+    <path
+      d="M100 34c-29.4 0-52 17.3-52 39.2 0 12.9 8.6 24.3 22 31.7l-4.3 15.5a3.2 3.2 0 0 0 4.5 3.6l17.6-8.9c8.3 1.8 12.2 2.3 12.2 2.3
+        c29.4 0 52-16.4 52-39.3C152 51.3 129.4 34 100 34z"
+      fill="var(--empty-bubble, url(#emptyGrad))"
+    />
+    <!-- three dots -->
+    <circle cx="84" cy="73" r="4" fill="var(--empty-dot, #ffffff)" opacity="0.95"/>
+    <circle cx="100" cy="73" r="4" fill="var(--empty-dot, #ffffff)" opacity="0.8"/>
+    <circle cx="116" cy="73" r="4" fill="var(--empty-dot, #ffffff)" opacity="0.6"/>
+  </g>
+
+  <!-- sparkles -->
+  <path d="M34 46l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z" fill="var(--empty-sparkle, rgba(64,150,255,0.28))"/>
+  <path d="M168 62l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6 1.6-4z" fill="var(--empty-sparkle, rgba(64,150,255,0.2))"/>
+
+  <!-- small floating element -->
+  <circle cx="162" cy="112" r="4" fill="var(--empty-sparkle, rgba(64,150,255,0.18))"/>
+
+  <defs>
+    <linearGradient id="emptyGrad" x1="60" y1="34" x2="140" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4a90ff"/>
+      <stop offset="1" stop-color="#1a5cff"/>
+    </linearGradient>
+  </defs>
+</svg>

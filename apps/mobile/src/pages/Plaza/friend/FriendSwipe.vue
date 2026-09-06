@@ -143,15 +143,11 @@ onMounted(refresh);
     <div v-else-if="finished && !current" class="state-box">
       <Empty description="暂时没有更多可以速配的朋友啦">
         <template #image>
-          <svg
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            style="width: 80px; height: 80px; color: var(--border-medium)"
-          >
-            <path
-              d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"
-            />
-          </svg>
+          <img
+            src="@/assets/empty-state.svg"
+            class="empty-state-img"
+            alt="暂无内容"
+          />
         </template>
       </Empty>
       <button class="restart-btn" @click="restart">重新开始</button>
@@ -259,6 +255,11 @@ onMounted(refresh);
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.empty-state-img {
+  width: 120px;
+  height: 96px;
 }
 
 .hint {

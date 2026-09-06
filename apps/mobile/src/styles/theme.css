@@ -193,3 +193,12 @@ textarea {
   height: calc(46px + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
 }
+
+/* Center the custom #image slot of Vant's Empty component.
+   .van-empty__image is a 160x160 block box; inline svgs pushed in via
+   the #image slot default to its top-left corner. */
+.van-empty__image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

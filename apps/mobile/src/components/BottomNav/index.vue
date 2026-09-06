@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useUnreadStore } from "@/stores/unread";
 
 interface NavItem {
   name: string;
@@ -9,6 +10,7 @@ interface NavItem {
 
 const route = useRoute();
 const router = useRouter();
+const { chatBadge, friendBadge } = useUnreadStore();
 
 const navItems: NavItem[] = [
   { name: "chat", path: "/chats" },
@@ -16,6 +18,14 @@ const navItems: NavItem[] = [
   { name: "plaza", path: "/plaza" },
   { name: "profile", path: "/profile" },
 ];
+
+const badgeOf = (name: string) => {
+  if (name === "chat") return chatBadge.value;
+  if (name === "friends") return friendBadge.value;
+  return 0;
+};
+
+const formatBadge = (count: number) => (count > 99 ? "99+" : String(count));
 
 const active = computed(() => {
   const path = route.path;
@@ -188,6 +198,12 @@ const onChange = (path: string) => {
           fill="var(--nav-active-color)"
         />
       </svg>
+
+      <span
+        v-if="badgeOf(item.name) > 0"
+        class="nav-badge"
+        >{{ formatBadge(badgeOf(item.name)) }}</span
+      >
     </button>
   </div>
 </template>
@@ -253,6 +269,25 @@ const onChange = (path: string) => {
 
   &.active::after {
     transform: translateX(-50%) scale(1);
+  }
+
+  .nav-badge {
+    position: absolute;
+    top: 8px;
+    left: calc(50% + 8px);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--badge-text, #fff);
+    background: var(--badge-bg, #ef4444);
+    border-radius: var(--radius-full, 999px);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
   }
 }
 

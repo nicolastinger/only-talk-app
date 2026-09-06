@@ -78,15 +78,11 @@ onMounted(refresh);
       <div v-else-if="list.length === 0" class="state-box">
         <Empty :description="emptyTextMap[feed]">
           <template #image>
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              style="width: 80px; height: 80px; color: var(--border-medium)"
-            >
-              <path
-                d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-              />
-            </svg>
+            <img
+              src="@/assets/empty-state.svg"
+              class="empty-state-img"
+              alt="暂无内容"
+            />
           </template>
         </Empty>
       </div>
@@ -119,6 +115,11 @@ onMounted(refresh);
   padding: 50px 0;
   display: flex;
   justify-content: center;
+}
+
+.empty-state-img {
+  width: 120px;
+  height: 96px;
 }
 
 .m-list {
