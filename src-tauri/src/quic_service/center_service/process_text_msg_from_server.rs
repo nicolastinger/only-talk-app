@@ -32,13 +32,13 @@ use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_i
 use crate::service::{friend_service, group_service};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
-    CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE,
-    MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_NOTIFICATION, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE,
-    MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER,
-    MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
-    MSG_TYPE_FORCE_LOGOUT, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS,
-    MSG_TYPE_SYSTEM,
-    MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
+    CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_FORCE_LOGOUT,
+    MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_NOTIFICATION, MSG_TYPE_GROUP_TEXT,
+    MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT,
+    MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
+    MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING,
+    MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL,
+    NOTIFY_TYPE_MSG,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
@@ -170,8 +170,17 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
 
 /// 处理服务端的同平台挤下线通知。设置 Idle 是为了阻止 run_client 自动重连。
 async fn process_force_logout(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
-    let reason = String::from_utf8_lossy(&text_quic_msg.raw).to_string();
+    let (reason, killer_session) = parse_force_logout_raw(&text_quic_msg.raw);
     info!("收到强制退出通知: {}", reason);
+
+    // 同进程旧连接顶替自己(本机重新登录/刷新 token 后,旧代连接收到自己发起的强退帧):
+    // killer 会话等于本机当前 token 的 jti,忽略即可,避免把自己置为 Idle 停掉重连。
+    if let Some(killer) = killer_session.as_deref() {
+        if current_token_jti().await.as_deref() == Some(killer) {
+            info!("强退帧来自本机当前会话,忽略(旧连接顶替自己): killer_session={}", killer);
+            return Ok(());
+        }
+    }
 
     disconnect_quic().await?;
     GLOBAL_QUIC_USER_INFO.write().await.clear();
@@ -180,6 +189,73 @@ async fn process_force_logout(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::
         handle.emit("force_logout", reason)?;
     }
     Ok(())
+}
+
+/// 解析服务端强退帧:JSON {reason, session} 或历史纯文本 reason。
+/// 返回 (展示文案, 发起该次强退的会话 jti)。
+fn parse_force_logout_raw(raw: &[u8]) -> (String, Option<String>) {
+    match serde_json::from_slice::<serde_json::Value>(raw) {
+        Ok(value) => {
+            let session = value
+                .get("session")
+                .and_then(|s| s.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string());
+            let reason = value
+                .get("reason")
+                .and_then(|r| r.as_str())
+                .map(|r| r.to_string())
+                .unwrap_or_default();
+            if reason.is_empty() {
+                (String::from_utf8_lossy(raw).to_string(), session)
+            } else {
+                (reason, session)
+            }
+        }
+        Err(_) => (String::from_utf8_lossy(raw).to_string(), None),
+    }
+}
+
+/// 当前 access_token 中携带的会话 jti(仅 base64url 解析 payload,不校验签名,
+/// 用于识别强退帧是否来自本机当前会话)。
+async fn current_token_jti() -> Option<String> {
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").cloned()?;
+    decode_token_jti(&token)
+}
+
+fn decode_token_jti(token: &str) -> Option<String> {
+    let payload = token.split('.').nth(1)?;
+    let bytes = decode_base64url(payload)?;
+    let value: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    value.get("jti")?.as_str().map(|s| s.to_string())
+}
+
+/// 无填充 base64url 解码(仅用于解析 JWT payload 片段)。
+fn decode_base64url(input: &str) -> Option<Vec<u8>> {
+    let decode_table = |c: u8| -> Option<u8> {
+        match c {
+            b'A'..=b'Z' => Some(c - b'A'),
+            b'a'..=b'z' => Some(c - b'a' + 26),
+            b'0'..=b'9' => Some(c - b'0' + 52),
+            b'-' => Some(62),
+            b'_' => Some(63),
+            _ => None,
+        }
+    };
+    let mut out = Vec::with_capacity(input.len() * 3 / 4);
+    let mut acc: u32 = 0;
+    let mut bits: u8 = 0;
+    for byte in input.bytes() {
+        let value = decode_table(byte)?;
+        acc = (acc << 6) | u32::from(value);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+            acc &= (1u32 << bits) - 1;
+        }
+    }
+    Some(out)
 }
 
 async fn is_group_message(recv_user: &str) -> bool {
