@@ -29,7 +29,7 @@ use crate::service::chat_service::{
 };
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
-use crate::service::{friend_service, group_service};
+use crate::service::{friend_service, group_service, message_alert};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_FORCE_LOGOUT,
@@ -290,6 +290,9 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
         flag = true;
     }
 
+    // 新消息到达提醒(系统通知/桌面可点横幅)，不阻塞主流程
+    message_alert::on_incoming_message(&me, &msg, false, flag).await;
+
     let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
     if friend_session.is_empty() {
         create_chat_session_service(friend_uuid.to_string()).await?;
@@ -360,6 +363,9 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
             flag = true;
         }
     }
+
+    // 新消息到达提醒(系统通知/桌面可点横幅)，不阻塞主流程
+    message_alert::on_incoming_message(&me, &msg, true, flag).await;
 
     let mut group_session = query_chat_session_by_user_db(&me, group_id).await?;
     if group_session.is_empty() {

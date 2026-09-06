@@ -1,5 +1,6 @@
 import AnnouncementBanner from '@/components/AnnouncementBanner';
 import DraggableHeader from '@/components/DraggableHeader';
+import MessageAlertBanner from '@/components/MessageAlertBanner';
 import { LeftAside } from '@/components/LeftAside';
 import OnlineStatusSwitch from '@/components/OnlineStatusSwitch';
 import {
@@ -121,7 +122,9 @@ const HomeLayout = () => {
   // 最小化到系统托盘
   const hideToTray = async () => {
     const currentWindow = Window.getCurrent();
-    await invoke('add_user_map', { map: { window_hide: '1' } });
+    await invoke('add_user_map', {
+      map: { window_hide: '1', app_foreground: '0' },
+    });
     await currentWindow.hide();
     setCloseModalVisible(false);
   };
@@ -258,6 +261,8 @@ const HomeLayout = () => {
           <Outlet />
         </div>
       </div>
+      {/* 新消息提醒横幅：点击跳转到对应会话窗口 */}
+      <MessageAlertBanner />
       <Modal
         title={intl.formatMessage({ id: 'homeLayout.closeWindow' })}
         open={closeModalVisible}
