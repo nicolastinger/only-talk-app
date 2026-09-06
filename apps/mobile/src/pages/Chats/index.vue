@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import {
   showToast,
@@ -10,30 +10,105 @@ import {
   Empty,
 } from "vant";
 import { invoke } from "@tauri-apps/api/core";
-import { clearAllUnreadSessions } from "@workspace/services";
+import { clearAllUnreadSessions, get_friend_list } from "@workspace/services";
 import { useChatSessions } from "@/hooks/useChatSession";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { formatMessageTime, getMessagePreview } from "@/utils/time";
 import { DEFAULT_AVATAR } from "@/stores/user";
-import type { ChatSessionVo } from "@workspace/types";
+import type { ChatSessionVo, FriendVo } from "@workspace/types";
 
 const router = useRouter();
 const { sessions, refresh } = useChatSessions();
 const { getAvatarUrl } = useAvatar();
 const refreshing = ref(false);
 const searchText = ref("");
+const debouncedSearch = ref("");
 
 const avatarMap = ref<Record<string, string | null>>({});
+const friendMap = ref<Record<string, FriendVo>>({});
+
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const isSelfChat = (item: ChatSessionVo) => item.send_user === item.recv_user;
+
+const isGroupChat = (item: ChatSessionVo) => item.session_type === 2;
+
+const peerIdOf = (item: ChatSessionVo): string => item.send_user || "";
+
+const loadFriends = async () => {
+  try {
+    const list = (await get_friend_list()) || [];
+    const map: Record<string, FriendVo> = {};
+    for (const f of list) map[f.friend_id] = f;
+    friendMap.value = map;
+    const icons = [
+      ...new Set(list.map((f) => f.friend_icon).filter((i) => !!i)),
+    ];
+    await Promise.all(
+      icons
+        .filter((icon) => avatarMap.value[icon] === undefined)
+        .map(async (icon) => {
+          const url = await getAvatarUrl(icon);
+          avatarMap.value[icon] = url;
+        })
+    );
+  } catch (e) {
+    console.error("加载好友信息失败:", e);
+  }
+};
+
+const getDisplayName = (item: ChatSessionVo) => {
+  if (isSelfChat(item)) return "我的笔记";
+  if (item.friend_name) return item.friend_name;
+  const peer = peerIdOf(item);
+  const friend = friendMap.value[peer];
+  if (friend?.friend_name) return friend.friend_name;
+  if (peer) return shortId(peer);
+  return "未知";
+};
+
+const shortId = (id: string): string =>
+  id.length > 12 ? `用户${id.slice(-6)}` : id;
+
+const getDisplayMessage = (item: ChatSessionVo) =>
+  getMessagePreview(item.text_type, item.last_message);
+
+const isPinned = (item: ChatSessionVo) => !!(item.is_top && item.is_top > 0);
+
+const getGroupInitial = (item: ChatSessionVo) => {
+  const name = getDisplayName(item).trim();
+  return name ? name.slice(0, 1).toUpperCase() : "群";
+};
+
+const iconUrlOf = (item: ChatSessionVo): string | null => {
+  if (isSelfChat(item)) return null;
+  const icon = item.friend_icon;
+  if (icon && avatarMap.value[icon] != null) return avatarMap.value[icon];
+  const friend = friendMap.value[peerIdOf(item)];
+  const friendIcon = friend?.friend_icon;
+  if (friendIcon && avatarMap.value[friendIcon] != null) {
+    return avatarMap.value[friendIcon];
+  }
+  return null;
+};
 
 const resolveAvatars = async () => {
-  for (const s of sessions.value) {
-    if (isSelfChat(s)) continue;
-    const icon = s.friend_icon;
-    if (!icon || avatarMap.value[icon] !== undefined) continue;
-    const url = await getAvatarUrl(icon);
-    avatarMap.value[icon] = url;
-  }
+  const icons = [
+    ...new Set(
+      sessions.value
+        .filter((s) => !isSelfChat(s) && s.friend_icon)
+        .map((s) => s.friend_icon)
+    ),
+  ];
+  await Promise.all(
+    icons
+      .filter((icon) => avatarMap.value[icon] === undefined)
+      .map(async (icon) => {
+        const url = await getAvatarUrl(icon);
+        avatarMap.value[icon] = url;
+      })
+  );
 };
 
 watch(
@@ -44,16 +119,67 @@ watch(
   { immediate: true }
 );
 
-const sectionTab = ref(0);
-const searchList = computed(() => {
-  if (!searchText.value.trim()) return sessions.value;
-  const keyword = searchText.value.trim().toLowerCase();
-  return sessions.value.filter((s) =>
-    s.friend_name?.toLowerCase().includes(keyword)
-  );
+watch(
+  friendMap,
+  () => {
+    resolveAvatars();
+  },
+  { immediate: true }
+);
+
+watch(searchText, (val) => {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    debouncedSearch.value = val.trim().toLowerCase();
+  }, 200);
 });
 
-const isGroupChat = (item: ChatSessionVo) => item.session_type === 2;
+onMounted(() => {
+  loadFriends().catch(() => {});
+});
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer);
+});
+
+const escapeHtml = (input: string): string =>
+  input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const highlightText = (text: string): string => {
+  const keyword = debouncedSearch.value;
+  if (!keyword) return escapeHtml(text);
+  const lower = text.toLowerCase();
+  const kwLength = keyword.length;
+  let result = "";
+  let index = 0;
+  let found = lower.indexOf(keyword);
+  while (found !== -1) {
+    result += escapeHtml(text.slice(index, found));
+    result += `<span class="hl">${escapeHtml(
+      text.slice(found, found + kwLength)
+    )}</span>`;
+    index = found + kwLength;
+    found = lower.indexOf(keyword, index);
+  }
+  result += escapeHtml(text.slice(index));
+  return result;
+};
+
+const sectionTab = ref(0);
+const searchList = computed(() => {
+  const keyword = debouncedSearch.value;
+  if (!keyword) return sessions.value;
+  return sessions.value.filter((s) => {
+    const name = (getDisplayName(s) || "").toLowerCase();
+    const message = getDisplayMessage(s).toLowerCase();
+    return name.includes(keyword) || message.includes(keyword);
+  });
+});
 
 const visibleSessions = computed(() =>
   searchList.value.filter((s) =>
@@ -61,13 +187,15 @@ const visibleSessions = computed(() =>
   )
 );
 
-const totalUnread = computed(() =>
-  visibleSessions.value.reduce((sum, s) => sum + (s.unread_count || 0), 0)
-);
+const totalUnread = computed(() => {
+  if (debouncedSearch.value) return 0;
+  return sessions.value.reduce((sum, s) => sum + (s.unread_count || 0), 0);
+});
 
-const emptyText = computed(() =>
-  sectionTab.value === 1 ? "暂无群聊会话" : "暂无单聊会话"
-);
+const emptyText = computed(() => {
+  if (debouncedSearch.value) return "未找到相关会话";
+  return sectionTab.value === 1 ? "暂无群聊会话" : "暂无单聊会话";
+});
 
 const onRefresh = async () => {
   refreshing.value = true;
@@ -128,30 +256,16 @@ const deleteSession = async (item: ChatSessionVo) => {
   }
 };
 
-const isSelfChat = (item: ChatSessionVo) => item.send_user === item.recv_user;
-
 const getAvatar = (item: ChatSessionVo) => {
   if (isSelfChat(item)) return "";
-  const icon = item.friend_icon;
-  if (icon && avatarMap.value[icon] != null) {
-    return avatarMap.value[icon];
-  }
-  return DEFAULT_AVATAR;
+  const url = iconUrlOf(item);
+  return url || DEFAULT_AVATAR;
 };
 
 const hasResolvedAvatar = (item: ChatSessionVo) => {
   if (isSelfChat(item)) return false;
-  const icon = item.friend_icon;
-  return !!icon && avatarMap.value[icon] != null;
+  return iconUrlOf(item) != null;
 };
-
-const getDisplayName = (item: ChatSessionVo) => {
-  if (isSelfChat(item)) return "我的笔记";
-  return item.friend_name || item.send_user || "未知";
-};
-
-const getDisplayMessage = (item: ChatSessionVo) =>
-  getMessagePreview(item.text_type, item.last_message);
 </script>
 
 <template>
@@ -265,22 +379,33 @@ const getDisplayMessage = (item: ChatSessionVo) =>
                 📝
               </div>
               <div v-else class="avatar group-avatar-fallback">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
-                  />
-                </svg>
+                <span class="group-initial">{{ getGroupInitial(item) }}</span>
               </div>
             </div>
             <div class="session-info">
               <div class="session-top">
-                <span class="session-name">{{ getDisplayName(item) }}</span>
+                <div class="session-name-row">
+                  <span v-if="isPinned(item)" class="pin-badge">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path
+                        d="M16 9V4h1c.55 0 1-.45 1-1V2H6v1c0 .55.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1V15H19v-2c-1.66 0-3-1.34-3-3z"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="session-name"
+                    v-html="highlightText(getDisplayName(item))"
+                  ></span>
+                </div>
                 <span class="session-time">{{
                   formatMessageTime(item.timestamp)
                 }}</span>
               </div>
               <div class="session-bottom">
-                <span class="session-msg">{{ getDisplayMessage(item) }}</span>
+                <span
+                  class="session-msg"
+                  v-html="highlightText(getDisplayMessage(item))"
+                ></span>
                 <Badge
                   v-if="item.unread_count > 0"
                   :content="item.unread_count"
@@ -558,9 +683,10 @@ const getDisplayMessage = (item: ChatSessionVo) =>
   color: #fff;
   box-shadow: var(--shadow-sm);
 
-  svg {
-    width: 24px;
-    height: 24px;
+  .group-initial {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1;
   }
 }
 
@@ -576,6 +702,29 @@ const getDisplayMessage = (item: ChatSessionVo) =>
   margin-bottom: 6px;
 }
 
+.session-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pin-badge {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-blue);
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .session-name {
   font-size: 16px;
   font-weight: 600;
@@ -583,6 +732,13 @@ const getDisplayMessage = (item: ChatSessionVo) =>
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+}
+
+.hl {
+  color: var(--brand-blue);
+  font-weight: 600;
+  background: transparent;
 }
 
 .session-time {

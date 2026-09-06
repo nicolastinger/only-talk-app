@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  onUnmounted,
+  nextTick,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { showToast } from "vant";
@@ -42,6 +50,8 @@ const friendInfo = reactive({ name: "", icon: "" });
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
 const meUuid = ref("");
+
+let allowInfiniteScroll = false;
 
 const { textMessage } = useMessageApi(() => meUuid.value, friendId);
 const { getAvatarUrl } = useAvatar();
@@ -95,7 +105,9 @@ const loadFriendInfo = async () => {
     // fallthrough to local session
   }
   try {
-    const sessions = (await invoke("get_chat_session_from_store")) as ChatSessionVo[];
+    const sessions = (await invoke(
+      "get_chat_session_from_store"
+    )) as ChatSessionVo[];
     const session = sessions.find(
       (s) => s.send_user === friendId || s.recv_user === friendId
     );
@@ -126,7 +138,8 @@ const makeUiMessage = (
     textMsg: msg,
     ack: undefined,
     failed: false,
-    showTime: index === 0 || needTimeDivider(arr[index - 1].timestamp, msg.timestamp),
+    showTime:
+      index === 0 || needTimeDivider(arr[index - 1].timestamp, msg.timestamp),
     senderUuid: msg.send_user,
   };
 };
@@ -134,6 +147,7 @@ const makeUiMessage = (
 const loadMessages = async (page = 1, prepend = false) => {
   if (page === 1) loading.value = true;
   else loadingMore.value = true;
+  if (!prepend && page === 1) allowInfiniteScroll = false;
   try {
     const textQuicMsg: TextQuicMsgVo = {
       nano_id: "",
@@ -150,7 +164,9 @@ const loadMessages = async (page = 1, prepend = false) => {
     if (data.length < pageSize) hasMore.value = false;
 
     const list = data.filter(
-      (m) => m.text_type !== MSG_TYPE_RECALL_SUCCESS && m.text_type !== MSG_TYPE_RECALL_FAILURE
+      (m) =>
+        m.text_type !== MSG_TYPE_RECALL_SUCCESS &&
+        m.text_type !== MSG_TYPE_RECALL_FAILURE
     );
     const chatMessages: UiChatMessage[] = await Promise.all(
       list.map(async (item, index, arr) => {
@@ -163,18 +179,34 @@ const loadMessages = async (page = 1, prepend = false) => {
     );
 
     if (prepend) {
+      // 对齐 PC：向上加载历史时保持当前滚动位置，避免视口跳动
+      const prevScrollHeight = containerRef.value?.scrollHeight || 0;
       messages.value = [...chatMessages, ...messages.value];
+      await nextTick();
+      const el = containerRef.value;
+      if (el) {
+        const newScrollHeight = el.scrollHeight;
+        el.scrollTop = newScrollHeight - prevScrollHeight;
+      }
     } else {
       messages.value = chatMessages;
       currentPage.value = 1;
       await nextTick();
-      scrollToBottom(false);
     }
   } catch (e) {
     console.error("加载消息失败:", e);
   } finally {
     loading.value = false;
     loadingMore.value = false;
+    if (!prepend) {
+      // 容器在 loading=false 后才挂载，需在渲染完成后滚动到最新消息
+      await nextTick();
+      scrollToBottom(false);
+      setTimeout(() => scrollToBottom(false), 120);
+      setTimeout(() => {
+        allowInfiniteScroll = true;
+      }, 200);
+    }
   }
 };
 
@@ -185,7 +217,14 @@ const reloadFirstPage = () => {
 
 const onScroll = () => {
   const el = containerRef.value;
-  if (!el || loadingMore.value || !hasMore.value) return;
+  if (
+    !el ||
+    !allowInfiniteScroll ||
+    loading.value ||
+    loadingMore.value ||
+    !hasMore.value
+  )
+    return;
   if (el.scrollTop <= 80) {
     const nextPage = currentPage.value + 1;
     currentPage.value = nextPage;
@@ -256,7 +295,9 @@ const sendText = async () => {
     await invoke("send_text_msg", { textQuicMsg: textMsg });
   } catch (e) {
     console.error("发送失败:", e);
-    const idx = messages.value.findIndex((m) => m.textMsg.nano_id === textMsg.nano_id);
+    const idx = messages.value.findIndex(
+      (m) => m.textMsg.nano_id === textMsg.nano_id
+    );
     if (idx !== -1) messages.value[idx].failed = true;
     showToast({ message: "发送失败，点击消息重试", icon: "fail" });
   }
@@ -270,7 +311,12 @@ const selectAndSend = async (
   try {
     const filters =
       media === "image"
-        ? [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
+        ? [
+            {
+              name: "Images",
+              extensions: ["png", "jpg", "jpeg", "gif", "webp"],
+            },
+          ]
         : undefined;
     const filePaths = await selectFile(false, false, filters);
     if (!filePaths || filePaths.length === 0) return;
@@ -322,24 +368,32 @@ const selectAndSend = async (
       await invoke(command, { textQuicMsg: textMsg });
     } catch (e) {
       console.error("发送媒体失败:", e);
-      const idx = messages.value.findIndex((m) => m.textMsg.nano_id === textMsg.nano_id);
+      const idx = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
       if (idx !== -1) {
         messages.value[idx].failed = true;
         messages.value[idx].sendingImage = false;
       }
-      showToast({ message: media === "image" ? "图片发送失败" : "文件发送失败", icon: "fail" });
+      showToast({
+        message: media === "image" ? "图片发送失败" : "文件发送失败",
+        icon: "fail",
+      });
     }
   } catch (e) {
     console.error("选择文件失败:", e);
   }
 };
 
-const sendImage = () => selectAndSend("image", MSG_TYPE_IMAGE, "send_image_msg");
+const sendImage = () =>
+  selectAndSend("image", MSG_TYPE_IMAGE, "send_image_msg");
 const sendFile = () => selectAndSend("file", 3, "send_file_msg");
 
 /** 失败消息重发：优先走 Rust 补发，若不存在发送记录则直接重发 */
 const handleRetry = async (msg: UiChatMessage) => {
-  const idx = messages.value.findIndex((m) => m.textMsg.nano_id === msg.textMsg.nano_id);
+  const idx = messages.value.findIndex(
+    (m) => m.textMsg.nano_id === msg.textMsg.nano_id
+  );
   const update = (failed: boolean, ack?: boolean | undefined) => {
     if (idx !== -1) {
       messages.value[idx].failed = failed;
@@ -526,6 +580,9 @@ const selfTools = ["emoji", "image"] as const;
       <div v-if="loadingMore" class="loading-more">
         <div class="loading-spinner small"></div>
       </div>
+      <div v-if="!hasMore && messages.length > 0" class="no-more">
+        没有更多消息了
+      </div>
       <MessageList
         mode="single"
         :messages="messages"
@@ -685,5 +742,12 @@ const selfTools = ["emoji", "image"] as const;
   display: flex;
   justify-content: center;
   padding: 8px;
+}
+.no-more {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-placeholder);
 }
 </style>

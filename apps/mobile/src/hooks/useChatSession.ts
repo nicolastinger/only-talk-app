@@ -4,6 +4,14 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getMyUuid } from "@/utils/api";
 import type { ChatSessionVo, ChatSessionEvent } from "@workspace/types";
 
+const sortSessions = (list: ChatSessionVo[]): ChatSessionVo[] =>
+  [...list].sort((a, b) => {
+    if ((b.is_top || 0) !== (a.is_top || 0)) {
+      return (b.is_top || 0) - (a.is_top || 0);
+    }
+    return b.timestamp - a.timestamp;
+  });
+
 export function useChatSessions() {
   const sessions = ref<ChatSessionVo[]>([]);
   const loading = ref(false);
@@ -14,7 +22,7 @@ export function useChatSessions() {
   const fetchSessions = async () => {
     try {
       const res: ChatSessionVo[] = await invoke("get_chat_session_from_store");
-      sessions.value = (res || []).sort((a, b) => b.timestamp - a.timestamp);
+      sessions.value = sortSessions(res || []);
     } catch (e) {
       console.error("加载会话列表失败:", e);
     }
@@ -46,9 +54,7 @@ export function useChatSessions() {
               sessions.value[index].unread_count + evt.data.unread_count,
           };
         }
-        sessions.value = [...sessions.value].sort(
-          (a, b) => b.timestamp - a.timestamp
-        );
+        sessions.value = sortSessions(sessions.value);
       } catch (e) {
         console.error("处理chat_session事件失败:", e);
       }

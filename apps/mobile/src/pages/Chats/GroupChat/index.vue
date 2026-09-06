@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  onUnmounted,
+  nextTick,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { showToast, showConfirmDialog } from "vant";
@@ -49,6 +57,8 @@ const groupInfo = reactive<Partial<GroupVo>>({
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
 const meUuid = ref("");
+
+let allowInfiniteScroll = false;
 
 const { textMessage } = useMessageApi(() => groupId, undefined, true);
 const { groupAckMessage } = useGroupMessageAck(groupId);
@@ -143,7 +153,8 @@ const makeUiMessage = (
     textMsg: msg,
     ack: undefined,
     failed: false,
-    showTime: index === 0 || needTimeDivider(arr[index - 1].timestamp, msg.timestamp),
+    showTime:
+      index === 0 || needTimeDivider(arr[index - 1].timestamp, msg.timestamp),
     senderUuid: msg.send_user,
   };
 };
@@ -151,6 +162,7 @@ const makeUiMessage = (
 const loadMessages = async (page = 1, prepend = false) => {
   if (page === 1) loading.value = true;
   else loadingMore.value = true;
+  if (!prepend && page === 1) allowInfiniteScroll = false;
   try {
     const data = (await invoke("get_group_chat_record_from_store", {
       groupId,
@@ -173,18 +185,34 @@ const loadMessages = async (page = 1, prepend = false) => {
     }
 
     if (prepend) {
+      // 对齐 PC：向上加载历史时保持当前滚动位置，避免视口跳动
+      const prevScrollHeight = containerRef.value?.scrollHeight || 0;
       messages.value = [...chatMessages, ...messages.value];
+      await nextTick();
+      const el = containerRef.value;
+      if (el) {
+        const newScrollHeight = el.scrollHeight;
+        el.scrollTop = newScrollHeight - prevScrollHeight;
+      }
     } else {
       messages.value = chatMessages;
       currentPage.value = 1;
       await nextTick();
-      scrollToBottom(false);
     }
   } catch (e) {
     console.error("加载群消息失败:", e);
   } finally {
     loading.value = false;
     loadingMore.value = false;
+    if (!prepend) {
+      // 容器在 loading=false 后才挂载，需在渲染完成后滚动到最新消息
+      await nextTick();
+      scrollToBottom(false);
+      setTimeout(() => scrollToBottom(false), 120);
+      setTimeout(() => {
+        allowInfiniteScroll = true;
+      }, 200);
+    }
   }
 };
 
@@ -195,7 +223,14 @@ const reloadFirstPage = () => {
 
 const onScroll = () => {
   const el = containerRef.value;
-  if (!el || loadingMore.value || !hasMore.value) return;
+  if (
+    !el ||
+    !allowInfiniteScroll ||
+    loading.value ||
+    loadingMore.value ||
+    !hasMore.value
+  )
+    return;
   if (el.scrollTop <= 80) {
     const nextPage = currentPage.value + 1;
     currentPage.value = nextPage;
@@ -282,7 +317,12 @@ const selectAndSendGroup = async (
   try {
     const filters =
       media === "image"
-        ? [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
+        ? [
+            {
+              name: "Images",
+              extensions: ["png", "jpg", "jpeg", "gif", "webp"],
+            },
+          ]
         : undefined;
     const filePaths = await selectFile(false, false, filters);
     if (!filePaths || filePaths.length === 0) return;
@@ -574,7 +614,11 @@ const handlePreview = async (msg: UiChatMessage) => {
         >
       </div>
       <button class="more-btn" aria-label="群聊设置" @click="handleLeaveGroup">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 20px; height: 20px">
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style="width: 20px; height: 20px"
+        >
           <path
             d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
           />
@@ -590,6 +634,9 @@ const handlePreview = async (msg: UiChatMessage) => {
     <div v-else ref="containerRef" class="message-container" @scroll="onScroll">
       <div v-if="loadingMore" class="loading-more">
         <div class="loading-spinner small"></div>
+      </div>
+      <div v-if="!hasMore && messages.length > 0" class="no-more">
+        没有更多消息了
       </div>
       <MessageList
         mode="group"
@@ -750,5 +797,12 @@ const handlePreview = async (msg: UiChatMessage) => {
   display: flex;
   justify-content: center;
   padding: 8px;
+}
+.no-more {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-placeholder);
 }
 </style>
