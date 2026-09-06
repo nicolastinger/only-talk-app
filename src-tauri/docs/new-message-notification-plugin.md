@@ -16,7 +16,21 @@
 
 移动端点系统通知 → 插件回传 `actionId="tap"` + 会话目标(`extra.payload.chat`)→ 前端 `router.push` 跳到对应单聊/群聊窗口。
 
-## 2. 为什么必须"生成安卓模块"
+## 2. 安卓后台保活(前台服务)行为说明
+
+为了让 App 退到后台时仍能收到 QUIC 消息并弹系统通知,安卓端用一个**前台服务**(`KeepAliveService`)保活进程。行为要点:
+
+- **只在后台运行、前台不打扰**:`MainActivity.onPause`(退后台)启动前台服务,`onResume`(回前台)后**延迟约 1.5s 再停止**(确保服务已完成 `startForeground`,避免竞态崩溃)。回到前台后通知栏自动恢复干净。
+- **防崩溃与去抖**:用 `KeepAliveService.isRunning` 标志去重;快速 前台↔后台 切换(点通知栏、下拉通知、权限弹窗等)不会反复 stop/start,只在回到前台连续停留后才真正停止。
+  - ⚠️ 不要退回"onPause 启动 + onResume 立刻停止"的写法:会在 `startForeground` 完成前被 stop,触发 `ForegroundServiceDidNotStartInTimeException` ANR(已在模拟机复现)。
+- **通知可见性**:Android 强制要求前台服务运行期间必须带一条通知,**无法彻底隐藏、且为 ongoing(用户划不走)**。已尽量低调:
+  - 只有 App 在后台时才出现(前台无此通知);
+  - 通知通道 `IMPORTANCE_MIN`,静音、不震动、无角标。
+  - 若连后台这条也不想出现,只能放弃前台服务,那样后台保活会不可靠。
+- **省电**:`WakeLock`/`WifiLock` 仅在**熄屏**时持有(靠 `ACTION_SCREEN_ON/OFF` 广播切换);亮屏时即使退到后台,前台服务本身已能阻止进程冻结/网络回收。
+- 用户从最近任务划掉 App 时,由 manifest 的 `android:stopWithTask="true"` 自动停止服务。
+
+## 3. 为什么必须"生成安卓模块"
 
 - 通知能力分两层:
   - 桌面端/服务端逻辑:纯 Rust,打包即可用(`notify-rust`)。
@@ -39,7 +53,7 @@ pnpm tauri android build
 > 依赖侧只要保留住 `src-tauri/Cargo.toml` 里的 `tauri-plugin-notification = "2"` 以及
 > `apps/pc`、`apps/mobile` 的 `@tauri-apps/plugin-notification` 依赖,CLI 就会在下次安卓构建时自动补出该插件模块;反之若把依赖删了,安卓端会静默退回"无通知"。
 
-## 3. 本次改动涉及的文件
+## 4. 本次改动涉及的文件
 
 Rust(仓库内、已入库):
 - `src-tauri/Cargo.toml` — 新增依赖 `tauri-plugin-notification = "2"`
@@ -55,9 +69,12 @@ Rust(仓库内、已入库):
 - `apps/mobile/src/App.vue` — 前台状态维护 + 插件 `onAction` 监听,点击通知跳到 `/chats/chat/:friendId` 或 `/chats/group-chat/:groupId`
 
 安卓原生(在 `gen/android` 内,**本地生成、未入库**,重生成后会保留在工程里):
-- `KeepAliveService.kt` / `AndroidManifest.xml` / `MainActivity.kt` / `strings.xml` — 前台服务保活(顺带已在 Android 13+ 申请 `POST_NOTIFICATIONS`,通知插件共用该权限)
+- `KeepAliveService.kt` — 后台保活前台服务:熄屏才持 WakeLock/WifiLock、通知通道 `IMPORTANCE_MIN`(静音),暴露 `isRunning` 供 Activity 去重启停
+- `MainActivity.kt` — 仅在退后台(`onPause`)时启动保活、回前台(`onResume`)延迟 1.5s 停止;Android 13+ 申请 `POST_NOTIFICATIONS`(通知插件共用该权限)
+- `AndroidManifest.xml` — 声明保活服务(`foregroundServiceType="dataSync"`、`stopWithTask="true"`)及所需权限
+- `strings.xml` — 保活通知文案
 
-## 4. 复现/验证步骤
+## 5. 复现/验证步骤
 
 1. 确保依赖齐全:`pnpm install`(workspace 根)。
 2. 重新生成安卓模块 + 装到手机:
@@ -66,11 +83,12 @@ Rust(仓库内、已入库):
    ```
 3. 验证:
    - App 切后台后,另一账号给当前账号发消息 → 状态栏出现系统通知,标题为好友/群名。
-   - 点击该通知 → App 回到前台并直接打开对应会话。
+   - 点击该通知 → App 回到前台并直接打开对应会话;期间反复点通知/切前后台不应崩溃(`ForegroundServiceDidNotStartInTimeException`)。
+   - 退后台后通知栏出现一条**静音保活通知**,回到前台约 1.5s 后自动消失。
    - 桌面端:前台时在其它会话/页面收到消息 → 右上角横幅,点击跳到对应会话;最小化/托盘隐藏后收到消息 → 系统通知。
    - 手机设置里允许通知权限(Android 13+ 首次启动会请求 `POST_NOTIFICATIONS`)。
 
-## 5. 已知限制与后续可做
+## 6. 已知限制与后续可做
 
 - **桌面端系统通知没有"点击回调"**(`tauri-plugin-notification` 桌面实现不支持),桌面跳转依赖应用内横幅;这是之前确认过的取舍。
 - **移动端冷启动点通知可能丢失**:若 App 进程已被系统彻底杀掉,点通知冷启动时插件点击事件可能早于前端监听注册而丢。常规"切后台"场景因前台服务保活进程存活,不受影响。如需要,可在 `MainActivity` 把点击 intent 落盘、启动后读取补齐。
