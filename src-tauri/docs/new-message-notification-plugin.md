@@ -27,7 +27,8 @@
   - 只有 App 在后台时才出现(前台无此通知);
   - 通知通道 `IMPORTANCE_MIN`,静音、不震动、无角标。
   - 若连后台这条也不想出现,只能放弃前台服务,那样后台保活会不可靠。
-- **省电**:`WakeLock`/`WifiLock` 仅在**熄屏**时持有(靠 `ACTION_SCREEN_ON/OFF` 广播切换);亮屏时即使退到后台,前台服务本身已能阻止进程冻结/网络回收。
+- **省电与保活锁**:服务运行期间(即 App 退到后台期间)**持续持有** `WakeLock` + WiFi 高功耗锁(`WIFI_MODE_FULL_HIGH_PERF`),保证 CPU 不休眠、Wi-Fi 不降功耗,后台 QUIC 心跳与 PONG 才能续上;回到前台(服务停止)后两锁释放。
+- **电池优化豁免**:前台服务只能阻止进程进入 cached 态,**没法阻止 Doze/App Standby/国产 ROM 电池优化**限制后台执行与网络(这也是「保活通知在、整个进程仍被冻结」的原因)。`MainActivity` 首次启动会通过 `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` 引导用户把 App 设为电池优化豁免(已在 manifest 声明 `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)。
 - 用户从最近任务划掉 App 时,由 manifest 的 `android:stopWithTask="true"` 自动停止服务。
 
 ## 3. 为什么必须"生成安卓模块"
@@ -69,9 +70,9 @@ Rust(仓库内、已入库):
 - `apps/mobile/src/App.vue` — 前台状态维护 + 插件 `onAction` 监听,点击通知跳到 `/chats/chat/:friendId` 或 `/chats/group-chat/:groupId`
 
 安卓原生(在 `gen/android` 内,**本地生成、未入库**,重生成后会保留在工程里):
-- `KeepAliveService.kt` — 后台保活前台服务:熄屏才持 WakeLock/WifiLock、通知通道 `IMPORTANCE_MIN`(静音),暴露 `isRunning` 供 Activity 去重启停
-- `MainActivity.kt` — 仅在退后台(`onPause`)时启动保活、回前台(`onResume`)延迟 1.5s 停止;Android 13+ 申请 `POST_NOTIFICATIONS`(通知插件共用该权限)
-- `AndroidManifest.xml` — 声明保活服务(`foregroundServiceType="dataSync"`、`stopWithTask="true"`)及所需权限
+- `KeepAliveService.kt` — 后台保活前台服务:服务运行期间**恒持 WakeLock + WiFi 高功耗锁**(防 CPU 休眠/Wi-Fi 省电断 QUIC);通知通道 `IMPORTANCE_MIN`(静音),暴露 `isRunning` 供 Activity 去重启停
+- `MainActivity.kt` — 仅在退后台(`onPause`)时启动保活、回前台(`onResume`)延迟 1.5s 停止;Android 13+ 申请 `POST_NOTIFICATIONS`、引导申请电池优化豁免(防 Doze/OEM 冻结进程)
+- `AndroidManifest.xml` — 声明保活服务(`foregroundServiceType="dataSync"`、`stopWithTask="true"`)、所需权限及 `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`
 - `strings.xml` — 保活通知文案
 
 ## 5. 复现/验证步骤
