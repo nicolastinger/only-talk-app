@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FriendVo, GroupVo } from '@workspace/types';
+import { FriendVo, GroupInfoVo } from '@workspace/types';
 import {
   get_friend_list,
   create_group,
@@ -49,7 +49,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     }
     setLoading(true);
     try {
-      const group: GroupVo = await create_group({
+      const group: GroupInfoVo = await create_group({
         group_name: groupName.trim(),
       });
       if (selectedFriends.length > 0) {

@@ -87,6 +87,12 @@ interface SendVerifyCodeRequest {
   email: string;
 }
 
+/** 登录/刷新令牌响应(POST /user/sign_in, /user/refresh_token 返回) — 镜像 rs SignInResponseVO */
+interface SignInResponseVo {
+  access_token: string;
+  refresh_token: string;
+}
+
 interface UserInfo {
   uuid: string;
   username?: string;
@@ -96,12 +102,6 @@ interface UserInfo {
   age?: number;
   birthday?: number;
   info?: string;
-  created_at?: number;
-  updated_at?: number;
-  last_login_at?: number;
-  last_login_equipment?: string;
-  last_login_ipv4?: string;
-  last_login_ipv6?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -160,4 +160,5 @@ export type {
   SignUpStep1Response,
   CompleteProfileRequest,
   SendVerifyCodeRequest,
+  SignInResponseVo,
 };

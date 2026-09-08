@@ -3,6 +3,15 @@ import { FileVo, Page, TextQuicMsgVo } from "@workspace/types";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 
 /**
+ * 本地文件记录 + 前端运行时追加的 tauri 路径。
+ * tauri_file_path/blob_url 为客户端缓存字段, 非后端返回, 仅用于本地文件访问。
+ */
+interface FileVoLocal extends FileVo {
+  tauri_file_path?: string;
+  blob_url?: string;
+}
+
+/**
  * 选择文件
  * @param isMultiple 是否多选
  * @param isDirectory 是否选择目录
@@ -52,13 +61,13 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
 export const getFiles = async (
   bizId: string,
   nanoId?: string
-): Promise<FileVo[] | null> => {
+): Promise<FileVoLocal[] | null> => {
   try {
-    let files = [] as FileVo[];
-    const FileVos: FileVo[] = await invoke("get_file_by_biz_id", {
+    let files = [] as FileVoLocal[];
+    const FileVos: FileVoLocal[] = (await invoke("get_file_by_biz_id", {
       bizId,
       nanoId,
-    });
+    })) as FileVoLocal[];
 
     if (FileVos.length > 0) {
       FileVos.forEach((file) => {
@@ -87,13 +96,13 @@ export const getFiles = async (
 export const getChatFileByBizId = async (
   bizId: string,
   nanoId?: string
-): Promise<FileVo[] | null> => {
+): Promise<FileVoLocal[] | null> => {
   try {
-    let files = [] as FileVo[];
-    const FileVos: FileVo[] = await invoke("get_chat_file_by_biz_id", {
+    let files = [] as FileVoLocal[];
+    const FileVos: FileVoLocal[] = (await invoke("get_chat_file_by_biz_id", {
       bizId,
       nanoId,
-    });
+    })) as FileVoLocal[];
 
     console.log("get_chat_file_by_biz_id result:", FileVos);
 

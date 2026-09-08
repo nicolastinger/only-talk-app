@@ -3,7 +3,7 @@ import { useBearStore } from '@/store/store';
 import { history, useIntl } from '@umijs/max';
 import { getFiles, getUnreadNotificationCounts } from '@workspace/services';
 import { get_group_list } from '@workspace/services';
-import { GroupVo } from '@workspace/types';
+import { GroupInfoVo, GroupListItemVo } from '@workspace/types';
 import { Badge, message } from 'antd';
 import { PlusOutlined, MailOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
@@ -13,7 +13,7 @@ import styles from './styles/GroupList.less';
 
 const GroupList = () => {
   const intl = useIntl();
-  const [groups, setGroups] = useState<GroupVo[]>([]);
+  const [groups, setGroups] = useState<GroupListItemVo[]>([]);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [invitationVisible, setInvitationVisible] = useState(false);
   const [groupInvitationUnread, setGroupInvitationUnread] = useState(0);
@@ -61,7 +61,7 @@ const GroupList = () => {
     history.push('/home/contacts/group?groupId=' + groupId);
   };
 
-  const handleCreateSuccess = async (group: GroupVo) => {
+  const handleCreateSuccess = async (group: GroupInfoVo) => {
     setCreateModalVisible(false);
     await getGroupList();
   };
@@ -111,7 +111,7 @@ const GroupList = () => {
 };
 
 interface GroupBoxProps {
-  group: GroupVo;
+  group: GroupListItemVo;
   onClick: () => void;
 }
 

@@ -3,7 +3,7 @@ import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
 import { history, useIntl, useSearchParams } from '@umijs/max';
 import { get_group_info, get_group_members, getFiles, create_group_chat_session } from '@workspace/services';
-import { GroupVo, GroupMemberVo } from '@workspace/types';
+import { GroupInfoVo, GroupMemberVo } from '@workspace/types';
 import { Avatar, Button, Collapse, List, message, Spin } from 'antd';
 import { UserOutlined, TeamOutlined, MessageOutlined } from '@ant-design/icons';
 import { useEffect, useMemo, useState } from 'react';
@@ -15,7 +15,7 @@ const GroupInfoPage = () => {
   const groupId = searchParams.get('groupId') || '';
   const { userInfo } = useBearStore();
 
-  const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
+  const [groupInfo, setGroupInfo] = useState<GroupInfoVo | null>(null);
   const [members, setMembers] = useState<GroupMemberVo[]>([]);
   const [groupIcon, setGroupIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -139,14 +139,14 @@ const GroupInfoPage = () => {
                     dataSource={members}
                     renderItem={(member) => {
                       const info = memberInfoMap.get(member.user_uuid);
-                      const displayName = info?.username || member.nickname || member.username;
+                      const displayName = info?.username || member.nickname || member.user_uuid;
                       return (
                       <List.Item className={styles.memberItem}>
                         <div className={styles.memberInfo}>
                           <Avatar
                             size={32}
                             icon={<UserOutlined />}
-                            src={info?.icon || member.icon}
+                            src={info?.icon}
                           />
                           <div className={styles.memberDetail}>
                             <span className={styles.memberName}>

@@ -2,7 +2,7 @@ import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { useUserInfoList } from '@/hooks/useUserInfoList';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { useBearStore } from '@/store/store';
-import { GroupMemberVo, GroupVo } from '@workspace/types';
+import { GroupInfoVo, GroupMemberVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
 import { convertPathToTauriUrl, getFiles, selectFile } from '@workspace/services';
 import { history, useSearchParams, useIntl } from '@umijs/max';
@@ -36,7 +36,7 @@ const GroupSettingsPage = () => {
     0: intl.formatMessage({ id: 'groupSettings.members.member' }),
   };
 
-  const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
+  const [groupInfo, setGroupInfo] = useState<GroupInfoVo | null>(null);
   const [members, setMembers] = useState<GroupMemberVo[]>([]);
   const [loading, setLoading] = useState(true);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -159,7 +159,7 @@ const GroupSettingsPage = () => {
     const ids: string[] = [];
     for (const member of members) {
       const info = memberInfoMap.get(member.user_uuid);
-      const bizId = info?.icon || member.icon;
+      const bizId = info?.icon;
       if (bizId) ids.push(bizId);
     }
     return ids;
@@ -170,7 +170,7 @@ const GroupSettingsPage = () => {
     const keyword = searchText.toLowerCase();
     const info = memberInfoMap.get(m.user_uuid);
     return (
-      (m.username || '').toLowerCase().includes(keyword) ||
+      (info?.username || '').toLowerCase().includes(keyword) ||
       (info?.account || '').toLowerCase().includes(keyword) ||
       m.user_uuid.toLowerCase().includes(keyword)
     );
@@ -250,7 +250,7 @@ const GroupSettingsPage = () => {
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
       title: intl.formatMessage({ id: 'groupSettings.members.removeMember' }),
-      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: member.username || member.user_uuid }),
+      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: memberInfoMap.get(member.user_uuid)?.username || member.user_uuid }),
       okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
       okButtonProps: { danger: true },
       cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
@@ -342,7 +342,7 @@ const GroupSettingsPage = () => {
               selectedUser = val;
             }}
             options={membersToTransfer.map((m) => ({
-              label: `${m.username || m.user_uuid} (${m.user_uuid})`,
+              label: `${memberInfoMap.get(m.user_uuid)?.username || m.user_uuid} (${m.user_uuid})`,
               value: m.user_uuid,
             }))}
           />
@@ -403,7 +403,7 @@ const GroupSettingsPage = () => {
     { label: intl.formatMessage({ id: 'groupSettings.groupId' }), value: groupInfo.group_uuid, icon: <CopyOutlined />, onClick: copyGroupId, showArrow: true },
     { label: intl.formatMessage({ id: 'groupSettings.members.owner' }), value: (() => {
       const owner = members.find((m) => m.role === 2);
-      return owner ? (owner.username || owner.user_uuid) : '-';
+      return owner ? (memberInfoMap.get(owner.user_uuid)?.username || owner.user_uuid) : '-';
     })(), icon: <SafetyCertificateOutlined /> },
     { label: intl.formatMessage({ id: 'groupSettings.createdAt' }), value: groupInfo.created_at ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN') : '-', icon: null },
   ];
@@ -521,8 +521,8 @@ const GroupSettingsPage = () => {
             )}
             {displayMembers.map((member) => {
               const info = memberInfoMap.get(member.user_uuid);
-              const displayName = info?.username || member.username || intl.formatMessage({ id: 'groupSettings.members.member' });
-              const iconBizId = info?.icon || member.icon;
+              const displayName = info?.username || member.nickname || intl.formatMessage({ id: 'groupSettings.members.member' });
+              const iconBizId = info?.icon;
               const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
               return (
               <div key={member.user_uuid} className={styles.memberGridItem}>
@@ -590,8 +590,8 @@ const GroupSettingsPage = () => {
             {filteredMembers.map((member) => {
               const isSelf = member.user_uuid === userInfo?.uuid;
               const info = memberInfoMap.get(member.user_uuid);
-              const displayName = info?.username || member.username || member.user_uuid;
-              const iconBizId = info?.icon || member.icon;
+              const displayName = info?.username || member.nickname || member.user_uuid;
+              const iconBizId = info?.icon;
               const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
               const actions: { label: React.ReactNode; onClick: () => void }[] = [];
               if (!isSelf && isOwner) {

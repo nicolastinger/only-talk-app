@@ -1,7 +1,7 @@
 import { useBearStore } from '@/store/store';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { history, useIntl, useLocation } from '@umijs/max';
-import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
+import { FriendVo, GroupMemberStoreVo, GroupVo } from '@workspace/types';
 import { get_friend_list, invite_group_members } from '@workspace/services';
 import { Avatar, Button, List, Modal, Select, Spin, Typography, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 const GroupInfoPage: React.FC = () => {
   const intl = useIntl();
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
-  const [members, setMembers] = useState<GroupMemberVo[]>([]);
+  const [members, setMembers] = useState<GroupMemberStoreVo[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [friendList, setFriendList] = useState<FriendVo[]>([]);
@@ -42,14 +42,14 @@ const GroupInfoPage: React.FC = () => {
   const loadMembers = async () => {
     setLoading(true);
     try {
-      const data: GroupMemberVo[] = await invoke('sync_group_members_command', {
+      const data: GroupMemberStoreVo[] = await invoke('sync_group_members_command', {
         groupId,
       });
       setMembers(data);
     } catch (err) {
       console.log('获取成员失败，尝试本地加载', err);
       try {
-        const data: GroupMemberVo[] = await invoke('get_group_members', {
+        const data: GroupMemberStoreVo[] = await invoke('get_group_members', {
           groupId,
         });
         setMembers(data);
@@ -91,7 +91,7 @@ const GroupInfoPage: React.FC = () => {
   const openInviteModal = async () => {
     try {
       const friends = await get_friend_list();
-      const memberIds = new Set(members.map((m) => m.user_uuid));
+      const memberIds = new Set(members.map((m) => m.user_id));
       const nonMembers = friends.filter((f) => !memberIds.has(f.friend_id));
       setFriendList(nonMembers);
       setSelectedFriends([]);
@@ -120,10 +120,10 @@ const GroupInfoPage: React.FC = () => {
   };
 
   const isOwner = groupInfo?.owner_uuid === meUuid;
-  const isAdmin = members.some((m) => m.user_uuid === meUuid && m.role >= 1);
+  const isAdmin = members.some((m) => m.user_id === meUuid && m.role >= 1);
 
   const memberUuids = useMemo(
-    () => members.map((m) => m.user_uuid).filter(Boolean),
+    () => members.map((m) => m.user_id).filter(Boolean),
     [members],
   );
   const { memberInfoMap } = useGroupMemberInfo(memberUuids);
@@ -168,9 +168,9 @@ const GroupInfoPage: React.FC = () => {
       ) : (
         <List
           dataSource={members}
-          renderItem={(member: GroupMemberVo) => {
-            const info = memberInfoMap.get(member.user_uuid);
-            const displayName = info?.username || member.nickname || member.user_uuid;
+          renderItem={(member: GroupMemberStoreVo) => {
+            const info = memberInfoMap.get(member.user_id);
+            const displayName = info?.username || member.nickname || member.user_id;
             return (
             <List.Item>
               <List.Item.Meta
@@ -190,7 +190,7 @@ const GroupInfoPage: React.FC = () => {
                     )}
                   </span>
                 }
-                description={member.user_uuid === meUuid ? intl.formatMessage({ id: 'groupSettings.members.me' }) : member.user_uuid}
+                description={member.user_id === meUuid ? intl.formatMessage({ id: 'groupSettings.members.me' }) : member.user_id}
               />
             </List.Item>
             );

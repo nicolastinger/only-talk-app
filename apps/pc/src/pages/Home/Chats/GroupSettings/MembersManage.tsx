@@ -3,7 +3,7 @@ import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
-import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
+import { FriendVo, GroupInfoVo, GroupMemberVo } from '@workspace/types';
 import { Avatar, Button, Dropdown, Input, List, MenuProps, Modal, Select, Space, message, Tag } from 'antd';
 import { UserOutlined, PlusOutlined, MoreOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -12,7 +12,7 @@ import { useIntl } from '@umijs/max';
 import styles from './index.module.less';
 
 interface Props {
-  groupInfo: GroupVo;
+  groupInfo: GroupInfoVo;
   members: GroupMemberVo[];
   onUpdate: () => void;
 }
@@ -47,7 +47,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
     const ids: string[] = [];
     for (const member of members) {
       const info = memberInfoMap.get(member.user_uuid);
-      const bizId = info?.icon || member.icon;
+      const bizId = info?.icon;
       if (bizId) ids.push(bizId);
     }
     return ids;
@@ -92,7 +92,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
       title: intl.formatMessage({ id: 'groupSettings.members.removeMember' }),
-      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: member.username || member.user_uuid }),
+      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: memberInfoMap.get(member.user_uuid)?.username || member.user_uuid }),
       okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
       okButtonProps: { danger: true },
       cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
@@ -167,7 +167,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
     const keyword = searchText.toLowerCase();
     const info = memberInfoMap.get(m.user_uuid);
     return (
-      (m.username || '').toLowerCase().includes(keyword) ||
+      (info?.username || '').toLowerCase().includes(keyword) ||
       (info?.account || '').toLowerCase().includes(keyword) ||
       m.user_uuid.toLowerCase().includes(keyword)
     );
@@ -196,8 +196,8 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
         dataSource={filteredMembers}
         renderItem={(member) => {
           const info = memberInfoMap.get(member.user_uuid);
-          const displayName = info?.username || member.username || member.user_uuid;
-          const iconBizId = info?.icon || member.icon;
+          const displayName = info?.username || member.nickname || member.user_uuid;
+          const iconBizId = info?.icon;
           const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
           return (
           <div className={styles.memberItem}>

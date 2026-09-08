@@ -1,9 +1,12 @@
 import {
   HTTP_METHOD,
   TALK_API,
-  GroupVo,
+  GroupInfoVo,
+  GroupListItemVo,
   GroupMemberVo,
   GroupInvitationVo,
+  GroupMessageVo,
+  UnreadCountVo,
 } from "@workspace/types";
 import { invoke_rust } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -19,14 +22,14 @@ function parseData<T>(res: any): T {
   throw new Error(json.message || "请求失败");
 }
 
-export const get_group_list = async (): Promise<GroupVo[]> => {
+export const get_group_list = async (): Promise<GroupListItemVo[]> => {
   const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/my/list", "");
-  return parseData<GroupVo[]>(res);
+  return parseData<GroupListItemVo[]>(res);
 };
 
-export const get_group_info = async (groupId: string): Promise<GroupVo> => {
+export const get_group_info = async (groupId: string): Promise<GroupInfoVo> => {
   const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + `/group/chat/info/${groupId}`, "");
-  return parseData<GroupVo>(res);
+  return parseData<GroupInfoVo>(res);
 };
 
 export const create_group = async (dto: {
@@ -34,9 +37,9 @@ export const create_group = async (dto: {
   avatar?: string;
   description?: string;
   max_members?: number;
-}): Promise<GroupVo> => {
+}): Promise<GroupInfoVo> => {
   const res = await invoke_rust(HTTP_METHOD.POST, TALK_API + "/group/chat/create", JSON.stringify(dto));
-  return parseData<GroupVo>(res);
+  return parseData<GroupInfoVo>(res);
 };
 
 export const update_group = async (dto: {
@@ -135,18 +138,18 @@ export const get_group_message_history = async (dto: {
   group_uuid: string;
   start?: number;
   size?: number;
-}): Promise<any[]> => {
+}): Promise<GroupMessageVo[]> => {
   const params = new URLSearchParams();
   params.set("group_uuid", dto.group_uuid);
   if (dto.start !== undefined) params.set("start", String(dto.start));
   if (dto.size !== undefined) params.set("size", String(dto.size));
   const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + `/group/chat/message/history?${params.toString()}`, "");
-  return parseData<any[]>(res);
+  return parseData<GroupMessageVo[]>(res);
 };
 
-export const get_unread_group_messages = async (): Promise<any[]> => {
+export const get_unread_group_messages = async (): Promise<UnreadCountVo[]> => {
   const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/message/unread", "");
-  return parseData<any[]>(res);
+  return parseData<UnreadCountVo[]>(res);
 };
 
 export const create_group_chat_session = async (

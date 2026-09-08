@@ -21,7 +21,7 @@ import { parseResponse } from "@/utils/api";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type {
   FriendVo,
-  GroupVo,
+  GroupListItemVo,
   FriendRequestInfo,
   FriendRequestInfoDTO,
 } from "@workspace/types";
@@ -30,7 +30,7 @@ const router = useRouter();
 const { getAvatarUrl } = useAvatar();
 
 const friends = ref<FriendVo[]>([]);
-const groups = ref<GroupVo[]>([]);
+const groups = ref<GroupListItemVo[]>([]);
 const refreshing = ref(false);
 const sectionTab = ref(0);
 const pendingRequestCount = ref(0);
@@ -148,7 +148,7 @@ const goChat = async (friend: FriendVo) => {
   }
   router.push(`/chats/chat/${friend.friend_id}`);
 };
-const goGroupChat = async (group: GroupVo) => {
+const goGroupChat = async (group: GroupListItemVo) => {
   try {
     await invoke("create_group_chat_session_command", {
       groupId: group.group_uuid,
@@ -167,7 +167,7 @@ const getAvatar = (friend: FriendVo) => {
   return DEFAULT_AVATAR;
 };
 
-const getGroupAvatar = (group: GroupVo) => {
+const getGroupAvatar = (group: GroupListItemVo) => {
   const icon = group.avatar;
   if (icon && groupAvatarMap.value[icon] != null) {
     return groupAvatarMap.value[icon];
@@ -175,7 +175,7 @@ const getGroupAvatar = (group: GroupVo) => {
   return null;
 };
 
-const hasGroupAvatar = (group: GroupVo) => !!getGroupAvatar(group);
+const hasGroupAvatar = (group: GroupListItemVo) => !!getGroupAvatar(group);
 
 let unlistenFriends: UnlistenFn | undefined;
 

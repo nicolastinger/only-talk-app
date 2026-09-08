@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { GroupVo } from '@workspace/types';
+import { GroupInfoVo } from '@workspace/types';
 import { create_group } from '@workspace/services';
 import { Modal, Input, InputNumber, message } from 'antd';
 import { useIntl } from '@umijs/max';
@@ -7,7 +7,7 @@ import { useIntl } from '@umijs/max';
 interface CreateGroupModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: (group: GroupVo) => void;
+  onSuccess: (group: GroupInfoVo) => void;
 }
 
 const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
@@ -36,7 +36,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     }
     setLoading(true);
     try {
-      const group: GroupVo = await create_group({
+      const group: GroupInfoVo = await create_group({
         group_name: groupName.trim(),
         avatar: '',
         description: description.trim() || undefined,

@@ -131,7 +131,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       <div
         key={n.id}
         className={`${styles.notifyItem} ${isUnread ? styles.unread : ''}`}
-        onClick={() => isUnread && handleMarkRead(n.id)}
+        onClick={() => isUnread && n.id && handleMarkRead(n.id)}
       >
         <div className={styles.notifyHeader}>
           <Tag color={type.color}>{type.text}</Tag>
