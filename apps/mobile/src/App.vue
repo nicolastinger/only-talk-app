@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
+import AnnouncementBanner from "@/components/AnnouncementBanner.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -150,6 +151,7 @@ onUnmounted(() => {
 
 <template>
   <div class="app-container">
+    <AnnouncementBanner v-if="showNav" />
     <router-view v-slot="{ Component }">
       <transition name="page-slide" mode="default">
         <component :is="Component" />

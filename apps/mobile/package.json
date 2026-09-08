@@ -21,6 +21,8 @@
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@workspace/services": "workspace:*",
     "@workspace/types": "workspace:*",
+    "dompurify": "^3.4.15",
+    "marked": "^18.0.12",
     "vant": "^4.8.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"
