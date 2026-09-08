@@ -34,6 +34,7 @@ import { genNanoId } from "@/chat/id";
 import MessageList from "@/components/chat/MessageList.vue";
 import MessageInputBar from "@/components/chat/MessageInputBar.vue";
 import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
+import PendingSendBar from "@/components/chat/PendingSendBar.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -62,6 +63,10 @@ const isSelf = computed(() => !!meUuid.value && friendId === meUuid.value);
 
 const ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let viewportCleanup: (() => void) | null = null;
+
+/** 待发送/发送失败面板的刷新信号（消息入队 / 收到 ACK 后自增触发重拉） */
+const pendingRefreshSignal = ref(0);
+const bumpPendingRefresh = () => void (pendingRefreshSignal.value += 1);
 
 const isImageType = (t: number) => t === MSG_TYPE_IMAGE;
 
@@ -300,6 +305,8 @@ const sendText = async () => {
     );
     if (idx !== -1) messages.value[idx].failed = true;
     showToast({ message: "发送失败，点击消息重试", icon: "fail" });
+  } finally {
+    bumpPendingRefresh();
   }
 };
 
@@ -379,6 +386,8 @@ const selectAndSend = async (
         message: media === "image" ? "图片发送失败" : "文件发送失败",
         icon: "fail",
       });
+    } finally {
+      bumpPendingRefresh();
     }
   } catch (e) {
     console.error("选择文件失败:", e);
@@ -404,6 +413,7 @@ const handleRetry = async (msg: UiChatMessage) => {
   startAckTimer(msg.textMsg.nano_id);
   try {
     await invoke("retry_send_msg", { sendId: msg.textMsg.nano_id });
+    bumpPendingRefresh();
     return;
   } catch {
     // 本地无发送记录 → 直接重发
@@ -421,6 +431,8 @@ const handleRetry = async (msg: UiChatMessage) => {
     console.error("重发失败:", e);
     update(true, undefined);
     showToast({ message: "重发失败", icon: "fail" });
+  } finally {
+    bumpPendingRefresh();
   }
 };
 
@@ -429,6 +441,7 @@ const handleRetry = async (msg: UiChatMessage) => {
 watch(textMessage, async (msg) => {
   if (!msg) return;
   if (msg.text_type === MSG_TYPE_RECALL_SUCCESS) {
+    bumpPendingRefresh();
     const idx = messages.value.findIndex((m) => m.textMsg.nano_id === msg.raw);
     if (idx !== -1) {
       clearAckTimer(msg.raw);
@@ -444,6 +457,7 @@ watch(textMessage, async (msg) => {
     return;
   }
   if (msg.text_type === MSG_TYPE_RECALL_FAILURE) {
+    bumpPendingRefresh();
     const idx = messages.value.findIndex((m) => m.textMsg.nano_id === msg.raw);
     if (idx !== -1) messages.value[idx].failed = true;
     return;
@@ -593,6 +607,12 @@ const selfTools = ["emoji", "image"] as const;
         @retry="handleRetry"
       />
     </div>
+
+    <PendingSendBar
+      v-if="!loading"
+      :friend-uuid="friendId"
+      :refresh-signal="pendingRefreshSignal"
+    />
 
     <MessageInputBar
       v-if="!loading"
