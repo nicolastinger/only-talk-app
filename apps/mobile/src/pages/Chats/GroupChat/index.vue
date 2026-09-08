@@ -10,7 +10,7 @@ import {
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { showToast, showConfirmDialog } from "vant";
+import { showToast } from "vant";
 import { useMessageApi } from "@/hooks/useMessageApi";
 import { useGroupMessageAck } from "@/hooks/useGroupMessageAck";
 import { useGroupMemberInfo } from "@/hooks/useGroupMemberInfo";
@@ -99,6 +99,18 @@ const clearAckTimer = (nanoId: string) => {
   if (timer) {
     clearTimeout(timer);
     ackTimers.delete(nanoId);
+  }
+};
+
+/** 群消息没有服务端逐成员回执，发送命令成功即视为已送达
+ *  标记 ack=true 让绿点出现（同 PC 已送达语义），并清除等待超时定时器 */
+const markGroupDelivered = (nanoId: string) => {
+  const idx = messages.value.findIndex((m) => m.textMsg.nano_id === nanoId);
+  if (idx !== -1) {
+    clearAckTimer(nanoId);
+    messages.value[idx].ack = true;
+    messages.value[idx].failed = false;
+    messages.value[idx].sendingImage = false;
   }
 };
 
@@ -299,6 +311,7 @@ const sendGroupText = async () => {
   startAckTimer(textMsg.nano_id);
   try {
     await invoke("send_group_text_msg", { textQuicMsg: textMsg });
+    markGroupDelivered(textMsg.nano_id);
   } catch (e) {
     console.error("群消息发送失败:", e);
     const idx = messages.value.findIndex(
@@ -372,6 +385,7 @@ const selectAndSendGroup = async (
     startAckTimer(textMsg.nano_id);
     try {
       await invoke(command, { textQuicMsg: textMsg });
+      markGroupDelivered(textMsg.nano_id);
     } catch (e) {
       console.error("群媒体发送失败:", e);
       const idx = messages.value.findIndex(
@@ -444,6 +458,7 @@ const handleRetry = async (msg: UiChatMessage) => {
       : "send_group_file_msg";
   try {
     await invoke(command, { textQuicMsg: textMsg });
+    markGroupDelivered(textMsg.nano_id);
   } catch (e) {
     console.error("群消息重发失败:", e);
     const i = messages.value.findIndex(
@@ -515,26 +530,7 @@ watch(
   { deep: false }
 );
 
-const handleLeaveGroup = async () => {
-  try {
-    await showConfirmDialog({
-      title: "退出群聊",
-      message: "确定要退出该群聊吗？",
-      confirmButtonText: "退出",
-      confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
-    });
-  } catch {
-    return;
-  }
-  try {
-    await invoke("leave_group_command", { groupId });
-    router.back();
-  } catch (e) {
-    console.error("退出群聊失败:", e);
-    showToast({ message: "退出群聊失败", icon: "fail" });
-  }
-};
+const goGroupSettings = () => router.push(`/chats/group-settings/${groupId}`);
 
 const markReadSession = () => {
   invoke("mark_read_chat_session", { friendUuid: groupId }).catch(() => {});
@@ -613,7 +609,7 @@ const handlePreview = async (msg: UiChatMessage) => {
           >{{ groupInfo.member_count }}人</span
         >
       </div>
-      <button class="more-btn" aria-label="群聊设置" @click="handleLeaveGroup">
+      <button class="more-btn" aria-label="群聊设置" @click="goGroupSettings">
         <svg
           viewBox="0 0 24 24"
           fill="currentColor"

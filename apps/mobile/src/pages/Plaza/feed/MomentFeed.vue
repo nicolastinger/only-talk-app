@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { PullRefresh, Loading, Empty } from "vant";
 import { get_moment_list } from "@workspace/services";
 import type { MomentVo } from "@workspace/types";
 import MomentCard from "./MomentCard.vue";
+
+const router = useRouter();
 
 const props = defineProps<{ feed: "plaza" | "following" | "mine" }>();
 
@@ -103,6 +106,19 @@ onMounted(refresh);
         </div>
       </template>
     </div>
+
+    <button
+      v-if="feed === 'mine'"
+      class="fab"
+      aria-label="发动态"
+      @click="router.push('/plaza/moment/create')"
+    >
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+        />
+      </svg>
+    </button>
   </PullRefresh>
 </template>
 
@@ -145,6 +161,32 @@ onMounted(refresh);
 
   &:disabled {
     opacity: 0.6;
+  }
+}
+
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  width: 54px;
+  height: 54px;
+  border: none;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+
+  svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  &:active {
+    transform: scale(0.94);
   }
 }
 </style>

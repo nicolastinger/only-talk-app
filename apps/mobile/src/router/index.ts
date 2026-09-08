@@ -31,6 +31,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/chats/group-settings/:groupId",
+    name: "GroupSettings",
+    component: () => import("@/pages/Chats/GroupSettings.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/friends",
     name: "Friends",
     component: () => import("@/pages/Friends/index.vue"),
@@ -61,9 +67,21 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/friends/create-group",
+    name: "CreateGroup",
+    component: () => import("@/pages/Friends/CreateGroup.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/plaza",
     name: "Plaza",
     component: () => import("@/pages/Plaza/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plaza/moment/create",
+    name: "MomentCreate",
+    component: () => import("@/pages/Plaza/feed/MomentComposer.vue"),
     meta: { requiresAuth: true },
   },
   {
