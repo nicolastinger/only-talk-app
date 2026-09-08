@@ -128,6 +128,45 @@
   }
 }
 
+.sessionItem {
+  position: relative;
+  overflow: hidden;
+
+  .deleteBtn {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    background: rgba(249, 115, 22, 0.12);
+    color: #a1a1aa;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 2;
+  }
+
+  &:hover .deleteBtn {
+    opacity: 1;
+  }
+
+  .deleteBtn:hover {
+    background: rgba(249, 115, 22, 0.18);
+    color: #f97316;
+  }
+
+  .deleteIcon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
 .clearBtn {
   margin-left: 8px;
   display: flex;

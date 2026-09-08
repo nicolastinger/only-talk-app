@@ -44,7 +44,7 @@ use crate::cmd::chat_record_controller::{
 };
 use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
-    mark_read_chat_session, search_chat_session,
+    hide_chat_session, mark_read_chat_session, search_chat_session,
 };
 use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
@@ -268,6 +268,7 @@ pub fn run() {
             clear_unread_by_level,
             get_unread_notification_counts,
             mark_read_chat_session,
+            hide_chat_session,
             clear_all_unread_sessions,
             get_local_file,
             get_file_by_biz_id,

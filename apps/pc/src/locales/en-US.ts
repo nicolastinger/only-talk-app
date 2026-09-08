@@ -619,6 +619,8 @@ export default {
     confirm: 'Confirm',
     cancel: 'Cancel',
     clearUnread: 'Clear unread',
+    hideSession: 'Hide conversation',
+    hideSessionConfirm: 'Hide this conversation? It will reappear when a new message arrives',
   },
   plaza: {
     title: 'Discover Plaza',

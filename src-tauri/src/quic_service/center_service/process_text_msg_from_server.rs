@@ -424,6 +424,9 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
 
 // 更新会话列表
 pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow::Error> {
+    // 收到新消息时强制将会话置为显示状态，满足“隐藏会话直到新消息再显示”
+    let mut chat_session = chat_session;
+    chat_session.is_show = 1;
     update_chat_session_db(&chat_session).await?;
 
     // 向前的会话事件统一为规范方向（send_user=对方、recv_user=我），

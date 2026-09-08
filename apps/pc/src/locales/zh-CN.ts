@@ -610,6 +610,8 @@ export default {
     confirm: '确定',
     cancel: '取消',
     clearUnread: '清空未读',
+    hideSession: '隐藏会话',
+    hideSessionConfirm: '隐藏该会话？新消息到达时将重新显示',
   },
   plaza: {
     title: '交友广场',

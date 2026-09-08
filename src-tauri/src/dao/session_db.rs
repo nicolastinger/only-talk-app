@@ -13,8 +13,9 @@ pub async fn update_chat_session_db(chat_session: &ChatSession) -> Result<(), an
         true => chat_session.recv_user.clone(),
         false => chat_session.send_user.clone(),
     };
-    // 执行更新
-    let res = sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = unread_count + ?4, last_message = ?5 WHERE send_user = ?6 and recv_user = ?7"#)
+    // 执行更新。任何会话内容更新都视为有新消息，is_show 强制置1，
+    // 确保被隐藏的会话（is_show=0）在新消息到达时自动重新显示
+    let res = sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = unread_count + ?4, last_message = ?5, is_show = 1 WHERE send_user = ?6 and recv_user = ?7"#)
         .bind(&chat_session.nano_id)
         .bind(chat_session.timestamp)
         .bind(chat_session.text_type)

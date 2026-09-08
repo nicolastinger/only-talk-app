@@ -9,7 +9,6 @@ import {
   Badge,
   Empty,
 } from "vant";
-import { invoke } from "@tauri-apps/api/core";
 import { clearAllUnreadSessions, get_friend_list } from "@workspace/services";
 import { useChatSessions } from "@/hooks/useChatSession";
 import { useUnreadStore } from "@/stores/unread";
@@ -21,7 +20,7 @@ import type { ChatSessionVo, FriendVo } from "@workspace/types";
 
 const router = useRouter();
 const { sessions, refresh } = useChatSessions();
-const { chatBadge } = useUnreadStore();
+const { chatBadge, hideSession } = useUnreadStore();
 const { getAvatarUrl } = useAvatar();
 const refreshing = ref(false);
 const searchText = ref("");
@@ -245,14 +244,8 @@ const deleteSession = async (item: ChatSessionVo) => {
       confirmButtonColor: "#ef4444",
       cancelButtonText: "取消",
     });
-    await invoke("hide_chat_session", {
-      sendUser: item.send_user,
-      recvUser: item.recv_user,
-    });
-    sessions.value = sessions.value.filter(
-      (s) => !(s.send_user === item.send_user && s.recv_user === item.recv_user)
-    );
-    showToast({ message: "已删除", icon: "success" });
+    await hideSession(item);
+    showToast({ message: "已隐藏，新消息将重新显示", icon: "success" });
   } catch (e) {
     if (e !== "cancel") console.error("删除会话失败:", e);
   }

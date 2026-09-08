@@ -27,8 +27,9 @@ use crate::dao::group_db::{query_group_by_id, upsert_group};
 use crate::dao::group_message_ack::insert_group_message_ack;
 use crate::dao::group_message_read::update_group_message_read;
 use crate::dao::session_db::{
-    query_chat_session_by_user_db, query_chat_session_db, query_group_chat_session,
-    search_chat_session_db, update_chat_session_db, update_chat_session_local_db,
+    hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
+    query_group_chat_session, search_chat_session_db, update_chat_session_db,
+    update_chat_session_local_db,
 };
 use crate::dao::webrtc_signal_db::save_webrtc_signal;
 use crate::dto::http_result::HttpResult;
@@ -97,6 +98,17 @@ pub async fn search_chat_session_service(
     search_chat_session_db(&uuid, &keyword).await
 }
 
+/// 隐藏会话（is_show置0），新消息到达时会自动重新显示
+pub async fn hide_chat_session_service(
+    send_user: String,
+    recv_user: String,
+) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friend_id = if send_user == me { recv_user } else { send_user };
+    hide_chat_session_db(&me, &friend_id).await?;
+    Ok(())
+}
+
 /// 分页获取聊天记录
 pub async fn get_chat_record_service(
     text_quic_msg: TextQuicMsgVo,
@@ -128,6 +140,9 @@ pub async fn get_chat_record_by_type_service(
 
 /// 本地清空已读消息计数
 pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow::Error> {
+    // 会话被读取时同步为显示状态，避免隐藏会话因读已读事件而滞留隐藏
+    let mut chat_session = chat_session;
+    chat_session.is_show = 1;
     update_chat_session_local_db(&chat_session).await?;
 
     // 清空/清理会话事件统一为规范方向（send_user=对方、recv_user=我），

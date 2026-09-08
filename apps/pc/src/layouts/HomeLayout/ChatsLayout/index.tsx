@@ -30,6 +30,21 @@ const ClearIcon = () => (
   </svg>
 );
 
+const DeleteIcon = () => (
+  <svg
+    className={styles.deleteIcon}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z" />
+    <path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+  </svg>
+);
+
 const ChatsLayout = () => {
   const intl = useIntl();
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
@@ -171,6 +186,35 @@ const ChatsLayout = () => {
     await clearAllUnreadSessions();
   };
 
+  const handleHideSession = async (item: ChatSessionVo) => {
+    try {
+      await invoke('hide_chat_session', {
+        sendUser: item.send_user,
+        recvUser: item.recv_user,
+      });
+      setChatSessionList((prev) =>
+        prev.filter(
+          (s) =>
+            !(
+              s.send_user === item.send_user &&
+              s.recv_user === item.recv_user
+            )
+        )
+      );
+      const sessionKey =
+        item.send_user === item.recv_user
+          ? item.send_user
+          : item.send_user === userInfo?.uuid
+          ? item.recv_user
+          : item.send_user;
+      if (sessionKey === selectedSessionKey) {
+        setSelectedSessionKey('');
+      }
+    } catch (e) {
+      console.error('隐藏会话失败:', e);
+    }
+  };
+
   const privateChatList = useMemo(() => {
     return chatSessionList.filter((item) => item.session_type !== 2);
   }, [chatSessionList]);
@@ -249,7 +293,11 @@ const ChatsLayout = () => {
             const isSelected = selectedSessionKey === sessionKey;
 
             return (
-              <div key={item.nano_id} onClick={() => routeToChat(item)}>
+              <div
+                key={item.nano_id}
+                className={styles.sessionItem}
+                onClick={() => routeToChat(item)}
+              >
                 <Message
                   message={item.last_message}
                   img={item.friend_icon}
@@ -262,6 +310,23 @@ const ChatsLayout = () => {
                   recv_user={item.recv_user}
                   isSelected={isSelected}
                 />
+                <Popconfirm
+                  title={intl.formatMessage({ id: 'chatsLayout.hideSessionConfirm' })}
+                  okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
+                  cancelText={intl.formatMessage({ id: 'chatsLayout.cancel' })}
+                  onConfirm={(e) => {
+                    e?.stopPropagation();
+                    handleHideSession(item);
+                  }}
+                >
+                  <button
+                    className={styles.deleteBtn}
+                    title={intl.formatMessage({ id: 'chatsLayout.hideSession' })}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DeleteIcon />
+                  </button>
+                </Popconfirm>
               </div>
             );
           })}

@@ -1,6 +1,6 @@
 use crate::service::chat_service::{
     clear_all_unread_sessions_service, create_chat_session_service, get_chat_session_service,
-    search_chat_session_service, update_last_read_msg_service,
+    hide_chat_session_service, search_chat_session_service, update_last_read_msg_service,
 };
 use crate::vo::chat_session_vo::ChatSessionVo;
 
@@ -9,6 +9,12 @@ use crate::vo::chat_session_vo::ChatSessionVo;
 pub async fn mark_read_chat_session(friend_uuid: String) -> Result<(), String> {
     update_last_read_msg_service(friend_uuid).await.map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// 隐藏会话（is_show置0），新消息到达时自动重新显示
+#[tauri::command]
+pub async fn hide_chat_session(send_user: String, recv_user: String) -> Result<(), String> {
+    hide_chat_session_service(send_user, recv_user).await.map_err(|e| e.to_string())
 }
 
 /// 创建一个聊天窗口

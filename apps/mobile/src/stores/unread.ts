@@ -76,6 +76,27 @@ const refreshAll = async () => {
   ]);
 };
 
+// 隐藏会话（is_show置0），新消息到达时会重新显示
+const hideSession = async (item: ChatSessionVo) => {
+  try {
+    await invoke("hide_chat_session", {
+      sendUser: item.send_user,
+      recvUser: item.recv_user,
+    });
+    sessions.value = sessions.value.filter(
+      (s) =>
+        !(s.send_user === item.send_user && s.recv_user === item.recv_user)
+    );
+    chatUnread.value = sessions.value.reduce(
+      (sum, s) => sum + (s.unread_count || 0),
+      0
+    );
+  } catch (e) {
+    console.error("隐藏会话失败:", e);
+    throw e;
+  }
+};
+
 let unlisteners: UnlistenFn[] = [];
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let monitorStarted = false;
@@ -163,6 +184,7 @@ export const useUnreadStore = () => ({
   chatBadge,
   friendBadge,
   refresh: refreshAll,
+  hideSession,
   refreshFriendCounts: async () => {
     await Promise.all([fetchFriendCounts(), fetchGroupCounts()]);
   },
