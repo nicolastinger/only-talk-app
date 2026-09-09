@@ -204,7 +204,13 @@ onUnmounted(() => {
 
 <template>
   <div class="friends-page">
-    <div class="header"><h1 class="title">好友</h1></div>
+    <div class="header">
+      <svg class="title-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+        />
+      </svg>
+    </div>
 
     <div class="search-section" @click="goSearch">
       <div class="search-bar">
@@ -418,11 +424,11 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--border-light);
 }
 
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
+.title-icon {
+  width: 26px;
+  height: 26px;
+  color: var(--brand-blue);
+  display: block;
 }
 
 .search-section {
@@ -571,8 +577,12 @@ onUnmounted(() => {
 .friend-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 2px 12px 12px;
+  margin: 0 12px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
 }
 
 .friend-item {
@@ -580,16 +590,17 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  overflow: hidden;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  background: transparent;
+  border-bottom: 1px solid var(--border-light);
   cursor: pointer;
-  transition: transform var(--transition-fast);
+  transition: background var(--transition-fast);
+
+  &:last-child {
+    border-bottom: none;
+  }
 
   &:active {
-    transform: scale(0.98);
+    background: var(--surface-hover);
   }
 }
 

@@ -21,7 +21,7 @@ import type { ChatSessionVo, FriendVo, GroupListItemVo } from "@workspace/types"
 
 const router = useRouter();
 const { sessions, refresh } = useChatSessions();
-const { chatBadge, hideSession } = useUnreadStore();
+const { hideSession } = useUnreadStore();
 const { unreadCount: annUnread, fetchList: fetchAnnouncements, openList: openAnnouncements } =
   useAnnouncementStore();
 const { getAvatarUrl } = useAvatar();
@@ -232,11 +232,6 @@ const visibleSessions = computed(() =>
   )
 );
 
-const totalUnread = computed(() => {
-  if (debouncedSearch.value) return 0;
-  return chatBadge.value;
-});
-
 const emptyText = computed(() => {
   if (debouncedSearch.value) return "未找到相关会话";
   return sectionTab.value === 1 ? "暂无群聊会话" : "暂无单聊会话";
@@ -312,12 +307,11 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   <div class="chats-page">
     <div class="header">
       <div class="header-top">
-        <h1 class="title">
-          消息
-          <span v-if="totalUnread > 0" class="total-badge">{{
-            totalUnread > 99 ? "99+" : totalUnread
-          }}</span>
-        </h1>
+        <svg class="title-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
+          />
+        </svg>
         <div class="header-actions">
           <button
             class="hdr-btn"
@@ -520,34 +514,18 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   margin-bottom: 12px;
 }
 
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.total-badge {
-  font-size: 14px;
-  font-weight: 600;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 8px;
-  background: var(--badge-bg);
-  color: var(--badge-text);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.title-icon {
+  width: 26px;
+  height: 26px;
+  color: var(--brand-blue);
+  flex-shrink: 0;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .hdr-btn {
@@ -556,17 +534,16 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  color: var(--text-tertiary);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: var(--shadow-xs);
 
   svg {
-    width: 22px;
-    height: 22px;
+    width: 21px;
+    height: 21px;
   }
 
   .bell-wrap {
@@ -594,9 +571,9 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   }
 
   &:active {
-    background: var(--blue-50);
+    background: var(--brand-blue-bg);
     color: var(--brand-blue);
-    border-color: var(--brand-blue);
+    transform: scale(0.92);
   }
 }
 

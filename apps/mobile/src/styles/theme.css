@@ -112,6 +112,15 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
+  /* ===== Profile 卡片(主题可感知) ===== */
+  --profile-hero-grad: linear-gradient(
+    145deg,
+    #dbeafe 0%,
+    #eff6ff 45%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  --profile-avatar-ring: linear-gradient(135deg, #93c5fd 0%, #dbeafe 100%);
+
   /* ===== Transitions ===== */
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s ease;
@@ -152,6 +161,15 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-glow-sm: 0 0 8px rgba(64, 150, 255, 0.35);
   --color-info-bg: rgba(64, 150, 255, 0.15);
+
+  /* ===== Profile 卡片暗色覆写 ===== */
+  --profile-hero-grad: linear-gradient(
+    145deg,
+    rgba(64, 150, 255, 0.32) 0%,
+    rgba(64, 150, 255, 0.1) 48%,
+    transparent 100%
+  );
+  --profile-avatar-ring: linear-gradient(135deg, #4a90ff 0%, #1a5cff 100%);
 }
 
 html,

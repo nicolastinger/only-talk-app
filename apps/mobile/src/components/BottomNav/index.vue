@@ -242,22 +242,23 @@ const onChange = (path: string) => {
   -webkit-tap-highlight-color: transparent;
   padding: 0;
 
+  /* 活跃态由图标颜色 + 底部小圆点指示 */
   .nav-icon {
+    position: relative;
     width: var(--nav-icon-size, 28px);
     height: var(--nav-icon-size, 28px);
     color: var(--nav-inactive-color, #b0c4de);
-    transition: color 0.15s ease, transform 0.15s ease;
+    transition: color 0.15s ease;
   }
 
   &.active .nav-icon {
     color: var(--nav-active-color);
-    transform: scale(1.08);
   }
 
   &::after {
     content: "";
     position: absolute;
-    bottom: 6px;
+    bottom: 7px;
     left: 50%;
     transform: translateX(-50%) scale(0);
     width: 4px;
@@ -273,8 +274,8 @@ const onChange = (path: string) => {
 
   .nav-badge {
     position: absolute;
-    top: 8px;
-    left: calc(50% + 8px);
+    top: 7px;
+    left: calc(50% + 9px);
     min-width: 18px;
     height: 18px;
     padding: 0 5px;

@@ -42,7 +42,13 @@ const onMenuClick = () => {
 
 <template>
   <div class="profile-page">
-    <div class="header"><h1 class="title">我的</h1></div>
+    <div class="header">
+      <svg class="title-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+        />
+      </svg>
+    </div>
 
     <div class="user-card">
       <div class="user-bg"></div>
@@ -126,35 +132,35 @@ const onMenuClick = () => {
 }
 
 .header {
-    padding: max(16px, env(safe-area-inset-top)) 20px;
-    background: var(--header-bg);
-    backdrop-filter: blur(20px);
+  padding: max(16px, env(safe-area-inset-top)) 20px;
+  background: var(--header-bg);
+  backdrop-filter: blur(20px);
   position: sticky;
   top: 0;
   z-index: 50;
   border-bottom: 1px solid var(--border-light);
 }
 
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
+.title-icon {
+  width: 26px;
+  height: 26px;
+  color: var(--brand-blue);
+  display: block;
 }
 
 .user-card {
   margin: 16px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   overflow: hidden;
   position: relative;
-  border: 1px solid var(--border-medium);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
 }
 
 .user-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--blue-100), var(--blue-50));
+  background: var(--profile-hero-grad);
 }
 
 .user-content {
@@ -162,7 +168,7 @@ const onMenuClick = () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
+  padding: 24px 20px;
   cursor: pointer;
   &:active {
     background: rgba(74, 144, 255, 0.04);
@@ -172,14 +178,18 @@ const onMenuClick = () => {
 .avatar-wrapper {
   position: relative;
   flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--profile-avatar-ring);
+  box-shadow: var(--shadow-sm);
 }
 
 .user-avatar {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  border: 3px solid var(--border-strong);
-  box-shadow: var(--shadow-sm);
+  border: 3px solid var(--surface);
+  box-shadow: var(--shadow-xs);
   object-fit: cover;
   display: block;
 }
