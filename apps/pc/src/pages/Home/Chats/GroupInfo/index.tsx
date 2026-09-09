@@ -35,7 +35,14 @@ const GroupInfoPage: React.FC = () => {
       });
       setGroupInfo(data);
     } catch (err) {
-      console.log('获取群信息失败', err);
+      console.log('获取群信息失败，尝试本地加载', err);
+      try {
+        const local: GroupVo[] = await invoke('get_group_list');
+        const found = local.find((g) => g.group_uuid === groupId);
+        if (found) setGroupInfo(found);
+      } catch (e) {
+        console.log('本地获取群信息也失败', e);
+      }
     }
   };
 

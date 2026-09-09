@@ -66,6 +66,9 @@ const FriendInfo = (props: { uuid: string }) => {
       if (result.from_cache) {
         console.log('用户信息来自缓存，后台刷新中...');
         refreshUserInfo(uuid);
+      } else {
+        // HTTP 拿到的是最新资料, 顺手按 uuid 定向回写本地好友表, 防列表/会话显示旧信息
+        writebackFriendProfile(uuid, user);
       }
     } catch (err) {
       console.error('获取用户信息失败', err);
@@ -75,6 +78,21 @@ const FriendInfo = (props: { uuid: string }) => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  // HTTP 新资料到手后, 定向回写本地好友表(sqlite 单条), 失败静默
+  const writebackFriendProfile = async (friendUuid: string, u: UserInfo) => {
+    try {
+      await invoke('update_friend_profile_command', {
+        friendUuid,
+        account: u.account || '',
+        name: u.username || '',
+        icon: u.icon || '',
+        info: u.info || '',
+      });
+    } catch (e) {
+      console.log('回写好友资料到本地失败', e);
     }
   };
 
@@ -101,6 +119,8 @@ const FriendInfo = (props: { uuid: string }) => {
 
       const icon = await getUserIcon(freshUser.icon || '');
       setFriendIcon(icon);
+
+      writebackFriendProfile(uuid, freshUser);
     } catch (err) {
       console.log('后台刷新用户信息失败', err);
     }

@@ -1,9 +1,10 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
+import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl, useSearchParams } from '@umijs/max';
 import { get_group_info, get_group_members, getFiles, create_group_chat_session } from '@workspace/services';
-import { GroupInfoVo, GroupMemberVo } from '@workspace/types';
+import { GroupInfoVo, GroupMemberVo, GroupVo } from '@workspace/types';
 import { Avatar, Button, Collapse, List, message, Spin } from 'antd';
 import { UserOutlined, TeamOutlined, MessageOutlined } from '@ant-design/icons';
 import { useEffect, useMemo, useState } from 'react';
@@ -29,13 +30,40 @@ const GroupInfoPage = () => {
 
   const loadGroupInfo = async () => {
     setLoading(true);
+    // 1) 先用本地 sqlite 群组行秒开资料卡, 再 HTTP 拉权威数据覆盖
+    try {
+      const localGroups: GroupVo[] = await invoke('get_group_list');
+      const local = localGroups.find((g) => g.group_uuid === groupId);
+      if (local) {
+        setGroupInfo(local as unknown as GroupInfoVo);
+        if (local.avatar) {
+          const files = await getFiles(local.avatar).catch(() => []);
+          if (files?.[0]?.tauri_file_path) {
+            setGroupIcon(files[0].tauri_file_path);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('读取本地群组信息失败', error);
+    }
+    // 2) HTTP 获取最新群信息, 并按群 uuid 定向回写本地 sqlite 群组表
     try {
       const info = await get_group_info(groupId);
       setGroupInfo(info);
       if (info.avatar) {
         const files = await getFiles(info.avatar);
-        setGroupIcon(files?.[0]?.tauri_file_path || '');
+        if (files?.[0]?.tauri_file_path) {
+          setGroupIcon(files[0].tauri_file_path);
+        }
       }
+      invoke('update_group_profile_command', {
+        groupId: info.group_uuid,
+        groupName: info.group_name,
+        avatar: info.avatar || '',
+        ownerUuid: info.owner_uuid,
+        memberCount: info.member_count,
+        createdAt: info.created_at,
+      }).catch((err) => console.log('回写群资料到本地失败', err));
     } catch (error) {
       console.error('获取群组信息失败', error);
       message.error(intl.formatMessage({ id: 'groupInfo.loadError' }));
@@ -87,7 +115,8 @@ const GroupInfoPage = () => {
     }
   };
 
-  if (loading) {
+  // 本地 sqlite 已能秒开渲染时不再整页转圈, 等待 HTTP 期间先展示本地数据
+  if (loading && !groupInfo) {
     return (
       <div className={styles.loadingContainer}>
         <Spin size="large" />
