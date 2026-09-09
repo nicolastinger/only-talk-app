@@ -5,4 +5,5 @@ pub mod friend_service;
 pub mod group_service;
 pub mod message_alert;
 pub mod p2p_service;
+pub mod session_manager;
 pub mod user_service;

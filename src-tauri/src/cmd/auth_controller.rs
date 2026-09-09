@@ -11,11 +11,9 @@ use crate::dto::http_result::HttpResult;
 use crate::entity::user_info::UserInfo;
 use crate::entity::user_token::UserToken;
 use crate::service::p2p_service;
-use crate::service::user_service::{add_user_map, get_user_info, user_login};
+use crate::service::user_service::{add_user_map, teardown_session, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
-use crate::{
-    GLOBAL_PRIVATE_SQL_POOL, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL,
-};
+use crate::GLOBAL_QUIC_USER_INFO;
 
 #[command]
 pub async fn sign_in(
@@ -156,58 +154,19 @@ pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
     Ok(ApiResponse { status, body: response_body })
 }
 
-/// 登出命令
+/// 登出命令: 统一清理当前会话(QUIC/定时任务/媒体/数据库连接/全局状态)
 #[command]
 pub async fn logout() -> Result<String, String> {
-    // 清空用户信息
-    {
-        let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
-        user_info.clear();
-        info!("用户信息已清空")
-    }
-
-    // 清空全局服务器列表
-    {
-        let mut guard = GLOBAL_QUIC_SERVER_LIST.write().await;
-        guard.clear();
-        info!("服务器列表已清空")
-    }
-
-    // 清空数据库连接
-    {
-        let mut guard = GLOBAL_SQL_POOL.write().await;
-        guard.take();
-        info!("数据库连接已清空")
-    }
-
-    // 清空加密数据库连接(聊天记录所在库, 登出后不可再访问)
-    {
-        let mut guard = GLOBAL_PRIVATE_SQL_POOL.write().await;
-        guard.take();
-        info!("加密数据库连接已清空")
-    }
-
+    teardown_session().await.map_err(|e| e.to_string())?;
     info!("用户已登出");
     Ok("登出成功".to_string())
 }
 
-/// 清除用户信息命令
+/// 清除用户信息命令(复用统一会话清理, 幂等, 与 logout 重复调用无副作用)
 #[command]
 pub async fn clear_user_info() -> Result<String, String> {
     info!("清除用户信息");
-
-    // 清空全局用户信息
-    {
-        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
-        guard.clear();
-    }
-
-    // 清空全局服务器列表
-    {
-        let mut guard = GLOBAL_QUIC_SERVER_LIST.write().await;
-        guard.clear();
-    }
-
+    teardown_session().await.map_err(|e| e.to_string())?;
     Ok("用户信息已清除".to_string())
 }
 

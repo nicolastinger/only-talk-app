@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { showDialog } from "vant";
 import { invoke } from "@tauri-apps/api/core";
@@ -18,15 +18,17 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
+import { clearUuidCache } from "@/utils/api";
 import AnnouncementCenter from "@/components/AnnouncementCenter.vue";
 
 const route = useRoute();
 const router = useRouter();
-const { clearAuth } = useAuthStore();
+const { isLoggedIn, clearAuth } = useAuthStore();
 useTheme();
 useCallManager();
 
 let unlistenForceLogout: UnlistenFn | undefined;
+let logoutTask: Promise<void> | undefined;
 
 const showNav = computed(() => {
   const path = route.path;
@@ -109,6 +111,33 @@ const setupForegroundTracking = () => {
     window.removeEventListener("pageshow", () => setForeground("1"));
   };
 };
+
+// 登录状态驱动后台监听生命周期：
+// - 登出/被踢下线 → 调 Rust 统一会话清理(logout: 停QUIC/定时任务/媒体/池)并停止本地轮询监听
+// - 重新登录 → 重启监听(monitor 内部有防重入守卫)
+watch(isLoggedIn, (loggedIn) => {
+  if (loggedIn) {
+    startQuicMonitor();
+    startUnreadMonitor();
+    return;
+  }
+  if (logoutTask) return;
+  logoutTask = (async () => {
+    try {
+      await invoke("logout");
+    } catch (e) {
+      console.error("Rust 会话清理失败:", e);
+    }
+    stopUnreadMonitor();
+    stopQuicMonitor();
+    clearUuidCache();
+  })();
+  logoutTask
+    .finally(() => {
+      logoutTask = undefined;
+    })
+    .catch(() => {});
+});
 
 onMounted(() => {
   startQuicMonitor();

@@ -43,16 +43,16 @@ use crate::cmd::chat_record_controller::{
     send_group_text_msg, send_image_msg, send_text_msg, send_webrtc_signal,
 };
 use crate::cmd::chat_session_controller::{
-    clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
-    hide_chat_session, mark_read_chat_session, search_chat_session,
+    clear_all_unread_sessions, create_chat_session, get_chat_session_from_store, hide_chat_session,
+    mark_read_chat_session, search_chat_session,
 };
 use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
 };
 use crate::cmd::friend_controller::{
-    block_friend_command, delete_friend_command, get_black_list, get_friend_info,
-    get_friend_list, search_friend, unblock_friend_command, update_local_friend_list,
+    block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
+    search_friend, unblock_friend_command, update_local_friend_list,
 };
 use crate::cmd::group_controller::{
     accept_group_invitation_command, create_group_chat_session_command, create_group_command,
@@ -103,6 +103,12 @@ pub struct MediaSendQueue {
     pub dropped_frames: Arc<AtomicU64>,
 }
 
+/// 会话后台任务控制（退出登录时 cancel + await 彻底退出）
+pub struct SessionControl {
+    pub cancel: tokio_util::sync::CancellationToken,
+    pub handle: tokio::task::JoinHandle<()>,
+}
+
 lazy_static! {
     pub static ref GLOBAL_QUIC_SERVER_LIST: Arc<RwLock<HashMap<String, QuicConnection>>> =
         Arc::new(RwLock::new(HashMap::new()));
@@ -124,6 +130,8 @@ lazy_static! {
     // MediaData通道取消令牌，用于视频通话结束时停止媒体帧接收循环
     pub static ref MEDIA_DATA_CANCEL_TOKEN: Arc<RwLock<Option<tokio_util::sync::CancellationToken>>> =
         Arc::new(RwLock::new(None));
+    // 会话级后台任务控制(登录启动/登出 cancel+await)
+    pub static ref SESSION_CONTROL: RwLock<Option<SessionControl>> = RwLock::new(None);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
