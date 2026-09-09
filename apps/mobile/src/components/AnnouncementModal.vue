@@ -80,7 +80,6 @@ const handleIgnore = () => {
   <Popup
     :show="show"
     :round="true"
-    :closeable="true"
     position="bottom"
     teleport="body"
     :style="{ maxHeight: '85vh' }"

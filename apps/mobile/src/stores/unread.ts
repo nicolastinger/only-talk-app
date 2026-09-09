@@ -117,14 +117,22 @@ const setupSessionListener = async () => {
 
         if (index === -1) {
           sessions.value.unshift(evt.data);
-        } else if (evt.type === 0) {
-          sessions.value[index] = { ...evt.data, unread_count: 0 };
-        } else if (evt.type === 1) {
-          sessions.value[index] = {
-            ...evt.data,
-            unread_count:
-              sessions.value[index].unread_count + evt.data.unread_count,
-          };
+        } else {
+          const prev = sessions.value[index];
+          // 事件 VO 的 friend_name/friend_icon 恒为空（ChatSessionVo::from 置空），
+          // 保留本地已缓存的名称/头像，避免实时更新清掉 sqlite join 出来的群名/群头像
+          const patch: Partial<ChatSessionVo> = {};
+          if (!evt.data.friend_name) patch.friend_name = prev.friend_name;
+          if (!evt.data.friend_icon) patch.friend_icon = prev.friend_icon;
+          if (evt.type === 0) {
+            sessions.value[index] = { ...evt.data, unread_count: 0, ...patch };
+          } else if (evt.type === 1) {
+            sessions.value[index] = {
+              ...evt.data,
+              unread_count: prev.unread_count + evt.data.unread_count,
+              ...patch,
+            };
+          }
         }
         sessions.value = sortSessions(sessions.value);
         chatUnread.value = sessions.value.reduce(

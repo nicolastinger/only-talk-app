@@ -9,18 +9,21 @@ import {
   Badge,
   Empty,
 } from "vant";
-import { clearAllUnreadSessions, get_friend_list } from "@workspace/services";
+import { clearAllUnreadSessions, get_friend_list, get_group_list } from "@workspace/services";
 import { useChatSessions } from "@/hooks/useChatSession";
 import { useUnreadStore } from "@/stores/unread";
+import { useAnnouncementStore } from "@/stores/announcement";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { formatMessageTime, getMessagePreview } from "@/utils/time";
 import { DEFAULT_AVATAR } from "@/stores/user";
-import type { ChatSessionVo, FriendVo } from "@workspace/types";
+import type { ChatSessionVo, FriendVo, GroupListItemVo } from "@workspace/types";
 
 const router = useRouter();
 const { sessions, refresh } = useChatSessions();
 const { chatBadge, hideSession } = useUnreadStore();
+const { unreadCount: annUnread, fetchList: fetchAnnouncements, openList: openAnnouncements } =
+  useAnnouncementStore();
 const { getAvatarUrl } = useAvatar();
 const refreshing = ref(false);
 const searchText = ref("");
@@ -28,14 +31,50 @@ const debouncedSearch = ref("");
 
 const avatarMap = ref<Record<string, string | null>>({});
 const friendMap = ref<Record<string, FriendVo>>({});
+const groupMap = ref<Record<string, GroupListItemVo>>({});
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const openAnnouncementCenter = async () => {
+  await fetchAnnouncements();
+  openAnnouncements();
+};
 
 const isSelfChat = (item: ChatSessionVo) => item.send_user === item.recv_user;
 
 const isGroupChat = (item: ChatSessionVo) => item.session_type === 2;
 
 const peerIdOf = (item: ChatSessionVo): string => item.send_user || "";
+
+const groupIdOf = (item: ChatSessionVo): string =>
+  isGroupChat(item) ? item.group_id || item.send_user || "" : "";
+
+const groupInfoOf = (item: ChatSessionVo): GroupListItemVo | undefined => {
+  const gid = groupIdOf(item);
+  return gid ? groupMap.value[gid] : undefined;
+};
+
+// 群会话名称/头像优先取 sqlite join 的 friend_name/friend_icon（离线可用），
+// 缺失时（本地 group_info 尚未同步）用服务端群列表兜底
+const sessionIconOf = (s: ChatSessionVo): string => {
+  if (isSelfChat(s)) return "";
+  if (isGroupChat(s)) {
+    return s.friend_icon || groupInfoOf(s)?.avatar || "";
+  }
+  return s.friend_icon || "";
+};
+
+const loadGroups = async () => {
+  try {
+    const list = (await get_group_list()) || [];
+    const map: Record<string, GroupListItemVo> = {};
+    for (const g of list) map[g.group_uuid] = g;
+    groupMap.value = map;
+    await resolveAvatars();
+  } catch (e) {
+    console.error("加载群列表失败:", e);
+  }
+};
 
 const loadFriends = async () => {
   try {
@@ -61,6 +100,12 @@ const loadFriends = async () => {
 
 const getDisplayName = (item: ChatSessionVo) => {
   if (isSelfChat(item)) return "我的笔记";
+  if (isGroupChat(item)) {
+    if (item.friend_name) return item.friend_name;
+    const group = groupInfoOf(item);
+    if (group?.group_name) return group.group_name;
+    return "群聊";
+  }
   if (item.friend_name) return item.friend_name;
   const peer = peerIdOf(item);
   const friend = friendMap.value[peer];
@@ -84,26 +129,24 @@ const getGroupInitial = (item: ChatSessionVo) => {
 
 const iconUrlOf = (item: ChatSessionVo): string | null => {
   if (isSelfChat(item)) return null;
-  const icon = item.friend_icon;
+  const icon = isGroupChat(item)
+    ? item.friend_icon || groupInfoOf(item)?.avatar
+    : item.friend_icon || friendMap.value[peerIdOf(item)]?.friend_icon;
   if (icon && avatarMap.value[icon] != null) return avatarMap.value[icon];
-  const friend = friendMap.value[peerIdOf(item)];
-  const friendIcon = friend?.friend_icon;
-  if (friendIcon && avatarMap.value[friendIcon] != null) {
-    return avatarMap.value[friendIcon];
-  }
   return null;
 };
 
 const resolveAvatars = async () => {
-  const icons = [
-    ...new Set(
-      sessions.value
-        .filter((s) => !isSelfChat(s) && s.friend_icon)
-        .map((s) => s.friend_icon)
-    ),
-  ];
+  const icons = new Set<string>();
+  for (const s of sessions.value) {
+    const icon = sessionIconOf(s);
+    if (icon) icons.add(icon);
+  }
+  for (const g of Object.values(groupMap.value)) {
+    if (g.avatar) icons.add(g.avatar);
+  }
   await Promise.all(
-    icons
+    [...icons]
       .filter((icon) => avatarMap.value[icon] === undefined)
       .map(async (icon) => {
         const url = await getAvatarUrl(icon);
@@ -137,6 +180,7 @@ watch(searchText, (val) => {
 
 onMounted(() => {
   loadFriends().catch(() => {});
+  loadGroups().catch(() => {});
 });
 
 onUnmounted(() => {
@@ -201,6 +245,7 @@ const emptyText = computed(() => {
 const onRefresh = async () => {
   refreshing.value = true;
   await refresh();
+  await Promise.all([loadFriends(), loadGroups()]).catch(() => {});
   refreshing.value = false;
 };
 
@@ -274,6 +319,23 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
           }}</span>
         </h1>
         <div class="header-actions">
+          <button
+            class="hdr-btn"
+            aria-label="系统公告"
+            title="系统公告"
+            @click="openAnnouncementCenter"
+          >
+            <span class="bell-wrap">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+                />
+              </svg>
+              <span v-if="annUnread > 0" class="bell-dot">{{
+                annUnread > 99 ? "99+" : annUnread
+              }}</span>
+            </span>
+          </button>
           <button
             class="hdr-btn"
             aria-label="全部已读"
@@ -505,6 +567,30 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   svg {
     width: 22px;
     height: 22px;
+  }
+
+  .bell-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bell-dot {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: var(--radius-full);
+    background: var(--badge-bg);
+    color: var(--badge-text);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+    box-sizing: border-box;
   }
 
   &:active {
