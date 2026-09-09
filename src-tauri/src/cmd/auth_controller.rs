@@ -13,7 +13,9 @@ use crate::entity::user_token::UserToken;
 use crate::service::p2p_service;
 use crate::service::user_service::{add_user_map, get_user_info, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
-use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
+use crate::{
+    GLOBAL_PRIVATE_SQL_POOL, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL,
+};
 
 #[command]
 pub async fn sign_in(
@@ -176,6 +178,13 @@ pub async fn logout() -> Result<String, String> {
         let mut guard = GLOBAL_SQL_POOL.write().await;
         guard.take();
         info!("数据库连接已清空")
+    }
+
+    // 清空加密数据库连接(聊天记录所在库, 登出后不可再访问)
+    {
+        let mut guard = GLOBAL_PRIVATE_SQL_POOL.write().await;
+        guard.take();
+        info!("加密数据库连接已清空")
     }
 
     info!("用户已登出");

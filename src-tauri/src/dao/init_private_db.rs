@@ -13,9 +13,21 @@ use sqlx::{query, SqlitePool};
 use crate::cmd::user_controller::get_user_map;
 use crate::config::get_config;
 use crate::dao::create_table::init_private_ddl;
+use crate::dao::get_db_client;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{APP_PATH, PRIVATE_DB, SQLITE_PATH};
 use crate::GLOBAL_PRIVATE_SQL_POOL;
+
+/// 明文 user.db 中历史遗留的聊天数据表(聊天记录现统一存加密 private.db)
+const LEGACY_PLAINTEXT_CHAT_TABLES: [&str; 7] = [
+    "chat_record",
+    "group_chat_record",
+    "chat_record_send",
+    "chat_record_ack",
+    "group_message_ack",
+    "group_message_read",
+    "webrtc_signal",
+];
 
 /// 初始化加密的私有数据库。
 ///
@@ -32,12 +44,9 @@ pub async fn init_private_db() -> Result<(), anyhow::Error> {
     // 登录后服务端签发的密钥已写入 GLOBAL_QUIC_USER_INFO
     let key = get_user_info("private_db_key").await?;
 
-    if Path::new(&db_path).exists() {
+    let init_result = if Path::new(&db_path).exists() {
         match open_private_pool(&db_url, &key).await {
-            Ok(pool) => {
-                store_pool_and_init(pool).await?;
-                return Ok(());
-            }
+            Ok(pool) => store_pool_and_init(pool).await,
             Err(first_err) => {
                 info!("私有数据库用当前密钥打开失败(旧密钥/损坏?), 备份后重建: {:?}", first_err);
                 let now =
@@ -45,13 +54,30 @@ pub async fn init_private_db() -> Result<(), anyhow::Error> {
                 let backup_path = format!("{}.{}.bak", db_path, now);
                 fs::rename(&db_path, &backup_path)?;
                 info!("已备份原私有数据库到: {}", backup_path);
+                // 文件缺失或已备份重建 → create_if_missing 新建空库
+                let pool = open_private_pool(&db_url, &key).await?;
+                store_pool_and_init(pool).await
             }
         }
-    }
+    } else {
+        // 文件缺失 → create_if_missing 新建空库
+        let pool = open_private_pool(&db_url, &key).await?;
+        store_pool_and_init(pool).await
+    };
+    init_result?;
 
-    // 文件缺失或已备份重建 → create_if_missing 新建空库
-    let pool = open_private_pool(&db_url, &key).await?;
-    store_pool_and_init(pool).await
+    // 聊天记录已落加密库后, 清理明文 user.db 中历史遗留的同名表
+    drop_legacy_plaintext_chat_tables().await
+}
+
+/// 清理明文 user.db 中历史遗留的聊天数据表(无迁移, 直接删除)
+async fn drop_legacy_plaintext_chat_tables() -> Result<(), anyhow::Error> {
+    let pool = get_db_client().await?;
+    for table in LEGACY_PLAINTEXT_CHAT_TABLES {
+        query(&format!("DROP TABLE IF EXISTS {}", table)).execute(&pool).await?;
+    }
+    info!("已清理 user.db 中历史遗留的明文聊天数据表");
+    Ok(())
 }
 
 /// 用指定密钥打开 SQLCipher 数据库(文件不存在则新建)，并执行一次探测查询验证密钥。

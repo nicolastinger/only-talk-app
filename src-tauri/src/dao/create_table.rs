@@ -42,14 +42,6 @@ pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error
     init_sqlite::<Group>(pool_sqlite).await?;
     init_sqlite::<GroupMember>(pool_sqlite).await?;
     init_sqlite::<SystemNotification>(pool_sqlite).await?;
-
-    init_sqlite::<ChatRecord>(pool_sqlite).await?;
-    init_sqlite::<GroupChatRecord>(pool_sqlite).await?;
-    init_sqlite::<ChatRecordSend>(pool_sqlite).await?;
-    init_sqlite::<ChatRecordAck>(pool_sqlite).await?;
-    init_sqlite::<GroupMessageAck>(pool_sqlite).await?;
-    init_sqlite::<GroupMessageRead>(pool_sqlite).await?;
-    init_sqlite::<WebrtcSignal>(pool_sqlite).await?;
     {
         // 本地存储初始化成功
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
