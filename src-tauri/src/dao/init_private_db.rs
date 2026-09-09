@@ -85,7 +85,9 @@ async fn drop_legacy_plaintext_chat_tables() -> Result<(), anyhow::Error> {
 async fn open_private_pool(db_url: &str, key: &str) -> Result<SqlitePool, anyhow::Error> {
     let private_opts = SqliteConnectOptions::from_str(db_url)?
         .create_if_missing(true)
-        .pragma("key", key.to_string());
+        // sqlx 会把 pragma 值原样拼进 SQL(PRAGMA key = <value>), 需自带引号,
+        // 否则 64 位十六进制密钥会被当成非法 token, 报 "unrecognized token"
+        .pragma("key", format!("'{}'", key.replace('\'', "''")));
 
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(private_opts).await?;
 
