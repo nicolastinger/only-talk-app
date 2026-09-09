@@ -33,13 +33,38 @@ use crate::utils::message_types::MSG_TYPE_P2P;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
+/// 从服务端拉取当前用户+设备 唯一的本地加密库密钥(按 user_id + 设备指纹签发)
+async fn fetch_private_db_key() -> Result<String, anyhow::Error> {
+    let url = format!("{}/user/sqlite_key/fetch", TALK_API);
+    // 设备指纹为小写 hex，无需额外转义
+    let body = format!(
+        "{{\"device_fingerprint\":\"{}\"}}",
+        crate::utils::device_info::device_fingerprint()
+    );
+    let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
+    let response: HttpResult = serde_json::from_str(&result.body)?;
+    if response.code != 200 {
+        return Err(anyhow!("获取数据库密钥失败: {}", response.message));
+    }
+    let db_key = response
+        .data
+        .get("db_key")
+        .and_then(|v| v.as_str())
+        .ok_or(anyhow!("获取数据库密钥响应缺少 db_key"))?
+        .to_string();
+    Ok(db_key)
+}
+
 /// 用户登录执行操作
 pub async fn user_login() -> Result<(), anyhow::Error> {
     info!("用户登录开始");
+    // 先拉取本设备私库密钥(登录成功后方可签发/取回), 供 init_private_db 建库/开库使用
+    let db_key = fetch_private_db_key().await?;
+    insert_user_info("private_db_key", &db_key).await?;
     // 初始化数据库
-    init_sqlite().await.expect("初始化数据库失败!");
+    init_sqlite().await?;
     // 初始化私有数据库
-    init_private_db().await.expect("初始化私有数据库失败");
+    init_private_db().await?;
     //1、获取好友列表
     update_friend_list().await.unwrap_or_else(|e| {
         error!("获取好友列表失败 {:?}", e);
@@ -338,11 +363,12 @@ pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> 
             .await
             {
                 Ok(m) => {
-                    let result = serde_json::from_str::<HttpResult>(&m.body).unwrap_or(HttpResult {
-                        code: -1,
-                        message: String::new(),
-                        data: serde_json::Value::Null,
-                    });
+                    let result =
+                        serde_json::from_str::<HttpResult>(&m.body).unwrap_or(HttpResult {
+                            code: -1,
+                            message: String::new(),
+                            data: serde_json::Value::Null,
+                        });
                     if result.code == 200 || result.code == 204 {
                         SystemNotification::mark_read_synced(&uuid, &read_ids).await?;
                         info!("通知已读上报成功: {:?}", read_ids);
