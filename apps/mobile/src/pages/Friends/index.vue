@@ -157,7 +157,12 @@ const goGroupChat = async (group: GroupListItemVo) => {
   } catch {
     /* 会话可能已存在 */
   }
-  router.push(`/chats/group-chat/${group.group_uuid}`);
+  const qp = new URLSearchParams();
+  qp.set("name", group.group_name || "群聊");
+  if (group.member_count > 0) qp.set("mc", String(group.member_count));
+  router.push(
+    `/chats/group-chat/${group.group_uuid}${qp.size ? `?${qp.toString()}` : ""}`
+  );
 };
 
 const getAvatar = (friend: FriendVo) => {

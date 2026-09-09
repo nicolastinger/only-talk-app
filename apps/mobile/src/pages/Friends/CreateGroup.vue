@@ -43,8 +43,16 @@ const submit = async () => {
       /* 会话可能已存在 */
     }
     showToast({ message: "群聊创建成功", icon: "success" });
+    const qp = new URLSearchParams();
+    qp.set("name", group.group_name || name);
+    if (group.member_count > 0) qp.set("mc", String(group.member_count));
     setTimeout(
-      () => router.replace(`/chats/group-chat/${group.group_uuid}`),
+      () =>
+        router.replace(
+          `/chats/group-chat/${group.group_uuid}${
+            qp.size ? `?${qp.toString()}` : ""
+          }`
+        ),
       500
     );
   } catch (e) {

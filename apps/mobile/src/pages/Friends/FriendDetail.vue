@@ -7,6 +7,7 @@ import {
   get_friend_info,
   get_cached_user_info,
   delete_friend,
+  refresh_user_info,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { DEFAULT_AVATAR } from "@/stores/user";
@@ -29,25 +30,56 @@ const avatarUrl = ref<string | null>(null);
 const loadDetail = async () => {
   loading.value = true;
   loadError.value = false;
+  // 1) 先用本地 sqlite 数据秒开页面
+  let userInfo: UserInfo | null = null;
+  let friendVo: FriendVo | null = null;
   try {
-    let userInfo: UserInfo | null = null;
     try {
       userInfo = await get_cached_user_info(friendId);
     } catch {}
-    let friendVo: FriendVo | null = null;
     try {
       friendVo = (await get_friend_info(friendId)) as FriendVo | null;
     } catch {}
-    detail.value = { friendVo, userInfo };
-
-    const icon = friendVo?.friend_icon || userInfo?.icon;
-    if (icon) {
-      avatarUrl.value = await getAvatarUrl(icon);
-    }
-  } catch (e) {
+  } catch {
     loadError.value = true;
-  } finally {
+  }
+  if (!userInfo && !friendVo) {
+    loadError.value = true;
     loading.value = false;
+    return;
+  }
+  detail.value = { friendVo, userInfo };
+
+  const icon = friendVo?.friend_icon || userInfo?.icon;
+  if (icon) {
+    avatarUrl.value = await getAvatarUrl(icon);
+  }
+  loading.value = false;
+
+  // 2) 后台从 HTTP 拉取最新信息, 防止本地缓存过期
+  try {
+    const fresh = await refresh_user_info(friendId);
+    if (fresh) {
+      detail.value.userInfo = fresh;
+      const freshIcon = fresh.icon || detail.value.friendVo?.friend_icon;
+      if (freshIcon) {
+        avatarUrl.value = await getAvatarUrl(freshIcon);
+      }
+      // HTTP 拿到新数据后按 uuid 定向回写本地好友表(sqlite), 保证列表等处下次不显示旧信息
+      try {
+        await invoke("update_friend_profile_command", {
+          friendUuid: friendId,
+          account: fresh.account || detail.value.friendVo?.friend_account || "",
+          name: fresh.username || detail.value.friendVo?.friend_name || "",
+          icon: fresh.icon || detail.value.friendVo?.friend_icon || "",
+          info: fresh.info || "",
+        });
+      } catch {
+        /* 本地回写失败可忽略 */
+      }
+    }
+  } catch {
+    /* 离线或接口失败时保留本地数据 */
   }
 };
 

@@ -263,6 +263,32 @@ pub async fn get_group_info(group_id: &str) -> Result<GroupVo, anyhow::Error> {
     Ok(group_vo)
 }
 
+/// 用已从 HTTP 拉取到的群信息定向回写本地群组表(sqlite 单条 upsert)。
+/// 复用 upsert_group 的 ON CONFLICT 分支, 仅覆盖展示字段。
+pub async fn update_local_group_profile(
+    group_id: &str,
+    group_name: &str,
+    avatar: &str,
+    owner_uuid: &str,
+    member_count: i64,
+    created_at: i64,
+) -> Result<(), anyhow::Error> {
+    let group = Group {
+        id: 0,
+        group_id: group_id.to_string(),
+        group_name: group_name.to_string(),
+        group_icon: avatar.to_string(),
+        owner_id: owner_uuid.to_string(),
+        created_at,
+        updated_at: get_now_time_stamp_as_millis()?,
+        member_count,
+        is_del: 0,
+        is_show: 1,
+        version: 0,
+    };
+    upsert_group(&group).await
+}
+
 /// 从本地DB获取群列表
 pub async fn get_local_group_list() -> Result<Vec<GroupVo>, anyhow::Error> {
     let uuid = get_user_info("uuid").await?;

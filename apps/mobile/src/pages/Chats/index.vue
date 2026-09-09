@@ -263,7 +263,13 @@ const onClearAllUnread = async () => {
 const openChat = async (item: ChatSessionVo) => {
   if (item.session_type === 2) {
     const groupId = item.group_id || item.send_user;
-    router.push(`/chats/group-chat/${groupId}`);
+    const qp = new URLSearchParams();
+    qp.set("name", getDisplayName(item));
+    const icon = iconUrlOf(item);
+    if (icon) qp.set("icon", icon);
+    router.push(
+      `/chats/group-chat/${groupId}${qp.size ? `?${qp.toString()}` : ""}`
+    );
     return;
   }
   const myUuid = await getMyUuid();

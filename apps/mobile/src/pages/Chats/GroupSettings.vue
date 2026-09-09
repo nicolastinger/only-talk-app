@@ -90,6 +90,15 @@ const loadData = async () => {
       } else {
         groupAvatarUrl.value = null;
       }
+      // HTTP 群信息拿到后按群 uuid 定向回写本地群组表(sqlite), 防列表/会话入口显示旧数据
+      invoke("update_group_profile_command", {
+        groupId: info.value.group_uuid,
+        groupName: info.value.group_name,
+        avatar: info.value.avatar || "",
+        ownerUuid: info.value.owner_uuid,
+        memberCount: info.value.member_count,
+        createdAt: info.value.created_at || 0,
+      }).catch(() => {});
     }
     if (memberList.status === "fulfilled") {
       members.value = memberList.value || [];

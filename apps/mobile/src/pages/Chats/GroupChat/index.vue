@@ -542,6 +542,17 @@ onMounted(async () => {
     router.replace("/login");
     return;
   }
+  // 列表页点击进入时把群名/头像/人数通过 query 带过来, 避免异步拉取期间
+  // 顶部先闪显 groupId 占位符
+  const qName = route.query.name;
+  const qIcon = route.query.icon;
+  const qMc = route.query.mc;
+  if (typeof qName === "string" && qName) groupInfo.group_name = qName;
+  if (typeof qMc === "string") {
+    const n = Number(qMc);
+    if (Number.isFinite(n) && n > 0) groupInfo.member_count = n;
+  }
+  if (typeof qIcon === "string" && qIcon) groupAvatar.value = qIcon;
   await loadGroupInfo();
   await loadAvatars();
   await loadMessages(1);
@@ -604,7 +615,7 @@ const handlePreview = async (msg: UiChatMessage) => {
         @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
       />
       <div class="header-info">
-        <span class="header-name">{{ groupInfo.group_name || groupId }}</span>
+        <span class="header-name">{{ groupInfo.group_name || "群聊" }}</span>
         <span v-if="groupInfo.member_count" class="header-count"
           >{{ groupInfo.member_count }}人</span
         >

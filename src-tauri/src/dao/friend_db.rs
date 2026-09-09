@@ -150,3 +150,28 @@ pub async fn update_friend_info_db(friend: &Friend) -> Result<(), anyhow::Error>
     }
     Ok(())
 }
+
+/// 定向回写单个好友的可展示资料字段(sqlite 单条更新)。
+/// 不动 version/updated_at, 避免干扰全量增量同步的锚点选取。
+pub async fn update_friend_profile_db(
+    me: &str,
+    friend_id: &str,
+    account: &str,
+    name: &str,
+    icon: &str,
+    info: &str,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    sqlx::query(
+        r#"UPDATE friend SET friend_account = ?1, friend_name = ?2, friend_icon = ?3, friend_info = ?4 WHERE me = ?5 AND friend_id = ?6"#,
+    )
+    .bind(account)
+    .bind(name)
+    .bind(icon)
+    .bind(info)
+    .bind(me)
+    .bind(friend_id)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}

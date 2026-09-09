@@ -52,14 +52,14 @@ use crate::cmd::file_controller::{
 };
 use crate::cmd::friend_controller::{
     block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
-    search_friend, unblock_friend_command, update_local_friend_list,
+    search_friend, unblock_friend_command, update_friend_profile_command, update_local_friend_list,
 };
 use crate::cmd::group_controller::{
     accept_group_invitation_command, create_group_chat_session_command, create_group_command,
     decline_group_invitation_command, get_group_chat_session_list, get_group_info_command,
     get_group_list, get_group_members, invite_group_members_command, join_group_command,
     leave_group_command, remove_group_member_command, search_group, sync_group_list_command,
-    sync_group_members_command,
+    sync_group_members_command, update_group_profile_command,
 };
 use crate::cmd::notification_controller::{
     batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level,
@@ -271,6 +271,7 @@ pub fn run() {
             create_chat_session,
             get_system_notification,
             update_local_friend_list,
+            update_friend_profile_command,
             batch_read_system_notification,
             clear_all_unread_notifications,
             clear_unread_by_level,
@@ -305,6 +306,7 @@ pub fn run() {
             remove_group_member_command,
             sync_group_list_command,
             sync_group_members_command,
+            update_group_profile_command,
             create_group_chat_session_command,
             get_group_chat_session_list,
             search_group,

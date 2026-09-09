@@ -1,4 +1,6 @@
-use crate::dao::friend_db::{query_friend_info_by_id_db, query_friend_info_db};
+use crate::dao::friend_db::{
+    query_friend_info_by_id_db, query_friend_info_db, update_friend_profile_db,
+};
 use crate::service::friend_service::{
     block_friend, delete_friend, get_black_list as get_black_list_service, search_friend_list,
     unblock_friend, update_friend_list,
@@ -33,6 +35,21 @@ pub async fn get_friend_info(friend_uuid: String) -> Result<FriendVo, String> {
 pub async fn update_local_friend_list() -> Result<(), String> {
     update_friend_list().await.map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// 用已从 HTTP 拉取到的好友资料定向回写本地好友表(sqlite 单条更新)
+#[tauri::command]
+pub async fn update_friend_profile_command(
+    friend_uuid: String,
+    account: String,
+    name: String,
+    icon: String,
+    info: String,
+) -> Result<(), String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    update_friend_profile_db(&me, &friend_uuid, &account, &name, &icon, &info)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// 删除好友（软删除）
