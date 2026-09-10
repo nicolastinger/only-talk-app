@@ -214,14 +214,16 @@ impl SystemNotification {
     }
 
     /// 查询各模块未读通知数量
-    /// 返回 { contacts: level1=1且level2=1的未读数, groups: level1=1且level2=3的未读数 }
+    /// 返回 { contacts: level1=1且level2=1, groups: level1=1且level2=3, plaza: level2=4, moments: level2=5 }
     pub async fn get_unread_counts(user_id: &str) -> Result<UnreadCounts, anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
         let row = sqlx::query(
             r#"
             SELECT
                 SUM(CASE WHEN level1 = 1 AND level2 = 1 THEN 1 ELSE 0 END) as contacts_unread,
-                SUM(CASE WHEN level1 = 1 AND level2 = 3 THEN 1 ELSE 0 END) as groups_unread
+                SUM(CASE WHEN level1 = 1 AND level2 = 3 THEN 1 ELSE 0 END) as groups_unread,
+                SUM(CASE WHEN level1 = 1 AND level2 = 4 THEN 1 ELSE 0 END) as plaza_unread,
+                SUM(CASE WHEN level1 = 1 AND level2 = 5 THEN 1 ELSE 0 END) as moments_unread
             FROM system_notification
             WHERE user_id = ? AND is_read = 0
             "#,
@@ -232,8 +234,15 @@ impl SystemNotification {
 
         let contacts: i64 = row.try_get(0).unwrap_or(0);
         let groups: i64 = row.try_get(1).unwrap_or(0);
+        let plaza: i64 = row.try_get(2).unwrap_or(0);
+        let moments: i64 = row.try_get(3).unwrap_or(0);
 
-        Ok(UnreadCounts { contacts: contacts as i32, groups: groups as i32 })
+        Ok(UnreadCounts {
+            contacts: contacts as i32,
+            groups: groups as i32,
+            plaza: plaza as i32,
+            moments: moments as i32,
+        })
     }
 }
 
@@ -242,6 +251,8 @@ impl SystemNotification {
 pub struct UnreadCounts {
     pub contacts: i32,
     pub groups: i32,
+    pub plaza: i32,
+    pub moments: i32,
 }
 
 impl SqliteStore for SystemNotification {

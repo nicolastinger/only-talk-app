@@ -95,14 +95,14 @@ const LeftAside = () => {
         url: '/home/plaza',
         active: false,
         icon: <RadarChartOutlined style={{ fontSize: '18px' }} />,
-        unreadCount: 0,
+        unreadCount: menuUnread.plaza,
       },
       {
         text: intl.formatMessage({ id: 'leftAside.moments' }),
         url: '/home/moments',
         active: false,
         icon: <PictureOutlined style={{ fontSize: '18px' }} />,
-        unreadCount: 0,
+        unreadCount: menuUnread.moments,
       },
     ]);
 

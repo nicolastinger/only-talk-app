@@ -3,11 +3,13 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
+import { useUnreadStore } from "@/stores/unread";
 import { getMyAccount } from "@/utils/api";
 
 const router = useRouter();
 const { userInfo, loadUserInfo } = useUserStore();
 const { getAvatarUrl } = useAvatar();
+const { notifyUnread } = useUnreadStore();
 
 const account = ref("");
 const avatarUrl = ref<string | null>(null);
@@ -33,6 +35,10 @@ const getAvatar = () => avatarUrl.value || DEFAULT_AVATAR;
 
 const goToEditProfile = () => {
   router.push("/profile/edit");
+};
+
+const goToNotifications = () => {
+  router.push("/notifications");
 };
 
 const onMenuClick = () => {
@@ -71,6 +77,29 @@ const onMenuClick = () => {
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-item" @click="goToNotifications">
+        <div class="menu-left">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
+            <path
+              d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+            />
+          </svg>
+          <span class="menu-name">通知中心</span>
+        </div>
+        <div class="menu-right">
+          <span v-if="notifyUnread > 0" class="menu-badge">{{
+            notifyUnread > 99 ? "99+" : notifyUnread
+          }}</span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+            />
+          </svg>
+        </div>
       </div>
     </div>
 
@@ -253,6 +282,25 @@ const onMenuClick = () => {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+.menu-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.menu-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  background: #ef4444;
+  border-radius: 999px;
 }
 .menu-icon {
   width: 22px;

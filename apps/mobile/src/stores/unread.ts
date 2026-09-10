@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   get_accept_friend_request_list,
   get_pending_invitations,
+  getUnreadNotificationCounts,
 } from "@workspace/services";
 import { getMyUuid, parseResponse } from "@/utils/api";
 import type {
@@ -11,6 +12,7 @@ import type {
   ChatSessionEvent,
   FriendRequestInfo,
   FriendRequestInfoDTO,
+  SystemNotification,
 } from "@workspace/types";
 
 const sortSessions = (list: ChatSessionVo[]): ChatSessionVo[] =>
@@ -26,11 +28,16 @@ const loading = ref(false);
 const chatUnread = ref(0);
 const friendReq = ref(0);
 const groupInvite = ref(0);
+const plazaUnread = ref(0);
+const momentUnread = ref(0);
+const notifyUnread = ref(0);
 
 // 消息 tab 徽标：聊天未读 + 待处理好友请求 + 待处理群邀请
 const chatBadge = computed(() => chatUnread.value + friendReq.value + groupInvite.value);
 // 好友 tab 徽标：待处理好友请求 + 待处理群邀请
 const friendBadge = computed(() => friendReq.value + groupInvite.value);
+// 广场 tab 徽标：交友广场未读 + 动态未读（移动端广场与动态同属一个 tab）
+const plazaBadge = computed(() => plazaUnread.value + momentUnread.value);
 
 const fetchSessions = async () => {
   try {
@@ -68,11 +75,28 @@ const fetchGroupCounts = async () => {
   }
 };
 
+// 交友广场 / 动态未读通知数（来自本地 SQLite）
+const fetchNotificationCounts = async () => {
+  try {
+    const counts = await getUnreadNotificationCounts();
+    plazaUnread.value = counts.plaza || 0;
+    momentUnread.value = counts.moments || 0;
+    notifyUnread.value =
+      (counts.contacts || 0) +
+      (counts.groups || 0) +
+      (counts.plaza || 0) +
+      (counts.moments || 0);
+  } catch (e) {
+    console.error("加载广场/动态未读数失败:", e);
+  }
+};
+
 const refreshAll = async () => {
   await Promise.all([
     fetchSessions(),
     fetchFriendCounts(),
     fetchGroupCounts(),
+    fetchNotificationCounts(),
   ]);
 };
 
@@ -156,6 +180,19 @@ const setupRealtimeListeners = async () => {
   // 断线重连/离线补拉完成后刷新未读
   unlisteners.push(await listen<string>("quic_connected", refreshAll));
   unlisteners.push(await listen<string>("quic_sync_complete", refreshAll));
+  // 系统通知到达(含交友广场心动/匹配、动态点赞/评论)，刷新未读
+  unlisteners.push(
+    await listen<string>("listen_notify_msg", async (event) => {
+      try {
+        const notify: SystemNotification = JSON.parse(event.payload);
+        const uuid = await getMyUuid();
+        if (notify.user_id && notify.user_id !== uuid) return;
+        await refreshAll();
+      } catch (e) {
+        console.error("处理 listen_notify_msg 事件失败:", e);
+      }
+    })
+  );
 };
 
 const startMonitor = async () => {
@@ -189,8 +226,12 @@ export const useUnreadStore = () => ({
   chatUnread,
   friendReq,
   groupInvite,
+  plazaUnread,
+  momentUnread,
+  notifyUnread,
   chatBadge,
   friendBadge,
+  plazaBadge,
   refresh: refreshAll,
   hideSession,
   refreshFriendCounts: async () => {

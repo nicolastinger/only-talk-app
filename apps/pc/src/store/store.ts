@@ -70,6 +70,8 @@ export const useBearStore = create<BearState>()((set) => ({
   menuUnread: {
     contacts: 0,
     groups: 0,
+    plaza: 0,
+    moments: 0,
     system: 0,
     settings: 0,
     total: 0,

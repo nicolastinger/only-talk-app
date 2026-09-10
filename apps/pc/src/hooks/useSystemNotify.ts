@@ -16,9 +16,12 @@ const useSystemNotify = (recvUuid: string) => {
       setMenuUnread({
         contacts: counts.contacts,
         groups: counts.groups,
+        plaza: counts.plaza,
+        moments: counts.moments,
         system: 0,
         settings: 0,
-        total: counts.contacts + counts.groups,
+        total:
+          counts.contacts + counts.groups + counts.plaza + counts.moments,
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);

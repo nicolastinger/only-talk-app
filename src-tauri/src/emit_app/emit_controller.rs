@@ -11,7 +11,7 @@ use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
 /// 未读数量变更事件
 #[derive(Debug, Clone, Serialize)]
 pub struct UnreadCountEvent {
-    pub module: String, // "contacts" | "groups"
+    pub module: String, // "contacts" | "groups" | "plaza" | "moments"
     pub count: i32,     // 单条通知的未读数
 }
 
@@ -36,6 +36,8 @@ pub fn emit_unread_count(notification: &SystemNotification) -> Result<(), anyhow
     let module = match level2 {
         1 => "contacts",
         3 => "groups",
+        4 => "plaza",
+        5 => "moments",
         _ => {
             info!("未读通知：未知模块 level1={} level2={}", level1, level2);
             return Ok(());

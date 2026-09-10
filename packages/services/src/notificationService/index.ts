@@ -56,11 +56,14 @@ export const clearUnreadByLevel = async (
  */
 export const getUnreadNotificationCounts = async () => {
   try {
-    return await invoke<{ contacts: number; groups: number }>(
-      "get_unread_notification_counts"
-    );
+    return await invoke<{
+      contacts: number;
+      groups: number;
+      plaza: number;
+      moments: number;
+    }>("get_unread_notification_counts");
   } catch (e) {
     console.log("查询未读通知数量失败", e);
-    return { contacts: 0, groups: 0 };
+    return { contacts: 0, groups: 0, plaza: 0, moments: 0 };
   }
 };

@@ -24,8 +24,7 @@ use crate::entity::p2p_models::P2pInitMsg;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{
-    clear_chat_session, create_group_chat_session_service,
-    process_no_send_success_msg,
+    clear_chat_session, create_group_chat_session_service, process_no_send_success_msg,
 };
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
 use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
@@ -432,10 +431,8 @@ pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow
     // 向前的会话事件统一为规范方向（send_user=对方、recv_user=我），
     // 避免 ack/self-echo 等路径把方向写反、前端误判未读
     let me = get_user_info("uuid").await?;
-    let chat_session_event = ChatSessionEvent {
-        r#type: 1,
-        data: ChatSessionVo::from(chat_session.to_canonical(&me))?,
-    };
+    let chat_session_event =
+        ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session.to_canonical(&me))? };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
@@ -621,6 +618,12 @@ async fn process_local_notify_message(
         }
         3 => {
             group_service::process_group_notify_message(system_notification).await?;
+        }
+        4 => {
+            info!("处理交友广场通知 {:?}", system_notification);
+        }
+        5 => {
+            info!("处理动态广场通知 {:?}", system_notification);
         }
         _ => {
             info!("处理其他通知 {:?}", system_notification);

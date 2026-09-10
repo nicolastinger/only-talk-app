@@ -10,7 +10,7 @@ interface NavItem {
 
 const route = useRoute();
 const router = useRouter();
-const { chatBadge, friendBadge } = useUnreadStore();
+const { chatBadge, friendBadge, plazaBadge } = useUnreadStore();
 
 const navItems: NavItem[] = [
   { name: "chat", path: "/chats" },
@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
 const badgeOf = (name: string) => {
   if (name === "chat") return chatBadge.value;
   if (name === "friends") return friendBadge.value;
+  if (name === "plaza") return plazaBadge.value;
   return 0;
 };
 
