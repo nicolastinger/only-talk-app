@@ -8,7 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
 import { history, useIntl } from '@umijs/max';
-import { getFiles } from '@workspace/services';
+import { getFiles, isBackendSuccess } from '@workspace/services';
 import { HttpResponse, ResponseData } from '@workspace/types';
 import { Avatar, Button, Checkbox, message, Modal, Spin } from 'antd';
 import React, { lazy, Suspense, useEffect, useState } from 'react';
@@ -126,7 +126,7 @@ const LoginPage: React.FC = () => {
       });
 
       const data: ResponseData = JSON.parse(response.body);
-      if (data.code === 200) {
+      if (isBackendSuccess(data.code)) {
         messageApi.open({
           type: 'success',
           content: <FormattedMessage id="signIn.success" />,
@@ -228,7 +228,7 @@ const LoginPage: React.FC = () => {
       });
 
       const data: ResponseData = JSON.parse(response.body);
-      if (data.code === 200) {
+      if (isBackendSuccess(data.code)) {
         messageApi.open({
           type: 'success',
           content: <FormattedMessage id="signIn.success" />,

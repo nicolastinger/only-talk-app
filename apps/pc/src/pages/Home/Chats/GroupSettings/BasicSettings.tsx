@@ -1,7 +1,7 @@
 import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { GroupVo } from '@workspace/types';
 import { update_group } from '@workspace/services';
-import { convertPathToTauriUrl, getFiles, selectFile } from '@workspace/services';
+import { convertPathToTauriUrl, getFiles, isBackendSuccess, selectFile } from '@workspace/services';
 import { Avatar, Button, Form, Input, message, Spin } from 'antd';
 import { UserOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -45,7 +45,7 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
 
       if (uploadResult.status === 200) {
         const responseBody = JSON.parse(uploadResult.body);
-        if (responseBody.code === 200 && responseBody.data) {
+        if (isBackendSuccess(responseBody.code) && responseBody.data) {
           const bizId = responseBody.data;
           const FileVos = await getFiles(bizId);
           const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;

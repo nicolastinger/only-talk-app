@@ -12,7 +12,7 @@ interface HttpResponse {
 /**
  * 后端统一成功/失败信封 (CommonResponse<T>):
  * { code, data, message } (data 在无返回时为 null 或 0)
- * T 为业务载荷 VO; code !== 200 视为业务失败
+ * T 为业务载荷 VO; 业务成功码为 200(带数据) 或 204(无数据)，其余视为失败
  */
 interface BackendResponse<T> {
   code: number;

@@ -9,6 +9,7 @@ import {
   get_black_list,
   search_user_by_account,
   unblock_friend,
+  isBackendSuccess,
 } from "@workspace/services";
 import type { BlackListVo, RustResponse, UserInfo } from "@workspace/types";
 
@@ -33,7 +34,7 @@ const parseUser = (res: RustResponse): UserInfo | null => {
     throw new Error(res.error || "网络请求失败");
   }
   const data = JSON.parse(res.res.body);
-  if (data.code === 200 && data.data) {
+  if (isBackendSuccess(data.code) && data.data) {
     return data.data as UserInfo;
   }
   throw new Error(data.message || "请求失败");

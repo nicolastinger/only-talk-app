@@ -13,7 +13,7 @@ import {
   CompleteProfileRequest,
   BlackListVo,
 } from "@workspace/types";
-import { invoke_rust } from "../httpService";
+import { invoke_rust, isBackendSuccess } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
 
 export const get_friend_list = async (): Promise<FriendVo[]> => {
@@ -170,7 +170,7 @@ export const get_quic_servers = async (): Promise<QuicServerInfo[]> => {
     url: TALK_API + "/integrated/quic_servers",
   });
   const data = JSON.parse(response.body);
-  if (data.code !== 200) {
+  if (!isBackendSuccess(data.code)) {
     console.error("获取QUIC节点信息失败:", data.message);
     return [];
   }

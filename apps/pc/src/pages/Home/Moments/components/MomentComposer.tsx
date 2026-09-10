@@ -3,6 +3,7 @@ import { useIntl } from '@umijs/max';
 import {
   convertPathToTauriUrl,
   create_moment,
+  isBackendSuccess,
   selectFile,
 } from '@workspace/services';
 import { TALK_API } from '@workspace/types';
@@ -58,7 +59,7 @@ const MomentComposer = (props: {
         );
         if (res.status === 200) {
           const json = JSON.parse(res.body);
-          if (json.code === 200 && json.data) {
+          if (isBackendSuccess(json.code) && json.data) {
             if (preview) setImages((prev) => [...prev, preview]);
             setFileIds((prev) => [...prev, json.data]);
           } else {

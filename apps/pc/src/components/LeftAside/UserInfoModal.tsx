@@ -15,6 +15,7 @@ import { useIntl } from '@umijs/max';
 import {
   convertPathToTauriUrl,
   getFiles,
+  isBackendSuccess,
   selectFile,
   update_user_info,
   refresh_user_info,
@@ -159,7 +160,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       if (uploadResult.status === 200) {
         const responseBody = JSON.parse(uploadResult.body);
-        if (responseBody.code === 200 && responseBody.data) {
+        if (isBackendSuccess(responseBody.code) && responseBody.data) {
           const bizId = responseBody.data;
 
           const FileVos = await getFiles(bizId);
@@ -275,7 +276,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       if (response.netSuccess && response.res.status === 200) {
         const data = JSON.parse(response.res.body);
-        if (data.code === 200 || data.code === 204) {
+        if (isBackendSuccess(data.code)) {
           const updatedUserInfo = await refresh_user_info(userInfo.uuid);
           setUserInfo(updatedUserInfo);
           message.success(

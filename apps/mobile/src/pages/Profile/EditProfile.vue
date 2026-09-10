@@ -7,6 +7,7 @@ import {
   selectFile,
   convertPathToTauriUrl,
   cache_user_info,
+  isBackendSuccess,
 } from "@workspace/services";
 import { TALK_API } from "@workspace/types";
 import type { UserInfo } from "@workspace/types";
@@ -196,14 +197,14 @@ const pickAndUploadAvatar = async () => {
     if (uploadResult.status === 200) {
       const responseBody = JSON.parse(uploadResult.body);
       console.log("Response body:", responseBody);
-      if (responseBody.code === 200 && responseBody.data) {
+      if (isBackendSuccess(responseBody.code) && responseBody.data) {
         try {
           const res: { status: number; body: string } = await invoke("post_request", {
             url: TALK_API + "/user/me",
             body: "",
           });
           const meData = JSON.parse(res.body);
-          if (meData.code === 200 && meData.data) {
+          if (isBackendSuccess(meData.code) && meData.data) {
             const info: UserInfo = meData.data;
             setUserInfo(info);
             await cache_user_info(info).catch(() => null);
@@ -328,7 +329,7 @@ const onSave = async () => {
     });
 
     const response = JSON.parse(result);
-    if (response.code === 200) {
+    if (isBackendSuccess(response.code)) {
       const updatedInfo = {
         ...originalUserInfo,
         ...updateData,

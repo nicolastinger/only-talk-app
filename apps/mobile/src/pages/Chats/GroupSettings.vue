@@ -14,6 +14,7 @@ import {
   set_member_role,
   get_friend_list,
   selectFile,
+  isBackendSuccess,
 } from "@workspace/services";
 import type { GroupInfoVo, GroupMemberVo, FriendVo } from "@workspace/types";
 import { TALK_API } from "@workspace/types";
@@ -209,7 +210,7 @@ const changeAvatar = async () => {
     );
     if (res.status === 200) {
       const json = JSON.parse(res.body);
-      if (json.code === 200 && json.data) {
+      if (isBackendSuccess(json.code) && json.data) {
         const url = await getAvatarUrl(json.data);
         groupAvatarUrl.value = url;
         groupInfo.value = {

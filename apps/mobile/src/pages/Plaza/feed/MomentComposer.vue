@@ -7,6 +7,7 @@ import {
   selectFile,
   convertPathToTauriUrl,
   create_moment,
+  isBackendSuccess,
 } from "@workspace/services";
 import { TALK_API } from "@workspace/types";
 import { resolveContentToTempFile } from "@/utils/tempImage";
@@ -100,7 +101,7 @@ const pickImages = async () => {
 
       if (res.status === 200) {
         const json = JSON.parse(res.body);
-        if (json.code === 200 && json.data) {
+        if (isBackendSuccess(json.code) && json.data) {
           fileIds.value.push(json.data);
         } else {
           showToast(json.message || "上传图片失败");

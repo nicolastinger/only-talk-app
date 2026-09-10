@@ -18,6 +18,43 @@ export const setNotificationService = (service: NotificationService) => {
 
 const base_url: string = TALK_API;
 
+/**
+ * 后端业务成功码：
+ * - 200：成功且带数据（CommonResponse / CommonResponseRef::success）
+ * - 204：成功但无数据（CommonResponseNoDataRef::success_empty）
+ */
+export const BACKEND_SUCCESS_CODES = [200, 204];
+
+/** 判断后端统一信封的 code 是否表示业务成功 */
+export const isBackendSuccess = (code?: number): boolean =>
+  code !== undefined && BACKEND_SUCCESS_CODES.includes(code);
+
+export interface BackendEnvelope<T = unknown> {
+  code: number;
+  data: T;
+  message?: string;
+}
+
+/**
+ * 解析 invoke_rust 的返回：先校验网络层，再按后端统一信封 code 判断业务成功(200/204)。
+ * 成功返回 data，失败抛出后端 message。
+ */
+export const parseBackendResponse = <T>(res: RustResponse): T => {
+  if (!res.netSuccess) {
+    throw new Error(res.error || "网络请求失败");
+  }
+  const body = res.res.body;
+  // 兼容真·HTTP 204 空响应体：视为成功但无数据
+  if (!body) {
+    return undefined as T;
+  }
+  const json = JSON.parse(body) as BackendEnvelope<T>;
+  if (isBackendSuccess(json.code)) {
+    return json.data as T;
+  }
+  throw new Error(json.message || "请求失败");
+};
+
 export const invoke_rust = async (
   method: string,
   url: string,

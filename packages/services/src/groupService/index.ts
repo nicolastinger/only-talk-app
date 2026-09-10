@@ -8,18 +8,11 @@ import {
   GroupMessageVo,
   UnreadCountVo,
 } from "@workspace/types";
-import { invoke_rust } from "../httpService";
+import { invoke_rust, parseBackendResponse } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
 
 function parseData<T>(res: any): T {
-  if (!res.netSuccess) {
-    throw new Error(res.error || "网络请求失败");
-  }
-  const json = JSON.parse(res.res.body);
-  if (json.code === 200) {
-    return json.data as T;
-  }
-  throw new Error(json.message || "请求失败");
+  return parseBackendResponse<T>(res);
 }
 
 export const get_group_list = async (): Promise<GroupListItemVo[]> => {

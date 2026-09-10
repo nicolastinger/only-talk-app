@@ -1,13 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { RustResponse } from "@workspace/types";
-import { getFiles } from "@workspace/services";
+import { getFiles, isBackendSuccess } from "@workspace/services";
 
 export function parseResponse<T>(res: RustResponse): T {
   if (!res.netSuccess) {
     throw new Error(res.error || "网络请求失败");
   }
+  // 兼容真·HTTP 204 空响应体：视为成功但无数据
+  if (!res.res.body) {
+    return undefined as T;
+  }
   const data = JSON.parse(res.res.body);
-  if (data.code !== 200) {
+  if (!isBackendSuccess(data.code)) {
     throw new Error(data.message || "请求失败");
   }
   return data.data as T;

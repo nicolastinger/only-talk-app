@@ -18,6 +18,7 @@ import {
   search_user_by_account,
   cache_user_info,
   get_quic_servers,
+  isBackendSuccess,
 } from "@workspace/services";
 import { useAuthStore } from "@/stores/auth";
 
@@ -156,7 +157,7 @@ const handleQuickLogin = async () => {
       url: TALK_API,
     });
     const data: ResponseData = JSON.parse(response.body);
-    if (data.code === 200) {
+    if (isBackendSuccess(data.code)) {
       await enterApp();
     } else {
       failQuickLogin();
@@ -264,7 +265,7 @@ const enterApp = async () => {
       body: "",
     });
     const data: ResponseData = JSON.parse(res.body);
-    if (data.code === 200 && data.data) {
+    if (isBackendSuccess(data.code) && data.data) {
       const info: UserInfo = data.data;
       const cached = await get_cached_user_info(info.uuid).catch(() => null);
       const isDifferent =
@@ -303,7 +304,7 @@ const onLogin = async () => {
     });
     const data: ResponseData = JSON.parse(response.body);
 
-    if (data.code === 200) {
+    if (isBackendSuccess(data.code)) {
       await enterApp();
     } else {
       closeToast();
