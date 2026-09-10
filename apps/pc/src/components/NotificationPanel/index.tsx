@@ -62,18 +62,26 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
   useEffect(() => {
     if (!visible) return;
     loadNotifications();
+    refreshUnreadCounts();
     // 面板打开期间实时刷新列表与未读角标
-    let unlisten: (() => void) | undefined;
-    listen('listen_notify_msg', () => {
-      loadNotifications();
-      refreshUnreadCounts();
-    })
-      .then((fn) => {
-        unlisten = fn;
-      })
-      .catch((e) => console.log('监听通知事件失败', e));
+    const unlisteners: Array<() => void> = [];
+    const setup = async () => {
+      unlisteners.push(
+        await listen('listen_notify_msg', () => {
+          loadNotifications();
+          refreshUnreadCounts();
+        }),
+      );
+      unlisteners.push(
+        await listen('listen_notify_read', () => {
+          loadNotifications();
+          refreshUnreadCounts();
+        }),
+      );
+    };
+    setup().catch((e) => console.log('监听通知事件失败', e));
     return () => {
-      if (unlisten) unlisten();
+      unlisteners.forEach((fn) => fn());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -84,9 +92,11 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
     loadNotifications();
   };
 
-  const handleMarkRead = async (id: string) => {
+  const handleMarkRead = async (id: string, isUnread: boolean) => {
     try {
-      await invoke<number>('batch_read_system_notification', { readIds: [id] });
+      if (isUnread) {
+        await invoke<number>('batch_read_system_notification', { readIds: [id] });
+      }
       await refreshUnreadCounts();
       loadNotifications();
     } catch (e) {
@@ -161,7 +171,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       <div
         key={n.id}
         className={`${styles.notifyItem} ${isUnread ? styles.unread : ''}`}
-        onClick={() => isUnread && n.id && handleMarkRead(n.id)}
+        onClick={() => n.id && handleMarkRead(n.id, isUnread)}
       >
         <div className={styles.notifyHeader}>
           <Tag color={type.color}>{type.text}</Tag>

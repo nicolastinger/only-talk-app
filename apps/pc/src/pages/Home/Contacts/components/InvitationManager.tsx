@@ -71,12 +71,15 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
   const refreshUnreadCounts = async () => {
     try {
       const counts = await getUnreadNotificationCounts();
+      const current = useBearStore.getState().menuUnread;
       setMenuUnread({
+        ...current,
         contacts: counts.contacts,
         groups: counts.groups,
-        system: 0,
-        settings: 0,
-        total: counts.contacts + counts.groups,
+        plaza: counts.plaza,
+        moments: counts.moments,
+        total:
+          counts.contacts + counts.groups + counts.plaza + counts.moments,
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);

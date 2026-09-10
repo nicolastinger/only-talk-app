@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { showToast, Tabs, Tab, Badge, Empty, Button } from "vant";
 import { clearUnreadByLevel } from "@workspace/services";
 import { useUnreadStore } from "@/stores/unread";
@@ -14,6 +15,7 @@ const goBack = () => router.back();
 const notifications = ref<SystemNotification[]>([]);
 const loading = ref(false);
 const activeTab = ref(0);
+let unlisteners: UnlistenFn[] = [];
 
 interface Category {
   key: string;
@@ -111,7 +113,25 @@ const clearUnread = async (cat: Category) => {
   }
 };
 
-onMounted(loadNotifications);
+const handleNotifyEvent = () => {
+  loadNotifications();
+  refreshUnread();
+};
+
+const setupListeners = async () => {
+  unlisteners.push(await listen("listen_notify_msg", handleNotifyEvent));
+  unlisteners.push(await listen("listen_notify_read", handleNotifyEvent));
+};
+
+onMounted(() => {
+  loadNotifications();
+  setupListeners().catch((e) => console.error("监听通知事件失败", e));
+});
+
+onUnmounted(() => {
+  unlisteners.forEach((fn) => fn());
+  unlisteners = [];
+});
 </script>
 
 <template>

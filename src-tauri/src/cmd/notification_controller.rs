@@ -1,3 +1,4 @@
+use crate::emit_app::emit_controller::emit_notify_read;
 use crate::entity::system_notification::{SystemNotification, UnreadCounts};
 use crate::service::user_service::get_user_info;
 
@@ -17,6 +18,9 @@ pub async fn get_system_notification(
 pub async fn batch_read_system_notification(read_ids: Vec<String>) -> Result<i32, String> {
     let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
     let res = SystemNotification::batch_read(&me, read_ids).await.map_err(|e| e.to_string())?;
+    if res > 0 {
+        let _ = emit_notify_read();
+    }
     Ok(res)
 }
 
@@ -25,6 +29,7 @@ pub async fn batch_read_system_notification(read_ids: Vec<String>) -> Result<i32
 pub async fn clear_all_unread_notifications() -> Result<(), String> {
     let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
     SystemNotification::clear_all_unread(&me).await.map_err(|e| e.to_string())?;
+    let _ = emit_notify_read();
     Ok(())
 }
 
@@ -41,6 +46,9 @@ pub async fn clear_unread_by_level(
     let res = SystemNotification::clear_unread_by_level(&me, level1, level2, level3, level4)
         .await
         .map_err(|e| e.to_string())?;
+    if res > 0 {
+        let _ = emit_notify_read();
+    }
     Ok(res)
 }
 

@@ -193,6 +193,8 @@ const setupRealtimeListeners = async () => {
       }
     })
   );
+  // 任意位置标记已读/清空未读后，刷新未读
+  unlisteners.push(await listen("listen_notify_read", refreshAll));
 };
 
 const startMonitor = async () => {

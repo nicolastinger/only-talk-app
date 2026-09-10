@@ -21,6 +21,12 @@ pub fn send_notify_msg(msg: &str) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+/// 通知已读/清除后，广播给前端刷新未读角标与通知列表
+pub fn emit_notify_read() -> Result<(), anyhow::Error> {
+    APP_HANDLE.get().ok_or(anyhow!("无法获取app"))?.emit("listen_notify_read", "notify_read")?;
+    Ok(())
+}
+
 /// 向前端发送未读数量更新事件
 /// 根据 SystemNotification 的 level1/level2 自动判断模块并 emit
 pub fn emit_unread_count(notification: &SystemNotification) -> Result<(), anyhow::Error> {

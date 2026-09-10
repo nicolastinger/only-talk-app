@@ -35,26 +35,34 @@ const useSystemNotify = (recvUuid: string) => {
 
     refreshUnreadCounts();
 
-    let unlisten: (() => void) | undefined;
+    const unlisteners: Array<() => void> = [];
 
-    const setupListener = async () => {
-      unlisten = await listen<string>('listen_notify_msg', (event) => {
-        try {
-          const notify = JSON.parse(event.payload) as SystemNotification;
-          // 只处理当前用户的通知
-          if (notify.user_id === recvUuid) {
-            refreshUnreadCounts();
+    const setupListeners = async () => {
+      unlisteners.push(
+        await listen<string>('listen_notify_msg', (event) => {
+          try {
+            const notify = JSON.parse(event.payload) as SystemNotification;
+            // 只处理当前用户的通知
+            if (notify.user_id === recvUuid) {
+              refreshUnreadCounts();
+            }
+          } catch (e) {
+            console.log('解析通知消息失败', e);
           }
-        } catch (e) {
-          console.log('解析通知消息失败', e);
-        }
-      });
+        }),
+      );
+      // 任意位置标记已读/清空未读后，刷新角标
+      unlisteners.push(
+        await listen('listen_notify_read', () => {
+          refreshUnreadCounts();
+        }),
+      );
     };
 
-    setupListener().catch(console.error);
+    setupListeners().catch(console.error);
 
     return () => {
-      if (unlisten) unlisten();
+      unlisteners.forEach((fn) => fn());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recvUuid]);

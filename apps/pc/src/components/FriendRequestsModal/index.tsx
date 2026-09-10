@@ -52,12 +52,15 @@ const FriendRequestsModal = ({
   const refreshUnreadCounts = async () => {
     try {
       const counts = await getUnreadNotificationCounts();
+      const current = useBearStore.getState().menuUnread;
       setMenuUnread({
+        ...current,
         contacts: counts.contacts,
         groups: counts.groups,
-        system: 0,
-        settings: 0,
-        total: counts.contacts + counts.groups,
+        plaza: counts.plaza,
+        moments: counts.moments,
+        total:
+          counts.contacts + counts.groups + counts.plaza + counts.moments,
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);
@@ -242,7 +245,7 @@ const FriendRequestsModal = ({
       accept_status: 2,
     };
     const res = await process_friend_request(friendRequestInfoDTO);
-    if (res.netSuccess && res.res.status === 204) {
+    if (res.netSuccess && res.res.status === 200) {
       await update_local_friend_list();
       await getAcceptFriendRequestList();
     }
