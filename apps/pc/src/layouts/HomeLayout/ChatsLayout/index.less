@@ -59,14 +59,22 @@
     }
 
     .ant-segmented-item-selected {
-      background: linear-gradient(135deg, var(--color-primary) 0%, #4096ff 100%);
+      background: linear-gradient(
+        135deg,
+        var(--color-primary) 0%,
+        #4096ff 100%
+      );
       color: #fff;
       font-weight: 500;
       box-shadow: 0 2px 8px rgba(64, 150, 255, 0.3);
     }
 
     .ant-segmented-thumb {
-      background: linear-gradient(135deg, var(--color-primary) 0%, #4096ff 100%);
+      background: linear-gradient(
+        135deg,
+        var(--color-primary) 0%,
+        #4096ff 100%
+      );
       border-radius: 8px;
     }
   }
@@ -136,7 +144,7 @@
     position: absolute;
     top: 50%;
     right: 12px;
-    transform: translateY(-50%);
+    transform: translateY(-50%) scale(0.9);
     width: 28px;
     height: 28px;
     display: flex;
@@ -148,12 +156,24 @@
     color: #a1a1aa;
     cursor: pointer;
     opacity: 0;
-    transition: all 0.3s ease;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
     z-index: 2;
   }
 
-  &:hover .deleteBtn {
+  // 悬停整行或确认弹层打开时才显示并允许交互
+  &:hover .deleteBtn,
+  .deleteBtnVisible {
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(-50%) scale(1);
+  }
+
+  // 悬停后停顿一下再出现, 避免鼠标划过时闪烁; 移开则立即隐藏
+  &:hover .deleteBtn {
+    transition-delay: 0.4s;
   }
 
   .deleteBtn:hover {
@@ -205,7 +225,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1.1);
   }
   50% {

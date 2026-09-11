@@ -17,8 +17,10 @@ import type {
   MomentCommentVo,
   MomentLikerVo,
 } from "@workspace/types";
+import { ReportTargetType } from "@workspace/types";
 import { getMyUuid } from "@/utils/api";
 import { formatMomentTime } from "@/utils/time";
+import ReportSheet from "@/components/ReportSheet.vue";
 import MomentMedia from "./MomentMedia.vue";
 import MomentAvatar from "./MomentAvatar.vue";
 
@@ -39,6 +41,13 @@ const commentFinished = ref(false);
 const commentLoading = ref(false);
 const commentText = ref("");
 const sending = ref(false);
+
+const showReport = ref(false);
+const reportComment = ref<MomentCommentVo | null>(null);
+const openReport = (c: MomentCommentVo) => {
+  reportComment.value = c;
+  showReport.value = true;
+};
 
 const likerList = ref<MomentLikerVo[]>([]);
 const likerPage = ref(1);
@@ -335,6 +344,16 @@ onMounted(async () => {
               <p class="comment-text">{{ c.content }}</p>
               <span class="comment-time">{{ fmtTime(c.created_at) }}</span>
             </div>
+            <button
+              v-if="c.author_uuid !== myUuid"
+              class="comment-report"
+              title="举报"
+              @click="openReport(c)"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
+              </svg>
+            </button>
           </div>
 
           <div
@@ -410,6 +429,13 @@ onMounted(async () => {
         </div>
       </div>
     </van-popup>
+
+    <ReportSheet
+      v-model="showReport"
+      :target-type="ReportTargetType.MOMENT_COMMENT"
+      :target-uuid="reportComment?.id || ''"
+      :target-name="reportComment?.username || ''"
+    />
   </div>
 </template>
 
@@ -661,6 +687,24 @@ onMounted(async () => {
 .comment-time {
   font-size: 11px;
   color: var(--text-placeholder);
+}
+
+.comment-report {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-placeholder);
+  cursor: pointer;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .comments-more {

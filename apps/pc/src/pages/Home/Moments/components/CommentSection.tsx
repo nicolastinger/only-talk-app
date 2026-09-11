@@ -1,11 +1,13 @@
 import { DEFAULT_ICON } from '@/constants';
+import { useBearStore } from '@/store/store';
+import ReportModal from '@/components/ReportModal';
 import { useIntl } from '@umijs/max';
 import {
   get_moment_comments,
   getFiles,
   post_moment_comment,
 } from '@workspace/services';
-import { MomentCommentVo } from '@workspace/types';
+import { MomentCommentVo, ReportTargetType } from '@workspace/types';
 import { Avatar, Button, Empty, Input, message, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import styles from './styles/CommentSection.less';
@@ -18,6 +20,7 @@ const CommentSection = (props: {
 }) => {
   const { momentUuid, onCountChange } = props;
   const intl = useIntl();
+  const myUuid = useBearStore((state) => state.userInfo.uuid);
   const [comments, setComments] = useState<MomentCommentVo[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -26,6 +29,9 @@ const CommentSection = (props: {
   const [submitting, setSubmitting] = useState(false);
   const [text, setText] = useState('');
   const [avatars, setAvatars] = useState<{ [key: string]: string }>({});
+  const [reportComment, setReportComment] = useState<MomentCommentVo | null>(
+    null,
+  );
   const loadingRef = useRef(false);
 
   const loadComments = async (p: number, reset: boolean) => {
@@ -113,6 +119,14 @@ const CommentSection = (props: {
                   <span className={styles.time}>
                     {new Date(item.created_at * 1000).toLocaleString('zh-CN')}
                   </span>
+                  {item.author_uuid !== myUuid && (
+                    <button
+                      className={styles.reportBtn}
+                      onClick={() => setReportComment(item)}
+                    >
+                      {intl.formatMessage({ id: 'report.action' })}
+                    </button>
+                  )}
                 </div>
                 <div className={styles.commentText}>{item.content}</div>
               </div>
@@ -146,6 +160,14 @@ const CommentSection = (props: {
           {intl.formatMessage({ id: 'moments.comments.send' })}
         </Button>
       </div>
+
+      <ReportModal
+        open={!!reportComment}
+        targetType={ReportTargetType.MOMENT_COMMENT}
+        targetUuid={reportComment?.id || ''}
+        targetName={reportComment?.username || ''}
+        onClose={() => setReportComment(null)}
+      />
     </div>
   );
 };

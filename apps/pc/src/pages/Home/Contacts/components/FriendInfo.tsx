@@ -1,4 +1,15 @@
 import { DEFAULT_ICON } from '@/constants';
+import {
+  CalendarOutlined,
+  EnvironmentOutlined,
+  GiftOutlined,
+  IdcardOutlined,
+  MailOutlined,
+  ManOutlined,
+  PhoneOutlined,
+  UserOutlined,
+  WomanOutlined,
+} from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import {
@@ -9,9 +20,23 @@ import {
   unblock_friend,
 } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
-import { Button, Collapse, message } from 'antd';
-import { useEffect, useState } from 'react';
+import { Button, Collapse, message, Spin } from 'antd';
+import React, { useEffect, useState } from 'react';
 import styles from './styles/FriendInfo.less';
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}
+
+const InfoRow = ({ icon, label, value }: InfoRowProps) => (
+  <div className={styles.infoItem}>
+    <span className={styles.iconChip}>{icon}</span>
+    <span className={styles.label}>{label}</span>
+    <span className={styles.value}>{value}</span>
+  </div>
+);
 
 const FriendInfo = (props: { uuid: string }) => {
   const { uuid } = props;
@@ -180,119 +205,102 @@ const FriendInfo = (props: { uuid: string }) => {
     }
   };
 
-  const renderBtn = () => {
-    return (
-      <Button color="default" variant="solid" onClick={routeToChat}>
-        {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
-      </Button>
-    );
+  const renderGenderIcon = () => {
+    if (userInfo?.gender === 2) return <ManOutlined />;
+    if (userInfo?.gender === 3) return <WomanOutlined />;
+    return <UserOutlined />;
   };
 
-  const renderBlockBtn = () => {
+  if (loading && !userInfo) {
     return (
-      <Button
-        danger={!isBlocked}
-        color={isBlocked ? 'default' : 'danger'}
-        variant="solid"
-        onClick={handleToggleBlock}
-      >
-        {intl.formatMessage({
-          id: isBlocked ? 'friendInfo.unblock' : 'friendInfo.block',
-        })}
-      </Button>
+      <div className={styles.container}>
+        <div className={styles.content}>
+          <div className={styles.loadingState}>
+            <Spin size="large" />
+          </div>
+        </div>
+      </div>
     );
-  };
+  }
+
+  const displayName = userInfo?.username || currentFriend?.friend_name || '-';
+  const displayAccount =
+    userInfo?.account || currentFriend?.friend_account || '-';
 
   return (
     <div className={styles.container}>
       <div className={styles.content}>
+        <div className={styles.cover} />
+
         <div className={styles.header}>
-          <img
-            className={styles.icon}
-            src={friendIcon || DEFAULT_ICON}
-            alt="avatar"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = DEFAULT_ICON;
-            }}
-          />
-          <div className={styles.name}>
-            {userInfo?.username || currentFriend?.friend_name}
+          <div className={styles.avatarWrap}>
+            <img
+              className={styles.icon}
+              src={friendIcon || DEFAULT_ICON}
+              alt="avatar"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = DEFAULT_ICON;
+              }}
+            />
           </div>
+          <div className={styles.name}>{displayName}</div>
           {userInfo?.info && <div className={styles.bio}>{userInfo.info}</div>}
-        </div>
-
-        <div className={styles.infoSection}>
-          <div className={styles.infoItem}>
-            <span className={styles.label}>
-              {intl.formatMessage({ id: 'friendInfo.account' })}
-            </span>
-            <span className={styles.value}>
-              {userInfo?.account || currentFriend?.friend_account || '-'}
-            </span>
-          </div>
-
-          <div className={styles.infoItem}>
-            <span className={styles.label}>
-              {intl.formatMessage({ id: 'friendInfo.gender' })}
-            </span>
-            <span className={styles.value}>
+          <div className={styles.metaChips}>
+            <span className={styles.chip}>
+              {renderGenderIcon()}
               {userInfo?.gender !== undefined
                 ? genderMap[userInfo.gender]
                 : '-'}
             </span>
+            {userInfo?.age ? (
+              <span className={styles.chip}>
+                <CalendarOutlined />
+                {userInfo.age}
+              </span>
+            ) : null}
           </div>
+        </div>
 
-          <div className={styles.infoItem}>
-            <span className={styles.label}>
-              {intl.formatMessage({ id: 'friendInfo.age' })}
-            </span>
-            <span className={styles.value}>{userInfo?.age || '-'}</span>
-          </div>
+        <div className={styles.infoSection}>
+          <InfoRow
+            icon={<IdcardOutlined />}
+            label={intl.formatMessage({ id: 'friendInfo.account' })}
+            value={displayAccount}
+          />
 
           <Collapse
             className={styles.collapse}
             ghost
+            expandIconPosition="end"
             items={[
               {
                 key: '1',
                 label: intl.formatMessage({ id: 'friendInfo.moreInfo' }),
                 children: (
                   <>
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.birthday' })}
-                      </span>
-                      <span className={styles.value}>
-                        {formatBirthday(userInfo?.birthday)}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<GiftOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.birthday' })}
+                      value={formatBirthday(userInfo?.birthday)}
+                    />
 
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.phone' })}
-                      </span>
-                      <span className={styles.value}>
-                        {userInfo?.phone || '-'}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<PhoneOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.phone' })}
+                      value={userInfo?.phone || '-'}
+                    />
 
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.email' })}
-                      </span>
-                      <span className={styles.value}>
-                        {userInfo?.email || '-'}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<MailOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.email' })}
+                      value={userInfo?.email || '-'}
+                    />
 
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.address' })}
-                      </span>
-                      <span className={styles.value}>
-                        {userInfo?.address || '-'}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<EnvironmentOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.address' })}
+                      value={userInfo?.address || '-'}
+                    />
                   </>
                 ),
               },
@@ -301,8 +309,25 @@ const FriendInfo = (props: { uuid: string }) => {
         </div>
 
         <div className={styles.footer}>
-          <div className={styles.button}>{renderBtn()}</div>
-          <div className={styles.dangerButton}>{renderBlockBtn()}</div>
+          <Button
+            className={styles.primaryBtn}
+            color="primary"
+            variant="solid"
+            onClick={routeToChat}
+          >
+            {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
+          </Button>
+          <Button
+            className={styles.blockBtn}
+            danger={!isBlocked}
+            color={isBlocked ? 'default' : 'danger'}
+            variant="solid"
+            onClick={handleToggleBlock}
+          >
+            {intl.formatMessage({
+              id: isBlocked ? 'friendInfo.unblock' : 'friendInfo.block',
+            })}
+          </Button>
         </div>
       </div>
     </div>

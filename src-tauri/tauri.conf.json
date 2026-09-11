@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "identifier": "com.only.talk.app",
   "build": {
-    "frontendDist": "../apps/mobile/dist",
-    "devUrl": "http://localhost:5713",
-    "beforeDevCommand": "pnpm --filter @workspace/app-mobile dev",
-    "beforeBuildCommand": "pnpm --filter @workspace/app-mobile build"
+    "frontendDist": "../apps/pc/dist",
+    "devUrl": "http://localhost:8080",
+    "beforeDevCommand": "pnpm --filter @workspace/app-pc dev",
+    "beforeBuildCommand": "pnpm --filter @workspace/app-pc build"
   },
   "app": {
     "windows": [

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import type { PlazaUser } from "@workspace/types";
+import { ReportTargetType } from "@workspace/types";
 import PlazaAvatar from "./PlazaAvatar.vue";
+import ReportSheet from "@/components/ReportSheet.vue";
 import { genderText, sendPlazaFriendRequest } from "./utils";
 
 const props = withDefaults(
@@ -19,6 +21,7 @@ const emit = defineEmits<{
 
 const sending = ref(false);
 const sent = ref(false);
+const showReport = ref(false);
 
 const show = computed({
   get: () => props.modelValue,
@@ -114,8 +117,17 @@ const onAddFriend = async () => {
         >
           {{ sent ? "已发送申请" : sending ? "发送中..." : "加好友" }}
         </button>
+        <button class="report-btn" @click="showReport = true">举报</button>
       </div>
     </div>
+
+    <ReportSheet
+      v-if="user"
+      v-model="showReport"
+      :target-type="ReportTargetType.PLAZA_USER"
+      :target-uuid="user.uuid"
+      :target-name="user.username || ''"
+    />
   </van-popup>
 </template>
 
@@ -257,5 +269,17 @@ const onAddFriend = async () => {
   &:disabled {
     opacity: 0.6;
   }
+}
+
+.report-btn {
+  width: 100%;
+  height: 42px;
+  margin-top: 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
 }
 </style>

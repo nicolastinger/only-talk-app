@@ -1,5 +1,6 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
+import ReportModal from '@/components/ReportModal';
 import { useIntl } from '@umijs/max';
 import {
   delete_moment,
@@ -7,7 +8,7 @@ import {
   switch_moment_like,
   switch_user_follow,
 } from '@workspace/services';
-import { MomentVo } from '@workspace/types';
+import { MomentVo, ReportTargetType } from '@workspace/types';
 import { message, Modal } from 'antd';
 import { useEffect, useState, type CSSProperties } from 'react';
 import MomentMedia from './MomentMedia';
@@ -41,6 +42,7 @@ const MomentCard = (props: {
   const [liking, setLiking] = useState(false);
   const [isFollowing, setIsFollowing] = useState(!!moment.followed_by_me);
   const [following, setFollowing] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -190,8 +192,27 @@ const MomentCard = (props: {
           >
             💬 {moment.comment_count}
           </button>
+          {!isMine && (
+            <button
+              className={styles.actionBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                setReportModalVisible(true);
+              }}
+            >
+              {intl.formatMessage({ id: 'report.action' })}
+            </button>
+          )}
         </div>
       </div>
+
+      <ReportModal
+        open={reportModalVisible}
+        targetType={ReportTargetType.MOMENT}
+        targetUuid={moment.uuid}
+        targetName={moment.username || ''}
+        onClose={() => setReportModalVisible(false)}
+      />
     </div>
   );
 };

@@ -1,0 +1,15 @@
+.modal {
+  :global {
+    // antd v5 的 modal-body 默认无下内边距, TextArea 的 showCount 计数是
+    // 绝对定位在输入框下方约 22px 处, 会压到 footer 的按钮上, 这里补足间距
+    .ant-modal-body {
+      padding-bottom: 20px;
+    }
+  }
+}
+
+.tip {
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+}

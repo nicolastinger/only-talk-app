@@ -6,6 +6,7 @@ export * from "./menu";
 export * from "./moment";
 export * from "./p2p";
 export * from "./plaza";
+export * from "./report";
 export * from "./theme";
 export * from "./user";
 export * from "./webrtc";

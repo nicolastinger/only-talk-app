@@ -17,12 +17,13 @@ import {
   isBackendSuccess,
 } from "@workspace/services";
 import type { GroupInfoVo, GroupMemberVo, FriendVo } from "@workspace/types";
-import { TALK_API } from "@workspace/types";
+import { TALK_API, ReportTargetType } from "@workspace/types";
 import { useGroupMemberInfo } from "@/hooks/useGroupMemberInfo";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { resolveContentToTempFile } from "@/utils/tempImage";
 import { DEFAULT_AVATAR, useUserStore } from "@/stores/user";
+import ReportSheet from "@/components/ReportSheet.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -43,6 +44,7 @@ const nameDraft = ref("");
 const descDraft = ref("");
 const savingFlag = ref(false);
 const avatarUploading = ref(false);
+const showReport = ref(false);
 
 const memberUuids = computed(() =>
   members.value.map((m) => m.user_uuid).filter(Boolean)
@@ -594,8 +596,18 @@ const handleDissolve = async () => {
               退出群聊
             </button>
           </template>
+          <button class="action-btn" @click="showReport = true">
+            举报群聊
+          </button>
         </div>
       </div>
+
+      <ReportSheet
+        v-model="showReport"
+        :target-type="ReportTargetType.GROUP"
+        :target-uuid="groupId"
+        :target-name="groupInfo?.group_name || ''"
+      />
     </template>
 
     <!-- 修改群名称 -->

@@ -2,13 +2,13 @@ import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
 import { useBearStore } from '@/store/store';
-import { clearAllUnreadSessions } from '@workspace/services';
-import { invoke } from '@tauri-apps/api/core';
-import { history, Outlet, useLocation, useIntl } from '@umijs/max';
-import { ChatSessionVo } from '@workspace/types';
-import { Button, Segmented, Splitter, Popconfirm } from 'antd';
 import { MessageOutlined, TeamOutlined } from '@ant-design/icons';
-import React, { useEffect, useState, useMemo } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { history, Outlet, useIntl, useLocation } from '@umijs/max';
+import { clearAllUnreadSessions } from '@workspace/services';
+import { ChatSessionVo } from '@workspace/types';
+import { Button, Popconfirm, Segmented, Splitter } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from './index.less';
 
 type ChatTabType = 'private' | 'group';
@@ -52,6 +52,7 @@ const ChatsLayout = () => {
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
   const [activeTab, setActiveTab] = useState<ChatTabType>('private');
+  const [hidePopoverKey, setHidePopoverKey] = useState<string>('');
 
   const { userInfo } = useBearStore();
   const refreshFlag = useBearStore((state) => state.refreshFlag);
@@ -195,11 +196,8 @@ const ChatsLayout = () => {
       setChatSessionList((prev) =>
         prev.filter(
           (s) =>
-            !(
-              s.send_user === item.send_user &&
-              s.recv_user === item.recv_user
-            )
-        )
+            !(s.send_user === item.send_user && s.recv_user === item.recv_user),
+        ),
       );
       const sessionKey =
         item.send_user === item.recv_user
@@ -231,7 +229,14 @@ const ChatsLayout = () => {
     {
       value: 'private',
       label: (
-        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div
+          style={{
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
           <MessageOutlined />
           <span>{intl.formatMessage({ id: 'chatsLayout.privateChat' })}</span>
         </div>
@@ -240,7 +245,14 @@ const ChatsLayout = () => {
     {
       value: 'group',
       label: (
-        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div
+          style={{
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
           <TeamOutlined />
           <span>{intl.formatMessage({ id: 'chatsLayout.groupChat' })}</span>
         </div>
@@ -257,80 +269,97 @@ const ChatsLayout = () => {
         className={styles.left}
       >
         <div style={{ height: '100%' }}>
-        <div className={styles.header}>
-          <Search onSelect={(item) => routeToChat(item)} />
-          <Popconfirm
-            title={intl.formatMessage({ id: 'chatsLayout.clearUnreadConfirm' })}
-            onConfirm={handleClearAllUnread}
-            okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
-            cancelText={intl.formatMessage({ id: 'chatsLayout.cancel' })}
-          >
-            <Button
-              type="text"
-              icon={<ClearIcon />}
-              className={styles.clearBtn}
-              title={intl.formatMessage({ id: 'chatsLayout.clearUnread' })}
+          <div className={styles.header}>
+            <Search onSelect={(item) => routeToChat(item)} />
+            <Popconfirm
+              title={intl.formatMessage({
+                id: 'chatsLayout.clearUnreadConfirm',
+              })}
+              onConfirm={handleClearAllUnread}
+              okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
+              cancelText={intl.formatMessage({ id: 'chatsLayout.cancel' })}
+            >
+              <Button
+                type="text"
+                icon={<ClearIcon />}
+                className={styles.clearBtn}
+                title={intl.formatMessage({ id: 'chatsLayout.clearUnread' })}
+              />
+            </Popconfirm>
+          </div>
+          <div className={styles.tabContainer}>
+            <Segmented
+              value={activeTab}
+              onChange={(value) => setActiveTab(value as ChatTabType)}
+              options={tabOptions}
+              block
             />
-          </Popconfirm>
-        </div>
-        <div className={styles.tabContainer}>
-          <Segmented
-            value={activeTab}
-            onChange={(value) => setActiveTab(value as ChatTabType)}
-            options={tabOptions}
-            block
-          />
-        </div>
-        <div className={styles.item} key="chat">
-          {currentList.map((item: ChatSessionVo) => {
-            const sessionKey =
-              item.send_user === item.recv_user
-                ? item.send_user
-                : item.send_user === userInfo?.uuid
-                ? item.recv_user
-                : item.send_user;
+          </div>
+          <div className={styles.item} key="chat">
+            {currentList.map((item: ChatSessionVo) => {
+              const sessionKey =
+                item.send_user === item.recv_user
+                  ? item.send_user
+                  : item.send_user === userInfo?.uuid
+                  ? item.recv_user
+                  : item.send_user;
 
-            const isSelected = selectedSessionKey === sessionKey;
+              const isSelected = selectedSessionKey === sessionKey;
 
-            return (
-              <div
-                key={item.nano_id}
-                className={styles.sessionItem}
-                onClick={() => routeToChat(item)}
-              >
-                <Message
-                  message={item.last_message}
-                  img={item.friend_icon}
+              return (
+                <div
                   key={item.nano_id}
-                  time={item.timestamp}
-                  title={item.friend_name}
-                  count={item.unread_count}
-                  text_type={item.text_type}
-                  send_user={item.send_user}
-                  recv_user={item.recv_user}
-                  isSelected={isSelected}
-                />
-                <Popconfirm
-                  title={intl.formatMessage({ id: 'chatsLayout.hideSessionConfirm' })}
-                  okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
-                  cancelText={intl.formatMessage({ id: 'chatsLayout.cancel' })}
-                  onConfirm={(e) => {
-                    e?.stopPropagation();
-                    handleHideSession(item);
-                  }}
+                  className={styles.sessionItem}
+                  onClick={() => routeToChat(item)}
                 >
-                  <button
-                    className={styles.deleteBtn}
-                    title={intl.formatMessage({ id: 'chatsLayout.hideSession' })}
-                    onClick={(e) => e.stopPropagation()}
+                  <Message
+                    message={item.last_message}
+                    img={item.friend_icon}
+                    key={item.nano_id}
+                    time={item.timestamp}
+                    title={item.friend_name}
+                    count={item.unread_count}
+                    text_type={item.text_type}
+                    send_user={item.send_user}
+                    recv_user={item.recv_user}
+                    isSelected={isSelected}
+                  />
+                  <Popconfirm
+                    open={hidePopoverKey === item.nano_id}
+                    onOpenChange={(open) =>
+                      setHidePopoverKey(open ? item.nano_id : '')
+                    }
+                    title={intl.formatMessage({
+                      id: 'chatsLayout.hideSessionConfirm',
+                    })}
+                    okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
+                    cancelText={intl.formatMessage({
+                      id: 'chatsLayout.cancel',
+                    })}
+                    onConfirm={(e) => {
+                      e?.stopPropagation();
+                      setHidePopoverKey('');
+                      handleHideSession(item);
+                    }}
                   >
-                    <DeleteIcon />
-                  </button>
-                </Popconfirm>
-              </div>
-            );
-          })}
-        </div>
+                    <button
+                      className={`${styles.deleteBtn} ${
+                        hidePopoverKey === item.nano_id
+                          ? styles.deleteBtnVisible
+                          : ''
+                      }`}
+                      title={intl.formatMessage({
+                        id: 'chatsLayout.hideSession',
+                      })}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DeleteIcon />
+                    </button>
+                  </Popconfirm>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </Splitter.Panel>
       <Splitter.Panel className={styles.right}>

@@ -1,8 +1,13 @@
 import { DEFAULT_ICON } from '@/constants';
+import ReportModal from '@/components/ReportModal';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import { add_friend, getFiles } from '@workspace/services';
-import { FriendRequestInfoDTO, PlazaUser } from '@workspace/types';
+import {
+  FriendRequestInfoDTO,
+  PlazaUser,
+  ReportTargetType,
+} from '@workspace/types';
 import { Button, message, Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import { getGenderLabel } from './genderHelper';
@@ -18,6 +23,7 @@ const ProfileModal = (props: {
   const [userIcon, setUserIcon] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [requested, setRequested] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   const mapAddFriendError = (result: any): string => {
     let msg = '';
@@ -193,8 +199,25 @@ const ProfileModal = (props: {
                 ? intl.formatMessage({ id: 'plaza.requested' })
                 : intl.formatMessage({ id: 'plaza.addFriend' })}
             </Button>
+            <Button
+              block
+              size="large"
+              danger
+              onClick={() => setReportModalVisible(true)}
+            >
+              {intl.formatMessage({ id: 'report.action' })}
+            </Button>
           </div>
         </div>
+      )}
+      {user && (
+        <ReportModal
+          open={reportModalVisible}
+          targetType={ReportTargetType.PLAZA_USER}
+          targetUuid={user.uuid}
+          targetName={user.username || ''}
+          onClose={() => setReportModalVisible(false)}
+        />
       )}
     </Modal>
   );

@@ -12,6 +12,8 @@ import {
 import { useAvatar } from "@/hooks/useAvatar";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type { FriendVo, UserInfo } from "@workspace/types";
+import { ReportTargetType } from "@workspace/types";
+import ReportSheet from "@/components/ReportSheet.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -26,6 +28,7 @@ const detail = ref<FriendDetail>({ friendVo: null, userInfo: null });
 const loading = ref(true);
 const loadError = ref(false);
 const avatarUrl = ref<string | null>(null);
+const showReport = ref(false);
 
 const loadDetail = async () => {
   loading.value = true;
@@ -201,6 +204,17 @@ onMounted(loadDetail);
           <span>删除好友</span>
         </button>
       </div>
+
+      <button class="report-action" @click="showReport = true">
+        举报该用户
+      </button>
+
+      <ReportSheet
+        v-model="showReport"
+        :target-type="ReportTargetType.USER"
+        :target-uuid="friendId"
+        :target-name="getDisplayName()"
+      />
     </template>
   </div>
 </template>
@@ -388,5 +402,18 @@ onMounted(loadDetail);
 }
 :deep(.van-empty__description) {
   color: var(--text-tertiary);
+}
+
+.report-action {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 24px;
+  height: 46px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
 }
 </style>

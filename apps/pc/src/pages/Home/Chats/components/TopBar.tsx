@@ -1,14 +1,16 @@
 import { useBearStore } from '@/store/store';
+import ReportModal from '@/components/ReportModal';
 import {
   BellOutlined,
   DeleteOutlined,
   MoreOutlined,
   StopOutlined,
   UserOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { history, useIntl } from '@umijs/max';
 import { block_friend, delete_friend, unblock_friend } from '@workspace/services';
-import { FriendVo } from '@workspace/types';
+import { FriendVo, ReportTargetType } from '@workspace/types';
 import { Dropdown, Modal, message } from 'antd';
 import React, { useState } from 'react';
 import styles from './styles/TopBar.less';
@@ -23,6 +25,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   const intl = useIntl();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [blockModalVisible, setBlockModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   const triggerRefresh = useBearStore((state) => state.triggerRefresh);
 
   const handleViewProfile = () => {
@@ -114,6 +117,12 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
       onClick: handleBlock,
     },
     {
+      key: 'report',
+      label: intl.formatMessage({ id: 'report.action' }),
+      icon: <WarningOutlined />,
+      onClick: () => setReportModalVisible(true),
+    },
+    {
       type: 'divider' as const,
     },
     {
@@ -175,6 +184,15 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
           {intl.formatMessage({ id: 'chat.topBar.blockWarning' })}
         </p>
       </Modal>
+      {friendInfo?.friend_id && (
+        <ReportModal
+          open={reportModalVisible}
+          targetType={ReportTargetType.USER}
+          targetUuid={friendInfo.friend_id}
+          targetName={friendInfo.friend_name || title}
+          onClose={() => setReportModalVisible(false)}
+        />
+      )}
     </div>
   );
 };

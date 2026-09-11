@@ -9,10 +9,12 @@ import {
   delete_moment,
 } from "@workspace/services";
 import type { MomentVo } from "@workspace/types";
+import { ReportTargetType } from "@workspace/types";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { formatMomentTime } from "@/utils/time";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import ReportSheet from "@/components/ReportSheet.vue";
 import MomentMedia from "./MomentMedia.vue";
 
 const props = defineProps<{ moment: MomentVo }>();
@@ -27,6 +29,7 @@ const myUuid = ref("");
 
 const isSelf = computed(() => props.moment.author_uuid === myUuid.value);
 const busy = ref(false);
+const showReport = ref(false);
 
 const loadAvatar = async () => {
   if (!props.moment.icon) {
@@ -156,6 +159,16 @@ const onDelete = async () => {
         >
           {{ moment.followed_by_me ? "已关注" : "关注" }}
         </button>
+        <button
+          v-if="!isSelf"
+          class="report-btn"
+          title="举报"
+          @click.stop="showReport = true"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" />
+          </svg>
+        </button>
         <button v-else class="del-btn" @click.stop="onDelete">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -202,6 +215,13 @@ const onDelete = async () => {
         <span>{{ moment.comment_count || 0 }}</span>
       </div>
     </div>
+
+    <ReportSheet
+      v-model="showReport"
+      :target-type="ReportTargetType.MOMENT"
+      :target-uuid="moment.uuid"
+      :target-name="moment.username || ''"
+    />
   </div>
 </template>
 
@@ -283,6 +303,26 @@ const onDelete = async () => {
 
 .m-head-right {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-placeholder);
+  cursor: pointer;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .follow-btn {
