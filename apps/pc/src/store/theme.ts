@@ -1,14 +1,15 @@
 import { create } from 'zustand';
 import darkCss from '@/theme/dark.json';
 import lightCss from '@/theme/light.json';
+import { kv_get, kv_set } from '@workspace/services';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ChatsFontSize = 'small' | 'medium' | 'large';
 
 export type EffectiveMode = 'light' | 'dark';
 
-const THEME_KEY = 'theme';
-const FONT_KEY = 'chatFontSize';
+const THEME_KEY = 'ui_theme';
+const FONT_KEY = 'ui_chat_font_size';
 
 const FONT_SCALE: Record<ChatsFontSize, string> = {
   small: '0.875',
@@ -24,15 +25,6 @@ export function getEffectiveMode(mode: ThemeMode): EffectiveMode {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
     : 'light';
-}
-
-function read<T extends string>(key: string, fallback: T, valid: T[]): T {
-  try {
-    const value = localStorage.getItem(key);
-    return value !== null && valid.includes(value as T) ? (value as T) : fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 export function applyCssVars(mode: ThemeMode) {
@@ -55,15 +47,32 @@ interface ThemeState {
   setFontSize: (fontSize: ChatsFontSize) => void;
 }
 
-export const useThemeStore = create<ThemeState>()((set) => ({
-  mode: read(THEME_KEY, 'light', THEME_MODES),
-  fontSize: read(FONT_KEY, 'medium', FONT_SIZES),
-  setMode: (mode) => {
-    localStorage.setItem(THEME_KEY, mode);
-    set({ mode });
-  },
-  setFontSize: (fontSize) => {
-    localStorage.setItem(FONT_KEY, fontSize);
-    set({ fontSize });
-  },
-}));
+export const useThemeStore = create<ThemeState>()((set) => {
+  kv_get(THEME_KEY)
+    .then((value) => {
+      if (value && (THEME_MODES as string[]).includes(value)) {
+        set({ mode: value as ThemeMode });
+      }
+    })
+    .catch(() => {});
+  kv_get(FONT_KEY)
+    .then((value) => {
+      if (value && (FONT_SIZES as string[]).includes(value)) {
+        set({ fontSize: value as ChatsFontSize });
+      }
+    })
+    .catch(() => {});
+
+  return {
+    mode: 'light',
+    fontSize: 'medium',
+    setMode: (mode) => {
+      kv_set(THEME_KEY, mode).catch(() => {});
+      set({ mode });
+    },
+    setFontSize: (fontSize) => {
+      kv_set(FONT_KEY, fontSize).catch(() => {});
+      set({ fontSize });
+    },
+  };
+});

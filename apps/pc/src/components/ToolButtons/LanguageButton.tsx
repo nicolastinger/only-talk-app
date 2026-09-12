@@ -1,5 +1,6 @@
 import { getLocale, setLocale, useIntl } from '@umijs/max';
 import { Dropdown } from 'antd';
+import { kv_set } from '@workspace/services';
 import styles from './LanguageButton.less';
 
 const LanguageButton = () => {
@@ -21,7 +22,7 @@ const LanguageButton = () => {
 
   const changeLanguage = (lang: string) => {
     setLocale(lang, false);
-    localStorage.setItem('language', lang);
+    kv_set('ui_language', lang).catch(() => {});
   };
 
   const items = [

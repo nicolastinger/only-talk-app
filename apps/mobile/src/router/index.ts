@@ -1,5 +1,16 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
+import { kv_get } from "@workspace/services";
+
+const AUTH_KEY = "ui_auth_flag";
+
+const getAuthFlag = async (): Promise<string | null> => {
+  try {
+    return await kv_get(AUTH_KEY);
+  } catch {
+    return null;
+  }
+};
 
 const routes: RouteRecordRaw[] = [
   {
@@ -171,11 +182,11 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   // 登录页不需要验证，直接放行
   if (to.name === "Login") {
     // 如果已登录却访问登录页，重定向到主页
-    if (sessionStorage.getItem("auth_flag")) {
+    if (await getAuthFlag()) {
       next({ name: "Chats" });
       return;
     }
@@ -184,7 +195,7 @@ router.beforeEach((to, _from, next) => {
   }
 
   if (to.meta.requiresAuth) {
-    const flag = sessionStorage.getItem("auth_flag");
+    const flag = await getAuthFlag();
     if (!flag) {
       // 未登录，跳转到登录页
       next({ name: "Login", query: { redirect: to.fullPath } });

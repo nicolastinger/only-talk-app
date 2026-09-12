@@ -1,24 +1,28 @@
 import { computed, onMounted, ref, watch } from "vue";
+import { kv_get, kv_set } from "@workspace/services";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type EffectiveTheme = "light" | "dark";
 
-const THEME_KEY = "theme";
+const THEME_KEY = "ui_theme";
 const validModes: ThemeMode[] = ["light", "dark", "system"];
-
-const getStoredMode = (): ThemeMode => {
-  const value = localStorage.getItem(THEME_KEY) as ThemeMode | null;
-  return value && validModes.includes(value) ? value : "light";
-};
 
 const getSystemTheme = (): EffectiveTheme =>
   window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
-const mode = ref<ThemeMode>(getStoredMode());
+const mode = ref<ThemeMode>("light");
 const systemTheme = ref<EffectiveTheme>(getSystemTheme());
 const effectiveTheme = computed<EffectiveTheme>(() =>
   mode.value === "system" ? systemTheme.value : mode.value,
 );
+
+kv_get(THEME_KEY)
+  .then((value) => {
+    if (value && validModes.includes(value as ThemeMode)) {
+      mode.value = value as ThemeMode;
+    }
+  })
+  .catch(() => {});
 
 let initialized = false;
 
@@ -30,7 +34,7 @@ export function useTheme() {
 
   const setMode = (value: ThemeMode) => {
     mode.value = value;
-    localStorage.setItem(THEME_KEY, value);
+    kv_set(THEME_KEY, value).catch(() => {});
   };
 
   onMounted(() => {

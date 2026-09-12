@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { kv_get, kv_set } from "@workspace/services";
 
 interface NotifyItem {
   key: string;
@@ -11,7 +12,7 @@ interface NotifyItem {
 
 const router = useRouter();
 
-const STORAGE_KEY = "onlytalk_settings_notification";
+const STORAGE_KEY = "ui_notify_prefs";
 
 interface NotifyPrefs {
   receive: boolean;
@@ -21,9 +22,9 @@ interface NotifyPrefs {
   nightDnd: boolean;
 }
 
-const loadPrefs = (): NotifyPrefs => {
+const loadPrefs = async (): Promise<NotifyPrefs> => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = await kv_get(STORAGE_KEY);
     if (raw) return { ...defaultPrefs(), ...JSON.parse(raw) };
   } catch {
     /* ignore */
@@ -39,18 +40,18 @@ const defaultPrefs = (): NotifyPrefs => ({
   nightDnd: false,
 });
 
-const prefs = reactive<NotifyPrefs>(loadPrefs());
+const prefs = reactive<NotifyPrefs>(defaultPrefs());
 
 watch(
   prefs,
   (value) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    kv_set(STORAGE_KEY, JSON.stringify(value)).catch(() => {});
   },
   { deep: true }
 );
 
-onMounted(() => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+onMounted(async () => {
+  Object.assign(prefs, await loadPrefs());
 });
 
 const toggle = (key: keyof NotifyPrefs, checked: boolean) => {

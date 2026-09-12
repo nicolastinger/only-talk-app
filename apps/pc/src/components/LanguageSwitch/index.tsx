@@ -1,6 +1,7 @@
 import { getLocale, setLocale, useIntl } from '@umijs/max';
 import { Dropdown } from 'antd';
 import React from 'react';
+import { kv_set } from '@workspace/services';
 import styles from './index.less';
 
 const LanguageSwitch: React.FC = () => {
@@ -22,7 +23,7 @@ const LanguageSwitch: React.FC = () => {
 
   const changeLanguage = (lang: string) => {
     setLocale(lang, false);
-    localStorage.setItem('language', lang);
+    kv_set('ui_language', lang).catch(() => {});
   };
 
   const items = [

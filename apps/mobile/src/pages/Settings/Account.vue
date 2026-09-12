@@ -5,22 +5,23 @@ import { showToast } from "vant";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { getMyAccount } from "@/utils/api";
+import { kv_get, kv_set } from "@workspace/services";
 
 interface PrivacyPrefs {
   searchByPhone: boolean;
   recommend: boolean;
 }
 
-const STORAGE_KEY = "onlytalk_settings_privacy";
+const STORAGE_KEY = "ui_privacy_prefs";
 
 const defaultPrefs = (): PrivacyPrefs => ({
   searchByPhone: true,
   recommend: true,
 });
 
-const loadPrefs = (): PrivacyPrefs => {
+const loadPrefs = async (): Promise<PrivacyPrefs> => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = await kv_get(STORAGE_KEY);
     if (raw) return { ...defaultPrefs(), ...JSON.parse(raw) };
   } catch {
     /* ignore */
@@ -31,11 +32,13 @@ const loadPrefs = (): PrivacyPrefs => {
 const router = useRouter();
 const { userInfo, loadUserInfo } = useUserStore();
 const { getAvatarUrl } = useAvatar();
-const prefs = reactive<PrivacyPrefs>(loadPrefs());
+const prefs = reactive<PrivacyPrefs>(defaultPrefs());
 const account = ref("");
 const avatarUrl = ref<string | null>(null);
 
-watch(prefs, (value) => localStorage.setItem(STORAGE_KEY, JSON.stringify(value)));
+watch(prefs, (value) => {
+  kv_set(STORAGE_KEY, JSON.stringify(value)).catch(() => {});
+});
 
 const genderLabel = (gender?: number) => {
   if (gender === 2) return "男";
@@ -55,6 +58,7 @@ const formatBirthday = (timestamp?: number) => {
 };
 
 onMounted(async () => {
+  Object.assign(prefs, await loadPrefs());
   account.value = await getMyAccount().catch(() => "");
   await loadUserInfo();
   if (userInfo.value?.icon) {

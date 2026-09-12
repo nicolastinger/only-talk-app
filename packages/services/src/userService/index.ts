@@ -141,6 +141,26 @@ export const cache_user_info = async (userInfo: UserInfo) => {
   });
 };
 
+/**
+ * 后端内存 KV（GLOBAL_QUIC_USER_INFO）。
+ * 注意：非持久化，登出/强退会被清空，仅适合会话级或临时数据。
+ */
+export const kv_get = async (key: string): Promise<string | null> => {
+  try {
+    return await invoke<string>("get_user_map", { key });
+  } catch {
+    return null;
+  }
+};
+
+export const kv_set = async (key: string, value: string): Promise<void> => {
+  await invoke("add_user_map", { map: { [key]: value } });
+};
+
+export const kv_remove = async (key: string): Promise<void> => {
+  await invoke("remove_user_map", { key });
+};
+
 export const get_cached_user_info = async (uuid: string) => {
   return await invoke<UserInfo | null>("get_cached_user_info", {
     uuid,

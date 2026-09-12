@@ -1,28 +1,21 @@
 import { ref, computed } from "vue";
-import { get_announcement_list } from "@workspace/services";
+import { get_announcement_list, kv_get, kv_set } from "@workspace/services";
 import type { AnnouncementVO } from "@workspace/types";
 
-const KEY = "ignoredAnnouncements";
+const KEY = "ui_ignored_announcements";
 
-function load(): string[] {
-  try {
-    const v = localStorage.getItem(KEY);
-    return v ? (JSON.parse(v) as string[]) : [];
-  } catch {
-    return [];
-  }
-}
+const ignored = ref<string[]>([]);
 
-const ignored = ref<string[]>(load());
+kv_get(KEY)
+  .then((v) => {
+    if (v) ignored.value = JSON.parse(v) as string[];
+  })
+  .catch(() => {});
 
 const ignore = (uuid: string) => {
   if (ignored.value.includes(uuid)) return;
   ignored.value = [...ignored.value, uuid];
-  try {
-    localStorage.setItem(KEY, JSON.stringify(ignored.value));
-  } catch {
-    // 忽略 localStorage 异常（隐私模式等）
-  }
+  kv_set(KEY, JSON.stringify(ignored.value)).catch(() => {});
 };
 
 const list = ref<AnnouncementVO[]>([]);

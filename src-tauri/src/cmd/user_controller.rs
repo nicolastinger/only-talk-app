@@ -34,6 +34,13 @@ pub async fn get_user_map(key: String) -> Result<String, String> {
     Ok(GLOBAL_QUIC_USER_INFO.read().await.get(&key).cloned().ok_or("not found")?.to_string())
 }
 
+/// 删除持久化数据
+#[tauri::command]
+pub async fn remove_user_map(key: String) -> Result<(), String> {
+    GLOBAL_QUIC_USER_INFO.write().await.remove(&key);
+    Ok(())
+}
+
 /// 断开QUIC连接
 /// 清理所有与服务器连接的QUIC资源
 #[tauri::command]

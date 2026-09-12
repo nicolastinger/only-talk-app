@@ -76,7 +76,8 @@ use crate::cmd::p2p_controller::{
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
     get_cached_user_info_by_account, get_quic_connection_state, get_user_info_with_cache,
-    get_user_map, reconnect_quic_command, refresh_user_info, update_user_info_command,
+    get_user_map, reconnect_quic_command, refresh_user_info, remove_user_map,
+    update_user_info_command,
 };
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
@@ -232,6 +233,7 @@ pub fn run() {
             delete_quick_login_user,
             get_user_map,
             add_user_map,
+            remove_user_map,
             send_video_frame,
             send_p2p_init_msg,
             send_init_p2p_udp,

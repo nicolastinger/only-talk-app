@@ -65,8 +65,8 @@ export const handleRouteChange = (routeInfo: RouteInfo) => {
     location.pathname.startsWith(route)
   );
   
-  // 这里只是示例，实际应用中应该从localStorage或全局状态中获取登录状态
-  const isLoggedIn = localStorage.getItem('userToken');
+  // 这里只是示例，实际应用中应从后端内存 KV(get_user_map)或全局状态中获取登录状态
+  const isLoggedIn = await kv_get('token');
   
   // 如果不是公共路由且未登录，可以重定向到登录页面
   if (!isPublicRoute && !isLoggedIn && location.pathname !== '/signIn') {
