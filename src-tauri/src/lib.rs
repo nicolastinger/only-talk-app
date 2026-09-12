@@ -12,17 +12,17 @@ use sqlx::SqlitePool;
 use tauri::path::BaseDirectory;
 use tokio::sync::{Mutex, RwLock};
 pub mod cmd;
-mod config;
-mod dao;
-mod dto;
+pub mod config;
+pub mod dao;
+pub mod dto;
 mod emit_app;
-mod entity;
+pub mod entity;
 mod init_app;
 pub mod service;
 #[cfg(desktop)]
 mod tray;
 pub mod utils;
-mod vo;
+pub mod vo;
 
 use entity::quic_connection::QuicConnection;
 
