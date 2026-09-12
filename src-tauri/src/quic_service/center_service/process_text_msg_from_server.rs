@@ -5,7 +5,6 @@ use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::time::timeout;
-use uuid::Uuid;
 
 use crate::dao::chat_record_ack::update_chat_record_ack;
 use crate::dao::chat_record_db::insert_chat_record;
@@ -32,7 +31,7 @@ use crate::service::{friend_service, group_service, message_alert};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_FORCE_LOGOUT,
-    MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_NOTIFICATION, MSG_TYPE_GROUP_TEXT,
+    MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT,
     MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT,
     MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
     MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING,

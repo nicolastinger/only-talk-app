@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+#[allow(async_fn_in_trait)]
 pub trait SqliteStore {
     // 创建表结构
     async fn create_table(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error>;

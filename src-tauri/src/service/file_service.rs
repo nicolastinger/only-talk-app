@@ -18,7 +18,7 @@ use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord as ChatFileRecord};
 use crate::entity::file_record::FileRecord;
 use crate::service::api_service::{get_with_token, get_without_token, post_with_body};
-use crate::utils::global_static_str::{MONTHLY_RESOURCE_PATH, TALK_API};
+use crate::utils::global_static_str::MONTHLY_RESOURCE_PATH;
 use crate::utils::uuid_utils;
 use crate::vo::file_vo::FileVo;
 
@@ -202,7 +202,7 @@ pub async fn download_file_by_biz_service(
         // 3、遍历文件ID列表，下载每个文件
         for file_url in file_urls.into_iter() {
             if let Value::String(file_url_str) = file_url {
-                let file_url_str = format!("{}", file_url_str);
+                let file_url_str = file_url_str.to_string();
                 info!("下载文件URL: {}", file_url_str);
 
                 let is_public_bucket = file_url_str.contains("/user-avatar/")

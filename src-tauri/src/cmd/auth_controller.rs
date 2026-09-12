@@ -106,6 +106,7 @@ pub async fn sign_in(
 
 /// 通过 refresh_token 刷新 access_token
 #[command]
+#[allow(clippy::disallowed_methods)]
 pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
     let refresh_token = {
         GLOBAL_QUIC_USER_INFO
@@ -220,6 +221,7 @@ pub async fn get_quick_login_users() -> Result<Vec<QuickLoginUser>, String> {
 }
 
 #[command]
+#[allow(clippy::disallowed_methods)]
 pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiResponse, String> {
     let refresh_url = format!("{}/user/refresh_token", url.trim_end_matches('/'));
     let body = serde_json::json!({

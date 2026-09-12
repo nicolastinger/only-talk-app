@@ -75,7 +75,7 @@ pub fn pulse_tray_on_new_message<R: Runtime>(app: &AppHandle<R>) {
             Some(window) => {
                 let visible = window.is_visible().unwrap_or(false);
                 let minimized = window.is_minimized().unwrap_or(false);
-                !(visible && !minimized)
+                !visible || minimized
             }
             None => true, // 找不到窗口说明未初始化或已隐藏,一律允许闪烁
         }

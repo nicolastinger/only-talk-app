@@ -301,10 +301,7 @@ impl SqliteStore for SystemNotification {
         )
         .execute(pool_sqlite)
         .await;
-        match add_is_synced {
-            Ok(_) => {}
-            Err(_) => {} // 列已存在，忽略
-        }
+        let _ = add_is_synced; // 列已存在，忽略
 
         Ok(())
     }

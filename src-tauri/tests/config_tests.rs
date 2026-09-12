@@ -54,7 +54,8 @@ fn config_typed_accessors() {
 fn config_json_roundtrip() {
     let _guard = config_guard();
     clear_all_configs();
-    let value = serde_json::json!({"a": 1, "b": [1, 2], "c": {"d": true}});
+    let value: serde_json::Value =
+        serde_json::from_str(r#"{"a":1,"b":[1,2],"c":{"d":true}}"#).expect("构造 JSON 失败");
     set_config_json("j", &value).expect("序列化 JSON 失败");
     let back: serde_json::Value =
         get_config_json("j").expect("反序列化失败").expect("配置不存在");

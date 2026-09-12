@@ -65,6 +65,7 @@ struct BannerPayload {
 /// - `msg`：收到的消息
 /// - `is_group`：是否群聊消息
 /// - `viewing`：该消息所属会话是否为“当前正在查看的会话”
+#[allow(clippy::disallowed_methods)]
 pub async fn on_incoming_message(
     me: &str,
     msg: &TextQuicMsgVo,

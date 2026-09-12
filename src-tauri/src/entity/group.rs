@@ -99,7 +99,7 @@ impl Group {
     }
 
     /// 模糊搜索群聊（按群名称搜索）
-    pub async fn search_user_groups(me: &str, keyword: &str) -> Result<Vec<Group>, anyhow::Error> {
+    pub async fn search_user_groups(_me: &str, keyword: &str) -> Result<Vec<Group>, anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
         let pattern = format!("%{}%", keyword);
         let records = sqlx::query_as::<_, Group>(
@@ -142,10 +142,7 @@ impl SqliteStore for Group {
         )
         .execute(pool_sqlite)
         .await;
-        match result {
-            Ok(_) => {}
-            Err(_) => {} // Column already exists, ignore
-        }
+        let _ = result; // Column already exists, ignore
         Ok(())
     }
 

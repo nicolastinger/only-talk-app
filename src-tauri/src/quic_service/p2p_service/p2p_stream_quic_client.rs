@@ -3,7 +3,6 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use dashmap::DashMap;
 use log::{error, info};
 use quinn::{ClientConfig, Endpoint};
 use rustls::ClientConfig as RustlsClientConfig;
@@ -69,7 +68,7 @@ pub async fn run_client(
     let ping_uuid = target_uuid.clone();
 
     // 确保P2P_STREAM_SENDER中存在该用户的DashMap
-    P2P_STREAM_SENDER.entry(target_uuid.clone()).or_insert_with(DashMap::new);
+    P2P_STREAM_SENDER.entry(target_uuid.clone()).or_default();
 
     // ==================== 打开Default通道（双向流0） ====================
     let (mut send_default, mut recv_default) = connection.open_bi().await?;

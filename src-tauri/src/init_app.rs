@@ -17,7 +17,7 @@ use crate::utils::global_static_str::{
 
 pub async fn init_app(
     root_path: PathBuf,
-    app_handle: Option<tauri::AppHandle<Wry>>,
+    _app_handle: Option<tauri::AppHandle<Wry>>,
 ) -> Result<(), anyhow::Error> {
     // 获取应用的路径(挂载运行环境 {env} 段, 如 prod/dev/test)
     let env = get_env();
@@ -90,6 +90,7 @@ pub async fn init_app(
 }
 
 /// 复制打包的资源文件到应用可访问的目录
+#[allow(dead_code)]
 async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle<Wry>, target_dir: &Path) {
     use tauri::path::BaseDirectory;
 
@@ -98,7 +99,7 @@ async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle<Wry>, target_di
     // 尝试从资源目录复制默认图片
     let resource_file_path = match app_handle
         .path()
-        .resolve(&format!("{}/{}", RESOURCE_PATH, DEFAULT_IMAGE), BaseDirectory::Resource)
+        .resolve(format!("{}/{}", RESOURCE_PATH, DEFAULT_IMAGE), BaseDirectory::Resource)
     {
         Ok(path) => {
             info!("解析到的资源文件路径: {:?}", path);

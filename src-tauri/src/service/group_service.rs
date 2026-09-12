@@ -4,15 +4,9 @@ use anyhow::anyhow;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use uuid::Uuid;
-
 use crate::cmd::api_controller::{get_request, post_request};
-use crate::dao::group_db::{
-    get_last_group, query_group_list, search_group_list, soft_delete_group, upsert_group,
-};
-use crate::dao::group_member_db::{
-    insert_group_member, query_group_members, remove_group_member, upsert_group_members,
-};
+use crate::dao::group_db::{query_group_list, search_group_list, upsert_group};
+use crate::dao::group_member_db::{insert_group_member, query_group_members, remove_group_member};
 use crate::dao::session_db::{hide_group_session_db, update_chat_session_db};
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_session::ChatSession;
@@ -106,6 +100,7 @@ pub async fn create_group(request: CreateGroupRequest) -> Result<GroupVo, anyhow
 }
 
 /// 邀请群成员（发送邀请通知，需对方同意）
+#[allow(clippy::disallowed_methods)]
 pub async fn invite_group_members(
     group_id: &str,
     user_ids: Vec<String>,
@@ -129,6 +124,7 @@ pub async fn invite_group_members(
 }
 
 /// 接受群邀请
+#[allow(clippy::disallowed_methods)]
 pub async fn accept_group_invitation(group_id: &str) -> Result<(), anyhow::Error> {
     let url = format!("{}/group/chat/member/invite/accept", TALK_API);
     let body = serde_json::json!({
@@ -149,6 +145,7 @@ pub async fn accept_group_invitation(group_id: &str) -> Result<(), anyhow::Error
 }
 
 /// 拒绝群邀请
+#[allow(clippy::disallowed_methods)]
 pub async fn decline_group_invitation(group_id: &str) -> Result<(), anyhow::Error> {
     let url = format!("{}/group/chat/member/invite/decline", TALK_API);
     let body = serde_json::json!({
@@ -408,6 +405,7 @@ struct UnreadCountVO {
 
 /// 拉取群聊离线消息
 /// 先获取有未读消息的群列表，再逐个拉取历史消息并保存到本地 SQLite
+#[allow(clippy::disallowed_methods)]
 pub async fn pull_group_messages() -> Result<(), anyhow::Error> {
     // 1. 获取有未读消息的群
     let url = format!("{}/group/chat/message/unread", TALK_API);

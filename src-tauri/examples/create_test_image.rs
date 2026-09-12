@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::PathBuf;
 
 use image::{DynamicImage, ImageBuffer, Rgba};
 
@@ -29,10 +28,10 @@ fn main() {
     let dynamic_img = DynamicImage::ImageRgba8(img);
 
     let start = std::time::Instant::now();
-    dynamic_img.save(&output_path).unwrap();
+    dynamic_img.save(&output_path).expect("保存测试图片失败");
     let save_time = start.elapsed();
 
-    let file_size = fs::metadata(&output_path).unwrap().len();
+    let file_size = fs::metadata(&output_path).expect("读取文件元数据失败").len();
 
     println!("✓ 测试图片创建成功!");
     println!("  路径: {}", output_path.display());

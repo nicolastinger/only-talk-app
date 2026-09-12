@@ -249,7 +249,7 @@ fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String,
 /// 将文件（包括 Android content:// URI）复制到临时目录并返回真实路径
 #[command]
 pub async fn copy_file_to_temp(
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
     uri_or_path: String,
 ) -> Result<String, String> {
     info!("copy_file_to_temp called: {}", uri_or_path);

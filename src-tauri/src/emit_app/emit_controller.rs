@@ -10,6 +10,7 @@ use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
 
 /// 未读数量变更事件
 #[derive(Debug, Clone, Serialize)]
+#[allow(dead_code)]
 pub struct UnreadCountEvent {
     pub module: String, // "contacts" | "groups" | "plaza" | "moments"
     pub count: i32,     // 单条通知的未读数
@@ -29,6 +30,7 @@ pub fn emit_notify_read() -> Result<(), anyhow::Error> {
 
 /// 向前端发送未读数量更新事件
 /// 根据 SystemNotification 的 level1/level2 自动判断模块并 emit
+#[allow(dead_code)]
 pub fn emit_unread_count(notification: &SystemNotification) -> Result<(), anyhow::Error> {
     let level1 = notification.level1.unwrap_or(0);
     let level2 = notification.level2.unwrap_or(0);

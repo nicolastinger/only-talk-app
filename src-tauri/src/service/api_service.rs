@@ -159,9 +159,7 @@ pub async fn upload_multiple_files_with_fields(
 
     let field_name_owned = field_name.to_string();
     let mut form = reqwest::multipart::Form::new();
-    let mut part_index = 0;
-
-    for file_path in file_paths {
+    for (part_index, file_path) in file_paths.iter().enumerate() {
         let path = Path::new(file_path);
         let mut file = File::open(path)?;
         let mut buffer = Vec::new();
@@ -180,7 +178,6 @@ pub async fn upload_multiple_files_with_fields(
             unique_field_name,
             reqwest::multipart::Part::bytes(buffer).file_name(file_name.to_string()),
         );
-        part_index += 1;
     }
 
     for (key, value) in extra_fields {

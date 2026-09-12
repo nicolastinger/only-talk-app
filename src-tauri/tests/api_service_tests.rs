@@ -9,8 +9,8 @@ use std::path::PathBuf;
 fn create_test_file() -> PathBuf {
     let temp_dir = std::env::temp_dir();
     let path = temp_dir.join("test_upload.txt");
-    let mut file = fs::File::create(&path).unwrap();
-    file.write_all(b"Hello, this is a test file content!").unwrap();
+    let mut file = fs::File::create(&path).expect("创建测试文件失败");
+    file.write_all(b"Hello, this is a test file content!").expect("写入测试文件失败");
     path
 }
 
@@ -24,7 +24,7 @@ async fn test_post_form_data_request_success() {
         post_form_data_request("http://httpbin.org/post".to_string(), fields).await;
     assert!(result.is_ok());
 
-    let response = result.unwrap();
+    let response = result.expect("请求应成功");
     assert_eq!(response.status, 200);
 }
 
@@ -53,7 +53,7 @@ async fn test_upload_file_request_success() {
 
     assert!(result.is_ok());
 
-    let response = result.unwrap();
+    let response = result.expect("请求应成功");
     assert_eq!(response.status, 200);
 
     fs::remove_file(&test_file).ok();

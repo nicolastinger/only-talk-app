@@ -136,6 +136,7 @@ lazy_static! {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(non_snake_case)]
+#[allow(clippy::disallowed_methods)]
 pub fn run() {
     #[cfg(target_os = "linux")]
     {

@@ -12,7 +12,7 @@ fn create_test_image() -> PathBuf {
     let width = 800u32;
     let height = 600u32;
     let img = image::RgbaImage::from_pixel(width, height, image::Rgba([100, 150, 200, 255]));
-    img.save(&path).unwrap();
+    img.save(&path).expect("保存测试图片失败");
 
     path
 }
@@ -28,7 +28,7 @@ fn test_compress_image_to_webp_success() {
     let output_path = input_path.with_extension("webp");
     assert!(output_path.exists(), "Output file should exist");
 
-    let output_size = fs::metadata(&output_path).unwrap().len();
+    let output_size = fs::metadata(&output_path).expect("读取输出文件元数据失败").len();
     assert!(output_size <= 200 * 1024, "Output size should be <= 200KB, got {} bytes", output_size);
 
     fs::remove_file(&input_path).ok();
@@ -41,9 +41,9 @@ fn test_compress_image_to_webp_exceeds_max_input_size() {
     let large_path = temp_dir.join("large_test_input.png");
 
     {
-        let mut file = fs::File::create(&large_path).unwrap();
+        let mut file = fs::File::create(&large_path).expect("创建大文件失败");
         let zeros = vec![0u8; 101 * 1024 * 1024];
-        file.write_all(&zeros).unwrap();
+        file.write_all(&zeros).expect("写入大文件失败");
     }
 
     let result = compress_image_to_webp(&large_path);
@@ -63,10 +63,10 @@ fn test_compress_image_output_is_webp() {
     assert!(result.is_ok());
 
     let output_path = input_path.with_extension("webp");
-    let mut file = fs::File::open(&output_path).unwrap();
+    let mut file = fs::File::open(&output_path).expect("打开输出文件失败");
     let mut header = [0u8; 4];
     use std::io::Read;
-    file.read_exact(&mut header).unwrap();
+    file.read_exact(&mut header).expect("读取文件头失败");
 
     assert_eq!(&header, b"RIFF", "WebP file should start with RIFF");
 
@@ -82,14 +82,14 @@ fn test_compress_image_preserves_aspect_ratio() {
     let width = 1600u32;
     let height = 900u32;
     let img = image::RgbaImage::from_pixel(width, height, image::Rgba([255, 0, 0, 255]));
-    img.save(&input_path).unwrap();
+    img.save(&input_path).expect("保存测试图片失败");
 
     let result = compress_image_to_webp(&input_path);
 
     assert!(result.is_ok(), "Compression should succeed: {:?}", result.err());
 
     let output_path = input_path.with_extension("webp");
-    let loaded = image::open(&output_path).unwrap();
+    let loaded = image::open(&output_path).expect("打开输出图片失败");
 
     let output_width = loaded.width() as f64;
     let output_height = loaded.height() as f64;

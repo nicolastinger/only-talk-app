@@ -820,16 +820,24 @@ async fn user_token_upsert_query_delete() {
 #[tokio::test]
 async fn webrtc_signal_insert_query_and_summary() {
     with_private_db(|_pool| async move {
-        insert_webrtc_signal("w1", "s1", "offer", ME, FRIEND, &serde_json::json!({"sdp": "x"}), 100)
-            .await
-            .expect("插入信令失败");
+        insert_webrtc_signal(
+            "w1",
+            "s1",
+            "offer",
+            ME,
+            FRIEND,
+            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"x"}"#).expect("构造信令 JSON 失败"),
+            100,
+        )
+        .await
+        .expect("插入信令失败");
         insert_webrtc_signal(
             "w2",
             "s1",
             "answer",
             FRIEND,
             ME,
-            &serde_json::json!({"sdp": "y"}),
+            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"y"}"#).expect("构造信令 JSON 失败"),
             200,
         )
         .await
@@ -841,7 +849,16 @@ async fn webrtc_signal_insert_query_and_summary() {
         assert_eq!(signals[1].msg_type, "answer");
 
         // save_webrtc_signal: end 会额外写 chat_record 摘要(session::s1)
-        save_webrtc_signal("w3", "s1", "end", ME, FRIEND, &serde_json::json!({"end": true}), 300, "w2")
+        save_webrtc_signal(
+            "w3",
+            "s1",
+            "end",
+            ME,
+            FRIEND,
+            &serde_json::from_str::<serde_json::Value>(r#"{"end":true}"#).expect("构造信令 JSON 失败"),
+            300,
+            "w2",
+        )
             .await
             .expect("保存信令失败");
         let signals = query_webrtc_signal_by_session("s1").await.expect("按会话查询失败");
@@ -859,7 +876,7 @@ async fn webrtc_signal_insert_query_and_summary() {
             "candidate",
             ME,
             FRIEND,
-            &serde_json::json!({"candidate": "c1"}),
+            &serde_json::from_str::<serde_json::Value>(r#"{"candidate":"c1"}"#).expect("构造信令 JSON 失败"),
             400,
             "",
         )

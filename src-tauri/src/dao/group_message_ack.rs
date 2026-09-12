@@ -12,10 +12,10 @@ pub async fn insert_group_message_ack(ack: &GroupMessageAck) -> Result<(), anyho
     .bind(&ack.local_nano_id)
     .bind(&ack.group_uuid)
     .bind(&ack.send_user)
-    .bind(&ack.text_type)
-    .bind(&ack.ack_status)
+    .bind(ack.text_type)
+    .bind(ack.ack_status)
     .bind(&ack.raw)
-    .bind(&ack.timestamp)
+    .bind(ack.timestamp)
     .execute(&pool_sqlite)
     .await?;
     Ok(())

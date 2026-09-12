@@ -71,11 +71,11 @@ pub async fn query_app_logs_paged(
     let mut bind_index = 1usize;
     let mut count_query = String::from("SELECT COUNT(*) FROM app_log");
     let mut list_query = String::from("SELECT * FROM app_log");
-    if let Some(t) = log_type {
+    if let Some(_t) = log_type {
         conditions.push(format!("log_type = ?{}", bind_index));
         bind_index += 1;
     }
-    if let Some(l) = level {
+    if let Some(_l) = level {
         conditions.push(format!("level = ?{}", bind_index));
         bind_index += 1;
     }

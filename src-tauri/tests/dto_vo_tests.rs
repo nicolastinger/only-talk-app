@@ -11,7 +11,8 @@ use app_lib::vo::text_quic_msg::TextQuicMsgVo;
 fn http_result_serde_roundtrip() {
     let result = HttpResult {
         code: 200,
-        data: serde_json::json!({"uuid": "u1", "list": [1, 2]}),
+        data: serde_json::from_str::<serde_json::Value>(r#"{"uuid":"u1","list":[1,2]}"#)
+            .expect("构造 JSON 失败"),
         message: "ok".to_string(),
     };
     let json = serde_json::to_string(&result).expect("序列化失败");
@@ -57,12 +58,17 @@ fn response_serde_roundtrip() {
     let response = Response {
         code: 200,
         message: "ok".to_string(),
-        data: Some(serde_json::json!([1, 2, 3])),
+        data: Some(
+            serde_json::from_str::<serde_json::Value>(r#"[1,2,3]"#).expect("构造 JSON 失败"),
+        ),
     };
     let json = serde_json::to_string(&response).expect("序列化失败");
     let back: Response = serde_json::from_str(&json).expect("反序列化失败");
     assert_eq!(back.code, 200);
-    assert_eq!(back.data.expect("应有 data"), serde_json::json!([1, 2, 3]));
+    assert_eq!(
+        back.data.expect("应有 data"),
+        serde_json::from_str::<serde_json::Value>(r#"[1,2,3]"#).expect("构造 JSON 失败"),
+    );
 }
 
 #[test]

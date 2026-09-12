@@ -18,7 +18,7 @@ fn main() {
     }
 
     println!("测试图片: {}", test_image_path.display());
-    println!("文件大小: {} bytes\n", fs::metadata(&test_image_path).unwrap().len());
+    println!("文件大小: {} bytes\n", fs::metadata(&test_image_path).expect("读取文件元数据失败").len());
 
     run_compression_test(&test_image_path);
 
@@ -26,7 +26,7 @@ fn main() {
 }
 
 fn get_test_image_path() -> PathBuf {
-    let path = PathBuf::from(r"D:\漫展\P1002642.JPG");
+    
     // let mut path = std::env::current_dir().unwrap();
     // path.push("test_image.jpg");
     //
@@ -35,7 +35,7 @@ fn get_test_image_path() -> PathBuf {
     //     path.push("test_image.jpg");
     // }
 
-    path
+    PathBuf::from(r"D:\漫展\P1002642.JPG")
 }
 
 fn run_compression_test(input_path: &PathBuf) {
@@ -50,8 +50,8 @@ fn run_compression_test(input_path: &PathBuf) {
     match result {
         Ok(_) => {
             let output_path = input_path.with_extension("webp");
-            let output_size = fs::metadata(&output_path).unwrap().len();
-            let input_size = fs::metadata(input_path).unwrap().len();
+            let output_size = fs::metadata(&output_path).expect("读取输出文件元数据失败").len();
+            let input_size = fs::metadata(input_path).expect("读取输入文件元数据失败").len();
             let compression_ratio = (1.0 - (output_size as f64 / input_size as f64)) * 100.0;
 
             println!("✓ 压缩成功!");

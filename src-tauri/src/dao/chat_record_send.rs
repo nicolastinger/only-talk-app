@@ -10,7 +10,7 @@ pub async fn insert_chat_record_send(
         .bind(&chat_record_send.send_id)
         .bind(&chat_record_send.msg_id)
         .bind(chat_record_send.text_type)
-        .bind(&chat_record_send.platform)
+        .bind(chat_record_send.platform)
         .bind(&chat_record_send.recv_user)
         .bind(&chat_record_send.send_user)
         .bind(chat_record_send.timestamp)

@@ -299,12 +299,11 @@ async fn try_connect_once(
     let (mut send_stream, mut _recv_stream) = connection.open_bi().await?;
     send_stream.set_priority(0)?;
     let head_length = 9;
-    let buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    let _buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
 
     // bidi recv loop
     {
         let tx = disconnect_tx.clone();
-        let server_addr = server_addr;
         tokio::spawn(async move {
             let mut buffer = vec![0u8; 1024 * 8];
             loop {
@@ -366,7 +365,6 @@ async fn try_connect_once(
     {
         let conn_for_uni = connection.clone();
         let tx = disconnect_tx.clone();
-        let server_addr = server_addr;
         tokio::spawn(async move {
             let uni_buffer_msg: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
             let mut disconnect_rx = tx.subscribe();
@@ -451,11 +449,10 @@ async fn try_connect_once(
     {
         let conn = connection.clone();
         let tx = disconnect_tx.clone();
-        let server_addr = server_addr;
         tokio::spawn(async move {
             let ping_result = send_ping_msg(conn, tx, server_addr).await;
-            if ping_result.is_err() {
-                error!("心跳任务异常退出: {}", ping_result.unwrap_err());
+            if let Err(e) = ping_result {
+                error!("心跳任务异常退出: {}", e);
             }
         });
     }

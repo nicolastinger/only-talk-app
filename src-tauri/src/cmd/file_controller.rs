@@ -37,7 +37,7 @@ pub async fn get_local_file<R: Runtime>(app_handle: tauri::AppHandle<R>) -> Resu
 
         let packed_resource_path = match app_handle
             .path()
-            .resolve(&format!("{}/{}", RESOURCE_PATH, DEFAULT_IMAGE), BaseDirectory::Resource)
+            .resolve(format!("{}/{}", RESOURCE_PATH, DEFAULT_IMAGE), BaseDirectory::Resource)
         {
             Ok(path) => {
                 info!("解析到的打包资源路径: {:?}", path);
@@ -220,7 +220,7 @@ pub async fn debug_resource_paths<R: Runtime>(
                 }
             }
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // 2. 打包的资源路径
@@ -238,7 +238,7 @@ pub async fn debug_resource_paths<R: Runtime>(
                     }
                 }
             }
-            output.push_str("\n");
+            output.push('\n');
             Some(path)
         }
         Err(e) => {

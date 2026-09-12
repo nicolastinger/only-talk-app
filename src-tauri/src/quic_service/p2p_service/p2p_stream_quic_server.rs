@@ -2,7 +2,6 @@ use std::net::{SocketAddr, SocketAddrV6, UdpSocket};
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use dashmap::DashMap;
 use log::{error, info};
 use quinn::Endpoint;
 use tokio::sync::Mutex;
@@ -144,7 +143,7 @@ async fn handle_connection(connection: quinn::Connection) -> Result<(), anyhow::
     };
 
     // 确保P2P_STREAM_SENDER中存在该用户的DashMap
-    P2P_STREAM_SENDER.entry(target_uuid.clone()).or_insert_with(DashMap::new);
+    P2P_STREAM_SENDER.entry(target_uuid.clone()).or_default();
 
     // 设置p2p连接活跃状态
     {

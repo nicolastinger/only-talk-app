@@ -17,7 +17,7 @@ fn main() {
         return;
     }
 
-    let img = decode_jpeg(input_path).unwrap();
+    let img = decode_jpeg(input_path).expect("解码失败");
     let (width, height) = (img.width(), img.height());
     let target_size = 800u32;
 
@@ -37,7 +37,7 @@ fn main() {
     println!("{}", "-".repeat(60));
 
     for (name, filter) in filters {
-        let result = benchmark_resize(&img, target_size, filter, &name);
+        let result = benchmark_resize(&img, target_size, filter, name);
         if let Some((time, output_size, quality)) = result {
             println!(
                 "{:<15} {:<15} {:<15} {:<15}",

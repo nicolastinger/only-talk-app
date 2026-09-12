@@ -156,7 +156,7 @@ fn webrtc_signal_record_json_uses_renamed_keys() {
         sender: "a".to_string(),
         receiver: "b".to_string(),
         session_id: "s1".to_string(),
-        data: serde_json::json!({"sdp": "v0"}),
+        data: serde_json::from_str::<serde_json::Value>(r#"{"sdp":"v0"}"#).expect("构造 JSON 失败"),
         timestamp: 123,
     };
     let json = record.json_serialize().expect("序列化失败");

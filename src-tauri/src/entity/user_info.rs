@@ -84,7 +84,7 @@ impl UserInfo {
     pub async fn insert(&self) -> Result<i64, anyhow::Error> {
         let pool_sqlite = get_common_db_client().await?;
         let now =
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs()
                 as i64;
 
         let result = sqlx::query(
@@ -146,7 +146,7 @@ impl UserInfo {
     pub async fn update_by_uuid(&self) -> Result<u64, anyhow::Error> {
         let pool_sqlite = get_common_db_client().await?;
         let now =
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs()
                 as i64;
 
         let result = sqlx::query(
@@ -189,7 +189,7 @@ impl UserInfo {
     pub async fn upsert(&self) -> Result<(), anyhow::Error> {
         let pool_sqlite = get_common_db_client().await?;
         let now =
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs()
                 as i64;
 
         sqlx::query(

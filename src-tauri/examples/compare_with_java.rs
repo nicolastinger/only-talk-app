@@ -15,7 +15,7 @@ fn main() {
         return;
     }
 
-    let metadata = std::fs::metadata(input_path).unwrap();
+    let metadata = std::fs::metadata(input_path).expect("读取文件元数据失败");
     println!("测试图片: {}", input_path.display());
     println!(
         "文件大小: {} bytes ({:.2} MB)\n",

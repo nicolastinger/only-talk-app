@@ -3,7 +3,7 @@ use std::io::{BufReader, Read};
 use std::path::Path;
 use std::time::Instant;
 
-use image::{DynamicImage, ImageBuffer, ImageReader, Luma, Rgb, Rgba};
+use image::ImageReader;
 
 fn main() {
     println!("=== JPEG 解码器性能对比 ===\n");
@@ -15,7 +15,7 @@ fn main() {
         return;
     }
 
-    let metadata = std::fs::metadata(input_path).unwrap();
+    let metadata = std::fs::metadata(input_path).expect("读取文件元数据失败");
     println!("测试图片: {}", input_path.display());
     println!(
         "文件大小: {} bytes ({:.2} MB)\n",
@@ -67,9 +67,9 @@ fn main() {
 }
 
 fn read_file_to_memory(path: &Path) -> Vec<u8> {
-    let mut file = File::open(path).unwrap();
+    let mut file = File::open(path).expect("打开文件失败");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).unwrap();
+    file.read_to_end(&mut buffer).expect("读取文件失败");
     buffer
 }
 

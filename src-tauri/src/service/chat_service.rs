@@ -165,7 +165,7 @@ pub async fn clear_all_unread_sessions_service() -> Result<(), anyhow::Error> {
     let sessions = crate::dao::session_db::query_chat_session_db(&uuid).await?;
     for session in sessions {
         if session.unread_count > 0 {
-            let mut chat_session = ChatSession {
+            let chat_session = ChatSession {
                 id: 0,
                 nano_id: session.nano_id,
                 timestamp: session.timestamp,
@@ -430,7 +430,10 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
 
     let existing = query_group_chat_session(&me, &group_id).await?;
     if !existing.is_empty() {
-        let mut chat_session = existing.into_iter().next().unwrap();
+        let mut chat_session = existing
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("群聊会话不存在"))?;
         chat_session.is_show = 1;
         update_chat_session_local_db(&chat_session).await?;
         return Ok(());
@@ -756,7 +759,7 @@ pub async fn send_group_image_msg_service(
     let file_path = text_quic_msg.raw.clone();
 
     // 1、压缩图片到当月资源目录
-    let compressed_path = compress_image_to_webp(&Path::new(&file_path))?;
+    let compressed_path = compress_image_to_webp(Path::new(&file_path))?;
     let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
 
     // 2、上传图片到文件服务器（使用群聊专用接口）
@@ -1040,22 +1043,19 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
                     .ok_or(anyhow!("no_send_success_msg is empty"))?
                     .timestamp;
             }
-            if status == 0 && no_send_success_msg_option.is_none() {
-                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time {
+            if status == 0 && no_send_success_msg_option.is_none()
+                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time) {
                     no_send_success_msg_option = Some(item);
                     continue;
                 }
-            }
             if status == 1
                 && no_send_success_msg_option.is_none()
                 && retry_count < 3
                 && diff_time > 8000
-            {
-                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time {
+                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time) {
                     no_send_success_msg_option = Some(item);
                     continue;
                 }
-            }
             if status == 1 && retry_count >= 3 {
                 item.send_status = 2;
                 update_chat_record_send(&item.send_id, "", 2, 3, now, &item.raw).await?;
@@ -1147,7 +1147,7 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     let file_path = text_quic_msg.raw.clone();
 
     // 1、压缩图片到当月资源目录
-    let compressed_path = compress_image_to_webp(&Path::new(&file_path))?;
+    let compressed_path = compress_image_to_webp(Path::new(&file_path))?;
     let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
 
     // 2、上传图片到文件服务器

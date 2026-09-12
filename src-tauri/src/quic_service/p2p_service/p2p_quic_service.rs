@@ -107,6 +107,7 @@ pub async fn process_rec_msg(
 /// - MEDIA_CONFIG: 媒体配置，保存配置并通知前端
 /// - MEDIA_CONTROL: 媒体控制，转发给前端处理
 /// - TEXT: 文本消息，转发给前端显示
+#[allow(clippy::disallowed_methods)]
 pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error> {
     for msg in text_vec {
         match msg.text_type {
@@ -564,7 +565,7 @@ pub async fn send_media_frame(
     }
 
     if let Some(queue) = P2P_MEDIA_SEND_QUEUES.get(&target_uuid) {
-        if let Err(_) = queue.tx.try_send(frame_data) {
+        if queue.tx.try_send(frame_data).is_err() {
             // 队列满：主动丢帧，避免阻塞编码线程
             queue.dropped_frames.fetch_add(1, Ordering::Relaxed);
         }

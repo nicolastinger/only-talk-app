@@ -15,7 +15,7 @@ fn main() {
         return;
     }
 
-    let metadata = std::fs::metadata(input_path).unwrap();
+    let metadata = std::fs::metadata(input_path).expect("读取文件元数据失败");
     println!("文件: {}", input_path.display());
     println!(
         "大小: {} bytes ({:.2} MB)\n",
@@ -31,9 +31,9 @@ fn analyze_decode_steps(input_path: &Path) {
 
     println!("步骤1: 读取文件到内存");
     let read_start = Instant::now();
-    let mut file = File::open(input_path).unwrap();
+    let mut file = File::open(input_path).expect("打开文件失败");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).unwrap();
+    file.read_to_end(&mut buffer).expect("读取文件失败");
     let read_time = read_start.elapsed();
     println!(
         "  耗时: {:?} ({:.2} MB/s)",
@@ -49,13 +49,13 @@ fn analyze_decode_steps(input_path: &Path) {
 
     println!("\n步骤3: 解码像素数据");
     let decode_start = Instant::now();
-    let decoded = decoder.decode().unwrap();
+    let decoded = decoder.decode().expect("解码失败");
     let decode_time = decode_start.elapsed();
     println!("  耗时: {:?}", decode_time);
 
     println!("\n步骤4: 获取图片信息");
     let info_start = Instant::now();
-    let info = decoder.info().unwrap();
+    let info = decoder.info().expect("获取图片信息失败");
     let info_time = info_start.elapsed();
     println!("  耗时: {:?}", info_time);
     println!("  尺寸: {}x{}", info.width, info.height);
@@ -68,7 +68,7 @@ fn analyze_decode_steps(input_path: &Path) {
 
     println!("\n步骤5: 创建 ImageBuffer");
     let buffer_start = Instant::now();
-    let result =
+    let _result =
         create_image_buffer(&decoded, info.width as usize, info.height as usize, info.components);
     let buffer_time = buffer_start.elapsed();
     println!("  耗时: {:?}", buffer_time);
