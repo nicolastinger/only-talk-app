@@ -40,6 +40,9 @@ pub async fn init_app(
     let log_file_path = log_dir.join(LOG_FILE_NAME);
     println!("Android 日志路径: {:?}", log_file_path);
 
+    // 启动时分割历史日志(避免 fast_log 直接追加到旧文件)
+    split_history_log(log_file_path.to_str().expect("转换路径失败"));
+
     // 初始化日志
     init_log(log_file_path.to_str().expect("转换路径失败"));
 
@@ -158,6 +161,50 @@ async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle<Wry>, target_di
                 error!("资源目录不存在: {:?}", resource_dir);
             }
         }
+    }
+}
+
+// 启动时把上一次运行遗留的日志(修改日期早于今天)按最后修改时间重命名,
+// 否则 fast_log 会直接追加到旧文件, 导致日志不按天分割。
+fn split_history_log(log_file_path: &str) {
+    use std::io::Write;
+
+    let path = Path::new(log_file_path);
+    let Ok(meta) = fs::metadata(path) else {
+        return;
+    };
+    if !meta.is_file() {
+        return;
+    }
+    let Ok(modified) = meta.modified() else {
+        return;
+    };
+    let modified: chrono::DateTime<Local> = modified.into();
+    if modified.date_naive() >= Local::now().date_naive() {
+        return;
+    }
+
+    let suffix =
+        path.extension().and_then(|e| e.to_str()).map(|e| format!(".{}", e)).unwrap_or_default();
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("only_talk");
+    let rotated_path = path.with_file_name(format!(
+        "{}{}{}",
+        stem,
+        modified.format("%Y-%m-%dT%H-%M-%S%.6f"),
+        suffix
+    ));
+
+    if rotated_path.exists() {
+        let merged = match (fs::read(path), fs::OpenOptions::new().append(true).open(&rotated_path))
+        {
+            (Ok(content), Ok(mut dst)) => dst.write_all(&content).is_ok(),
+            _ => false,
+        };
+        if merged {
+            let _ = fs::remove_file(path);
+        }
+    } else {
+        let _ = fs::rename(path, &rotated_path);
     }
 }
 
