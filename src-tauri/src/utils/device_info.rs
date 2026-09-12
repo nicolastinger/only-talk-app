@@ -37,17 +37,13 @@ mod platform_machine_id {
         if len <= 0 {
             return None;
         }
-        let slice = unsafe {
-            std::slice::from_raw_parts(buf.as_ptr() as *const u8, len as usize)
-        };
+        let slice = unsafe { std::slice::from_raw_parts(buf.as_ptr() as *const u8, len as usize) };
         Some(String::from_utf8_lossy(slice).into_owned())
     }
 
     /// 优先 ro.serialno，缺失时回退 ro.build.fingerprint
     pub fn get() -> String {
-        get_prop("ro.serialno")
-            .or_else(|| get_prop("ro.build.fingerprint"))
-            .unwrap_or_default()
+        get_prop("ro.serialno").or_else(|| get_prop("ro.build.fingerprint")).unwrap_or_default()
     }
 }
 

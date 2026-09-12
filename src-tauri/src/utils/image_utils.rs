@@ -98,8 +98,7 @@ fn get_output_path(input_path: &std::path::Path) -> Result<PathBuf> {
 
     let file_stem = input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("image");
 
-    let timestamp =
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis();
+    let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis();
 
     let output_filename = format!("{}_{}.webp", file_stem, timestamp);
     let output_path = Path::new(&monthly_resource_path).join(output_filename);

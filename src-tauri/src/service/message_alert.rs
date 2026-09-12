@@ -66,12 +66,7 @@ struct BannerPayload {
 /// - `is_group`：是否群聊消息
 /// - `viewing`：该消息所属会话是否为“当前正在查看的会话”
 #[allow(clippy::disallowed_methods)]
-pub async fn on_incoming_message(
-    me: &str,
-    msg: &TextQuicMsgVo,
-    is_group: bool,
-    viewing: bool,
-) {
+pub async fn on_incoming_message(me: &str, msg: &TextQuicMsgVo, is_group: bool, viewing: bool) {
     // 自己其它端发来的消息不提醒
     if msg.send_user == me || msg.send_user == SYSTEM {
         return;

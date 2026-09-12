@@ -28,13 +28,8 @@ pub async fn start_video_channel(
     audio_channel: tauri::ipc::Channel<InvokeResponseBody>,
 ) -> Result<(), String> {
     info!("注册P2P媒体接收通道: friend={}", friend_id);
-    crate::P2P_MEDIA_CHANNELS.insert(
-        friend_id,
-        crate::P2pMediaChannels {
-            video: video_channel,
-            audio: audio_channel,
-        },
-    );
+    crate::P2P_MEDIA_CHANNELS
+        .insert(friend_id, crate::P2pMediaChannels { video: video_channel, audio: audio_channel });
     Ok(())
 }
 
@@ -91,11 +86,9 @@ pub async fn process_init_p2p_request(p2p_init_msg: String) -> Result<String, St
 pub async fn send_p2p_video_frame(request: Request<'_>) -> Result<(), String> {
     let target_uuid = get_current_target_uuid().await?;
     match request.body() {
-        InvokeBody::Raw(bytes) => {
-            send_p2p_video_frame_service(bytes.clone(), target_uuid)
-                .await
-                .map_err(|e| e.to_string())
-        }
+        InvokeBody::Raw(bytes) => send_p2p_video_frame_service(bytes.clone(), target_uuid)
+            .await
+            .map_err(|e| e.to_string()),
         InvokeBody::Json(_) => Err("send_p2p_video_frame 需要原始字节payload".into()),
     }
 }
@@ -107,11 +100,9 @@ pub async fn send_p2p_video_frame(request: Request<'_>) -> Result<(), String> {
 pub async fn send_p2p_audio_frame(request: Request<'_>) -> Result<(), String> {
     let target_uuid = get_current_target_uuid().await?;
     match request.body() {
-        InvokeBody::Raw(bytes) => {
-            send_p2p_audio_frame_service(bytes.clone(), target_uuid)
-                .await
-                .map_err(|e| e.to_string())
-        }
+        InvokeBody::Raw(bytes) => send_p2p_audio_frame_service(bytes.clone(), target_uuid)
+            .await
+            .map_err(|e| e.to_string()),
         InvokeBody::Json(_) => Err("send_p2p_audio_frame 需要原始字节payload".into()),
     }
 }
@@ -119,10 +110,7 @@ pub async fn send_p2p_audio_frame(request: Request<'_>) -> Result<(), String> {
 /// 获取当前 P2P 连接的目标 UUID（从全局状态读取）
 async fn get_current_target_uuid() -> Result<String, String> {
     let guard = crate::GLOBAL_QUIC_USER_INFO.read().await;
-    guard
-        .get("target_uuid")
-        .cloned()
-        .ok_or_else(|| "no target uuid".to_string())
+    guard.get("target_uuid").cloned().ok_or_else(|| "no target uuid".to_string())
 }
 
 /// 发送视频配置

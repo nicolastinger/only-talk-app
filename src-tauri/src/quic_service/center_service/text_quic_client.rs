@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
-use std::sync::LazyLock;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context};
@@ -18,7 +18,7 @@ use crate::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnectio
 use crate::quic_service::center_service::process_text_msg_from_server::process_msg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::quic_service::connection_state::{
-    QuicConnectionState, current_quic_epoch, invalidate_quic_epoch, GLOBAL_QUIC_STATE,
+    current_quic_epoch, invalidate_quic_epoch, QuicConnectionState, GLOBAL_QUIC_STATE,
 };
 use crate::quic_service::safe_configuration::configure_client;
 use crate::service::user_service::{get_user_info, insert_user_info, sync_offline_messages};

@@ -18,7 +18,10 @@ fn main() {
     }
 
     println!("测试图片: {}", test_image_path.display());
-    println!("文件大小: {} bytes\n", fs::metadata(&test_image_path).expect("读取文件元数据失败").len());
+    println!(
+        "文件大小: {} bytes\n",
+        fs::metadata(&test_image_path).expect("读取文件元数据失败").len()
+    );
 
     run_compression_test(&test_image_path);
 
@@ -26,7 +29,6 @@ fn main() {
 }
 
 fn get_test_image_path() -> PathBuf {
-    
     // let mut path = std::env::current_dir().unwrap();
     // path.push("test_image.jpg");
     //

@@ -148,10 +148,8 @@ pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow:
     // 清空/清理会话事件统一为规范方向（send_user=对方、recv_user=我），
     // 避免 ack 等路径把方向写反、前端误判
     let me = get_user_info("uuid").await?;
-    let chat_session_event = ChatSessionEvent {
-        r#type: 0,
-        data: ChatSessionVo::from(chat_session.to_canonical(&me))?,
-    };
+    let chat_session_event =
+        ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session.to_canonical(&me))? };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
@@ -430,10 +428,8 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
 
     let existing = query_group_chat_session(&me, &group_id).await?;
     if !existing.is_empty() {
-        let mut chat_session = existing
-            .into_iter()
-            .next()
-            .ok_or_else(|| anyhow::anyhow!("群聊会话不存在"))?;
+        let mut chat_session =
+            existing.into_iter().next().ok_or_else(|| anyhow::anyhow!("群聊会话不存在"))?;
         chat_session.is_show = 1;
         update_chat_session_local_db(&chat_session).await?;
         return Ok(());
@@ -1043,19 +1039,22 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
                     .ok_or(anyhow!("no_send_success_msg is empty"))?
                     .timestamp;
             }
-            if status == 0 && no_send_success_msg_option.is_none()
-                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time) {
-                    no_send_success_msg_option = Some(item);
-                    continue;
-                }
+            if status == 0
+                && no_send_success_msg_option.is_none()
+                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time)
+            {
+                no_send_success_msg_option = Some(item);
+                continue;
+            }
             if status == 1
                 && no_send_success_msg_option.is_none()
                 && retry_count < 3
                 && diff_time > 8000
-                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time) {
-                    no_send_success_msg_option = Some(item);
-                    continue;
-                }
+                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time)
+            {
+                no_send_success_msg_option = Some(item);
+                continue;
+            }
             if status == 1 && retry_count >= 3 {
                 item.send_status = 2;
                 update_chat_record_send(&item.send_id, "", 2, 3, now, &item.raw).await?;

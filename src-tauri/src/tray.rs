@@ -32,9 +32,8 @@ pub fn setup_tray<R: Runtime>(
         .on_menu_event(|app: &AppHandle<R>, event: MenuEvent| match event.id.as_ref() {
             "show_window" => {
                 // 真实窗口 label 为 main(历史遗留曾用 home),两者都兜底尝试
-                let window = app
-                    .get_webview_window("main")
-                    .or_else(|| app.get_webview_window("home"));
+                let window =
+                    app.get_webview_window("main").or_else(|| app.get_webview_window("home"));
                 if let Some(window) = window {
                     if let Err(e) = window.show() {
                         error!("显示窗口失败: {}", e);
@@ -68,9 +67,7 @@ pub fn pulse_tray_on_new_message<R: Runtime>(app: &AppHandle<R>) {
     }
     // 窗口仍然可见且未最小化(用户只是切到别的应用)时不闪托盘,交给系统通知提示即可
     let should_pulse = {
-        let win = app
-            .get_webview_window("main")
-            .or_else(|| app.get_webview_window("home"));
+        let win = app.get_webview_window("main").or_else(|| app.get_webview_window("home"));
         match win {
             Some(window) => {
                 let visible = window.is_visible().unwrap_or(false);

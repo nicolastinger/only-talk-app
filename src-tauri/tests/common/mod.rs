@@ -163,11 +163,7 @@ async fn clear_all_global_pools() {
 }
 
 fn temp_db_path(kind: DbKind) -> PathBuf {
-    std::env::temp_dir().join(format!(
-        "onlytalk_test_{}_{}.db",
-        kind.file_prefix(),
-        Uuid::new_v4()
-    ))
+    std::env::temp_dir().join(format!("onlytalk_test_{}_{}.db", kind.file_prefix(), Uuid::new_v4()))
 }
 
 fn remove_db_files(path: &Path) {

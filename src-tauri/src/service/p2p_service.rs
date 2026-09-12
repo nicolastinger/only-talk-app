@@ -569,9 +569,8 @@ pub async fn send_p2p_media_control_service(
     let control = crate::entity::p2p_models::P2pMediaControl {
         control_type: control_type_enum,
         enabled,
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
     };
 
     let control_vec = serde_json::to_vec(&control)?;
@@ -630,9 +629,8 @@ pub async fn send_p2p_media_info_service(
     let media_info = P2pMediaInfo {
         info_type: info_type_enum,
         data,
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
     };
 
     let info_vec = serde_json::to_vec(&media_info)?;
@@ -688,9 +686,8 @@ pub async fn send_p2p_video_call_invite_service(
     let invite = crate::entity::p2p_models::P2pVideoCallInvite {
         from_uuid: from_uuid.clone(),
         to_uuid: target_uuid.clone(),
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
         media_config: Some(crate::entity::p2p_models::P2pMediaConfig::default()),
         from_name,
     };
@@ -759,9 +756,8 @@ pub async fn send_p2p_video_call_response_service(
         from_uuid: from_uuid.clone(),
         to_uuid: target_uuid.clone(),
         accept,
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
         media_config,
         reject_reason,
     };

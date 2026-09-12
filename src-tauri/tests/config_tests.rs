@@ -57,8 +57,7 @@ fn config_json_roundtrip() {
     let value: serde_json::Value =
         serde_json::from_str(r#"{"a":1,"b":[1,2],"c":{"d":true}}"#).expect("构造 JSON 失败");
     set_config_json("j", &value).expect("序列化 JSON 失败");
-    let back: serde_json::Value =
-        get_config_json("j").expect("反序列化失败").expect("配置不存在");
+    let back: serde_json::Value = get_config_json("j").expect("反序列化失败").expect("配置不存在");
     assert_eq!(back, value);
 
     assert!(get_config_json::<serde_json::Value>("missing").expect("查询失败").is_none());

@@ -8,12 +8,20 @@
 mod common;
 
 use app_lib::dao::app_log_db::{
-    clear_app_logs, delete_app_log_by_id, insert_app_log, query_app_log_by_id, query_app_logs_paged,
-    update_app_log,
+    clear_app_logs, delete_app_log_by_id, insert_app_log, query_app_log_by_id,
+    query_app_logs_paged, update_app_log,
+};
+use app_lib::dao::chat_record_ack::{
+    insert_chat_record_ack, query_ack_record_from_db, query_chat_record_by_send_id,
+    update_chat_record_ack, update_chat_record_ack_prev_id,
 };
 use app_lib::dao::chat_record_db::{
     insert_chat_record, query_chat_record_by_id_from_db, query_chat_record_by_type_from_db,
     query_chat_record_from_db, query_last_chat_record, query_last_read_msg,
+};
+use app_lib::dao::chat_record_send::{
+    insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
+    update_chat_record_send, update_chat_record_send_status, update_chat_record_send_success,
 };
 use app_lib::dao::create_table::init_user_ddl;
 use app_lib::dao::file_record_db::{
@@ -25,20 +33,9 @@ use app_lib::dao::friend_db::{
     search_friend_db, set_block_friend_db, soft_delete_friend_db, update_friend_info_db,
     update_friend_profile_db,
 };
+use app_lib::dao::get_db_client;
 use app_lib::dao::group_chat_record_db::{
     insert_group_chat_record, query_group_chat_record_from_db, query_last_group_chat_record,
-};
-use app_lib::dao::session_db::{
-    hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
-    search_chat_session_db, show_chat_session_db, update_chat_session_db,
-};
-use app_lib::dao::chat_record_ack::{
-    insert_chat_record_ack, query_ack_record_from_db, query_chat_record_by_send_id,
-    update_chat_record_ack, update_chat_record_ack_prev_id,
-};
-use app_lib::dao::chat_record_send::{
-    insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
-    update_chat_record_send, update_chat_record_send_status, update_chat_record_send_success,
 };
 use app_lib::dao::group_message_ack::{
     insert_group_message_ack, query_group_message_ack_by_local_nano_id,
@@ -48,10 +45,13 @@ use app_lib::dao::group_message_ack::{
 use app_lib::dao::group_message_read::{
     query_group_last_read_msg, query_group_message_read, update_group_message_read,
 };
+use app_lib::dao::session_db::{
+    hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
+    search_chat_session_db, show_chat_session_db, update_chat_session_db,
+};
 use app_lib::dao::webrtc_signal_db::{
     insert_webrtc_signal, query_webrtc_signal_by_session, save_webrtc_signal,
 };
-use app_lib::dao::get_db_client;
 use app_lib::entity::app_log::LOG_LEVEL_INFO;
 use app_lib::entity::chat_record::ChatRecord;
 use app_lib::entity::chat_record_ack::ChatRecordAck;
@@ -111,9 +111,16 @@ async fn friend_db_upsert_query_block_soft_delete_roundtrip() {
         assert_eq!(one.friend_account, "alice");
 
         // 定向更新资料字段
-        update_friend_profile_db(ME, FRIEND, "alice", "AliceChanged", "http://icon/new.png", "{\"nick\":\"AC\"}")
-            .await
-            .expect("更新好友资料失败");
+        update_friend_profile_db(
+            ME,
+            FRIEND,
+            "alice",
+            "AliceChanged",
+            "http://icon/new.png",
+            "{\"nick\":\"AC\"}",
+        )
+        .await
+        .expect("更新好友资料失败");
         let one = query_friend_info_by_id_db(ME, FRIEND).await.expect("按id查询好友失败");
         assert_eq!(one.friend_name, "AliceChanged");
 
@@ -258,8 +265,9 @@ async fn app_log_db_insert_query_update_delete() {
         let log = query_app_log_by_id(id).await.expect("查询日志失败").expect("日志不存在");
         assert_eq!(log.raw, "raw-msg");
 
-        let (list, total) =
-            query_app_logs_paged(Some("QUIC"), Some(LOG_LEVEL_INFO), 1, 10).await.expect("分页查询失败");
+        let (list, total) = query_app_logs_paged(Some("QUIC"), Some(LOG_LEVEL_INFO), 1, 10)
+            .await
+            .expect("分页查询失败");
         assert!(total >= 1);
         assert_eq!(list.len(), 1);
         assert_eq!(list[0].source, "test");
@@ -315,10 +323,7 @@ async fn file_record_db_insert_retry_limit_delete() {
             FileRecord::get_by_biz_id(biz).await.expect("查询失败").is_empty(),
             "status=3 的记录不应被正常查询返回"
         );
-        assert_eq!(
-            FileRecord::get_by_biz_id_include_failed(biz).await.expect("查询失败").len(),
-            1
-        );
+        assert_eq!(FileRecord::get_by_biz_id_include_failed(biz).await.expect("查询失败").len(), 1);
 
         // 下载失败记录(直接 status=3)
         insert_failed_file_record("biz-002", ME, 1000).await.expect("插入失败记录失败");
@@ -396,9 +401,8 @@ async fn chat_record_db_insert_dedup_query_paging_type_filter() {
         assert_eq!(page[1].timestamp, 500);
 
         // 类型过滤
-        let typed = query_chat_record_by_type_from_db(ME, FRIEND, 1, 10, 0)
-            .await
-            .expect("按类型过滤失败");
+        let typed =
+            query_chat_record_by_type_from_db(ME, FRIEND, 1, 10, 0).await.expect("按类型过滤失败");
         assert_eq!(typed.len(), 1);
         assert_eq!(typed[0].nano_id, "m3");
 
@@ -416,7 +420,8 @@ async fn chat_record_db_insert_dedup_query_paging_type_filter() {
 #[tokio::test]
 async fn chat_record_biz_id_file_info() {
     with_private_db(|_pool| async move {
-        let raw = r#"{"biz_id":"biz-9","file_name":"report.pdf","file_type":"pdf","file_size":1024}"#;
+        let raw =
+            r#"{"biz_id":"biz-9","file_name":"report.pdf","file_type":"pdf","file_size":1024}"#;
         let msg = TextQuicMsgVo {
             nano_id: "file-1".to_string(),
             text_type: 3,
@@ -430,7 +435,8 @@ async fn chat_record_biz_id_file_info() {
         let info = ChatRecord::get_file_info_by_biz_id("biz-9").await.expect("查询文件信息失败");
         assert_eq!(info, Some(("report.pdf".to_string(), "pdf".to_string())));
 
-        let none = ChatRecord::get_file_info_by_biz_id("biz-missing").await.expect("查询文件信息失败");
+        let none =
+            ChatRecord::get_file_info_by_biz_id("biz-missing").await.expect("查询文件信息失败");
         assert!(none.is_none());
     })
     .await;
@@ -477,9 +483,8 @@ async fn group_chat_record_db_insert_dedup_query() {
             .expect("应存在最新群聊消息");
         assert_eq!(last.nano_id, "g2");
 
-        let by_group = GroupChatRecord::query_by_group_id(group, 10, 0)
-            .await
-            .expect("查询群聊失败");
+        let by_group =
+            GroupChatRecord::query_by_group_id(group, 10, 0).await.expect("查询群聊失败");
         assert_eq!(by_group.len(), 2);
 
         // 兼容路径: 以 chat_record 存储(recv_user=groupId)的群聊
@@ -492,9 +497,10 @@ async fn group_chat_record_db_insert_dedup_query() {
             timestamp: 300,
         };
         assert!(insert_chat_record(&legacy).await.expect("插入群聊消息失败"));
-        let legacy_list = app_lib::dao::chat_record_db::query_group_chat_record_from_db(group, 10, 0)
-            .await
-            .expect("查询群聊失败");
+        let legacy_list =
+            app_lib::dao::chat_record_db::query_group_chat_record_from_db(group, 10, 0)
+                .await
+                .expect("查询群聊失败");
         assert_eq!(legacy_list.len(), 1);
         assert_eq!(legacy_list[0].nano_id, "g3");
     })
@@ -543,9 +549,8 @@ async fn system_notification_lifecycle() {
         };
         SystemNotification::insert(&notif2).await.expect("插入通知失败");
 
-        let unread = SystemNotification::find_all_by_is_read(ME, Some(0))
-            .await
-            .expect("查询未读通知失败");
+        let unread =
+            SystemNotification::find_all_by_is_read(ME, Some(0)).await.expect("查询未读通知失败");
         assert_eq!(unread.len(), 2);
 
         let counts = SystemNotification::get_unread_counts(ME).await.expect("获取未读计数失败");
@@ -554,12 +559,12 @@ async fn system_notification_lifecycle() {
         assert_eq!(counts.plaza, 0);
 
         // 按 biz_id 批量已读
-        let affected =
-            SystemNotification::batch_read(ME, vec!["biz1".to_string()]).await.expect("批量已读失败");
-        assert_eq!(affected, 1);
-        let unread = SystemNotification::find_all_by_is_read(ME, Some(0))
+        let affected = SystemNotification::batch_read(ME, vec!["biz1".to_string()])
             .await
-            .expect("查询未读通知失败");
+            .expect("批量已读失败");
+        assert_eq!(affected, 1);
+        let unread =
+            SystemNotification::find_all_by_is_read(ME, Some(0)).await.expect("查询未读通知失败");
         assert_eq!(unread.len(), 1);
 
         // 已读未同步 -> 标记已同步
@@ -725,8 +730,7 @@ async fn user_info_upsert_query_update_delete() {
         // update_by_uuid
         user.username = Some("carol".to_string());
         assert_eq!(user.update_by_uuid().await.expect("更新用户失败"), 1);
-        let fetched =
-            UserInfo::query_by_uuid(ME).await.expect("查询失败").expect("用户不存在");
+        let fetched = UserInfo::query_by_uuid(ME).await.expect("查询失败").expect("用户不存在");
         assert_eq!(fetched.username.as_deref(), Some("carol"));
 
         // 新用户 insert
@@ -826,7 +830,8 @@ async fn webrtc_signal_insert_query_and_summary() {
             "offer",
             ME,
             FRIEND,
-            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"x"}"#).expect("构造信令 JSON 失败"),
+            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"x"}"#)
+                .expect("构造信令 JSON 失败"),
             100,
         )
         .await
@@ -837,7 +842,8 @@ async fn webrtc_signal_insert_query_and_summary() {
             "answer",
             FRIEND,
             ME,
-            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"y"}"#).expect("构造信令 JSON 失败"),
+            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"y"}"#)
+                .expect("构造信令 JSON 失败"),
             200,
         )
         .await
@@ -855,18 +861,18 @@ async fn webrtc_signal_insert_query_and_summary() {
             "end",
             ME,
             FRIEND,
-            &serde_json::from_str::<serde_json::Value>(r#"{"end":true}"#).expect("构造信令 JSON 失败"),
+            &serde_json::from_str::<serde_json::Value>(r#"{"end":true}"#)
+                .expect("构造信令 JSON 失败"),
             300,
             "w2",
         )
-            .await
-            .expect("保存信令失败");
+        .await
+        .expect("保存信令失败");
         let signals = query_webrtc_signal_by_session("s1").await.expect("按会话查询失败");
         assert_eq!(signals.len(), 3);
 
-        let summary = query_chat_record_by_id_from_db("session::s1", ME)
-            .await
-            .expect("查询信令摘要失败");
+        let summary =
+            query_chat_record_by_id_from_db("session::s1", ME).await.expect("查询信令摘要失败");
         assert_eq!(summary.text_type, MSG_TYPE_WEBRTC_SIGNAL);
 
         // candidate 不写摘要
@@ -876,7 +882,8 @@ async fn webrtc_signal_insert_query_and_summary() {
             "candidate",
             ME,
             FRIEND,
-            &serde_json::from_str::<serde_json::Value>(r#"{"candidate":"c1"}"#).expect("构造信令 JSON 失败"),
+            &serde_json::from_str::<serde_json::Value>(r#"{"candidate":"c1"}"#)
+                .expect("构造信令 JSON 失败"),
             400,
             "",
         )
@@ -915,9 +922,7 @@ async fn chat_record_send_lifecycle() {
         assert_eq!(pending[0].send_id, "send-1");
 
         // 标记发送成功
-        update_chat_record_send_success("send-1", "server-msg-1")
-            .await
-            .expect("标记成功失败");
+        update_chat_record_send_success("send-1", "server-msg-1").await.expect("标记成功失败");
         let fetched = query_record_send_from_db("send-1").await.expect("查询发送记录失败");
         assert_eq!(fetched.send_status, 3);
         assert_eq!(fetched.msg_id, "server-msg-1");

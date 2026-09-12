@@ -102,7 +102,8 @@ fn text_quic_msg_bincode_roundtrip() {
 
 #[test]
 fn text_record_json_roundtrip() {
-    let mut record = TextRecord { prev_id: "p0".to_string(), text: "hello".to_string(), platform: 0 };
+    let mut record =
+        TextRecord { prev_id: "p0".to_string(), text: "hello".to_string(), platform: 0 };
     record.set_prev_id("p1".to_string());
     let json = record.json_serialize().expect("序列化失败");
     let back = TextRecord::deserialize(&json).expect("反序列化失败");

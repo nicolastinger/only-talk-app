@@ -41,8 +41,7 @@ fn media_frame_header_roundtrip() {
     for ft in [MediaFrameType::Video, MediaFrameType::Audio] {
         for len in [0u32, 1, 123_456, u32::MAX] {
             let header = MediaFrameHeader::new(ft, len);
-            let back =
-                MediaFrameHeader::from_bytes(&header.to_bytes()).expect("反序列化失败");
+            let back = MediaFrameHeader::from_bytes(&header.to_bytes()).expect("反序列化失败");
             assert_eq!(back.frame_type, ft);
             assert_eq!(back.data_len, len);
         }

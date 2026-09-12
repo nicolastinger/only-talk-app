@@ -5,8 +5,8 @@ use std::time::Duration;
 use anyhow::anyhow;
 use log::{error, info, warn};
 use quinn::{RecvStream, SendStream};
-use tauri::Emitter;
 use tauri::ipc::InvokeResponseBody;
+use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use crate::dao::app_log_db::log_quic_event;
@@ -29,7 +29,9 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
     MSG_TYPE_PING,
 };
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_MEDIA_CHANNELS, P2P_MEDIA_SEND_QUEUES, P2P_STREAM_SENDER};
+use crate::{
+    APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_MEDIA_CHANNELS, P2P_MEDIA_SEND_QUEUES, P2P_STREAM_SENDER,
+};
 
 /// MediaData 发送队列容量（帧数）
 const MEDIA_SEND_QUEUE_CAPACITY: usize = 64;
@@ -393,10 +395,7 @@ pub fn send_ping_msg(send_stream_ping: Arc<Mutex<SendStream>>, _uuid: String) {
 /// # 参数
 /// - `recv_stream`: QUIC接收流
 /// - `target_uuid`: 对端用户UUID，用于查找已注册的二进制接收Channel
-pub async fn process_media_data_channel(
-    mut recv_stream: RecvStream,
-    target_uuid: String,
-) {
+pub async fn process_media_data_channel(mut recv_stream: RecvStream, target_uuid: String) {
     info!("MediaData通道接收循环启动（轻量级帧格式）");
     let _ = log_quic_event(
         LOG_LEVEL_INFO,
@@ -615,10 +614,7 @@ fn init_media_send_queue(target_uuid: String) {
     let entry = P2P_MEDIA_SEND_QUEUES.entry(target_uuid);
     match entry {
         dashmap::mapref::entry::Entry::Vacant(v) => {
-            v.insert(MediaSendQueue {
-                tx,
-                dropped_frames,
-            });
+            v.insert(MediaSendQueue { tx, dropped_frames });
             tokio::spawn(async move {
                 info!("媒体发送队列消费者启动: {}", target_for_task);
                 // 待发帧：get_sender 暂未就绪时保留当前帧重试，避免关键帧（首帧）丢失
@@ -645,14 +641,14 @@ fn init_media_send_queue(target_uuid: String) {
                         Err(_) => {
                             // 连接已关闭（P2P_STREAM_SENDER 条目已被清理）：停止重试并退出
                             if !P2P_STREAM_SENDER.contains_key(&target_for_task) {
-                                info!("媒体发送队列: 连接已关闭 target={}，停止发送", target_for_task);
+                                info!(
+                                    "媒体发送队列: 连接已关闭 target={}，停止发送",
+                                    target_for_task
+                                );
                                 break;
                             }
                             // 流暂未建立（连接建立初期）：保留当前帧重试，同时允许队列继续积压
-                            log::trace!(
-                                "媒体发送队列: 找不到发送流 target={}",
-                                target_for_task
-                            );
+                            log::trace!("媒体发送队列: 找不到发送流 target={}", target_for_task);
                             pending_frame = Some(frame_data);
                             tokio::time::sleep(Duration::from_millis(100)).await;
                         }
