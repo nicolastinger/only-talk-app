@@ -77,7 +77,7 @@ const HomeLayout = () => {
         url: TALK_API + '/user/me',
         body: '',
       });
-      const data: ResponseData = JSON.parse(res.body);
+      const data: ResponseData<UserInfo> = JSON.parse(res.body);
       const userInfo: UserInfo = data.data;
       await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });
       setUserInfo(userInfo);

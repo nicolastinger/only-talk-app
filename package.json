@@ -9,6 +9,7 @@
     "build:types": "pnpm --filter @workspace/types build",
     "build:services": "pnpm --filter @workspace/services build",
     "build:all": "pnpm build:types && pnpm build:services && pnpm build && pnpm build:mobile",
+    "typecheck": "pnpm -r typecheck",
     "tauri": "tauri",
     "lint": "prettier --cache --write .",
     "prepare": "husky install"

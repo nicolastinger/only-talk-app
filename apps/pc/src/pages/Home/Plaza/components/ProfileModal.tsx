@@ -1,5 +1,5 @@
-import { DEFAULT_ICON } from '@/constants';
 import ReportModal from '@/components/ReportModal';
+import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import { add_friend, getFiles } from '@workspace/services';
@@ -7,6 +7,7 @@ import {
   FriendRequestInfoDTO,
   PlazaUser,
   ReportTargetType,
+  RustResponse,
 } from '@workspace/types';
 import { Button, message, Modal } from 'antd';
 import { useEffect, useState } from 'react';
@@ -25,7 +26,7 @@ const ProfileModal = (props: {
   const [requested, setRequested] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
 
-  const mapAddFriendError = (result: any): string => {
+  const mapAddFriendError = (result: RustResponse): string => {
     let msg = '';
     try {
       const body = JSON.parse(result.res.body);

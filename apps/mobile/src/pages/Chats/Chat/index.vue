@@ -33,6 +33,7 @@ import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
 import MessageList from "@/components/chat/MessageList.vue";
 import MessageInputBar from "@/components/chat/MessageInputBar.vue";
+import type { InputTool } from "@/components/chat/MessageInputBar.vue";
 import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 import PendingSendBar from "@/components/chat/PendingSendBar.vue";
 
@@ -544,8 +545,8 @@ const handleStartCall = async (media: "audio" | "video") => {
   await startCall(friendId, media);
 };
 
-const friendTools = ["emoji", "image", "file", "audio", "video"] as const;
-const selfTools = ["emoji", "image"] as const;
+const friendTools: InputTool[] = ["emoji", "image", "file", "audio", "video"];
+const selfTools: InputTool[] = ["emoji", "image"];
 </script>
 
 <template>
@@ -617,7 +618,7 @@ const selfTools = ["emoji", "image"] as const;
     <MessageInputBar
       v-if="!loading"
       v-model="inputText"
-      :tools="isSelf ? (selfTools as any) : (friendTools as any)"
+      :tools="isSelf ? selfTools : friendTools"
       placeholder="输入消息..."
       @send="sendText"
       @pick-image="sendImage"

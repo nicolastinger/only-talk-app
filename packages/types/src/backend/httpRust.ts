@@ -22,11 +22,11 @@ interface BackendResponse<T> {
 
 /**
  * 旧版直接 JSON.parse(res.body) 得到的原始信封。
- * data 形状未知，仅作兼容；新代码应使用 BackendResponse<T>。
+ * data 形状由调用方按载荷指定(如 ResponseData<UserInfo>)；新代码应使用 BackendResponse<T>。
  */
-interface ResponseData {
+interface ResponseData<T = unknown> {
   code: number;
-  data: any;
+  data: T;
   message: string;
 }
 

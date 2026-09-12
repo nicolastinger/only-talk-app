@@ -2,7 +2,11 @@ import { reactive, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { UserInfo, HttpResponse, ResponseData } from "@workspace/types";
 import { TALK_API } from "@workspace/types";
-import { get_cached_user_info, cache_user_info, isBackendSuccess } from "@workspace/services";
+import {
+  get_cached_user_info,
+  cache_user_info,
+  isBackendSuccess,
+} from "@workspace/services";
 import { getMyUuid } from "@/utils/api";
 
 interface UserState {
@@ -23,7 +27,7 @@ async function fetchUserFromServer(): Promise<UserInfo | null> {
       url: TALK_API + "/user/me",
       body: "",
     });
-    const data: ResponseData = JSON.parse(res.body);
+    const data: ResponseData<UserInfo> = JSON.parse(res.body);
     if (isBackendSuccess(data.code) && data.data) {
       const remote: UserInfo = data.data;
       const cached = await get_cached_user_info(remote.uuid).catch(() => null);

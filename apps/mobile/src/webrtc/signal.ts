@@ -50,7 +50,7 @@ export interface SignalPayload {
   sender: string;
   receiver: string;
   sessionId: string;
-  data?: any;
+  data?: unknown;
   timestamp: number;
 }
 
@@ -124,7 +124,7 @@ export const sendWebRTCSignal = async (params: {
   sender: string;
   receiver: string;
   sessionId: string;
-  data?: any;
+  data?: unknown;
 }): Promise<void> => {
   const { type, sender, receiver, sessionId, data } = params;
   const msg: TextQuicMsgVoLike = {

@@ -17,7 +17,13 @@ const VideoCallPage: React.FC = () => {
   const callType = params.get('callType') || '1';
   console.log('callType', callType, friendId);
   const [showMe, setShowMe] = useState(false);
-  const cameraRef = useRef<any>(null);
+  // CameraControl 通过 useImperativeHandle 暴露的实例方法
+  const cameraRef = useRef<{
+    startCamera: () => Promise<void>;
+    stopCamera: () => void;
+    switchCamera: () => void;
+    isCameraOn: () => boolean;
+  }>(null);
   const [isReceiver, setIsReceiver] = useState(false);
 
   useEffect(() => {

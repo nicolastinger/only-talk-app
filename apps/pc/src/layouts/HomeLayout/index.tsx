@@ -159,7 +159,7 @@ const HomeLayout = () => {
         url: TALK_API + '/user/me',
         body: '',
       });
-      const data: ResponseData = JSON.parse(res.body);
+      const data: ResponseData<UserInfo> = JSON.parse(res.body);
       const remoteUserInfo: UserInfo = data.data;
 
       // 从 common_db 获取缓存的用户信息
@@ -306,7 +306,7 @@ const HomeLayout = () => {
         open={forceLogoutVisible}
         onOk={confirmForceLogout}
         okText={intl.formatMessage({ id: 'homeLayout.forceLogout' })}
-        okCancel={false}
+        cancelButtonProps={{ style: { display: 'none' } }}
         closable={false}
         maskClosable={false}
         centered

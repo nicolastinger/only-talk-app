@@ -4,10 +4,11 @@ import {
   AnnouncementListResult,
   AnnouncementVO,
   AnnouncementReadUserListResult,
+  RustResponse,
 } from "@workspace/types";
 import { invoke_rust, parseBackendResponse } from "../httpService";
 
-function parseData<T>(res: any): T {
+function parseData<T>(res: RustResponse): T {
   return parseBackendResponse<T>(res);
 }
 

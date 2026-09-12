@@ -233,7 +233,11 @@ const onTextMessage = async (payload: string) => {
 
   if (!isMidCall() || friendId !== call.friendId) return;
 
-  if (msg.text_type === 13 && ctrl.type === "accept" && call.role === "initiator") {
+  if (
+    msg.text_type === 13 &&
+    ctrl.type === "accept" &&
+    call.role === "initiator"
+  ) {
     // 对方接受 → 发起方创建并发送 offer
     if (call.stage === "outgoing") {
       if (noAnswerTimer) clearTimeout(noAnswerTimer);
@@ -290,7 +294,10 @@ const onWebRTCSignal = async (payload: string) => {
       // 响应方收到 offer（主叫接受后的正常 offer 或 ICE 重启）
       if (call.role !== "responder") return;
       try {
-        const answer = await service!.handleOffer(friendId, sig.data);
+        const answer = await service!.handleOffer(
+          friendId,
+          sig.data as RTCSessionDescriptionInit
+        );
         await sendWebRTCSignal({
           type: "answer",
           sender: me,
@@ -306,7 +313,10 @@ const onWebRTCSignal = async (payload: string) => {
     case "answer": {
       if (call.role !== "initiator") return;
       try {
-        await service!.handleAnswer(friendId, sig.data);
+        await service!.handleAnswer(
+          friendId,
+          sig.data as RTCSessionDescriptionInit
+        );
       } catch (e) {
         console.error("[CallManager] 处理 answer 失败:", e);
       }
@@ -314,7 +324,10 @@ const onWebRTCSignal = async (payload: string) => {
     }
     case "candidate": {
       try {
-        await service!.handleCandidate(friendId, sig.data);
+        await service!.handleCandidate(
+          friendId,
+          sig.data as RTCIceCandidateInit
+        );
       } catch (e) {
         console.error("[CallManager] 处理 candidate 失败:", e);
       }

@@ -42,7 +42,7 @@ const GroupChatPage: React.FC = () => {
   const groupId = params.get('groupId') || '';
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
-  const { textMessage } = useMessageApi(null as any, groupId);
+  const { textMessage } = useMessageApi(null, groupId);
   const { groupAckMessage } = useGroupMessageAckApi(groupId);
 
   const uniqueSenderUuids = useMemo(

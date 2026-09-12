@@ -209,7 +209,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           <TextArea
             className={styles.textArea}
             value={inputText}
-            onChange={(e: any) => onInputChange(e.target.value)}
+            onChange={(e) => onInputChange(e.target.value)}
             onKeyPress={onKeyPress}
             placeholder={intl.formatMessage({ id: 'webrtc.inputMessage' })}
             autoSize={{ minRows: 1, maxRows: 3 }}

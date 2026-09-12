@@ -20,7 +20,7 @@ const emit = () => {
   for (const listener of listeners) listener();
 };
 
-const stringifyArg = (arg: any): string => {
+const stringifyArg = (arg: unknown): string => {
   if (typeof arg === 'string') return arg;
   if (arg instanceof Error) return arg.stack || arg.message;
   try {
@@ -30,7 +30,7 @@ const stringifyArg = (arg: any): string => {
   }
 };
 
-const push = (level: LogLevel, args: any[]) => {
+const push = (level: LogLevel, args: unknown[]) => {
   const message = args.map(stringifyArg).join(' ');
   // 仅采集与 WebRTC 相关的日志（[WebRTCService...] / [WebRTCChat...] 等）
   if (!message.includes('[WebRT')) return;
@@ -41,6 +41,14 @@ const push = (level: LogLevel, args: any[]) => {
   emit();
 };
 
+/** 可被覆盖的 console 方法签名（参数用 unknown，避免 any） */
+type ConsoleOverride = {
+  log: (...args: unknown[]) => void;
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
+
 /**
  * 拦截当前 webview 的 console，仅采集包含 [WebRT 的日志到内存缓冲。
  * 模块级幂等，只作用于当前 WebRTC 窗口，不影响主窗。
@@ -49,35 +57,36 @@ export const initWebRTCConsoleCapture = (): (() => void) => {
   if (installed) return () => {};
   installed = true;
 
-  const originals = {
+  const originals: ConsoleOverride = {
     log: console.log.bind(console),
     info: console.info.bind(console),
     warn: console.warn.bind(console),
     error: console.error.bind(console),
   };
 
-  (console as any).log = (...args: any[]) => {
+  const consoleApi = console as unknown as ConsoleOverride;
+  consoleApi.log = (...args: unknown[]) => {
     push('log', args);
     originals.log(...args);
   };
-  (console as any).info = (...args: any[]) => {
+  consoleApi.info = (...args: unknown[]) => {
     push('info', args);
     originals.info(...args);
   };
-  (console as any).warn = (...args: any[]) => {
+  consoleApi.warn = (...args: unknown[]) => {
     push('warn', args);
     originals.warn(...args);
   };
-  (console as any).error = (...args: any[]) => {
+  consoleApi.error = (...args: unknown[]) => {
     push('error', args);
     originals.error(...args);
   };
 
   return () => {
-    (console as any).log = originals.log;
-    (console as any).info = originals.info;
-    (console as any).warn = originals.warn;
-    (console as any).error = originals.error;
+    consoleApi.log = originals.log;
+    consoleApi.info = originals.info;
+    consoleApi.warn = originals.warn;
+    consoleApi.error = originals.error;
     installed = false;
   };
 };

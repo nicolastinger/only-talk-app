@@ -7,7 +7,7 @@ export interface RouteLocation {
   pathname: string;
   search: string;
   hash: string;
-  query?: Record<string, any>;
+  query?: Record<string, string | undefined>;
   params?: Record<string, string>;
 }
 
@@ -20,7 +20,7 @@ export interface RouteConfig {
   component?: string;
   routes?: RouteConfig[];
   exact?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

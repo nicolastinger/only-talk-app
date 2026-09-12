@@ -16,9 +16,9 @@ import {
   convertPathToTauriUrl,
   getFiles,
   isBackendSuccess,
+  refresh_user_info,
   selectFile,
   update_user_info,
-  refresh_user_info,
 } from '@workspace/services';
 import { UpdateUserDTO } from '@workspace/types';
 import {
@@ -189,10 +189,10 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           intl.formatMessage({ id: 'userInfo.avatar.uploadFailed' }),
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('头像更新失败:', error);
       message.error(
-        error.message ||
+        (error instanceof Error ? error.message : String(error)) ||
           intl.formatMessage({ id: 'userInfo.avatar.updateFailed' }),
       );
       window.dispatchEvent(new CustomEvent('uploadEnd'));
@@ -295,10 +295,10 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('更新用户信息失败:', error);
       message.error(
-        error.message ||
+        (error instanceof Error ? error.message : String(error)) ||
           intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
       );
     } finally {

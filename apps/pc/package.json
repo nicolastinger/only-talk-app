@@ -8,6 +8,7 @@
   "scripts": {
     "build": "max build",
     "dev": "max dev",
+    "typecheck": "max setup && tsc --noEmit",
     "format": "prettier --cache --write .",
     "postinstall": "max setup",
     "prepare": "husky",

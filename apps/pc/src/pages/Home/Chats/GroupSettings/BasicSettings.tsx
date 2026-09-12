@@ -63,9 +63,11 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
       } else {
         message.error('群头像上传失败');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('群头像更新失败:', error);
-      message.error(error.message || '群头像更新失败');
+      message.error(
+        (error instanceof Error ? error.message : String(error)) || '群头像更新失败',
+      );
     } finally {
       setAvatarUploading(false);
     }

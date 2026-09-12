@@ -11,10 +11,11 @@ import {
   MomentListResult,
   MomentVo,
   TALK_API,
+  RustResponse,
 } from "@workspace/types";
 import { invoke_rust, parseBackendResponse } from "../httpService";
 
-function parseData<T>(res: any): T {
+function parseData<T>(res: RustResponse): T {
   return parseBackendResponse<T>(res);
 }
 
@@ -60,9 +61,7 @@ export const create_moment = async (
   return parseData<MomentVo>(res);
 };
 
-export const delete_moment = async (
-  dto: DeleteMomentDTO
-): Promise<boolean> => {
+export const delete_moment = async (dto: DeleteMomentDTO): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     TALK_API + "/moment/delete",

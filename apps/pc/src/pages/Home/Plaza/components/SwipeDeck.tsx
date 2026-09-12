@@ -66,8 +66,17 @@ const SwipeDeck = () => {
   const pageRef = useRef(1);
   const loadingRef = useRef(false);
 
-  const childRefs = useMemo<React.RefObject<any>[]>(
-    () => Array.from({ length: stack.length }, () => React.createRef<any>()),
+  // react-tinder-card 通过 ref 暴露的实例方法
+  interface TinderCardApi {
+    swipe(dir?: 'left' | 'right' | 'up' | 'down'): Promise<void>;
+    restoreCard(): Promise<void>;
+  }
+
+  const childRefs = useMemo<React.RefObject<TinderCardApi>[]>(
+    () =>
+      Array.from({ length: stack.length }, () =>
+        React.createRef<TinderCardApi>(),
+      ),
     [stack],
   );
 

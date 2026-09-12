@@ -25,6 +25,7 @@ import { nanoid } from 'nanoid';
 import { createWebRTCConfig, hasTurnServer } from './config';
 import {
   buildConnectionSummary,
+  ConnectionSummary,
   logCandidatePairStats,
   logIceDiagnostics,
 } from './Diagnostics';
@@ -499,7 +500,7 @@ class WebRTCService {
    * 获取所有连接的状态摘要
    * @returns 连接状态摘要对象
    */
-  getAllConnectionsSummary(): Record<string, any> {
+  getAllConnectionsSummary(): ConnectionSummary {
     return buildConnectionSummary(
       this.connections,
       this.dataChannels,

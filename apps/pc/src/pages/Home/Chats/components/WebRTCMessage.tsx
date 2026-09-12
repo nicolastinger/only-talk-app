@@ -22,9 +22,16 @@ interface ParsedSignal {
   sender: string;
   receiver: string;
   sessionId?: string;
-  data: any;
+  data: unknown;
   timestamp: number;
 }
+
+/** 从信令 data(unknown) 中安全提取字符串字段 */
+const signalStringField = (data: unknown, key: string): string | undefined => {
+  if (typeof data !== 'object' || data === null) return undefined;
+  const value = (data as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : undefined;
+};
 
 // 视频通话控制消息类型（12-15）
 const IS_CONTROL_TYPE = (textType: number): boolean =>
@@ -40,15 +47,35 @@ interface ControlStep {
 const getControlStep = (type: string): ControlStep => {
   switch (type) {
     case 'invite':
-      return { icon: <VideoCameraOutlined />, labelKey: '', styleType: 'invite' };
+      return {
+        icon: <VideoCameraOutlined />,
+        labelKey: '',
+        styleType: 'invite',
+      };
     case 'accept':
-      return { icon: <CheckCircleOutlined />, labelKey: 'webRTCMessage.accepted', styleType: 'accept' };
+      return {
+        icon: <CheckCircleOutlined />,
+        labelKey: 'webRTCMessage.accepted',
+        styleType: 'accept',
+      };
     case 'reject':
-      return { icon: <CloseCircleOutlined />, labelKey: 'webRTCMessage.rejected', styleType: 'reject' };
+      return {
+        icon: <CloseCircleOutlined />,
+        labelKey: 'webRTCMessage.rejected',
+        styleType: 'reject',
+      };
     case 'end':
-      return { icon: <PhoneOutlined />, labelKey: 'webRTCMessage.ended', styleType: 'end' };
+      return {
+        icon: <PhoneOutlined />,
+        labelKey: 'webRTCMessage.ended',
+        styleType: 'end',
+      };
     default:
-      return { icon: <VideoCameraOutlined />, labelKey: 'webRTCMessage.signal', styleType: 'signal' };
+      return {
+        icon: <VideoCameraOutlined />,
+        labelKey: 'webRTCMessage.signal',
+        styleType: 'signal',
+      };
   }
 };
 
@@ -95,21 +122,44 @@ const MEDIA_TYPE_MAP: Record<string, string> = {
 const getSignalStep = (type: string) => {
   switch (type) {
     case 'offer':
-      return { icon: <VideoCameraOutlined />, labelKey: 'webRTCMessage.offer', styleType: 'invite' };
+      return {
+        icon: <VideoCameraOutlined />,
+        labelKey: 'webRTCMessage.offer',
+        styleType: 'invite',
+      };
     case 'answer':
-      return { icon: <CheckCircleOutlined />, labelKey: 'webRTCMessage.answer', styleType: 'accept' };
+      return {
+        icon: <CheckCircleOutlined />,
+        labelKey: 'webRTCMessage.answer',
+        styleType: 'accept',
+      };
     case 'candidate':
-      return { icon: <PhoneOutlined />, labelKey: 'webRTCMessage.candidate', styleType: 'signal' };
+      return {
+        icon: <PhoneOutlined />,
+        labelKey: 'webRTCMessage.candidate',
+        styleType: 'signal',
+      };
     case 'end':
-      return { icon: <PhoneOutlined />, labelKey: 'webRTCMessage.ended', styleType: 'end' };
+      return {
+        icon: <PhoneOutlined />,
+        labelKey: 'webRTCMessage.ended',
+        styleType: 'end',
+      };
     default:
-      return { icon: <VideoCameraOutlined />, labelKey: 'webRTCMessage.signal', styleType: 'signal' };
+      return {
+        icon: <VideoCameraOutlined />,
+        labelKey: 'webRTCMessage.signal',
+        styleType: 'signal',
+      };
   }
 };
 
 /** 从会话明细记录提取可读摘要文案 */
-const getDetailContent = (record: DetailRecord, t: (id: string) => string): string => {
-  let data: any = record.data;
+const getDetailContent = (
+  record: DetailRecord,
+  t: (id: string) => string,
+): string => {
+  let data: unknown = record.data;
   if (typeof data === 'string') {
     try {
       data = JSON.parse(data);
@@ -119,13 +169,17 @@ const getDetailContent = (record: DetailRecord, t: (id: string) => string): stri
   }
 
   if (record.msg_type === 'candidate') {
-    const candidateStr = typeof data === 'string' ? data : data?.candidate;
+    const candidateStr =
+      typeof data === 'string' ? data : signalStringField(data, 'candidate');
     if (!candidateStr) return t('webRTCMessage.iceComplete');
     const parsed = parseIceCandidate(candidateStr);
-    return parsed ? `${parsed.type} ${parsed.protocol} ${parsed.ip}:${parsed.port}` : candidateStr;
+    return parsed
+      ? `${parsed.type} ${parsed.protocol} ${parsed.ip}:${parsed.port}`
+      : candidateStr;
   }
   if (record.msg_type === 'offer' || record.msg_type === 'answer') {
-    const sdp = typeof data === 'string' ? data : data?.sdp;
+    const sdp =
+      typeof data === 'string' ? data : signalStringField(data, 'sdp');
     if (sdp) {
       const mediaTypes = getSdpMediaTypes(sdp);
       if (mediaTypes.length > 0) {
@@ -141,7 +195,11 @@ const getDetailContent = (record: DetailRecord, t: (id: string) => string): stri
   return '—';
 };
 
-const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) => {
+const WebRTCMessage: React.FC<WebRTCMessageProps> = ({
+  textType,
+  isMine,
+  raw,
+}) => {
   const intl = useIntl();
   const [showDetail, setShowDetail] = useState(false);
   const [detailRecords, setDetailRecords] = useState<DetailRecord[]>([]);
@@ -153,7 +211,9 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
-      return parsed && typeof parsed.type === 'string' ? (parsed as ParsedSignal) : null;
+      return parsed && typeof parsed.type === 'string'
+        ? (parsed as ParsedSignal)
+        : null;
     } catch {
       return null;
     }
@@ -166,9 +226,12 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
     }
     setDetailLoading(true);
     try {
-      const records = await invoke<DetailRecord[]>('get_webrtc_signal_records', {
-        sessionId: signal.sessionId,
-      });
+      const records = await invoke<DetailRecord[]>(
+        'get_webrtc_signal_records',
+        {
+          sessionId: signal.sessionId,
+        },
+      );
       setDetailRecords(records || []);
     } catch (e) {
       console.error('[WebRTCMessage] 获取WebRTC信令详情失败:', e);
@@ -226,7 +289,8 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
   let isIceComplete = false;
 
   if (type === 'candidate') {
-    const candidateStr = typeof data === 'string' ? data : data?.candidate;
+    const candidateStr =
+      typeof data === 'string' ? data : signalStringField(data, 'candidate');
     if (!candidateStr) {
       isIceComplete = true;
     } else {
@@ -234,11 +298,12 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
       contentText = parsed
         ? `${parsed.type} ${parsed.protocol} ${parsed.ip}:${parsed.port}`
         : candidateStr.length > 60
-          ? `${candidateStr.slice(0, 60)}…`
-          : candidateStr;
+        ? `${candidateStr.slice(0, 60)}…`
+        : candidateStr;
     }
   } else if (type === 'offer' || type === 'answer') {
-    const sdp = typeof data === 'string' ? data : data?.sdp;
+    const sdp =
+      typeof data === 'string' ? data : signalStringField(data, 'sdp');
     if (sdp) {
       const mediaTypes = getSdpMediaTypes(sdp);
       if (mediaTypes.length > 0) {
@@ -252,7 +317,9 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
     }
   }
 
-  const sessionText = sessionId ? `${t('webRTCMessage.session')}: ${sessionId.slice(0, 8)}` : '';
+  const sessionText = sessionId
+    ? `${t('webRTCMessage.session')}: ${sessionId.slice(0, 8)}`
+    : '';
 
   return (
     <div
@@ -269,19 +336,27 @@ const WebRTCMessage: React.FC<WebRTCMessageProps> = ({ textType, isMine, raw }) 
         </div>
         {sessionId && (
           <div className={styles.detail} onClick={toggleDetail}>
-            {showDetail ? t('webRTCMessage.hideDetail') : t('webRTCMessage.detail')}
+            {showDetail
+              ? t('webRTCMessage.hideDetail')
+              : t('webRTCMessage.detail')}
           </div>
         )}
         {showDetail && (
           <div className={styles.detailContent}>
             {detailLoading && t('webRTCMessage.loading')}
-            {!detailLoading && detailRecords.length === 0 && t('webRTCMessage.noDetail')}
+            {!detailLoading &&
+              detailRecords.length === 0 &&
+              t('webRTCMessage.noDetail')}
             {!detailLoading &&
               detailRecords.map((record) => {
                 const recStep = getSignalStep(record.msg_type);
                 return (
-                  <div key={`${record.id}_${record.msg_type}_${record.timestamp}`}>
-                    <span className={styles.detailStep}>{t(recStep.labelKey)}</span>
+                  <div
+                    key={`${record.id}_${record.msg_type}_${record.timestamp}`}
+                  >
+                    <span className={styles.detailStep}>
+                      {t(recStep.labelKey)}
+                    </span>
                     <span className={styles.detailData}>
                       {getDetailContent(record, t)}
                     </span>

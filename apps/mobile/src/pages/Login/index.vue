@@ -21,6 +21,7 @@ import {
   isBackendSuccess,
 } from "@workspace/services";
 import { useAuthStore } from "@/stores/auth";
+import { parseResponse } from "@/utils/api";
 
 const router = useRouter();
 const { setLoggedIn, clearAuth } = useAuthStore();
@@ -234,8 +235,10 @@ const onAccountBlur = async () => {
   try {
     let userInfo = await get_cached_user_info_by_account(form.account);
     if (!userInfo) {
-      const result: any = await search_user_by_account(form.account);
-      userInfo = result?.data ?? result;
+      const result = parseResponse<UserInfo>(
+        await search_user_by_account(form.account)
+      );
+      userInfo = result;
     }
     if (userInfo?.icon) {
       accountAvatar.value = await resolveAvatarFromIcon(userInfo.icon);
@@ -264,7 +267,7 @@ const enterApp = async () => {
       url: TALK_API + "/user/me",
       body: "",
     });
-    const data: ResponseData = JSON.parse(res.body);
+    const data: ResponseData<UserInfo> = JSON.parse(res.body);
     if (isBackendSuccess(data.code) && data.data) {
       const info: UserInfo = data.data;
       const cached = await get_cached_user_info(info.uuid).catch(() => null);
@@ -430,105 +433,109 @@ onMounted(() => {
       </template>
       <template v-else>
         <div class="logo-section">
-        <div class="app-logo">
-          <img
-            v-if="accountAvatar"
-            :src="accountAvatar"
-            class="user-avatar-img"
-            @error="accountAvatar = null"
-          />
-          <img
-            v-else
-            src="/images/default.jpg"
-            class="user-avatar-img"
-            alt="默认头像"
-          />
-        </div>
-        <h1 class="app-name">Only Talk</h1>
-        <p class="app-slogan">随时随地，畅快交流</p>
-      </div>
-      <div class="form-section">
-        <div class="input-group">
-          <div class="input-wrapper" :class="{ error: accountError }">
-            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-              />
-            </svg>
-            <input
-              type="text"
-              v-model="form.account"
-              class="form-input"
-              placeholder="请输入账号"
-              @input="onAccountInput"
-              @blur="onAccountBlur"
+          <div class="app-logo">
+            <img
+              v-if="accountAvatar"
+              :src="accountAvatar"
+              class="user-avatar-img"
+              @error="accountAvatar = null"
             />
-            <svg
-              v-if="searchingAvatar"
-              class="searching-spin"
-              viewBox="0 0 24 24"
-              fill="none"
+            <img
+              v-else
+              src="/images/default.jpg"
+              class="user-avatar-img"
+              alt="默认头像"
+            />
+          </div>
+          <h1 class="app-name">Only Talk</h1>
+          <p class="app-slogan">随时随地，畅快交流</p>
+        </div>
+        <div class="form-section">
+          <div class="input-group">
+            <div class="input-wrapper" :class="{ error: accountError }">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                />
+              </svg>
+              <input
+                type="text"
+                v-model="form.account"
+                class="form-input"
+                placeholder="请输入账号"
+                @input="onAccountInput"
+                @blur="onAccountBlur"
+              />
+              <svg
+                v-if="searchingAvatar"
+                class="searching-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-dasharray="31.4 31.4"
+                />
+              </svg>
+            </div>
+            <span v-if="accountError" class="error-text">{{
+              accountError
+            }}</span>
+          </div>
+          <div class="input-group">
+            <div class="input-wrapper" :class="{ error: passwordError }">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"
+                />
+              </svg>
+              <input
+                type="password"
+                v-model="form.password"
+                class="form-input"
+                placeholder="请输入密码"
+                @input="onPasswordInput"
+                @blur="validatePassword(form.password)"
+              />
+            </div>
+            <span v-if="passwordError" class="error-text">{{
+              passwordError
+            }}</span>
+          </div>
+          <div class="agreement-row">
+            <label class="checkbox-label"
+              ><input
+                type="checkbox"
+                v-model="agreed"
+                class="agreement-checkbox" /><span class="checkmark"></span
+            ></label>
+            <span class="agreement-text"
+              >已阅读并同意<a
+                class="privacy-link"
+                @click.prevent="onOpenPrivacy"
+                >《隐私政策》</a
+              ></span
             >
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-dasharray="31.4 31.4"
-              />
-            </svg>
           </div>
-          <span v-if="accountError" class="error-text">{{ accountError }}</span>
-        </div>
-        <div class="input-group">
-          <div class="input-wrapper" :class="{ error: passwordError }">
-            <svg class="input-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"
-              />
-            </svg>
-            <input
-              type="password"
-              v-model="form.password"
-              class="form-input"
-              placeholder="请输入密码"
-              @input="onPasswordInput"
-              @blur="validatePassword(form.password)"
-            />
+          <button class="login-btn" :disabled="loading" @click="onLogin">
+            <span v-if="loading" class="loading-dots"
+              ><span class="dot"></span><span class="dot"></span
+              ><span class="dot"></span
+            ></span>
+            <span v-else>登 录</span>
+          </button>
+          <div class="form-footer">
+            <template v-if="quickUsers.length">
+              <a class="switch-link" @click="toQuickLogin">免登录</a>
+              <span class="divider">|</span>
+            </template>
+            <a class="switch-link" @click="toRegister">注册账号</a>
           </div>
-          <span v-if="passwordError" class="error-text">{{
-            passwordError
-          }}</span>
         </div>
-        <div class="agreement-row">
-          <label class="checkbox-label"
-            ><input
-              type="checkbox"
-              v-model="agreed"
-              class="agreement-checkbox" /><span class="checkmark"></span
-          ></label>
-          <span class="agreement-text"
-            >已阅读并同意<a class="privacy-link" @click.prevent="onOpenPrivacy"
-              >《隐私政策》</a
-            ></span
-          >
-        </div>
-        <button class="login-btn" :disabled="loading" @click="onLogin">
-          <span v-if="loading" class="loading-dots"
-            ><span class="dot"></span><span class="dot"></span
-            ><span class="dot"></span
-          ></span>
-          <span v-else>登 录</span>
-        </button>
-        <div class="form-footer">
-          <template v-if="quickUsers.length">
-            <a class="switch-link" @click="toQuickLogin">免登录</a>
-            <span class="divider">|</span>
-          </template>
-          <a class="switch-link" @click="toRegister">注册账号</a>
-        </div>
-      </div>
       </template>
     </div>
     <Overlay :show="showPrivacy" @click="showPrivacy = false">

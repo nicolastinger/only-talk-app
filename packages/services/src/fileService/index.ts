@@ -81,7 +81,7 @@ export const getFiles = async (
       });
     }
     return files;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get files failed:", error);
     return null;
   }
@@ -126,7 +126,7 @@ export const getChatFileByBizId = async (
     }
     console.log("Final files:", files);
     return files;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get chat file failed:", error);
     return null;
   }
@@ -163,7 +163,7 @@ export const getChatRecordByType = async (
     });
 
     return data || [];
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get chat record by type failed:", error);
     return [];
   }
@@ -211,7 +211,7 @@ export const getFriendImageMessages = async (
     }
 
     return { imageUrls, currentIndex };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get friend image messages failed:", error);
     return { imageUrls: [], currentIndex: 0 };
   }
@@ -267,7 +267,7 @@ export const getGroupImageMessages = async (
     }
 
     return { imageUrls, currentIndex };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get group image messages failed:", error);
     return { imageUrls: [], currentIndex: 0 };
   }

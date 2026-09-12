@@ -13,7 +13,7 @@ interface SearchResultItem {
   id: string;
   name: string;
   type: 'friend' | 'group';
-  data: any;
+  data: unknown;
 }
 
 const ContactsLayout = () => {

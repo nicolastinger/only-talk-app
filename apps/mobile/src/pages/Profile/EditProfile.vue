@@ -37,6 +37,16 @@ const genderOptions = [
 const showGenderSheet = ref(false);
 const showBirthdayPopup = ref(false);
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error) || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const form = reactive({
   username: "",
   info: "",
@@ -138,7 +148,11 @@ const pickAndUploadAvatar = async () => {
 
     // 处理 Android content:// URI
     if (filePath.startsWith("content://")) {
-      showLoadingToast({ message: "读取文件中...", forbidClick: true, duration: 0 });
+      showLoadingToast({
+        message: "读取文件中...",
+        forbidClick: true,
+        duration: 0,
+      });
 
       console.log("[DEBUG] Detected content URI, starting read...");
 
@@ -146,12 +160,16 @@ const pickAndUploadAvatar = async () => {
         const { tempPath } = await resolveContentToTempFile(filePath);
         filePath = tempPath;
         console.log("[DEBUG] Success! Resolved to:", filePath);
-      } catch (error: any) {
-        console.error("[DEBUG] ERROR:", error?.message || error?.toString() || error);
-        console.error("[DEBUG] ERROR stack:", error?.stack);
+      } catch (error) {
+        const errMsg = getErrorMessage(error, "Unknown error");
+        console.error("[DEBUG] ERROR:", error);
+        console.error(
+          "[DEBUG] ERROR stack:",
+          error instanceof Error ? error.stack : undefined
+        );
         closeToast();
         showToast({
-          message: `读取失败: ${error?.message || "Unknown error"}`,
+          message: `读取失败: ${errMsg || "Unknown error"}`,
           icon: "fail",
         });
         return;
@@ -167,9 +185,9 @@ const pickAndUploadAvatar = async () => {
         inputPath: filePath,
       }
     );
-    
+
     if (uploadCancelled) return;
-    
+
     console.log("Compressed result:", compressedResult);
 
     const preview = convertPathToTauriUrl(compressedResult);
@@ -199,10 +217,13 @@ const pickAndUploadAvatar = async () => {
       console.log("Response body:", responseBody);
       if (isBackendSuccess(responseBody.code) && responseBody.data) {
         try {
-          const res: { status: number; body: string } = await invoke("post_request", {
-            url: TALK_API + "/user/me",
-            body: "",
-          });
+          const res: { status: number; body: string } = await invoke(
+            "post_request",
+            {
+              url: TALK_API + "/user/me",
+              body: "",
+            }
+          );
           const meData = JSON.parse(res.body);
           if (isBackendSuccess(meData.code) && meData.data) {
             const info: UserInfo = meData.data;
@@ -214,9 +235,11 @@ const pickAndUploadAvatar = async () => {
         }
 
         if (userInfo.value?.icon) {
-          avatarUrl.value = await getAvatarUrl(userInfo.value.icon).catch(() => null);
+          avatarUrl.value = await getAvatarUrl(userInfo.value.icon).catch(
+            () => null
+          );
         }
-        
+
         showToast({ message: "头像更新成功", icon: "success" });
       } else {
         const errorMsg =
@@ -233,12 +256,12 @@ const pickAndUploadAvatar = async () => {
         icon: "fail",
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     if (uploadCancelled) return;
     closeToast();
     console.error("Upload error:", error);
     showToast({
-      message: error.message || error.toString() || "头像更新失败",
+      message: getErrorMessage(error, "头像更新失败"),
       icon: "fail",
     });
   } finally {
@@ -274,7 +297,16 @@ const onSave = async () => {
   saving.value = true;
 
   try {
-    const updateData: Record<string, any> = {};
+    const updateData: {
+      username?: string;
+      info?: string;
+      gender?: number | null;
+      age?: number;
+      birthday?: number;
+      phone?: string;
+      email?: string;
+      address?: string;
+    } = {};
 
     const newUsername = form.username || undefined;
     if (newUsername !== (originalUserInfo.username || undefined)) {
@@ -348,8 +380,8 @@ const onSave = async () => {
     } else {
       showToast({ message: response.message || "更新失败", icon: "fail" });
     }
-  } catch (error: any) {
-    showToast({ message: error.message || "更新失败", icon: "fail" });
+  } catch (error) {
+    showToast({ message: getErrorMessage(error, "更新失败"), icon: "fail" });
     saving.value = false;
   }
 };

@@ -34,7 +34,7 @@ interface WebRTCSignalMsgRaw {
   sender: string;
   receiver: string;
   sessionId: string;
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 
@@ -308,7 +308,10 @@ export const useWebRTCCall = () => {
 
           if (signalMsg.type === 'offer') {
             console.log(`[WebRTCChat] 调用 service.handleOffer()...`);
-            const answer = await service.handleOffer(friendId, signalMsg.data);
+            const answer = await service.handleOffer(
+              friendId,
+              signalMsg.data as RTCSessionDescriptionInit,
+            );
             console.log(`[WebRTCChat] answer创建成功`);
 
             const responseSignal: WebRTCSignalMessage = {
@@ -416,7 +419,10 @@ export const useWebRTCCall = () => {
               console.log(
                 `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的answer，正在处理...`,
               );
-              await service.handleAnswer(friendId, signalMsg.data);
+              await service.handleAnswer(
+                friendId,
+                signalMsg.data as RTCSessionDescriptionInit,
+              );
               console.log(`[WebRTCChat.onWebRTCSignal] ✅ answer已处理`);
             } else if (signalMsg.type === 'offer') {
               console.log(
@@ -425,7 +431,7 @@ export const useWebRTCCall = () => {
               try {
                 const restartAnswer = await service.handleOffer(
                   friendId,
-                  signalMsg.data,
+                  signalMsg.data as RTCSessionDescriptionInit,
                 );
                 console.log(`[WebRTCChat.onWebRTCSignal] ICE重启answer已创建`);
 
@@ -451,7 +457,10 @@ export const useWebRTCCall = () => {
               console.log(
                 `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的ICE candidate`,
               );
-              await service.handleCandidate(friendId, signalMsg.data);
+              await service.handleCandidate(
+                friendId,
+                signalMsg.data as RTCIceCandidateInit,
+              );
               console.log(`[WebRTCChat.onWebRTCSignal] ✅ candidate已处理`);
             } else if (signalMsg.type === 'end') {
               console.log(

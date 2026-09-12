@@ -145,9 +145,12 @@ const GroupSettingsPage = () => {
       } else {
         message.error(intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error(intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }), error);
-      message.error(error.message || intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }));
+      message.error(
+        (error instanceof Error ? error.message : String(error)) ||
+          intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }),
+      );
     } finally {
       setAvatarUploading(false);
     }

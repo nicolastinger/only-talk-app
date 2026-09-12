@@ -14,7 +14,7 @@ export const logCandidatePairStats = async (
 ): Promise<void> => {
   try {
     const stats = await connection.getStats();
-    let activeCandidatePair: any = null;
+    let activeCandidatePair: RTCIceCandidatePairStats | null = null;
     let totalCandidatePairs = 0;
     let succeededPairs = 0;
     let failedPairs = 0;
@@ -31,26 +31,41 @@ export const logCandidatePairStats = async (
 
     stats.forEach((report) => {
       if (report.type === 'candidate-pair') {
+        const pair = report as RTCIceCandidatePairStats;
         totalCandidatePairs++;
-        if (report.state === 'succeeded') {
+        if (pair.state === 'succeeded') {
           succeededPairs++;
-          activeCandidatePair = report;
-        } else if (report.state === 'failed') {
+          activeCandidatePair = pair;
+        } else if (pair.state === 'failed') {
           failedPairs++;
         }
       } else if (report.type === 'local-candidate') {
-        localCandidates.set(report.id, {
-          ip: report.ip || report.get?.('ip') || '未知',
-          port: report.port || report.get?.('port') || 0,
-          protocol: report.protocol || report.get?.('protocol') || '未知',
-          type: report.candidateType || report.get?.('candidateType') || '未知',
+        const cand = report as RTCStats & {
+          ip?: string;
+          address?: string;
+          port?: number;
+          protocol?: string;
+          candidateType?: string;
+        };
+        localCandidates.set(cand.id, {
+          ip: cand.address || cand.ip || '未知',
+          port: cand.port || 0,
+          protocol: cand.protocol || '未知',
+          type: cand.candidateType || '未知',
         });
       } else if (report.type === 'remote-candidate') {
-        remoteCandidates.set(report.id, {
-          ip: report.ip || report.get?.('ip') || '未知',
-          port: report.port || report.get?.('port') || 0,
-          protocol: report.protocol || report.get?.('protocol') || '未知',
-          type: report.candidateType || report.get?.('candidateType') || '未知',
+        const cand = report as RTCStats & {
+          ip?: string;
+          address?: string;
+          port?: number;
+          protocol?: string;
+          candidateType?: string;
+        };
+        remoteCandidates.set(cand.id, {
+          ip: cand.address || cand.ip || '未知',
+          port: cand.port || 0,
+          protocol: cand.protocol || '未知',
+          type: cand.candidateType || '未知',
         });
       }
     });
@@ -63,13 +78,12 @@ export const logCandidatePairStats = async (
       console.log(`  - 成功连接数: ${succeededPairs}`);
       console.log(`  - 失败连接数: ${failedPairs}`);
 
-      if (activeCandidatePair) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pair = activeCandidatePair as any;
-        const localCandId =
-          pair.localCandidateId || pair.get?.('localCandidateId');
-        const remoteCandId =
-          pair.remoteCandidateId || pair.get?.('remoteCandidateId');
+      // 闭包内赋值不会被 CFA 追踪(变量仍被收窄为初始值 null)，用 as 重置收窄后读取
+      const activePair = activeCandidatePair as RTCIceCandidatePairStats | null;
+      if (activePair) {
+        const pair = activePair;
+        const localCandId = pair.localCandidateId;
+        const remoteCandId = pair.remoteCandidateId;
 
         // 获取具体的候选地址信息
         const localCand = localCandidates.get(localCandId);
@@ -91,17 +105,10 @@ export const logCandidatePairStats = async (
           }`,
         );
 
-        const rtt =
-          pair.currentRoundTripTime ?? pair.get?.('currentRoundTripTime');
+        const rtt = pair.currentRoundTripTime;
         console.log(`    • 往返延迟(RTT): ${rtt?.toFixed?.(3) || '未知'}s`);
-        console.log(
-          `    • 接收字节: ${
-            (pair.bytesReceived ?? pair.get?.('bytesReceived')) || 0
-          }`,
-        );
-        console.log(
-          `    • 发送字节: ${(pair.bytesSent ?? pair.get?.('bytesSent')) || 0}`,
-        );
+        console.log(`    • 接收字节: ${pair.bytesReceived ?? 0}`);
+        console.log(`    • 发送字节: ${pair.bytesSent ?? 0}`);
 
         // 如果是通过srflx或relay成功连接，特别标注
         if (localCand?.type === 'srflx' || remoteCand?.type === 'srflx') {
@@ -178,6 +185,20 @@ export const logIceDiagnostics = async (
   await logCandidatePairStats(friendId, connection);
 };
 
+/** 单连接状态摘要 */
+export interface ConnectionSummary {
+  [friendId: string]: {
+    connectionState: RTCPeerConnectionState;
+    iceConnectionState: RTCIceConnectionState;
+    iceGatheringState: RTCIceGatheringState;
+    signalingState: RTCSignalingState;
+    iceRestartCount: number;
+    hasLocalStream: boolean;
+    hasRemoteStream: boolean;
+    dataChannelOpen: boolean;
+  };
+}
+
 /**
  * 汇总所有连接的状态摘要
  * @param connections 连接映射
@@ -192,8 +213,8 @@ export const buildConnectionSummary = (
   iceRestartCount: Map<string, number>,
   hasLocalStream: boolean,
   remoteStreams: Map<string, MediaStream>,
-): Record<string, any> => {
-  const summary: Record<string, any> = {};
+): ConnectionSummary => {
+  const summary: ConnectionSummary = {};
 
   connections.forEach((connection, friendId) => {
     summary[friendId] = {
