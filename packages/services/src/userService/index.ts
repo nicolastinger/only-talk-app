@@ -189,6 +189,10 @@ export const get_quic_servers = async (): Promise<QuicServerInfo[]> => {
   const response: HttpResponse = await invoke("get_request", {
     url: TALK_API + "/integrated/quic_servers",
   });
+  // 兼容真·HTTP 204 空响应体：视为成功但无数据
+  if (!response.body) {
+    return [];
+  }
   const data = JSON.parse(response.body);
   if (!isBackendSuccess(data.code)) {
     console.error("获取QUIC节点信息失败:", data.message);

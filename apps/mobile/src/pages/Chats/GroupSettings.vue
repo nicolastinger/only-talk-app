@@ -15,6 +15,7 @@ import {
   get_friend_list,
   selectFile,
   isBackendSuccess,
+  isHttpSuccess,
 } from "@workspace/services";
 import type { GroupInfoVo, GroupMemberVo, FriendVo } from "@workspace/types";
 import { TALK_API, ReportTargetType } from "@workspace/types";
@@ -210,9 +211,9 @@ const changeAvatar = async () => {
         fieldName: "file",
       }
     );
-    if (res.status === 200) {
-      const json = JSON.parse(res.body);
-      if (isBackendSuccess(json.code) && json.data) {
+    if (isHttpSuccess(res.status)) {
+      const json = res.body ? JSON.parse(res.body) : null;
+      if (json && isBackendSuccess(json.code) && json.data) {
         const url = await getAvatarUrl(json.data);
         groupAvatarUrl.value = url;
         groupInfo.value = {
@@ -222,7 +223,7 @@ const changeAvatar = async () => {
         await loadData();
         showToast({ message: "群头像已更新", icon: "success" });
       } else {
-        showToast(json.message || "上传头像失败");
+        showToast(json?.message || "上传头像失败");
       }
     } else {
       showToast(`上传失败(${res.status})`);

@@ -4,7 +4,7 @@ import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { useBearStore } from '@/store/store';
 import { GroupInfoVo, GroupMemberVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
-import { convertPathToTauriUrl, getFiles, isBackendSuccess, selectFile } from '@workspace/services';
+import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile } from '@workspace/services';
 import { history, useSearchParams, useIntl } from '@umijs/max';
 import { Avatar, Button, Input, Modal, Select, Tag, message, Spin } from 'antd';
 import {
@@ -125,9 +125,9 @@ const GroupSettingsPage = () => {
         fieldName: 'file',
       });
 
-      if (uploadResult.status === 200) {
-        const responseBody = JSON.parse(uploadResult.body);
-        if (isBackendSuccess(responseBody.code) && responseBody.data) {
+      if (isHttpSuccess(uploadResult.status)) {
+        const responseBody = uploadResult.body ? JSON.parse(uploadResult.body) : null;
+        if (responseBody && isBackendSuccess(responseBody.code) && responseBody.data) {
           const bizId = responseBody.data;
           const FileVos = await getFiles(bizId);
           const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
@@ -140,7 +140,7 @@ const GroupSettingsPage = () => {
             message.error(intl.formatMessage({ id: 'groupSettings.avatar.getFileFailed' }));
           }
         } else {
-          message.error(responseBody.msg || intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
+          message.error(responseBody?.msg || intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
         }
       } else {
         message.error(intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));

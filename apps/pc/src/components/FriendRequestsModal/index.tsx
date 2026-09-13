@@ -19,6 +19,7 @@ import {
   readContactsNotification,
   clearUnreadByLevel,
   getUnreadNotificationCounts,
+  isHttpSuccess,
 } from '@workspace/services';
 import {
   FriendRequestInfo,
@@ -136,7 +137,7 @@ const FriendRequestsModal = ({
     let friendRequestInfoDTO: FriendRequestInfoDTO = {};
     try {
       const res = await get_friend_request_list(friendRequestInfoDTO);
-      if (res.netSuccess && res.res.status === 200) {
+      if (res.netSuccess && isHttpSuccess(res.res.status)) {
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
         const enrichedData = await Promise.all(
           data.map((item) => enrichRequestWithUserInfo(item, false)),
@@ -158,7 +159,7 @@ const FriendRequestsModal = ({
     let friendRequestInfoDTO: FriendRequestInfoDTO = {};
     try {
       const res = await get_accept_friend_request_list(friendRequestInfoDTO);
-      if (res.netSuccess && res.res.status === 200) {
+      if (res.netSuccess && isHttpSuccess(res.res.status)) {
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
         const enrichedData = await Promise.all(
           data.map((item) => enrichRequestWithUserInfo(item, true)),
@@ -221,7 +222,7 @@ const FriendRequestsModal = ({
       accept_status: 1,
     };
     const res = await process_friend_request(friendRequestInfoDTO);
-    if (res.netSuccess && res.res.status === 200) {
+    if (res.netSuccess && isHttpSuccess(res.res.status)) {
       await update_local_friend_list();
       await getAcceptFriendRequestList();
     }
@@ -245,7 +246,7 @@ const FriendRequestsModal = ({
       accept_status: 2,
     };
     const res = await process_friend_request(friendRequestInfoDTO);
-    if (res.netSuccess && res.res.status === 200) {
+    if (res.netSuccess && isHttpSuccess(res.res.status)) {
       await update_local_friend_list();
       await getAcceptFriendRequestList();
     }

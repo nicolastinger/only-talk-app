@@ -16,6 +16,7 @@ import {
   convertPathToTauriUrl,
   getFiles,
   isBackendSuccess,
+  isHttpSuccess,
   refresh_user_info,
   selectFile,
   update_user_info,
@@ -158,9 +159,15 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       window.dispatchEvent(new CustomEvent('uploadEnd'));
 
-      if (uploadResult.status === 200) {
-        const responseBody = JSON.parse(uploadResult.body);
-        if (isBackendSuccess(responseBody.code) && responseBody.data) {
+      if (isHttpSuccess(uploadResult.status)) {
+        const responseBody = uploadResult.body
+          ? JSON.parse(uploadResult.body)
+          : null;
+        if (
+          responseBody &&
+          isBackendSuccess(responseBody.code) &&
+          responseBody.data
+        ) {
           const bizId = responseBody.data;
 
           const FileVos = await getFiles(bizId);
@@ -180,7 +187,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           }
         } else {
           message.error(
-            responseBody.msg ||
+            responseBody?.msg ||
               intl.formatMessage({ id: 'userInfo.avatar.uploadFailed' }),
           );
         }
@@ -274,7 +281,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       const response = await update_user_info(updateData);
 
-      if (response.netSuccess && response.res.status === 200) {
+      if (response.netSuccess && isHttpSuccess(response.res.status)) {
         const data = JSON.parse(response.res.body);
         if (isBackendSuccess(data.code)) {
           const updatedUserInfo = await refresh_user_info(userInfo.uuid);

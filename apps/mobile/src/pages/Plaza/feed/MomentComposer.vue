@@ -8,6 +8,7 @@ import {
   convertPathToTauriUrl,
   create_moment,
   isBackendSuccess,
+  isHttpSuccess,
 } from "@workspace/services";
 import { TALK_API } from "@workspace/types";
 import { resolveContentToTempFile } from "@/utils/tempImage";
@@ -99,12 +100,12 @@ const pickImages = async () => {
       );
       if (uploadCancelled) return;
 
-      if (res.status === 200) {
-        const json = JSON.parse(res.body);
-        if (isBackendSuccess(json.code) && json.data) {
+      if (isHttpSuccess(res.status)) {
+        const json = res.body ? JSON.parse(res.body) : null;
+        if (json && isBackendSuccess(json.code) && json.data) {
           fileIds.value.push(json.data);
         } else {
-          showToast(json.message || "上传图片失败");
+          showToast(json?.message || "上传图片失败");
           if (preview) previews.value.pop();
         }
       } else {

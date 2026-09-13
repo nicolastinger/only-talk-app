@@ -11,6 +11,10 @@ export function parseResponse<T>(res: RustResponse): T {
     return undefined as T;
   }
   const data = JSON.parse(res.res.body);
+  // 业务 204（success_empty）无数据，按布尔成功语义返回 true
+  if (data.code === 204) {
+    return true as T;
+  }
   if (!isBackendSuccess(data.code)) {
     throw new Error(data.message || "请求失败");
   }

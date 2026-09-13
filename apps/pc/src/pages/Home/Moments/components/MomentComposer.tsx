@@ -4,6 +4,7 @@ import {
   convertPathToTauriUrl,
   create_moment,
   isBackendSuccess,
+  isHttpSuccess,
   selectFile,
 } from '@workspace/services';
 import { TALK_API } from '@workspace/types';
@@ -57,13 +58,13 @@ const MomentComposer = (props: {
             fieldName: 'file',
           },
         );
-        if (res.status === 200) {
-          const json = JSON.parse(res.body);
-          if (isBackendSuccess(json.code) && json.data) {
+        if (isHttpSuccess(res.status)) {
+          const json = res.body ? JSON.parse(res.body) : null;
+          if (json && isBackendSuccess(json.code) && json.data) {
             if (preview) setImages((prev) => [...prev, preview]);
             setFileIds((prev) => [...prev, json.data]);
           } else {
-            message.error(json.message || '上传失败');
+            message.error(json?.message || '上传失败');
           }
         } else {
           message.error('上传失败');

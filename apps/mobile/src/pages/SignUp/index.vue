@@ -7,6 +7,7 @@ import {
   send_verify_code,
   sign_up_step1,
   complete_profile,
+  isHttpSuccess,
 } from "@workspace/services";
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -143,7 +144,7 @@ const handleSendCode = async () => {
   sendingCode.value = true;
   try {
     const res = await send_verify_code({ email: email.value });
-    if (res.netSuccess && res.res.status === 200) {
+    if (res.netSuccess && isHttpSuccess(res.res.status)) {
       showToast({ message: "验证码已发送，请注意查收", icon: "success" });
       startCountdown(60);
     } else {
@@ -167,7 +168,7 @@ const handleNext = async () => {
       email: email.value,
       verification_code: verificationCode.value,
     });
-    if (res.netSuccess && res.res.status === 200) {
+    if (res.netSuccess && isHttpSuccess(res.res.status)) {
       let token = "";
       try {
         token = JSON.parse(res.res.body)?.data?.reg_token ?? "";
@@ -209,7 +210,7 @@ const onFinish = async () => {
       password: password.value,
       username: username.value,
     });
-    if (res.netSuccess && res.res.status === 200) {
+    if (res.netSuccess && isHttpSuccess(res.res.status)) {
       showToast({
         message: `注册成功，欢迎 ${username.value}!`,
         icon: "success",

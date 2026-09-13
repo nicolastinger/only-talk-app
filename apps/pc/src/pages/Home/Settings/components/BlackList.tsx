@@ -6,6 +6,7 @@ import {
   getFiles,
   search_user_by_account,
   unblock_friend,
+  isHttpSuccess,
 } from '@workspace/services';
 import { BlackListVo, UserInfo } from '@workspace/types';
 import { Button, Card, Empty, Input, Modal, Spin, Typography, message } from 'antd';
@@ -76,7 +77,7 @@ const BlackList = () => {
     setSearching(true);
     try {
       const result = await search_user_by_account(searchKey.trim());
-      if (result.netSuccess && result.res.status === 200) {
+      if (result.netSuccess && isHttpSuccess(result.res.status)) {
         const data = JSON.parse(result.res.body);
         const user: UserInfo = data.data;
         if (user?.uuid) {

@@ -12,6 +12,7 @@ import {
   complete_profile,
   send_verify_code,
   sign_up_step1,
+  isHttpSuccess,
 } from '@workspace/services';
 import {
   CompleteProfileRequest,
@@ -187,7 +188,7 @@ const FastSignUp: React.FC = () => {
     setLoading(true);
     try {
       const res = await send_verify_code({ email });
-      if (res.netSuccess && res.res.status === 200) {
+      if (res.netSuccess && isHttpSuccess(res.res.status)) {
         message.success(intl.formatMessage({ id: 'signUp.sendCodeSuccess' }));
         startCountdown(60);
       } else {
@@ -216,7 +217,7 @@ const FastSignUp: React.FC = () => {
         verification_code: verificationCode,
       };
       const res = await sign_up_step1(step1Request);
-      if (res.netSuccess && res.res.status === 200) {
+      if (res.netSuccess && isHttpSuccess(res.res.status)) {
         let token = '';
         try {
           const body = JSON.parse(res.res.body);
@@ -264,7 +265,7 @@ const FastSignUp: React.FC = () => {
         username,
       };
       const res = await complete_profile(completeProfileRequest);
-      if (res.netSuccess && res.res.status === 200) {
+      if (res.netSuccess && isHttpSuccess(res.res.status)) {
         message.success(
           intl.formatMessage({ id: 'signUp.success' }, { username }),
         );

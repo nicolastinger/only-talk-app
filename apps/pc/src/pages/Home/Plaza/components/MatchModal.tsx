@@ -2,7 +2,7 @@ import { DEFAULT_ICON } from '@/constants';
 import { HeartFilled } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
-import { add_friend, getFiles } from '@workspace/services';
+import { add_friend, getFiles, isHttpSuccess } from '@workspace/services';
 import { FriendRequestInfoDTO, PlazaUser } from '@workspace/types';
 import { Button, message, Modal } from 'antd';
 import { useEffect, useState } from 'react';
@@ -60,7 +60,7 @@ const MatchModal = (props: { user: PlazaUser | null; onClose: () => void }) => {
         accept_status: 0,
       };
       const result = await add_friend(dto);
-      if (result.netSuccess && result.res.status === 200) {
+      if (result.netSuccess && isHttpSuccess(result.res.status)) {
         setRequested(true);
         message.success(
           intl.formatMessage({ id: 'friendRequest.requestSent' }),

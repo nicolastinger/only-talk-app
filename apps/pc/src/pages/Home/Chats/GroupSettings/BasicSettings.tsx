@@ -1,7 +1,7 @@
 import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { GroupVo } from '@workspace/types';
 import { update_group } from '@workspace/services';
-import { convertPathToTauriUrl, getFiles, isBackendSuccess, selectFile } from '@workspace/services';
+import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile } from '@workspace/services';
 import { Avatar, Button, Form, Input, message, Spin } from 'antd';
 import { UserOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -43,9 +43,9 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
         fieldName: 'file',
       });
 
-      if (uploadResult.status === 200) {
-        const responseBody = JSON.parse(uploadResult.body);
-        if (isBackendSuccess(responseBody.code) && responseBody.data) {
+      if (isHttpSuccess(uploadResult.status)) {
+        const responseBody = uploadResult.body ? JSON.parse(uploadResult.body) : null;
+        if (responseBody && isBackendSuccess(responseBody.code) && responseBody.data) {
           const bizId = responseBody.data;
           const FileVos = await getFiles(bizId);
           const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
@@ -58,7 +58,7 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
             message.error('获取群头像文件失败');
           }
         } else {
-          message.error(responseBody.msg || '群头像上传失败');
+          message.error(responseBody?.msg || '群头像上传失败');
         }
       } else {
         message.error('群头像上传失败');

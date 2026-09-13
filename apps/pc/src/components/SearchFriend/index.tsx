@@ -6,6 +6,7 @@ import {
   cache_user_info,
   getFiles,
   search_user_by_account,
+  isHttpSuccess,
 } from '@workspace/services';
 import { FriendRequestInfoDTO, UserInfo } from '@workspace/types';
 import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
@@ -30,7 +31,7 @@ const SearchFriend = () => {
     try {
       let result = await search_user_by_account(values.searchKey);
       console.log(result);
-      if (result.netSuccess && result.res.status === 200) {
+      if (result.netSuccess && isHttpSuccess(result.res.status)) {
         const data = JSON.parse(result.res.body);
         const users: UserInfo = data.data;
         setResults([users]);
@@ -74,7 +75,7 @@ const SearchFriend = () => {
 
       const result = await add_friend(friendData);
       console.log('请求结果', result);
-      if (result.netSuccess && result.res.status === 200) {
+      if (result.netSuccess && isHttpSuccess(result.res.status)) {
         message.success(
           intl.formatMessage(
             { id: 'friendRequest.requestSent' },

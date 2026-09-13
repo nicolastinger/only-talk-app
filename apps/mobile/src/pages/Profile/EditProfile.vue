@@ -8,6 +8,7 @@ import {
   convertPathToTauriUrl,
   cache_user_info,
   isBackendSuccess,
+  isHttpSuccess,
 } from "@workspace/services";
 import { TALK_API } from "@workspace/types";
 import type { UserInfo } from "@workspace/types";
@@ -212,10 +213,12 @@ const pickAndUploadAvatar = async () => {
     closeToast();
     console.log("Upload result:", uploadResult);
 
-    if (uploadResult.status === 200) {
-      const responseBody = JSON.parse(uploadResult.body);
+    if (isHttpSuccess(uploadResult.status)) {
+      const responseBody = uploadResult.body
+        ? JSON.parse(uploadResult.body)
+        : null;
       console.log("Response body:", responseBody);
-      if (isBackendSuccess(responseBody.code) && responseBody.data) {
+      if (responseBody && isBackendSuccess(responseBody.code) && responseBody.data) {
         try {
           const res: { status: number; body: string } = await invoke(
             "post_request",
@@ -243,9 +246,9 @@ const pickAndUploadAvatar = async () => {
         showToast({ message: "头像更新成功", icon: "success" });
       } else {
         const errorMsg =
-          responseBody.msg ||
-          responseBody.message ||
-          JSON.stringify(responseBody);
+          responseBody?.msg ||
+          responseBody?.message ||
+          "头像更新失败";
         console.error("Server error:", errorMsg);
         showToast({ message: errorMsg || "头像更新失败", icon: "fail" });
       }

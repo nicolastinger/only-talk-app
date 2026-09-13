@@ -2,7 +2,7 @@ import ReportModal from '@/components/ReportModal';
 import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
-import { add_friend, getFiles } from '@workspace/services';
+import { add_friend, getFiles, isHttpSuccess } from '@workspace/services';
 import {
   FriendRequestInfoDTO,
   PlazaUser,
@@ -90,7 +90,7 @@ const ProfileModal = (props: {
         accept_status: 0,
       };
       const result = await add_friend(dto);
-      if (result.netSuccess && result.res.status === 200) {
+      if (result.netSuccess && isHttpSuccess(result.res.status)) {
         setRequested(true);
         message.success(
           intl.formatMessage(

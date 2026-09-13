@@ -29,6 +29,10 @@ export const BACKEND_SUCCESS_CODES = [200, 204];
 export const isBackendSuccess = (code?: number): boolean =>
   code !== undefined && BACKEND_SUCCESS_CODES.includes(code);
 
+/** 判断 HTTP 状态码是否表示请求成功（200 带数据 / 204 无数据） */
+export const isHttpSuccess = (status?: number): boolean =>
+  status === 200 || status === 204;
+
 export interface BackendEnvelope<T = unknown> {
   code: number;
   data: T;
@@ -37,7 +41,7 @@ export interface BackendEnvelope<T = unknown> {
 
 /**
  * 解析 invoke_rust 的返回：先校验网络层，再按后端统一信封 code 判断业务成功(200/204)。
- * 成功返回 data，失败抛出后端 message。
+ * 成功返回 data；业务 204（success_empty）无数据，按布尔成功语义返回 true。
  */
 export const parseBackendResponse = <T>(res: RustResponse): T => {
   if (!res.netSuccess) {
@@ -49,6 +53,9 @@ export const parseBackendResponse = <T>(res: RustResponse): T => {
     return undefined as T;
   }
   const json = JSON.parse(body) as BackendEnvelope<T>;
+  if (json.code === 204) {
+    return true as T;
+  }
   if (isBackendSuccess(json.code)) {
     return json.data as T;
   }
