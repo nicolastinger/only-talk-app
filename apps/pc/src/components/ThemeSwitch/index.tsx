@@ -5,8 +5,11 @@ const ChangeTheme = () => {
   const { mode, setMode } = useTheme();
   const intl = useIntl();
 
-  const changeThemeColor = () => {
-    setMode(mode === 'dark' ? 'light' : 'dark');
+  const changeThemeColor = (e: React.MouseEvent<HTMLDivElement>) => {
+    setMode(mode === 'dark' ? 'light' : 'dark', {
+      x: e.clientX,
+      y: e.clientY,
+    });
   };
 
   return (

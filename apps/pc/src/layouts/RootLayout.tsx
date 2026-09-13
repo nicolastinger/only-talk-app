@@ -1,5 +1,6 @@
 import DevAssistant from '@/components/DevAssistant';
 import SyncLoadingOverlay from '@/components/SyncLoadingOverlay';
+import ThemeRevealOverlay from '@/components/ThemeRevealOverlay';
 import { useP2pMessageApi, useWebRTCIncomingCall, useWebRTCSignalApi } from '@/hooks';
 import { useTheme } from '@/hooks/useTheme';
 import { ConfigProvider, theme } from 'antd';
@@ -42,6 +43,7 @@ const RootLayout: React.FC = () => {
         <Outlet />
         <DevAssistant />
         <SyncLoadingOverlay />
+        <ThemeRevealOverlay />
       </div>
     </ConfigProvider>
   );

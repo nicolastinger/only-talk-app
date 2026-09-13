@@ -7,8 +7,11 @@ const ThemeButton = () => {
   const { mode, setMode } = useTheme();
   const isDark = mode === 'dark';
 
-  const toggleTheme = () => {
-    setMode(mode === 'dark' ? 'light' : 'dark');
+  const toggleTheme = (e: React.MouseEvent<HTMLDivElement>) => {
+    setMode(mode === 'dark' ? 'light' : 'dark', {
+      x: e.clientX,
+      y: e.clientY,
+    });
   };
 
   return (

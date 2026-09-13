@@ -20,6 +20,7 @@ import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
 import { clearUuidCache } from "@/utils/api";
 import AnnouncementCenter from "@/components/AnnouncementCenter.vue";
+import ThemeRevealOverlay from "@/components/ThemeRevealOverlay/index.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -190,6 +191,7 @@ onUnmounted(() => {
     <ReconnectOverlay />
     <SyncOverlay />
     <AnnouncementCenter />
+    <ThemeRevealOverlay />
   </div>
 </template>
 

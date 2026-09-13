@@ -121,7 +121,7 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Select value={mode} onChange={setMode} className={styles.select}>
+        <Select value={mode} onChange={(value) => setMode(value)} className={styles.select}>
           <Option value="light">
             {intl.formatMessage({
               id: 'settings.generalSettings.themeModes.light',

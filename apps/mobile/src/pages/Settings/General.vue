@@ -34,7 +34,7 @@ const goBack = () => router.back();
           :key="item.value"
           class="theme-option"
           :class="{ active: mode === item.value }"
-          @click="setMode(item.value)"
+          @click="setMode(item.value, { x: $event.clientX, y: $event.clientY })"
         >
           {{ item.label }}
         </button>

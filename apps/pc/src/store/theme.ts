@@ -40,14 +40,25 @@ export function applyFontVars(fontSize: ChatsFontSize) {
   );
 }
 
+/** 主题切换遮罩状态：active 时用旧主题色遮罩覆盖全屏，再收缩揭示新主题 */
+export interface ThemeRevealState {
+  active: boolean;
+  color: string;
+  x: number;
+  y: number;
+  key: number;
+}
+
 interface ThemeState {
   mode: ThemeMode;
   fontSize: ChatsFontSize;
-  setMode: (mode: ThemeMode) => void;
+  reveal: ThemeRevealState;
+  setMode: (mode: ThemeMode, origin?: { x: number; y: number }) => void;
   setFontSize: (fontSize: ChatsFontSize) => void;
+  endReveal: () => void;
 }
 
-export const useThemeStore = create<ThemeState>()((set) => {
+export const useThemeStore = create<ThemeState>()((set, get) => {
   kv_get(THEME_KEY)
     .then((value) => {
       if (value && (THEME_MODES as string[]).includes(value)) {
@@ -66,13 +77,35 @@ export const useThemeStore = create<ThemeState>()((set) => {
   return {
     mode: 'light',
     fontSize: 'medium',
-    setMode: (mode) => {
+    reveal: { active: false, color: '', x: 0, y: 0, key: 0 },
+    setMode: (mode, origin) => {
+      const from = getEffectiveMode(get().mode);
+      const to = getEffectiveMode(mode);
       kv_set(THEME_KEY, mode).catch(() => {});
-      set({ mode });
+      set((s) => ({
+        mode,
+        reveal:
+          from !== to
+            ? {
+                active: true,
+                color:
+                  getComputedStyle(document.documentElement)
+                    .getPropertyValue('--bg-color')
+                    .trim() || 'white',
+                x: origin?.x ?? window.innerWidth / 2,
+                y: origin?.y ?? window.innerHeight / 2,
+                key: s.reveal.key + 1,
+              }
+            : s.reveal,
+      }));
     },
     setFontSize: (fontSize) => {
       kv_set(FONT_KEY, fontSize).catch(() => {});
       set({ fontSize });
     },
+    endReveal: () =>
+      set({
+        reveal: { active: false, color: '', x: 0, y: 0, key: 0 },
+      }),
   };
 });
