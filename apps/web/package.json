@@ -1,0 +1,27 @@
+{
+  "name": "@workspace/app-web",
+  "version": "1.0.0",
+  "description": "Only Talk official website SPA (Vue3 + TypeScript + Vite, no Tauri deps, deployed on nginx)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "preview": "vite preview",
+    "format": "prettier --cache --write ."
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "prettier": "^2.8.7",
+    "prettier-plugin-organize-imports": "^3.2.2",
+    "prettier-plugin-packagejson": "^2.4.3",
+    "typescript": "^5.0.3",
+    "vite": "^5.0.0",
+    "vue-tsc": "^2.0.0"
+  }
+}

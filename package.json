@@ -4,8 +4,10 @@
   "scripts": {
     "dev": "pnpm --filter @workspace/app-pc dev",
     "dev:mobile": "pnpm --filter @workspace/app-mobile dev",
+    "dev:web": "pnpm --filter @workspace/app-web dev",
     "build": "pnpm --filter @workspace/app-pc build",
     "build:mobile": "pnpm --filter @workspace/app-mobile build",
+    "build:web": "pnpm --filter @workspace/app-web build",
     "build:types": "pnpm --filter @workspace/types build",
     "build:services": "pnpm --filter @workspace/services build",
     "build:all": "pnpm build:types && pnpm build:services && pnpm build && pnpm build:mobile",

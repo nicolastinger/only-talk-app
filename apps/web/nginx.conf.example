@@ -1,0 +1,73 @@
+# Only Talk 官网 nginx 配置示例
+#
+# 用法：
+#   1. 构建：pnpm --filter @workspace/app-web build（产物在 apps/web/dist）
+#   2. 将 dist 内容部署到服务器的 /var/www/only-talk-web 目录
+#   3. 按需替换域名与证书路径，放入 sites-enabled 后 nginx -t && nginx -s reload
+#
+# 关键点：
+#   - try_files 回退到 /index.html，支持 Vue Router history 模式的任意路由刷新
+#   - /downloads/ 目录用于直出安装包（占位，部署时放入真实安装包）
+#   - 带内容哈希的资源（/assets/*）走长时间缓存
+
+server {
+    listen 80;
+    server_name onlytalk.cn www.onlytalk.cn;
+    # 如需强制 HTTPS，可将下面两行注释打开
+    # return 301 https://$host$request_uri;
+
+    root /var/www/only-talk-web;
+    index index.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # SPA history 路由回退
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 哈希资源长缓存（Vite 构建产物文件名带 hash）
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri $uri/ =404;
+    }
+
+    # 安装包下载目录（真实安装包放置于该目录）
+    location /downloads/ {
+        expires 7d;
+        add_header Cache-Control "public";
+        default_type application/octet-stream;
+        autoindex off;
+        try_files $uri =404;
+    }
+}
+
+# HTTPS（certbot 证书申请后启用，证书路径以实际为准）
+# server {
+#     listen 443 ssl;
+#     server_name onlytalk.cn www.onlytalk.cn;
+#
+#     ssl_certificate     /etc/letsencrypt/live/onlytalk.cn/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/onlytalk.cn/privkey.pem;
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#
+#     root /var/www/only-talk-web;
+#     index index.html;
+#
+#     location / {
+#         try_files $uri $uri/ /index.html;
+#     }
+#     location /assets/ {
+#         expires 30d;
+#         add_header Cache-Control "public, immutable";
+#     }
+#     location /downloads/ {
+#         expires 7d;
+#         add_header Cache-Control "public";
+#         default_type application/octet-stream;
+#         try_files $uri =404;
+#     }
+# }

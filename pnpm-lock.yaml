@@ -188,6 +188,37 @@ importers:
         specifier: ^5.0.3
         version: 5.9.3
 
+  apps/web:
+    dependencies:
+      vue:
+        specifier: ^3.4.0
+        version: 3.5.34(typescript@5.9.3)
+      vue-router:
+        specifier: ^4.2.5
+        version: 4.6.4(vue@3.5.34(typescript@5.9.3))
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^5.0.0
+        version: 5.2.4(vite@5.4.21(@types/node@26.2.0)(less@4.5.1)(lightningcss@1.22.1)(sass@1.54.0)(terser@5.50.0))(vue@3.5.34(typescript@5.9.3))
+      prettier:
+        specifier: ^2.8.7
+        version: 2.8.8
+      prettier-plugin-organize-imports:
+        specifier: ^3.2.2
+        version: 3.2.4(prettier@2.8.8)(typescript@5.9.3)
+      prettier-plugin-packagejson:
+        specifier: ^2.4.3
+        version: 2.5.22(prettier@2.8.8)
+      typescript:
+        specifier: ^5.0.3
+        version: 5.9.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@26.2.0)(less@4.5.1)(lightningcss@1.22.1)(sass@1.54.0)(terser@5.50.0)
+      vue-tsc:
+        specifier: ^2.0.0
+        version: 2.2.12(typescript@5.9.3)
+
   packages/services:
     dependencies:
       '@tauri-apps/api':

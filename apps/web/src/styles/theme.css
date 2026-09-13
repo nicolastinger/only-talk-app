@@ -1,0 +1,100 @@
+:root {
+  /* Brand tokens, aligned with apps/mobile/src/styles/theme.css */
+  --brand-blue: rgb(64, 150, 255);
+  --brand-blue-dark: #1a5cff;
+  --brand-blue-light: #8cc4ff;
+  --brand-blue-pale: #b5dbff;
+
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-500: rgb(64, 150, 255);
+  --blue-600: rgb(18, 109, 255);
+  --blue-700: rgb(4, 79, 217);
+
+  --gradient-primary: linear-gradient(135deg, #1a5cff 0%, #4a90ff 100%);
+  --gradient-hero: linear-gradient(
+    160deg,
+    #eff6ff 0%,
+    #e8f1ff 55%,
+    #f7faff 100%
+  );
+
+  --bg-color: #ffffff;
+  --page-bg: #f5f8fd;
+  --surface: #ffffff;
+  --surface-hover: #f5f7fa;
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --header-border: #eceff4;
+
+  --text-primary: rgb(31, 37, 51);
+  --text-secondary: rgb(71, 83, 102);
+  --text-tertiary: rgb(122, 135, 153);
+  --text-placeholder: rgb(184, 192, 204);
+  --text-inverse: #ffffff;
+
+  --border-light: rgba(64, 150, 255, 0.14);
+  --border-subtle: #eceff4;
+
+  --shadow-sm: 0 2px 8px rgba(18, 92, 255, 0.08);
+  --shadow-md: 0 6px 20px rgba(18, 92, 255, 0.1);
+  --shadow-glow: 0 8px 32px rgba(64, 150, 255, 0.28);
+
+  --pill-bg: rgba(255, 255, 255, 0.7);
+
+  --notice-bg: #fff7e6;
+  --notice-border: #ffd591;
+  --notice-text: #ad6800;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --container-max: 1120px;
+  --header-height: 64px;
+  --transition-fast: 0.2s ease;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --blue-50: rgba(64, 150, 255, 0.14);
+  --blue-100: rgba(64, 150, 255, 0.22);
+  --blue-600: #7db4ff;
+  --blue-700: #9cc6ff;
+
+  --gradient-hero: linear-gradient(
+    160deg,
+    #0c1425 0%,
+    #0f1c34 55%,
+    #0f1524 100%
+  );
+
+  --bg-color: #0f1524;
+  --page-bg: #0f1524;
+  --surface: #172033;
+  --surface-hover: #1d2840;
+  --header-bg: rgba(15, 21, 36, 0.85);
+  --header-border: rgba(148, 172, 216, 0.14);
+
+  --text-primary: #e8eefc;
+  --text-secondary: #aab6cd;
+  --text-tertiary: #7e8ba5;
+  --text-placeholder: #55617a;
+  --text-inverse: #ffffff;
+
+  --border-light: rgba(64, 150, 255, 0.32);
+  --border-subtle: rgba(148, 172, 216, 0.16);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 8px 32px rgba(64, 150, 255, 0.22);
+
+  --pill-bg: rgba(255, 255, 255, 0.08);
+
+  --notice-bg: #2b2417;
+  --notice-border: #6b4d1f;
+  --notice-text: #e2b356;
+
+  color-scheme: dark;
+}
