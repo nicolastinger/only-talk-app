@@ -16,7 +16,10 @@ const effectiveTheme = computed<EffectiveTheme>(() =>
   mode.value === "system" ? systemTheme.value : mode.value,
 );
 
-/** 主题切换遮罩状态：active 时用旧主题色遮罩覆盖全屏，再收缩揭示新主题 */
+/** 待切换主题：遮罩扩散动画结束后才真正应用 */
+const pendingMode = ref<ThemeMode | null>(null);
+
+/** 主题切换遮罩状态：active 时用新主题色从点击点向外扩散，覆盖完成后切换主题 */
 export interface ThemeRevealState {
   active: boolean;
   color: string;
@@ -33,13 +36,24 @@ export const themeReveal = ref<ThemeRevealState>({
   key: 0,
 });
 
-/** 读取当前生效的主题背景色（切换前调用取到的是旧主题色） */
-const currentThemeBg = (): string =>
-  getComputedStyle(document.documentElement)
-    .getPropertyValue("--bg-color")
-    .trim() || "#ffffff";
+/** 读取指定主题的背景色（临时切换 :root[data-theme] 读取 CSS 变量，同步执行无闪烁） */
+const getThemeBg = (theme: EffectiveTheme): string => {
+  const root = document.documentElement;
+  const prev = root.dataset.theme;
+  root.dataset.theme = theme;
+  const color = getComputedStyle(root).getPropertyValue("--bg-color").trim();
+  root.dataset.theme = prev;
+  return color || (theme === "dark" ? "#000000" : "#ffffff");
+};
 
+/** 遮罩扩散完成：应用待切换主题并清除遮罩 */
 export const endReveal = () => {
+  if (pendingMode.value) {
+    const next = pendingMode.value;
+    pendingMode.value = null;
+    mode.value = next;
+    kv_set(THEME_KEY, next).catch(() => {});
+  }
   themeReveal.value = { active: false, color: "", x: 0, y: 0, key: 0 };
 };
 
@@ -66,13 +80,15 @@ export function useTheme() {
     if (value === mode.value) return;
     const to = value === "system" ? getSystemTheme() : value;
     if (effectiveTheme.value !== to) {
+      pendingMode.value = value;
       themeReveal.value = {
         active: true,
-        color: currentThemeBg(),
+        color: getThemeBg(to),
         x: origin?.x ?? window.innerWidth / 2,
         y: origin?.y ?? window.innerHeight / 2,
         key: themeReveal.value.key + 1,
       };
+      return;
     }
     mode.value = value;
     kv_set(THEME_KEY, value).catch(() => {});

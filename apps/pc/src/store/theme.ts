@@ -28,9 +28,22 @@ export function getEffectiveMode(mode: ThemeMode): EffectiveMode {
 }
 
 export function applyCssVars(mode: ThemeMode) {
-  const css = getEffectiveMode(mode) === 'dark' ? darkCss : lightCss;
-  const root = document.documentElement;
-  css.forEach((item) => root.style.setProperty(item.name, item.value));
+  applyCssVarsTo(document.documentElement, getEffectiveMode(mode));
+}
+
+function applyCssVarsTo(el: HTMLElement, theme: EffectiveMode) {
+  const css = theme === 'dark' ? darkCss : lightCss;
+  css.forEach((item) => el.style.setProperty(item.name, item.value));
+}
+
+/** 读取指定主题的背景色（通过临时探针元素读取 CSS 变量，同步执行无闪烁） */
+function getThemeBg(theme: EffectiveMode): string {
+  const probe = document.createElement('div');
+  applyCssVarsTo(probe, theme);
+  document.body.appendChild(probe);
+  const color = getComputedStyle(probe).getPropertyValue('--bg-color').trim();
+  probe.remove();
+  return color || 'white';
 }
 
 export function applyFontVars(fontSize: ChatsFontSize) {
@@ -40,7 +53,7 @@ export function applyFontVars(fontSize: ChatsFontSize) {
   );
 }
 
-/** 主题切换遮罩状态：active 时用旧主题色遮罩覆盖全屏，再收缩揭示新主题 */
+/** 主题切换遮罩状态：active 时用新主题色从点击点向外扩散，覆盖完成后切换主题 */
 export interface ThemeRevealState {
   active: boolean;
   color: string;
@@ -53,6 +66,7 @@ interface ThemeState {
   mode: ThemeMode;
   fontSize: ChatsFontSize;
   reveal: ThemeRevealState;
+  pendingMode: ThemeMode | null;
   setMode: (mode: ThemeMode, origin?: { x: number; y: number }) => void;
   setFontSize: (fontSize: ChatsFontSize) => void;
   endReveal: () => void;
@@ -78,34 +92,46 @@ export const useThemeStore = create<ThemeState>()((set, get) => {
     mode: 'light',
     fontSize: 'medium',
     reveal: { active: false, color: '', x: 0, y: 0, key: 0 },
+    pendingMode: null,
     setMode: (mode, origin) => {
       const from = getEffectiveMode(get().mode);
       const to = getEffectiveMode(mode);
+      if (from !== to) {
+        set((s) => ({
+          pendingMode: mode,
+          reveal: {
+            active: true,
+            color: getThemeBg(to),
+            x: origin?.x ?? window.innerWidth / 2,
+            y: origin?.y ?? window.innerHeight / 2,
+            key: s.reveal.key + 1,
+          },
+        }));
+        return;
+      }
       kv_set(THEME_KEY, mode).catch(() => {});
-      set((s) => ({
-        mode,
-        reveal:
-          from !== to
-            ? {
-                active: true,
-                color:
-                  getComputedStyle(document.documentElement)
-                    .getPropertyValue('--bg-color')
-                    .trim() || 'white',
-                x: origin?.x ?? window.innerWidth / 2,
-                y: origin?.y ?? window.innerHeight / 2,
-                key: s.reveal.key + 1,
-              }
-            : s.reveal,
-      }));
+      set({ mode });
     },
     setFontSize: (fontSize) => {
       kv_set(FONT_KEY, fontSize).catch(() => {});
       set({ fontSize });
     },
-    endReveal: () =>
+    endReveal: () => {
+      const pending = get().pendingMode;
+      if (pending) {
+        // 遮罩仍全覆盖时同步切换主题变量，避免移除遮罩时闪回旧主题
+        applyCssVars(pending);
+        kv_set(THEME_KEY, pending).catch(() => {});
+        set({
+          mode: pending,
+          pendingMode: null,
+          reveal: { active: false, color: '', x: 0, y: 0, key: 0 },
+        });
+        return;
+      }
       set({
         reveal: { active: false, color: '', x: 0, y: 0, key: 0 },
-      }),
+      });
+    },
   };
 });

@@ -7,14 +7,14 @@ interface RevealLayerProps {
   onEnd: () => void;
 }
 
-// 初始全覆盖(半径150%)，两帧后收缩为0，clip-path 过渡形成从点击点扩散的揭示效果
+// 初始为不可见(半径0%)，两帧后扩散到150%，clip-path 过渡形成从点击点扩散的揭示效果
 const RevealLayer: React.FC<RevealLayerProps> = ({ reveal, onEnd }) => {
-  const [radius, setRadius] = useState('150%');
+  const [radius, setRadius] = useState('0%');
 
   useEffect(() => {
-    setRadius('150%');
+    setRadius('0%');
     const raf = requestAnimationFrame(() =>
-      requestAnimationFrame(() => setRadius('0%')),
+      requestAnimationFrame(() => setRadius('150%')),
     );
     return () => cancelAnimationFrame(raf);
   }, []);
@@ -27,7 +27,7 @@ const RevealLayer: React.FC<RevealLayerProps> = ({ reveal, onEnd }) => {
         clipPath: `circle(${radius} at ${reveal.x}px ${reveal.y}px)`,
       }}
       onTransitionEnd={() => {
-        if (radius === '0%') onEnd();
+        if (radius === '150%') onEnd();
       }}
     />
   );
