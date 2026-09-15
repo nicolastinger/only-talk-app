@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
 import {
@@ -98,6 +99,7 @@ const CommentModal = (props: {
               <div className={styles.commentMeta}>
                 <span className={styles.name}>
                   {item.username || item.author_uuid}
+                  <UserTypeTag type={item.user_type} />
                 </span>
                 <span className={styles.time}>
                   {new Date(item.created_at * 1000).toLocaleString('zh-CN')}

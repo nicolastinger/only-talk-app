@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { FormattedMessage, useIntl } from '@umijs/max';
@@ -182,7 +183,12 @@ const SearchFriend = () => {
                       {item.username}
                     </Avatar>
                   }
-                  title={item.username}
+                  title={
+                    <span>
+                      {item.username}
+                      <UserTypeTag type={item.user_type} />
+                    </span>
+                  }
                   description={item.info}
                 />
               </List.Item>

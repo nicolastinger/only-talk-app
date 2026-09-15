@@ -90,6 +90,7 @@ async fn friend_db_upsert_query_block_soft_delete_roundtrip() {
             friend_name: "Alice".to_string(),
             friend_icon: "http://icon/alice.png".to_string(),
             friend_info: "{}".to_string(),
+            friend_user_type: None,
             friend_status: 0,
             me: ME.to_string(),
             is_del: false,
@@ -705,6 +706,7 @@ async fn user_info_upsert_query_update_delete() {
             email: Some("a@b.c".to_string()),
             address: Some("sh".to_string()),
             status: Some(0),
+            user_type: Some(0),
             created_at: 0,
             updated_at: 0,
         };
@@ -748,6 +750,7 @@ async fn user_info_upsert_query_update_delete() {
             email: None,
             address: None,
             status: None,
+            user_type: None,
             created_at: 0,
             updated_at: 0,
         };

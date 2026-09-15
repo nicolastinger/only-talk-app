@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
 import {
@@ -166,7 +167,10 @@ const BlackList = () => {
               }}
             />
             <div className={styles.blacklistIdentity}>
-              <Text className={styles.blacklistName}>{searchResult.username || '-'}</Text>
+              <Text className={styles.blacklistName}>
+                {searchResult.username || '-'}
+                <UserTypeTag type={searchResult.user_type} />
+              </Text>
               <Text type="secondary" className={styles.blacklistAccount}>
                 {searchResult.account || '-'}
               </Text>
@@ -192,7 +196,10 @@ const BlackList = () => {
                   }}
                 />
                 <div className={styles.blacklistIdentity}>
-                  <Text className={styles.blacklistName}>{item.username || '-'}</Text>
+                  <Text className={styles.blacklistName}>
+                    {item.username || '-'}
+                    <UserTypeTag type={item.user_type} />
+                  </Text>
                   <Text type="secondary" className={styles.blacklistAccount}>
                     {item.account || '-'}
                   </Text>

@@ -14,6 +14,8 @@ interface ChatSessionVo {
   is_top: number;
   friend_icon: string;
   friend_name: string;
+  /** 好友用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  friend_user_type?: number;
   /** 群聊时为群 uuid */
   group_id?: string;
 }
@@ -32,6 +34,8 @@ interface FriendVo {
   friend_account: string;
   friend_name: string;
   friend_icon: string;
+  /** 好友用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  friend_user_type?: number;
   friend_status: number;
   is_del: boolean;
   is_block: number;
@@ -100,6 +104,8 @@ interface GroupMemberStoreVo {
   user_id: string;
   username: string;
   icon: string;
+  /** 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
   role: number;
   nickname: string;
   /** 毫秒时间戳 */
@@ -112,6 +118,8 @@ interface BlackListVo {
   account?: string;
   username?: string;
   icon?: string;
+  /** 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
   /** 毫秒时间戳 */
   created_at?: number;
 }

@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { useBearStore } from '@/store/store';
 import {
@@ -505,6 +506,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
               <Title level={4} className={styles.username}>
                 {userInfo?.username ||
                   intl.formatMessage({ id: 'userInfo.unknown' })}
+                <UserTypeTag type={userInfo?.user_type} />
               </Title>
               {userInfo?.info && (
                 <Text type="secondary" className={styles.bio}>

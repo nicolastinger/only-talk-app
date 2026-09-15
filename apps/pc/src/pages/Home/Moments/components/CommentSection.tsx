@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import ReportModal from '@/components/ReportModal';
+import UserTypeTag from '@/components/UserTypeTag';
 import { useIntl } from '@umijs/max';
 import {
   get_moment_comments,
@@ -115,6 +116,7 @@ const CommentSection = (props: {
                 <div className={styles.commentMeta}>
                   <span className={styles.name}>
                     {item.username || item.author_uuid}
+                    <UserTypeTag type={item.user_type} />
                   </span>
                   <span className={styles.time}>
                     {new Date(item.created_at * 1000).toLocaleString('zh-CN')}

@@ -102,6 +102,7 @@ pub async fn update_friend_list() -> Result<(), anyhow::Error> {
                     friend_name: friend_vo.username,
                     friend_icon: friend_vo.icon,
                     friend_info: friend_vo.info,
+                    friend_user_type: friend_vo.user_type,
                     friend_status: 0,
                     me: uuid.clone(),
                     is_del: friend_vo.is_del,
@@ -182,6 +183,7 @@ pub async fn get_black_list() -> Result<Vec<BlackListVo>, anyhow::Error> {
             account: f.friend_account,
             username: f.friend_name,
             icon: f.friend_icon,
+            user_type: f.friend_user_type,
             created_at: f.created_at,
         })
         .collect())

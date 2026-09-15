@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
@@ -272,7 +273,10 @@ const GroupInfoPage: React.FC = () => {
                         src={info?.icon || member.icon}
                       />
                       <div className={styles.memberDetail}>
-                        <span className={styles.memberName}>{displayName}</span>
+                        <span className={styles.memberName}>
+                          {displayName}
+                          <UserTypeTag type={info?.user_type} />
+                        </span>
                         <span className={styles.memberSub}>
                           {member.user_id === meUuid
                             ? intl.formatMessage({

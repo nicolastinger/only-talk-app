@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import {
   CalendarOutlined,
@@ -254,7 +255,10 @@ const FriendInfo = (props: { uuid: string }) => {
               }}
             />
           </div>
-          <div className={styles.name}>{displayName}</div>
+          <div className={styles.name}>
+            {displayName}
+            <UserTypeTag type={userInfo?.user_type} />
+          </div>
           {userInfo?.info && <div className={styles.bio}>{userInfo.info}</div>}
           <div className={styles.metaChips}>
             <span className={styles.chip}>

@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
+import UserTypeTag from "@/components/UserTypeTag.vue";
 import "vant/lib/index.css";
 import "@/styles/theme.css";
 
@@ -22,6 +23,7 @@ import {
 const app = createApp(App);
 
 app.use(router);
+app.component("UserTypeTag", UserTypeTag);
 
 app.use(NavBar);
 app.use(Form);

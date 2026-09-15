@@ -106,7 +106,7 @@ pub async fn search_friend_db(uuid: &str, keyword: &str) -> Result<Vec<Friend>, 
 
 /// 更新好友信息表
 pub async fn update_friend_info_db(friend: &Friend) -> Result<(), anyhow::Error> {
-    let res = sqlx::query(r#"UPDATE friend SET friend_id = ?1, friend_account = ?2, friend_name = ?3, friend_icon = ?4, friend_status = ?5, me = ?6, is_del = ?7, is_block = ?8, is_mute = ?9, is_top = ?10, is_show = ?11, created_at = ?12, updated_at = ?13, version = ?14, friend_info = ?15 WHERE friend_id = ?1 and me = ?6"#)
+    let res = sqlx::query(r#"UPDATE friend SET friend_id = ?1, friend_account = ?2, friend_name = ?3, friend_icon = ?4, friend_status = ?5, me = ?6, is_del = ?7, is_block = ?8, is_mute = ?9, is_top = ?10, is_show = ?11, created_at = ?12, updated_at = ?13, version = ?14, friend_info = ?15, friend_user_type = ?16 WHERE friend_id = ?1 and me = ?6"#)
         .bind(&friend.friend_id)
         .bind(&friend.friend_account)
         .bind(&friend.friend_name)
@@ -122,11 +122,12 @@ pub async fn update_friend_info_db(friend: &Friend) -> Result<(), anyhow::Error>
         .bind(friend.updated_at)
         .bind(friend.version)
         .bind(&friend.friend_info)
+        .bind(friend.friend_user_type)
         .execute(&get_db_client().await?)
         .await;
     if res?.rows_affected() < 1 {
         // 如果更新失败，则插入新的好友信息
-        let res = sqlx::query(r#"INSERT INTO friend (friend_id, friend_account, friend_name, friend_icon, friend_status, me, is_del, is_block, is_mute, is_top, is_show, created_at, updated_at, version, friend_info) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)"#)
+        let res = sqlx::query(r#"INSERT INTO friend (friend_id, friend_account, friend_name, friend_icon, friend_status, me, is_del, is_block, is_mute, is_top, is_show, created_at, updated_at, version, friend_info, friend_user_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)"#)
             .bind(&friend.friend_id)
             .bind(&friend.friend_account)
             .bind(&friend.friend_name)
@@ -142,6 +143,7 @@ pub async fn update_friend_info_db(friend: &Friend) -> Result<(), anyhow::Error>
             .bind(friend.updated_at)
             .bind(friend.version)
             .bind(&friend.friend_info)
+            .bind(friend.friend_user_type)
             .execute(&get_db_client().await?)
             .await;
         if let Err(e) = res {

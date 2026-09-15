@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import ReportModal from '@/components/ReportModal';
+import UserTypeTag from '@/components/UserTypeTag';
 import { useIntl } from '@umijs/max';
 import {
   delete_moment,
@@ -146,6 +147,7 @@ const MomentCard = (props: {
             <div className={styles.usernameRow}>
               <span className={styles.username} onClick={handleOpenUser}>
                 {moment.username || '用户'}
+                <UserTypeTag type={moment.user_type} />
               </span>
               {isMine && (
                 <span className={styles.mineBadge}>

@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { formatMessageTime } from '@/utils/format';
 import { getFiles } from '@workspace/services';
@@ -9,7 +10,9 @@ import styles from './styles/MessageBox.less';
 // 图片缓存
 const imageCache = new Map<string, string>();
 
-const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
+const MessageBox = (
+  props: MessageQueueProps & { isSelected?: boolean; userType?: number },
+) => {
   const {
     message,
     title,
@@ -20,6 +23,7 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
     send_user,
     recv_user,
     isSelected,
+    userType,
   } = props;
 
   // 判断是否是自己给自己的会话
@@ -149,6 +153,7 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
           <div className={styles.titleText}>
             <div className={styles.title}>
               {title}
+              <UserTypeTag type={userType} />
               {isSelfChat && (
                 <span className={styles.selfChatBadge}>📝 笔记</span>
               )}

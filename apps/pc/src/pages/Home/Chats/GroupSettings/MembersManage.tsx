@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { DEFAULT_ICON } from '@/constants';
@@ -208,6 +209,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
                   <span className={styles.memberName}>
                     {displayName}
                   </span>
+                  <UserTypeTag type={info?.user_type} />
                   {member.role > 0 && (
                     <span className={`${styles.roleTag} ${member.role === 2 ? styles.roleOwner : styles.roleAdmin}`}>
                       {ROLE_TEXT[member.role]}

@@ -265,6 +265,7 @@ onMounted(async () => {
                 <span class="d-username">
                   {{ moment.username || "未知用户" }}
                   <em v-if="isSelf" class="mine-badge">我的</em>
+                  <UserTypeTag :type="moment.user_type" />
                 </span>
                 <span class="d-time">
                   {{ formatMomentTime(moment.created_at) }}
@@ -341,6 +342,7 @@ onMounted(async () => {
             <MomentAvatar :icon="c.icon" :size="36" />
             <div class="comment-main">
               <span class="comment-name">{{ c.username || "未知用户" }}</span>
+              <UserTypeTag :type="c.user_type" />
               <p class="comment-text">{{ c.content }}</p>
               <span class="comment-time">{{ fmtTime(c.created_at) }}</span>
             </div>
@@ -410,6 +412,7 @@ onMounted(async () => {
         <div v-for="l in likerList" :key="l.uuid" class="liker-item">
           <MomentAvatar :icon="l.icon" :size="40" />
           <span class="liker-name">{{ l.username || "未知用户" }}</span>
+          <UserTypeTag :type="l.user_type" />
           <span class="liker-time">{{ fmtTime(l.created_at) }}</span>
         </div>
         <div v-if="likerList.length === 0" class="comments-empty">

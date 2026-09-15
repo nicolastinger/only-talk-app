@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { CloseOutlined, HeartOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
@@ -193,6 +194,7 @@ const SwipeDeck = () => {
                     <div className={styles.cardBody}>
                       <div className={styles.cardName}>
                         {user.username || ''}
+                        <UserTypeTag type={user.user_type} />
                         {user.age ? (
                           <span className={styles.cardAge}>
                             {user.age}

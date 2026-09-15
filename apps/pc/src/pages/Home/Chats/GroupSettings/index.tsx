@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON, TALK_API } from '@/constants';
 import { useUserInfoList } from '@/hooks/useUserInfoList';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
@@ -627,6 +628,7 @@ const GroupSettingsPage = () => {
                         <span className={styles.memberListItemName}>
                           {displayName}
                         </span>
+                        <UserTypeTag type={info?.user_type} />
                         {member.role > 0 && (
                           <span className={`${styles.roleTag} ${member.role === 2 ? styles.roleOwner : styles.roleAdmin}`}>
                             {ROLE_TEXT[member.role]}

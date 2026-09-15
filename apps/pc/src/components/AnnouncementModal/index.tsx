@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import {
   CloseOutlined,
   NotificationOutlined,
@@ -154,6 +155,7 @@ const AnnouncementModal = ({
                       />
                       <span className={styles.chipName}>
                         {u.username || u.uuid}
+                        <UserTypeTag type={u.user_type} />
                       </span>
                     </div>
                   ))}

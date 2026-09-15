@@ -453,6 +453,10 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
                     class="session-name"
                     v-html="highlightText(getDisplayName(item))"
                   ></span>
+                  <UserTypeTag
+                    v-if="item.session_type !== 2"
+                    :type="item.friend_user_type"
+                  />
                 </div>
                 <span class="session-time">{{
                   formatMessageTime(item.timestamp)

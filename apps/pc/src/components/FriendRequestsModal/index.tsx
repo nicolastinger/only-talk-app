@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import {
@@ -303,7 +304,10 @@ const FriendRequestsModal = ({
         <div className={styles.contentSection}>
           <div className={styles.header}>
             <div className={styles.userInfo}>
-              <span className={styles.username}>{displayName}</span>
+              <span className={styles.username}>
+                {displayName}
+                <UserTypeTag type={request.userInfo?.user_type} />
+              </span>
               {displayAccount && (
                 <span className={styles.account}>@{displayAccount}</span>
               )}

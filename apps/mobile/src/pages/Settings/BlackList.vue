@@ -167,7 +167,10 @@ const confirmUnblock = (item: BlackItem) => {
           @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
         />
         <div class="black-info">
-          <div class="black-name">{{ searchResult.username || "-" }}</div>
+          <div class="black-name">
+            {{ searchResult.username || "-" }}
+            <UserTypeTag :type="searchResult.user_type" />
+          </div>
           <div class="black-account">{{ searchResult.account || "-" }}</div>
         </div>
         <button class="btn-danger" :disabled="blockLoading" @click="confirmBlock">
@@ -193,7 +196,10 @@ const confirmUnblock = (item: BlackItem) => {
             @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
           />
           <div class="black-info">
-            <div class="black-name">{{ item.username || "-" }}</div>
+            <div class="black-name">
+              {{ item.username || "-" }}
+              <UserTypeTag :type="item.user_type" />
+            </div>
             <div class="black-account">{{ item.account || "-" }}</div>
           </div>
           <button class="btn-plain" @click="confirmUnblock(item)">移出</button>

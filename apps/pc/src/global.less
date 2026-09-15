@@ -106,6 +106,14 @@
   --gradient-blue-hover: #0a4de8;
   --gradient-blue-hover-light: #3a80ff;
 
+  // 资料卡封面渐变（主题可感知，暗色覆写在 theme/dark.json）
+  --profile-cover-grad: linear-gradient(
+    135deg,
+    var(--gradient-blue-mid) 0%,
+    var(--gradient-blue-accent) 55%,
+    var(--gradient-blue-light) 100%
+  );
+
   // 功能色
   --color-success: #52c41a;
   --color-success-hover: #73d13d;

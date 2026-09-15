@@ -36,6 +36,9 @@ pub struct UserInfo {
     pub address: Option<String>,
     /// 用户状态 (0: 正常, 1: 禁用, 2: 注销等)
     pub status: Option<u8>,
+    /// 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
+    #[serde(default)]
+    pub user_type: Option<i16>,
     /// 创建时间 (Unix 时间戳，单位：秒)
     #[serde(default)]
     pub created_at: i64,
@@ -61,6 +64,7 @@ impl SqliteStore for UserInfo {
             email TEXT,
             address TEXT,
             status INTEGER,
+            user_type INTEGER,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL
         )"#,
@@ -70,7 +74,13 @@ impl SqliteStore for UserInfo {
         Ok(())
     }
 
-    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        // 迁移：补充 user_type 列（老库无此列，SQLite 不支持 ADD COLUMN IF NOT EXISTS）
+        let add_user_type =
+            sqlx::query(r#"ALTER TABLE user_info ADD COLUMN user_type INTEGER"#)
+                .execute(pool_sqlite)
+                .await;
+        let _ = add_user_type; // 列已存在，忽略
         Ok(())
     }
 
@@ -88,8 +98,8 @@ impl UserInfo {
 
         let result = sqlx::query(
             r#"INSERT INTO user_info 
-            (uuid, username, account, icon, gender, age, birthday, info, phone, email, address, status, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"#
+            (uuid, username, account, icon, gender, age, birthday, info, phone, email, address, status, user_type, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)"#
         )
         .bind(&self.uuid)
         .bind(&self.username)
@@ -103,6 +113,7 @@ impl UserInfo {
         .bind(&self.email)
         .bind(&self.address)
         .bind(self.status)
+        .bind(self.user_type)
         .bind(now)
         .bind(now)
         .execute(&pool_sqlite)
@@ -191,8 +202,8 @@ impl UserInfo {
 
         sqlx::query(
             r#"INSERT INTO user_info 
-            (uuid, username, account, icon, gender, age, birthday, info, phone, email, address, status, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+            (uuid, username, account, icon, gender, age, birthday, info, phone, email, address, status, user_type, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
             ON CONFLICT(uuid) DO UPDATE SET
             username = excluded.username,
             account = excluded.account,
@@ -205,6 +216,7 @@ impl UserInfo {
             email = excluded.email,
             address = excluded.address,
             status = excluded.status,
+            user_type = excluded.user_type,
             updated_at = excluded.updated_at"#
         )
         .bind(&self.uuid)
@@ -219,6 +231,7 @@ impl UserInfo {
         .bind(&self.email)
         .bind(&self.address)
         .bind(self.status)
+        .bind(self.user_type)
         .bind(now)
         .bind(now)
         .execute(&pool_sqlite)

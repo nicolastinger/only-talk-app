@@ -1,5 +1,6 @@
 import { useBearStore } from '@/store/store';
 import ReportModal from '@/components/ReportModal';
+import UserTypeTag from '@/components/UserTypeTag';
 import {
   BellOutlined,
   DeleteOutlined,
@@ -136,7 +137,10 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.leftContainer}>{title}</div>
+      <div className={styles.leftContainer}>
+        {title}
+        <UserTypeTag type={friendInfo?.friend_user_type} />
+      </div>
       <div className={styles.rightContainer}>
         <Dropdown
           menu={{ items: menuItems }}

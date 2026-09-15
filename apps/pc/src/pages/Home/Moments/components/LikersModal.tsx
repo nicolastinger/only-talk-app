@@ -1,5 +1,6 @@
 import { get_moment_likers, getFiles } from '@workspace/services';
 import { MomentLikerVo } from '@workspace/types';
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
 import { Avatar, Empty, Modal, Spin } from 'antd';
@@ -79,7 +80,10 @@ const LikersModal = (props: {
             <div key={l.uuid} className={styles.item}>
               <Avatar size={36} src={avatars[l.icon || ''] || DEFAULT_ICON} />
               <div className={styles.meta}>
-                <span className={styles.name}>{l.username || l.uuid}</span>
+                <span className={styles.name}>
+                  {l.username || l.uuid}
+                  <UserTypeTag type={l.user_type} />
+                </span>
                 <span className={styles.time}>
                   {new Date(l.created_at * 1000).toLocaleString('zh-CN')}
                 </span>

@@ -310,6 +310,7 @@ onUnmounted(() => {
               </div>
               <div class="friend-info">
                 <span class="friend-name">{{ friend.friend_name }}</span>
+                <UserTypeTag :type="friend.friend_user_type" />
                 <span class="friend-account">@{{ friend.friend_account }}</span>
               </div>
               <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">

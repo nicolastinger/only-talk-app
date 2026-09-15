@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
 import { getFiles, switch_plaza_crush } from '@workspace/services';
@@ -115,7 +116,10 @@ const PlazaCard = (props: {
         )}
       </div>
       <div className={styles.body}>
-        <div className={styles.name}>{username || ''}</div>
+        <div className={styles.name}>
+          {username || ''}
+          <UserTypeTag type={props.user.user_type} />
+        </div>
 
         <div className={styles.meta}>
           {gender !== undefined && gender !== null ? (

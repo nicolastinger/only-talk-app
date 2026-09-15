@@ -90,7 +90,10 @@ const onChangePassword = () => {
           @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
         />
         <div class="user-info">
-          <div class="user-name">{{ userInfo?.username || account || "用户" }}</div>
+          <div class="user-name">
+            {{ userInfo?.username || account || "用户" }}
+            <UserTypeTag :type="userInfo?.user_type" />
+          </div>
           <div class="user-account">账号：{{ userInfo?.account || account || "-" }}</div>
         </div>
       </div>

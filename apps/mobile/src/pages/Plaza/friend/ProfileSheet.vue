@@ -74,6 +74,7 @@ const onAddFriend = async () => {
         </div>
         <div class="hero-name">
           {{ user.username || "未命名" }}
+          <UserTypeTag :type="user.user_type" />
           <span
             v-if="user.gender !== undefined && user.gender !== null"
             class="hero-gender"

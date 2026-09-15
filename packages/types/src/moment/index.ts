@@ -4,6 +4,8 @@ interface MomentVo {
   author_uuid: string;
   username?: string;
   icon?: string;
+  /** 作者用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
   content: string;
   visibility: number;
   image_count: number;
@@ -28,6 +30,8 @@ interface MomentCommentVo {
   author_uuid: string;
   username?: string;
   icon?: string;
+  /** 作者用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
   content: string;
   created_at: number;
 }
@@ -43,6 +47,8 @@ interface MomentLikerVo {
   uuid: string;
   username?: string;
   icon?: string;
+  /** 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
   created_at: number;
 }
 

@@ -1,4 +1,5 @@
 import ReportModal from '@/components/ReportModal';
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
@@ -129,7 +130,10 @@ const ProfileModal = (props: {
                 (e.target as HTMLImageElement).src = DEFAULT_ICON;
               }}
             />
-            <div className={styles.name}>{user.username || '-'}</div>
+            <div className={styles.name}>
+              {user.username || '-'}
+              <UserTypeTag type={user.user_type} />
+            </div>
           </div>
 
           {user.motto && <div className={styles.motto}>{user.motto}</div>}

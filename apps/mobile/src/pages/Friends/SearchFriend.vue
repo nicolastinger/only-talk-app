@@ -128,6 +128,7 @@ const goBack = () => router.back();
           <span class="result-name">{{
             searchResult.username || searchResult.account
           }}</span>
+          <UserTypeTag :type="searchResult.user_type" />
           <span class="result-account">@{{ searchResult.account }}</span>
           <span v-if="searchResult.info" class="result-bio">{{
             searchResult.info
@@ -170,6 +171,7 @@ const goBack = () => router.back();
               <span class="target-name">{{
                 searchResult.username || searchResult.account
               }}</span>
+              <UserTypeTag :type="searchResult.user_type" />
               <span class="target-account">@{{ searchResult.account }}</span>
             </div>
           </div>

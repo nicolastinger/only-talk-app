@@ -208,7 +208,8 @@ onMounted(() => {
                 </span>
               </div>
               <span class="invite-desc"
-                >{{ inv.partyName }} 邀请你加入群聊</span
+                >{{ inv.partyName
+                }}<UserTypeTag :type="inv.user?.user_type" /> 邀请你加入群聊</span
               >
               <span class="invite-time">{{ formatTime(inv.created_at) }}</span>
             </div>
@@ -259,7 +260,8 @@ onMounted(() => {
                 </span>
               </div>
               <span class="invite-desc"
-                >你邀请了 {{ inv.partyName }} 加入群聊</span
+                >你邀请了 {{ inv.partyName
+                }}<UserTypeTag :type="inv.user?.user_type" /> 加入群聊</span
               >
               <span class="invite-time">{{ formatTime(inv.created_at) }}</span>
             </div>

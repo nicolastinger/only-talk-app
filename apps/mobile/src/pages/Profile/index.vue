@@ -70,6 +70,7 @@ const onMenuClick = () => {
         <div class="user-info">
           <h2 class="user-name">
             {{ userInfo?.username || account || "用户" }}
+            <UserTypeTag :type="userInfo?.user_type" />
           </h2>
           <p class="user-account">账号: {{ userInfo?.account || account }}</p>
           <p v-if="userInfo?.info" class="user-bio">{{ userInfo.info }}</p>

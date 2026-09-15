@@ -65,6 +65,7 @@ const moreTagCount = computed(() =>
 
     <div class="p-name-row">
       <span class="p-name">{{ user.username || "未命名" }}</span>
+      <UserTypeTag :type="user.user_type" />
       <span v-if="genderClass" class="p-gender" :class="genderClass">
         {{ genderText(user.gender) }}
       </span>

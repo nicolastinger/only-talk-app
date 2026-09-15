@@ -17,6 +17,8 @@ pub struct ChatSessionVo {
     pub is_top: i64,
     pub friend_icon: String,
     pub friend_name: String,
+    /// 好友用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
+    pub friend_user_type: Option<i16>,
     pub group_id: Option<String>,
 }
 
@@ -35,6 +37,7 @@ impl ChatSessionVo {
             is_top: chat_session.is_top,
             friend_icon: "".to_string(),
             friend_name: "".to_string(),
+            friend_user_type: None,
             group_id: chat_session.group_id,
         })
     }

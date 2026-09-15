@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { HeartFilled } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -101,7 +102,10 @@ const MatchModal = (props: { user: PlazaUser | null; onClose: () => void }) => {
               (e.target as HTMLImageElement).src = DEFAULT_ICON;
             }}
           />
-          <div className={styles.name}>{user.username || '-'}</div>
+          <div className={styles.name}>
+            {user.username || '-'}
+            <UserTypeTag type={user.user_type} />
+          </div>
           <div className={styles.actions}>
             <Button
               block

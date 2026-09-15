@@ -162,6 +162,7 @@ onMounted(refresh);
               <PlazaAvatar :icon="peek.icon" :size="56" />
             </div>
             <span class="peek-name">{{ peek.username || "未命名" }}</span>
+            <UserTypeTag :type="peek.user_type" />
           </div>
           <p v-if="peek.motto" class="peek-motto">{{ peek.motto }}</p>
         </div>
@@ -183,6 +184,7 @@ onMounted(refresh);
           </div>
           <div class="card-name">
             {{ current.username || "未命名" }}
+            <UserTypeTag :type="current.user_type" />
             <span
               v-if="current.gender !== undefined && current.gender !== null"
               class="card-gender"

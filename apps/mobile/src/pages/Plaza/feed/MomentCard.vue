@@ -145,6 +145,7 @@ const onDelete = async () => {
           <span class="m-username">
             {{ moment.username || "未知用户" }}
             <em v-if="isSelf" class="mine-badge">我的</em>
+            <UserTypeTag :type="moment.user_type" />
           </span>
           <span class="m-time">{{ formatMomentTime(moment.created_at) }}</span>
         </span>

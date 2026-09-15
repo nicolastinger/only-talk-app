@@ -573,6 +573,7 @@ const handleDissolve = async () => {
                 "
               />
               <span class="member-name">{{ getMemberName(m) }}</span>
+              <UserTypeTag :type="memberMap[m.user_uuid]?.user_type" />
               <span
                 v-if="m.role > 0"
                 class="role-tag"
@@ -848,8 +849,8 @@ const handleDissolve = async () => {
   align-items: center;
   gap: 14px;
   padding: 16px 18px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
+  background: var(--profile-hero-grad);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
 }

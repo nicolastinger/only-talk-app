@@ -135,6 +135,7 @@ const handleIgnore = () => {
                 @error="($event.target as HTMLImageElement).style.display = 'none'"
               />
               <span class="chip-name">{{ u.username || shortId(u.uuid) }}</span>
+              <UserTypeTag :type="u.user_type" />
             </div>
           </div>
         </div>

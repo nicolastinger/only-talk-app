@@ -9,6 +9,8 @@ pub struct FriendVo {
     pub friend_account: String,
     pub friend_name: String,
     pub friend_icon: String,
+    /// 好友用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
+    pub friend_user_type: Option<i16>,
     pub friend_status: i32,
     pub is_del: bool,
     pub is_block: i32,
@@ -25,6 +27,7 @@ impl From<Friend> for FriendVo {
             friend_account: friend.friend_account,
             friend_name: friend.friend_name,
             friend_icon: friend.friend_icon,
+            friend_user_type: friend.friend_user_type,
             friend_status: friend.friend_status,
             is_del: friend.is_del,
             is_block: friend.is_block,
@@ -42,6 +45,9 @@ pub struct FriendListVO {
     pub username: String,
     pub icon: String,
     pub info: String,
+    /// 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
+    #[serde(default)]
+    pub user_type: Option<i16>,
     pub is_del: bool,
     pub is_block: bool,
     pub version: i32,
@@ -55,5 +61,7 @@ pub struct BlackListVo {
     pub account: String,
     pub username: String,
     pub icon: String,
+    /// 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
+    pub user_type: Option<i16>,
     pub created_at: i64,
 }

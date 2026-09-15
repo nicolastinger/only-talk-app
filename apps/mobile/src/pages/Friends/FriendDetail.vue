@@ -158,7 +158,10 @@ onMounted(loadDetail);
             class="profile-avatar"
             @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
           />
-          <h2 class="profile-name">{{ getDisplayName() }}</h2>
+          <h2 class="profile-name">
+            {{ getDisplayName() }}
+            <UserTypeTag :type="detail.userInfo?.user_type" />
+          </h2>
           <p class="profile-account">@{{ getAccount() }}</p>
           <p v-if="getBio()" class="profile-bio">{{ getBio() }}</p>
         </div>
@@ -294,7 +297,7 @@ onMounted(loadDetail);
 .profile-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--blue-100), var(--blue-50));
+  background: var(--profile-hero-grad);
 }
 
 .profile-content {

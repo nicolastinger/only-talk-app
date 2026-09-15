@@ -1,4 +1,5 @@
 import { openNewWindow } from '@/components/Window/OpenWindow';
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { LockOutlined, StopOutlined, UserOutlined } from '@ant-design/icons';
@@ -116,6 +117,7 @@ const AccountPrivacy = () => {
           <div className={styles.profileIdentity}>
             <div className={styles.profileName}>
               {userInfo?.username || '-'}
+              <UserTypeTag type={userInfo?.user_type} />
             </div>
             <div className={styles.profileAccount}>
               {userInfo?.account || '-'}

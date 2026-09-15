@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { ArrowLeftOutlined } from '@ant-design/icons';
@@ -166,6 +167,7 @@ const MomentDetail = () => {
               <div className={styles.usernameRow}>
                 <span className={styles.username}>
                   {moment.username || '用户'}
+                  <UserTypeTag type={moment.user_type} />
                 </span>
                 {isMine && (
                   <span className={styles.mineBadge}>

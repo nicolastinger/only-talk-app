@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { SearchOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import { invoke } from '@tauri-apps/api/core';
@@ -185,6 +186,9 @@ const Search: React.FC<SearchProps> = ({ onSelect }) => {
                     <div className={styles.itemInfo}>
                       <div className={styles.itemName}>
                         <HighlightText text={item.friend_name} keyword={value} />
+                        {item.session_type !== 2 && (
+                          <UserTypeTag type={item.friend_user_type} />
+                        )}
                         {item.session_type === 2 && (
                           <span className={styles.groupTag}>
                             {intl.formatMessage({ id: 'search.groupTag' })}

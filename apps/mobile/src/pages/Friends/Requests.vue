@@ -274,6 +274,7 @@ onUnmounted(() => {
               <div class="request-head">
                 <div class="request-identity">
                   <span class="request-name">{{ getRequestName(req) }}</span>
+                  <UserTypeTag :type="req.userInfo?.user_type" />
                   <span v-if="getRequestAccount(req)" class="request-account"
                     >@{{ getRequestAccount(req) }}</span
                   >
@@ -337,6 +338,7 @@ onUnmounted(() => {
               <div class="request-head">
                 <div class="request-identity">
                   <span class="request-name">{{ getRequestName(req) }}</span>
+                  <UserTypeTag :type="req.userInfo?.user_type" />
                   <span v-if="getRequestAccount(req)" class="request-account"
                     >@{{ getRequestAccount(req) }}</span
                   >

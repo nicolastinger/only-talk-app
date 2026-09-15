@@ -1,4 +1,5 @@
 import { openNewWindow } from '@/components/Window/OpenWindow';
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { useBearStore } from '@/store/store';
@@ -155,6 +156,7 @@ const MediaPage: React.FC = () => {
           <div className={styles.name}>
             {userInfo?.username ||
               intl.formatMessage({ id: 'media.defaultUserName' })}
+            <UserTypeTag type={userInfo?.user_type} />
           </div>
           <div className={styles.text}>
             <VideoCameraOutlined className={styles.textIcon} />

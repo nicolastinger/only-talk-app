@@ -318,6 +318,7 @@ const ChatsLayout = () => {
                     key={item.nano_id}
                     time={item.timestamp}
                     title={item.friend_name}
+                    userType={item.friend_user_type}
                     count={item.unread_count}
                     text_type={item.text_type}
                     send_user={item.send_user}

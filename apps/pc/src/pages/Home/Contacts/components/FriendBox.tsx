@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { history } from '@umijs/max';
 import { getFiles } from '@workspace/services';
@@ -44,7 +45,10 @@ const FriendBox = (props: { friend: FriendVo }) => {
         </Badge>
       </div>
       <div className={styles.center}>
-        <div className={styles.centerTitle}>{friend_name}</div>
+        <div className={styles.centerTitle}>
+          {friend_name}
+          <UserTypeTag type={props.friend.friend_user_type} />
+        </div>
       </div>
     </div>
   );

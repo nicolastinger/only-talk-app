@@ -31,6 +31,8 @@ interface FriendListVo {
   username?: string;
   icon?: string;
   info?: string;
+  /** 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
   is_del?: boolean;
   is_block?: boolean;
   version?: number;

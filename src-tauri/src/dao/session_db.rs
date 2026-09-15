@@ -79,9 +79,10 @@ pub async fn query_chat_session_db(uuid: &str) -> Result<Vec<ChatSessionVo>, any
     let record = sqlx::query_as::<_, ChatSessionVo>(
         r#"select cs.*,
         COALESCE(fr.friend_icon, gr.group_icon, '') as friend_icon,
-        COALESCE(fr.friend_name, gr.group_name, '') as friend_name
+        COALESCE(fr.friend_name, gr.group_name, '') as friend_name,
+        fr.friend_user_type
         from chat_session cs
-        left join (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
+        left join (SELECT friend_id, friend_name, friend_icon, friend_user_type FROM friend WHERE me = ?1 and is_block = 0) fr
         on cs.send_user = fr.friend_id and cs.session_type != 2
         left join group_info gr on cs.group_id = gr.group_id and cs.session_type = 2
         where cs.recv_user = ?1 and cs.is_show = 1"#,
@@ -160,9 +161,10 @@ pub async fn search_chat_session_db(
     let record = sqlx::query_as::<_, ChatSessionVo>(
         r#"select cs.*,
         COALESCE(fr.friend_icon, gr.group_icon, '') as friend_icon,
-        COALESCE(fr.friend_name, gr.group_name, '') as friend_name
+        COALESCE(fr.friend_name, gr.group_name, '') as friend_name,
+        fr.friend_user_type
         from chat_session cs
-        left join (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
+        left join (SELECT friend_id, friend_name, friend_icon, friend_user_type FROM friend WHERE me = ?1 and is_block = 0) fr
         on cs.send_user = fr.friend_id and cs.session_type != 2
         left join group_info gr on cs.group_id = gr.group_id and cs.session_type = 2
         where cs.recv_user = ?1 and cs.is_show = 1

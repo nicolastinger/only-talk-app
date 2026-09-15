@@ -106,6 +106,8 @@ interface UserInfo {
   email?: string;
   address?: string;
   status?: number;
+  /** 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
 }
 
 interface UserInfoWithCache {

@@ -109,6 +109,11 @@ const senderName = (msg: UiChatMessage): string => {
   return msg.textMsg.send_user ? msg.textMsg.send_user.slice(0, 8) : "群成员";
 };
 
+const senderUserType = (msg: UiChatMessage): number | undefined => {
+  const info = props.memberMap?.[msg.senderUuid || msg.textMsg.send_user || ""];
+  return info?.user_type ?? undefined;
+};
+
 const senderAvatar = (msg: UiChatMessage): string => {
   const uuid = msg.senderUuid || msg.textMsg.send_user || "";
   const url = props.avatarUrlMap?.[uuid];
@@ -134,7 +139,9 @@ const senderAvatar = (msg: UiChatMessage): string => {
           class="avatar"
           alt="avatar"
           @click="onAvatarClick(msg, true)"
-          @error="($event.target as HTMLImageElement).src = fallbackAvatar || ''"
+          @error="
+            ($event.target as HTMLImageElement).src = fallbackAvatar || ''
+          "
         />
         <div class="row-content" :class="{ failed: msg.failed }">
           <!-- 图片消息 -->
@@ -170,7 +177,9 @@ const senderAvatar = (msg: UiChatMessage): string => {
           </template>
 
           <!-- P2P 隐私 -->
-          <template v-else-if="contentKind(msg.textMsg.text_type) === 'privacy'">
+          <template
+            v-else-if="contentKind(msg.textMsg.text_type) === 'privacy'"
+          >
             <PrivacyMsg :is-mine="true" />
           </template>
 
@@ -209,7 +218,10 @@ const senderAvatar = (msg: UiChatMessage): string => {
           @error="($event.target as HTMLImageElement).src = peerAvatar"
         />
         <div class="row-content">
-          <div v-if="isGroup" class="sender-name">{{ senderName(msg) }}</div>
+          <div v-if="isGroup" class="sender-name">
+            {{ senderName(msg) }}
+            <UserTypeTag :type="senderUserType(msg)" />
+          </div>
           <template v-if="contentKind(msg.textMsg.text_type) === 'image'">
             <ImageMsg
               :src="msg.imageUrl"
@@ -229,7 +241,9 @@ const senderAvatar = (msg: UiChatMessage): string => {
               :raw="msg.textMsg.raw"
             />
           </template>
-          <template v-else-if="contentKind(msg.textMsg.text_type) === 'privacy'">
+          <template
+            v-else-if="contentKind(msg.textMsg.text_type) === 'privacy'"
+          >
             <PrivacyMsg :is-mine="false" />
           </template>
           <template v-else>

@@ -100,6 +100,7 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
                   msg={msg}
                   icon={senderIcon}
                   senderName={senderName}
+                  senderUserType={memberInfo?.user_type}
                   groupUuid={groupUuid}
                 />
               )}

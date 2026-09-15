@@ -48,7 +48,11 @@ const loadingMore = ref(false);
 const currentPage = ref(1);
 const hasMore = ref(true);
 const pageSize = 20;
-const friendInfo = reactive({ name: "", icon: "" });
+const friendInfo = reactive({
+  name: "",
+  icon: "",
+  user_type: undefined as number | undefined,
+});
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
 const meUuid = ref("");
@@ -106,6 +110,7 @@ const loadFriendInfo = async () => {
     })) as FriendVo;
     friendInfo.name = data.friend_name || "";
     friendInfo.icon = data.friend_icon || "";
+    friendInfo.user_type = data.friend_user_type ?? undefined;
     return;
   } catch {
     // fallthrough to local session
@@ -120,6 +125,7 @@ const loadFriendInfo = async () => {
     if (session) {
       friendInfo.name = session.friend_name || "";
       friendInfo.icon = session.friend_icon || "";
+      friendInfo.user_type = session.friend_user_type ?? undefined;
     }
   } catch {
     // ignore
@@ -585,6 +591,7 @@ const handleAvatarClick = ({
         <span class="header-name">{{
           isSelf ? "我的笔记" : friendInfo.name || friendId
         }}</span>
+        <UserTypeTag v-if="!isSelf" :type="friendInfo.user_type" />
       </div>
       <div class="header-actions">
         <button

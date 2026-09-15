@@ -1,9 +1,14 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
 import { openUserProfile } from '@/utils/userProfile';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
-import { ChatMessage, GroupFileRecord, GroupImageRecord } from '@workspace/types';
+import {
+  ChatMessage,
+  GroupFileRecord,
+  GroupImageRecord,
+} from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import ChatFile from '../../components/ChatFile';
 import ChatImage from '../../components/ChatImage';
@@ -16,6 +21,7 @@ interface GroupCustomerChatBoxProps {
   msg: ChatMessage;
   icon?: string;
   senderName?: string;
+  senderUserType?: number;
   groupUuid: string;
   currentBizId?: string;
 }
@@ -80,6 +86,7 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
     },
     icon,
     senderName,
+    senderUserType,
     groupUuid,
     currentBizId,
   } = props;
@@ -224,9 +231,10 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
         />
       </div>
       <div className={styles.chatContainerWrapper}>
-        {senderName && (
-          <div className={styles.senderName}>{senderName}</div>
-        )}
+        {senderName &&           <div className={styles.senderName}>
+            {senderName}
+            <UserTypeTag type={senderUserType} />
+          </div>}
         <div
           className={`${styles.chatContainer} ${
             isImageMessage ? styles.imageMessage : ''

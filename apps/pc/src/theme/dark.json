@@ -120,6 +120,10 @@
     "value": "rgba(64, 150, 255, 0.15)"
   },
   {
+    "name": "--profile-cover-grad",
+    "value": "linear-gradient(135deg, rgba(64, 150, 255, 0.35) 0%, rgba(64, 150, 255, 0.18) 55%, rgba(64, 150, 255, 0.06) 100%)"
+  },
+  {
     "name": "--shadow-sm",
     "value": "0 2px 8px rgba(0, 0, 0, 0.3)"
   },

@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
@@ -221,6 +222,7 @@ const GroupInfoPage = () => {
                             <div className={styles.memberDetail}>
                               <span className={styles.memberName}>
                                 {displayName}
+                                <UserTypeTag type={info?.user_type} />
                               </span>
                               <span className={styles.memberRole}>
                                 {getRoleName(member.role)}
