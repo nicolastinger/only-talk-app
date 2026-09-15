@@ -220,3 +220,19 @@ textarea {
   align-items: center;
   justify-content: center;
 }
+
+/* ===== 主题切换遮罩动画（参考 apps/web） ===== */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+.theme-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: clip-path;
+}

@@ -7,6 +7,12 @@ export type EffectiveTheme = "light" | "dark";
 const THEME_KEY = "ui_theme";
 const validModes: ThemeMode[] = ["light", "dark", "system"];
 
+/** 与 theme.css 的 --page-bg 保持一致，用于无 View Transitions 时的遮罩兜底 */
+const PAGE_BG: Record<EffectiveTheme, string> = {
+  light: "#f5f8fd",
+  dark: "#1a1a1a",
+};
+
 const getSystemTheme = (): EffectiveTheme =>
   window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
@@ -16,46 +22,86 @@ const effectiveTheme = computed<EffectiveTheme>(() =>
   mode.value === "system" ? systemTheme.value : mode.value,
 );
 
-/** 待切换主题：遮罩扩散动画结束后才真正应用 */
-const pendingMode = ref<ThemeMode | null>(null);
-
-/** 主题切换遮罩状态：active 时用新主题色从点击点向外扩散，覆盖完成后切换主题 */
-export interface ThemeRevealState {
-  active: boolean;
-  color: string;
-  x: number;
-  y: number;
-  key: number;
+function applyTheme(theme: EffectiveTheme) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
 }
 
-export const themeReveal = ref<ThemeRevealState>({
-  active: false,
-  color: "",
-  x: 0,
-  y: 0,
-  key: 0,
-});
+/** 点击点到最远角的距离，作为圆形遮罩的半径 */
+function revealRadius(x: number, y: number): number {
+  return Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y),
+  );
+}
 
-/** 读取指定主题的背景色（临时切换 :root[data-theme] 读取 CSS 变量，同步执行无闪烁） */
-const getThemeBg = (theme: EffectiveTheme): string => {
-  const root = document.documentElement;
-  const prev = root.dataset.theme;
-  root.dataset.theme = theme;
-  const color = getComputedStyle(root).getPropertyValue("--bg-color").trim();
-  root.dataset.theme = prev;
-  return color || (theme === "dark" ? "#000000" : "#ffffff");
-};
+/**
+ * 切换主题并播放圆形遮罩动画（参考 apps/web/src/theme.ts）：
+ * 优先使用 View Transitions API，从点击位置圆形展开；
+ * 不支持时降级为 JS 遮罩层动画。
+ */
+function revealTheme(
+  nextMode: ThemeMode,
+  next: EffectiveTheme,
+  x: number,
+  y: number,
+) {
+  const commit = () => {
+    mode.value = nextMode;
+    applyTheme(next);
+    kv_set(THEME_KEY, nextMode).catch(() => {});
+  };
 
-/** 遮罩扩散完成：应用待切换主题并清除遮罩 */
-export const endReveal = () => {
-  if (pendingMode.value) {
-    const next = pendingMode.value;
-    pendingMode.value = null;
-    mode.value = next;
-    kv_set(THEME_KEY, next).catch(() => {});
+  const doc = document as Document & {
+    startViewTransition?: (callback: () => void) => { ready: Promise<void> };
+  };
+
+  if (doc.startViewTransition) {
+    const transition = doc.startViewTransition(commit);
+    transition.ready
+      .then(() => {
+        document.documentElement.animate(
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${revealRadius(x, y)}px at ${x}px ${y}px)`,
+            ],
+          },
+          {
+            duration: 600,
+            easing: "ease-in",
+            pseudoElement: "::view-transition-new(root)",
+          },
+        );
+      })
+      .catch(() => {});
+    return;
   }
-  themeReveal.value = { active: false, color: "", x: 0, y: 0, key: 0 };
-};
+
+  const radius = revealRadius(x, y);
+  const mask = document.createElement("div");
+  mask.className = "theme-mask";
+  mask.style.background = PAGE_BG[next];
+  mask.style.clipPath = `circle(0px at ${x}px ${y}px)`;
+  requestAnimationFrame(() => {
+    document.body.appendChild(mask);
+    mask
+      .animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${radius}px at ${x}px ${y}px)`,
+          ],
+        },
+        { duration: 600, easing: "ease-in", fill: "forwards" },
+      )
+      .addEventListener("finish", () => {
+        // 遮罩全覆盖后再切换主题，避免提前切换导致遮罩不可见
+        commit();
+        mask.remove();
+      });
+  });
+}
 
 kv_get(THEME_KEY)
   .then((value) => {
@@ -68,30 +114,20 @@ kv_get(THEME_KEY)
 let initialized = false;
 
 export function useTheme() {
-  const applyTheme = () => {
-    document.documentElement.dataset.theme = effectiveTheme.value;
-    document.documentElement.style.colorScheme = effectiveTheme.value;
-  };
-
-  const setMode = (
-    value: ThemeMode,
-    origin?: { x: number; y: number },
-  ) => {
+  const setMode = (value: ThemeMode, origin?: { x: number; y: number }) => {
     if (value === mode.value) return;
-    const to = value === "system" ? getSystemTheme() : value;
-    if (effectiveTheme.value !== to) {
-      pendingMode.value = value;
-      themeReveal.value = {
-        active: true,
-        color: getThemeBg(to),
-        x: origin?.x ?? window.innerWidth / 2,
-        y: origin?.y ?? window.innerHeight / 2,
-        key: themeReveal.value.key + 1,
-      };
+    const next = value === "system" ? getSystemTheme() : value;
+    if (effectiveTheme.value === next) {
+      mode.value = value;
+      kv_set(THEME_KEY, value).catch(() => {});
       return;
     }
-    mode.value = value;
-    kv_set(THEME_KEY, value).catch(() => {});
+    revealTheme(
+      value,
+      next,
+      origin?.x ?? window.innerWidth / 2,
+      origin?.y ?? window.innerHeight / 2,
+    );
   };
 
   onMounted(() => {

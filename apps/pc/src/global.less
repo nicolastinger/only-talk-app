@@ -252,6 +252,22 @@ body {
   transition: all 0.3s;
 }
 
+// 主题切换遮罩动画（参考 apps/web）
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+.theme-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: clip-path;
+}
+
 // 全局滚动条默认样式 (统一为动态广场风格; 局部定义的滚动条样式优先)
 * {
   scrollbar-width: thin;
