@@ -249,7 +249,7 @@ fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String,
 /// 将文件（包括 Android content:// URI）复制到临时目录并返回真实路径
 #[command]
 pub async fn copy_file_to_temp(
-    _app: tauri::AppHandle,
+    app: tauri::AppHandle,
     uri_or_path: String,
 ) -> Result<String, String> {
     info!("copy_file_to_temp called: {}", uri_or_path);
@@ -267,6 +267,8 @@ pub async fn copy_file_to_temp(
 
     #[cfg(not(target_os = "android"))]
     {
+        // 非 Android 平台不使用 AppHandle，显式消费避免 unused 警告
+        let _ = app;
         Err("content:// URI 仅在 Android 环境支持".to_string())
     }
 }
