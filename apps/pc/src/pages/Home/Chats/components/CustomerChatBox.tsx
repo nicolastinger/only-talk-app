@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
+import { openUserProfile } from '@/utils/userProfile';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
@@ -161,7 +162,9 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
 
   const isImageMessage = text_type === MSG_TYPE_IMAGE;
   const isFileMessage = text_type === MSG_TYPE_FILE;
-  const isSpecialMessage = [MSG_TYPE_PRIVACY, 100, 12, 13, 14, 15].includes(text_type);
+  const isSpecialMessage = [MSG_TYPE_PRIVACY, 100, 12, 13, 14, 15].includes(
+    text_type,
+  );
 
   return (
     <div className={styles.container}>
@@ -173,15 +176,16 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
           className={styles.imgItem}
           alt="avatar"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() =>
+            openUserProfile(props.text_msg_raw.send_user || friendUuid)
+          }
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}
         />
       </div>
       <div className={styles.chatContainerWrapper}>
-        {senderName && (
-          <div className={styles.senderName}>{senderName}</div>
-        )}
+        {senderName && <div className={styles.senderName}>{senderName}</div>}
         <div
           className={`${styles.chatContainer} ${
             isImageMessage ? styles.imageMessage : ''

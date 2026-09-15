@@ -31,6 +31,10 @@ interface BearState {
   triggerRefresh: () => void;
   isSyncing: boolean;
   setIsSyncing: (isSyncing: boolean) => void;
+  /** 当前用户资料弹窗可见性（点击自己的头像时打开） */
+  userInfoModalVisible: boolean;
+  openUserInfoModal: () => void;
+  closeUserInfoModal: () => void;
 }
 
 export const useBearStore = create<BearState>()((set) => ({
@@ -125,4 +129,7 @@ export const useBearStore = create<BearState>()((set) => ({
     set((state) => ({ refreshFlag: state.refreshFlag + 1 })),
   isSyncing: false,
   setIsSyncing: (isSyncing: boolean) => set({ isSyncing }),
+  userInfoModalVisible: false,
+  openUserInfoModal: () => set({ userInfoModalVisible: true }),
+  closeUserInfoModal: () => set({ userInfoModalVisible: false }),
 }));

@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
+import { openUserProfile } from '@/utils/userProfile';
 import {
   convertPathToTauriUrl,
   getChatFileByBizId,
@@ -238,7 +239,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
 
   const isImageMessage = text_type === MSG_TYPE_IMAGE;
   const isFileMessage = text_type === MSG_TYPE_FILE;
-  const isSpecialMessage = [MSG_TYPE_PRIVACY, 100, 12, 13, 14, 15].includes(text_type);
+  const isSpecialMessage = [MSG_TYPE_PRIVACY, 100, 12, 13, 14, 15].includes(
+    text_type,
+  );
 
   return (
     <div className={styles.container}>
@@ -257,13 +260,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             } ${ackFlag === 101 ? styles.hasSentBubble : ''}`}
           >
             {renderMessage()}
-            {ackFlag === 101 && (
-              <span className={styles.sentBadge} />
-            )}
+            {ackFlag === 101 && <span className={styles.sentBadge} />}
           </div>
-          {ackFlag === 101 && (
-            <span className={styles.sentLabel}>已发送</span>
-          )}
+          {ackFlag === 101 && <span className={styles.sentLabel}>已发送</span>}
           <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
         </div>
       </div>
@@ -275,6 +274,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           className={styles.imgItem}
           alt="icon"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() => openUserProfile(userInfo?.uuid || '')}
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}

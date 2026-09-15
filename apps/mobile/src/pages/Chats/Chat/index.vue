@@ -547,6 +547,22 @@ const handleStartCall = async (media: "audio" | "video") => {
 
 const friendTools: InputTool[] = ["emoji", "image", "file", "audio", "video"];
 const selfTools: InputTool[] = ["emoji", "image"];
+
+/** 点击消息头像：自己→我的资料，对方→好友资料卡 */
+const handleAvatarClick = ({
+  uuid,
+  isMine,
+}: {
+  uuid: string;
+  isMine: boolean;
+}) => {
+  if (!uuid) return;
+  if (isMine || uuid === meUuid.value) {
+    router.push("/profile");
+  } else {
+    router.push(`/friends/detail/${uuid}`);
+  }
+};
 </script>
 
 <template>
@@ -604,8 +620,10 @@ const selfTools: InputTool[] = ["emoji", "image"];
         :my-avatar="myAvatar || DEFAULT_AVATAR"
         :peer-avatar="chatAvatar || DEFAULT_AVATAR"
         :fallback-avatar="DEFAULT_AVATAR"
+        :my-uuid="meUuid"
         @preview="handlePreview"
         @retry="handleRetry"
+        @avatar-click="handleAvatarClick"
       />
     </div>
 

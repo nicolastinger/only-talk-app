@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
+import { openUserProfile } from '@/utils/userProfile';
 import { getChatFileByBizId, getFiles } from '@workspace/services';
 import { ChatMessage, GroupFileRecord, GroupImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
@@ -212,6 +213,11 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
           className={styles.imgItem}
           alt="avatar"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() =>
+            openUserProfile(
+              props.msg.sender_uuid || props.msg.text_msg_raw.send_user || '',
+            )
+          }
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}

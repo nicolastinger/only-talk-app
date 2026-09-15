@@ -36,12 +36,24 @@ const props = defineProps<{
   avatarUrlMap?: Record<string, string | null>;
   /** 头像加载失败兜底值 */
   fallbackAvatar?: string;
+  /** 当前登录用户 uuid（用于点击自己的头像跳转资料卡） */
+  myUuid?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "preview", msg: UiChatMessage): void;
   (e: "retry", msg: UiChatMessage): void;
+  (e: "avatar-click", payload: { uuid: string; isMine: boolean }): void;
 }>();
+
+/** 点击头像：自己的消息用当前用户 uuid，对方的用消息发送者 uuid */
+const onAvatarClick = (msg: UiChatMessage, isMine: boolean) => {
+  const uuid = isMine
+    ? props.myUuid || ""
+    : msg.senderUuid || msg.textMsg.send_user || "";
+  if (!uuid) return;
+  emit("avatar-click", { uuid, isMine });
+};
 
 const isGroup = computed(() => props.mode === "group");
 
@@ -121,6 +133,7 @@ const senderAvatar = (msg: UiChatMessage): string => {
           :src="myAvatar || fallbackAvatar"
           class="avatar"
           alt="avatar"
+          @click="onAvatarClick(msg, true)"
           @error="($event.target as HTMLImageElement).src = fallbackAvatar || ''"
         />
         <div class="row-content" :class="{ failed: msg.failed }">
@@ -192,6 +205,7 @@ const senderAvatar = (msg: UiChatMessage): string => {
           :src="senderAvatar(msg)"
           class="avatar"
           alt="avatar"
+          @click="onAvatarClick(msg, false)"
           @error="($event.target as HTMLImageElement).src = peerAvatar"
         />
         <div class="row-content">
@@ -259,6 +273,11 @@ const senderAvatar = (msg: UiChatMessage): string => {
   object-fit: cover;
   flex-shrink: 0;
   box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+  &:active {
+    transform: scale(0.92);
+  }
 }
 .row-content {
   max-width: calc(100% - 48px);

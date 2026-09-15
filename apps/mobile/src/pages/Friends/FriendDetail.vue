@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { showToast, showConfirmDialog, Empty } from "vant";
 import { invoke } from "@tauri-apps/api/core";
@@ -29,6 +29,9 @@ const loading = ref(true);
 const loadError = ref(false);
 const avatarUrl = ref<string | null>(null);
 const showReport = ref(false);
+
+/** 是否为自己的好友（非好友时只展示资料卡，不显示删除好友） */
+const isFriend = computed(() => !!detail.value.friendVo);
 
 const loadDetail = async () => {
   loading.value = true;
@@ -138,7 +141,7 @@ onMounted(loadDetail);
           />
         </svg>
       </button>
-      <h1 class="title">好友详情</h1>
+      <h1 class="title">{{ isFriend ? "好友详情" : "用户资料" }}</h1>
     </div>
 
     <div v-if="loading" class="loading-state"><p>加载中...</p></div>
@@ -195,7 +198,11 @@ onMounted(loadDetail);
           </svg>
           <span>发消息</span>
         </button>
-        <button class="action-btn danger" @click="onDeleteFriend">
+        <button
+          class="action-btn danger"
+          v-if="isFriend"
+          @click="onDeleteFriend"
+        >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"

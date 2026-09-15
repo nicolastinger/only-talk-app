@@ -25,9 +25,12 @@ const LeftAside = () => {
   const [bottomBtnList, setBottomBtnList] = React.useState<LayoutBtnProps[]>(
     [],
   );
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [notifyVisible, setNotifyVisible] = useState(false);
   const userInfo = useBearStore((state) => state.userInfo);
+
+  const isModalVisible = useBearStore((state) => state.userInfoModalVisible);
+  const openUserInfoModal = useBearStore((state) => state.openUserInfoModal);
+  const closeUserInfoModal = useBearStore((state) => state.closeUserInfoModal);
 
   const menuUnread = useBearStore((state) => state.menuUnread);
   const { totalUnreadCount } = useChatsUnread(userInfo.uuid);
@@ -67,11 +70,11 @@ const LeftAside = () => {
   };
 
   const showModal = () => {
-    setIsModalVisible(true);
+    openUserInfoModal();
   };
 
   const handleCancel = () => {
-    setIsModalVisible(false);
+    closeUserInfoModal();
   };
 
   useEffect(() => {

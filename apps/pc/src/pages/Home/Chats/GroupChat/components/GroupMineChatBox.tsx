@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
+import { openUserProfile } from '@/utils/userProfile';
 import {
   convertPathToTauriUrl,
   getChatFileByBizId,
@@ -295,13 +296,9 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
             }`}
           >
             {renderMessage()}
-            {ackFlag === 101 && (
-              <span className={styles.sentBadge} />
-            )}
+            {ackFlag === 101 && <span className={styles.sentBadge} />}
           </div>
-          {ackFlag === 101 && (
-            <span className={styles.sentLabel}>已发送</span>
-          )}
+          {ackFlag === 101 && <span className={styles.sentLabel}>已发送</span>}
           <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
         </div>
       </div>
@@ -313,6 +310,7 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           className={styles.imgItem}
           alt="icon"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() => openUserProfile(userInfo?.uuid || '')}
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}

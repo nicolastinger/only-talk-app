@@ -14,6 +14,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import {
   block_friend,
+  get_friend_info,
   get_user_info_with_cache,
   getFiles,
   refresh_user_info,
@@ -46,6 +47,8 @@ const FriendInfo = (props: { uuid: string }) => {
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  /** 是否为自己的好友（非好友时只展示资料卡，不显示拉黑） */
+  const [isFriend, setIsFriend] = useState(false);
 
   const genderMap: { [key: number]: string } = {
     0: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }),
@@ -64,6 +67,14 @@ const FriendInfo = (props: { uuid: string }) => {
   const initUserData = async (uuid: string) => {
     setLoading(true);
     try {
+      // 判断是否为自己的好友：非好友（如群成员）只展示资料卡
+      try {
+        const friend = await get_friend_info(uuid);
+        setIsFriend(!!friend);
+      } catch {
+        setIsFriend(false);
+      }
+
       const result = await get_user_info_with_cache(uuid);
       console.log('get_user_info_with_cache result:', result);
 
@@ -317,17 +328,19 @@ const FriendInfo = (props: { uuid: string }) => {
           >
             {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
           </Button>
-          <Button
-            className={styles.blockBtn}
-            danger={!isBlocked}
-            color={isBlocked ? 'default' : 'danger'}
-            variant="solid"
-            onClick={handleToggleBlock}
-          >
-            {intl.formatMessage({
-              id: isBlocked ? 'friendInfo.unblock' : 'friendInfo.block',
-            })}
-          </Button>
+          {isFriend && (
+            <Button
+              className={styles.blockBtn}
+              danger={!isBlocked}
+              color={isBlocked ? 'default' : 'danger'}
+              variant="solid"
+              onClick={handleToggleBlock}
+            >
+              {intl.formatMessage({
+                id: isBlocked ? 'friendInfo.unblock' : 'friendInfo.block',
+              })}
+            </Button>
+          )}
         </div>
       </div>
     </div>

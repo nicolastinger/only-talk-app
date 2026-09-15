@@ -532,6 +532,22 @@ watch(
 
 const goGroupSettings = () => router.push(`/chats/group-settings/${groupId}`);
 
+/** 点击消息头像：自己→我的资料，群成员→用户资料卡 */
+const handleAvatarClick = ({
+  uuid,
+  isMine,
+}: {
+  uuid: string;
+  isMine: boolean;
+}) => {
+  if (!uuid) return;
+  if (isMine || uuid === meUuid.value) {
+    router.push("/profile");
+  } else {
+    router.push(`/friends/detail/${uuid}`);
+  }
+};
+
 const markReadSession = () => {
   invoke("mark_read_chat_session", { friendUuid: groupId }).catch(() => {});
 };
@@ -653,8 +669,10 @@ const handlePreview = async (msg: UiChatMessage) => {
         :fallback-avatar="DEFAULT_AVATAR"
         :member-map="memberMap"
         :avatar-url-map="avatarUrlMap"
+        :my-uuid="meUuid"
         @preview="handlePreview"
         @retry="handleRetry"
+        @avatar-click="handleAvatarClick"
       />
     </div>
 
