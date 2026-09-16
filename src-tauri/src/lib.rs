@@ -44,7 +44,7 @@ use crate::cmd::chat_record_controller::{
 };
 use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store, hide_chat_session,
-    mark_read_chat_session, search_chat_session,
+    mark_read_chat_session, search_chat_session, session_uuid_cmd,
 };
 use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
@@ -313,7 +313,8 @@ pub fn run() {
             create_group_chat_session_command,
             get_group_chat_session_list,
             search_group,
-            search_chat_session
+            search_chat_session,
+            session_uuid_cmd
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

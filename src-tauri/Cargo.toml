@@ -47,7 +47,7 @@ crc-catalog = "2.0"  # 可选，用于预置标准CRC算法
 sqlx = { version = "=0.8.1", features = ["sqlite", "runtime-tokio", "macros"] }
 rcgen = "0.11.3"
 webpki-roots = "1.0.2"
-uuid = { version = "1.11.0", features = ["v4", "v7"] }
+uuid = { version = "1.11.0", features = ["v4", "v5", "v7"] }
 tauri-plugin-dialog = "2.0.0-rc"
 tauri-plugin-fs = "2"
 tauri-plugin-notification = "2"

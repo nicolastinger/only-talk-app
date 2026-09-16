@@ -498,6 +498,8 @@ pub async fn pull_group_messages() -> Result<(), anyhow::Error> {
                     is_show: 1,
                     is_top: 0,
                     group_id: Some(msg.group_uuid.clone()),
+                    session_uuid: None,
+                    synced_id: 0,
                 });
 
             // 只把本次真正新增的消息计入未读（重复拉取不叠加）

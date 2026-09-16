@@ -19,6 +19,10 @@ pub struct ChatSession {
     pub is_show: i64,
     pub is_top: i64,
     pub group_id: Option<String>,
+    /// 会话标识: 单聊由用户对 v5 派生 / 群聊 = group_id
+    pub session_uuid: Option<String>,
+    /// 本地已拉取位置(离线同步用)
+    pub synced_id: i64,
 }
 
 impl ChatSession {
@@ -46,6 +50,8 @@ impl ChatSession {
             is_show: chat_session_vo.is_show,
             is_top: chat_session_vo.is_top,
             group_id: chat_session_vo.group_id,
+            session_uuid: chat_session_vo.session_uuid,
+            synced_id: chat_session_vo.synced_id,
         })
     }
 }
@@ -65,7 +71,10 @@ impl SqliteStore for ChatSession {
             is_show INTEGER NOT NULL DEFAULT 1,
             is_top INTEGER NOT NULL DEFAULT 0,
             session_type INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(send_user, recv_user)
+            session_uuid TEXT DEFAULT NULL,
+            synced_id INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(send_user, recv_user),
+            UNIQUE(session_uuid)
         )"#,
         )
         .execute(pool_sqlite)
@@ -74,10 +83,20 @@ impl SqliteStore for ChatSession {
     }
 
     async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
-        let result = sqlx::query("ALTER TABLE chat_session ADD COLUMN group_id TEXT DEFAULT NULL")
+        let _ = sqlx::query("ALTER TABLE chat_session ADD COLUMN group_id TEXT DEFAULT NULL")
             .execute(pool_sqlite)
-            .await;
-        let _ = result; // Column already exists, ignore
+            .await; // Column already exists, ignore
+        let _ = sqlx::query("ALTER TABLE chat_session ADD COLUMN session_uuid TEXT DEFAULT NULL")
+            .execute(pool_sqlite)
+            .await; // Column already exists, ignore
+        let _ = sqlx::query("ALTER TABLE chat_session ADD COLUMN synced_id INTEGER NOT NULL DEFAULT 0")
+            .execute(pool_sqlite)
+            .await; // Column already exists, ignore
+        let _ = sqlx::query(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_session_su ON chat_session(session_uuid)",
+        )
+        .execute(pool_sqlite)
+        .await; // Index already exists, ignore
         Ok(())
     }
 

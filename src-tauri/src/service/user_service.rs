@@ -211,6 +211,8 @@ pub async fn get_unread_message() -> Result<(), anyhow::Error> {
                 is_show: 1,
                 is_top: 0,
                 group_id: None,
+                session_uuid: None,
+                synced_id: 0,
             };
             unread_count_map.insert(user, chat_session);
         } else {

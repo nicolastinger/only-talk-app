@@ -169,6 +169,8 @@ async fn session_db_upsert_canonical_hide_search_roundtrip() {
             is_show: 1,
             is_top: 0,
             group_id: None,
+            session_uuid: None,
+            synced_id: 0,
         };
 
         // 首次调用 -> 无匹配行走 INSERT 分支
@@ -195,6 +197,8 @@ async fn session_db_upsert_canonical_hide_search_roundtrip() {
             is_show: 1,
             is_top: 0,
             group_id: None,
+            session_uuid: None,
+            synced_id: 0,
         };
         update_chat_session_db(&session2).await.expect("更新会话失败");
 

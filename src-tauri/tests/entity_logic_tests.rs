@@ -30,6 +30,8 @@ fn make_session(send_user: &str, recv_user: &str, session_type: i64) -> ChatSess
         is_show: 1,
         is_top: 0,
         group_id: None,
+        session_uuid: None,
+        synced_id: 0,
     }
 }
 
