@@ -57,3 +57,19 @@ pub async fn query_group_last_read_msg(
     .await?;
     Ok(record)
 }
+
+/// 任务07: 自 watermark 起有阅读事件的群及各自最大事件时间(已读上报聚合用)。
+pub async fn query_group_read_peers(
+    uuid: &str,
+    timestamp: i64,
+) -> Result<Vec<(String, i64)>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let rows = sqlx::query_as::<_, (String, i64)>(
+        r#"SELECT group_uuid AS g, MAX(timestamp) AS ts FROM group_message_read WHERE user_uuid = ?1 AND timestamp > ?2 GROUP BY group_uuid"#,
+    )
+    .bind(uuid)
+    .bind(timestamp)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(rows)
+}

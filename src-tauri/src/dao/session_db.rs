@@ -189,3 +189,34 @@ pub async fn hide_group_session_db(me: &str, group_id: &str) -> Result<(), anyho
     .await?;
     Ok(())
 }
+
+/// 任务07: 同步落库后写入会话标识与同步游标(按 (send_user, recv_user, session_type) 定位)。
+pub async fn set_session_sync_cursor(
+    me: &str,
+    peer_or_group: &str,
+    session_type: i64,
+    session_uuid: &str,
+    synced_id: i64,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    sqlx::query(
+        r#"UPDATE chat_session SET session_uuid = ?1, synced_id = ?2 WHERE recv_user = ?3 AND send_user = ?4 AND session_type = ?5"#,
+    )
+    .bind(session_uuid)
+    .bind(synced_id)
+    .bind(me)
+    .bind(peer_or_group)
+    .bind(session_type)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}
+
+/// 任务07: 本地是否已存在任何已同步会话(判定 initial / incremental)。
+pub async fn has_any_synced_session() -> Result<bool, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM chat_session WHERE synced_id > 0")
+        .fetch_one(&pool_sqlite)
+        .await?;
+    Ok(count > 0)
+}

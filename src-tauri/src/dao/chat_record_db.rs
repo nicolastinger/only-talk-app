@@ -119,3 +119,43 @@ pub async fn query_chat_record_by_type_from_db(
         .await?;
     Ok(record)
 }
+
+/// 任务07: 同步落库后回填服务端消息 id。
+pub async fn set_chat_record_server_id(nano_id: &str, server_id: i64) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query("UPDATE chat_record SET server_id = ?1 WHERE nano_id = ?2")
+        .bind(server_id)
+        .bind(nano_id)
+        .execute(&pool_sqlite)
+        .await?;
+    Ok(())
+}
+
+/// 任务07: 单聊会话本地已同步的最大服务端 id(已读上报用); 无则 None。
+pub async fn local_max_server_id(me: &str, peer: &str) -> Result<Option<i64>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let (max,): (Option<i64>,) = sqlx::query_as(
+        "SELECT MAX(server_id) FROM chat_record WHERE (send_user = ?1 AND recv_user = ?2) OR (send_user = ?2 AND recv_user = ?1)",
+    )
+    .bind(me)
+    .bind(peer)
+    .fetch_one(&pool_sqlite)
+    .await?;
+    Ok(max)
+}
+
+/// 任务07: 自 watermark 起有阅读事件的单聊对端及各自最大事件时间(已读上报聚合用)。
+pub async fn query_read_peers(
+    uuid: &str,
+    timestamp: i64,
+) -> Result<Vec<(String, i64)>, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let rows = sqlx::query_as::<_, (String, i64)>(
+        r#"SELECT send_user AS peer, MAX(timestamp) AS ts FROM chat_record_read WHERE recv_user = ?1 AND timestamp > ?2 GROUP BY send_user"#,
+    )
+    .bind(uuid)
+    .bind(timestamp)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(rows)
+}

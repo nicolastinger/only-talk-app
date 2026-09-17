@@ -361,6 +361,7 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
         group_id: msg.recv_user.clone(),
         send_user: msg.send_user.clone(),
         timestamp: msg.timestamp,
+        server_id: None,
     };
     insert_group_chat_record(&record).await?;
 
@@ -558,6 +559,7 @@ async fn process_group_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
         group_id: ack_record.group_uuid.clone(),
         send_user: ack_record.send_user.clone(),
         timestamp: ack_record.timestamp,
+        server_id: None,
     };
     insert_group_chat_record(&record).await?;
 

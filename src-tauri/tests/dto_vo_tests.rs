@@ -2,7 +2,6 @@
 
 //! DTO / VO 序列化单元测试。
 
-use app_lib::dto::add_read_chat_record::AddReadChatRecord;
 use app_lib::dto::http_result::HttpResult;
 use app_lib::vo::http_response::Response;
 use app_lib::vo::text_quic_msg::TextQuicMsgVo;
@@ -28,29 +27,6 @@ fn http_result_deserialize_from_server_format() {
     let back: HttpResult = serde_json::from_str(json).expect("反序列化失败");
     assert_eq!(back.code, 204);
     assert!(back.data.is_null());
-}
-
-#[test]
-fn add_read_chat_record_chat_type_defaults_to_none() {
-    let json = r#"{"nano_id":"n1","timestamp":100,"send_user":"a","recv_user":"b"}"#;
-    let record: AddReadChatRecord = serde_json::from_str(json).expect("反序列化失败");
-    assert_eq!(record.nano_id, "n1");
-    assert_eq!(record.timestamp, 100);
-    assert!(record.chat_type.is_none(), "缺省字段应默认为 None");
-}
-
-#[test]
-fn add_read_chat_record_serde_roundtrip() {
-    let record = AddReadChatRecord {
-        nano_id: "n".to_string(),
-        timestamp: 100,
-        send_user: "a".to_string(),
-        recv_user: "b".to_string(),
-        chat_type: Some(2),
-    };
-    let json = serde_json::to_string(&record).expect("序列化失败");
-    let back: AddReadChatRecord = serde_json::from_str(&json).expect("反序列化失败");
-    assert_eq!(back.chat_type, Some(2));
 }
 
 #[test]

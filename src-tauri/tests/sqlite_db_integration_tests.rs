@@ -460,6 +460,7 @@ async fn group_chat_record_db_insert_dedup_query() {
             group_id: group.to_string(),
             send_user: ME.to_string(),
             timestamp: 100,
+            server_id: None,
         };
         assert!(GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"));
         assert!(
@@ -475,6 +476,7 @@ async fn group_chat_record_db_insert_dedup_query() {
             group_id: group.to_string(),
             send_user: ME.to_string(),
             timestamp: 200,
+            server_id: None,
         };
         insert_group_chat_record(&rec2).await.expect("插入群聊消息失败");
 

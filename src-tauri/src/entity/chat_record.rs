@@ -14,6 +14,8 @@ pub struct ChatRecord {
     pub recv_user: String, //接收用户
     pub send_user: String, //发送用户
     pub timestamp: i64,
+    /// 服务端消息 id(任务07): 离线同步落库时填充; 在线 QUIC 消息为 NULL
+    pub server_id: Option<i64>,
 }
 
 impl SqliteStore for ChatRecord {
@@ -26,7 +28,8 @@ impl SqliteStore for ChatRecord {
             timestamp INTEGER NOT NULL,
             send_user TEXT NOT NULL,
             recv_user TEXT NOT NULL,
-            text_type INTEGER NOT NULL DEFAULT 0
+            text_type INTEGER NOT NULL DEFAULT 0,
+            server_id INTEGER DEFAULT NULL
         )"#,
         )
         .execute(pool_sqlite)
@@ -34,7 +37,10 @@ impl SqliteStore for ChatRecord {
         Ok(())
     }
 
-    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        let _ = sqlx::query("ALTER TABLE chat_record ADD COLUMN server_id INTEGER DEFAULT NULL")
+            .execute(pool_sqlite)
+            .await; // Column already exists, ignore
         Ok(())
     }
 
