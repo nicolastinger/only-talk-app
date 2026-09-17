@@ -12,7 +12,7 @@ use crate::entity::user_info::UserInfo;
 use crate::entity::user_token::UserToken;
 use crate::service::p2p_service;
 use crate::service::user_service::{add_user_map, teardown_session, user_login};
-use crate::utils::global_static_str::DOMAIN_NAME;
+use crate::utils::global_static_str::talk_api_domain;
 use crate::utils::http_client::http_client;
 use crate::GLOBAL_QUIC_USER_INFO;
 
@@ -41,9 +41,12 @@ pub async fn sign_in(
     }
 
     let parsed = Url::parse(&url).map_err(|x| x.to_string())?;
-    let domain = parsed.domain().unwrap_or(DOMAIN_NAME).to_string();
-    let port = parsed.port_or_known_default().unwrap_or(8443);
-    let me_url = format!("https://{}:{}/user/me", &domain, &port);
+    let scheme = parsed.scheme().to_string();
+    let host = parsed.host_str().map(|h| h.to_string()).unwrap_or_else(talk_api_domain);
+    let me_url = match parsed.port() {
+        Some(p) => format!("{}://{}:{}/user/me", scheme, host, p),
+        None => format!("{}://{}/user/me", scheme, host),
+    };
 
     let data = sign_in_result.data.as_object().ok_or("sign_in data 不是 JSON 对象")?;
     let access_token =
@@ -262,9 +265,12 @@ pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiRespon
     }
 
     let parsed = Url::parse(&url).map_err(|x| x.to_string())?;
-    let domain = parsed.domain().unwrap_or(DOMAIN_NAME).to_string();
-    let port = parsed.port_or_known_default().unwrap_or(8443);
-    let me_url = format!("https://{}:{}/user/me", &domain, &port);
+    let scheme = parsed.scheme().to_string();
+    let host = parsed.host_str().map(|h| h.to_string()).unwrap_or_else(talk_api_domain);
+    let me_url = match parsed.port() {
+        Some(p) => format!("{}://{}:{}/user/me", scheme, host, p),
+        None => format!("{}://{}/user/me", scheme, host),
+    };
 
     let me_res = post_request(me_url, String::new()).await?;
     let uuid = if me_res.status == 200 {

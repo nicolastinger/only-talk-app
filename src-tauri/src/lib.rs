@@ -46,6 +46,9 @@ use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store, hide_chat_session,
     mark_read_chat_session, search_chat_session, session_uuid_cmd,
 };
+use crate::cmd::config_controller::{
+    get_all_client_config, get_client_config, reset_client_config, set_client_config,
+};
 use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
     debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
@@ -278,6 +281,10 @@ pub fn run() {
             create_chat_session,
             get_system_notification,
             update_local_friend_list,
+            get_client_config,
+            set_client_config,
+            get_all_client_config,
+            reset_client_config,
             update_friend_profile_command,
             batch_read_system_notification,
             clear_all_unread_notifications,

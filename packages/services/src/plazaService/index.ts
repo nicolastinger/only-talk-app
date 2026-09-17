@@ -1,6 +1,5 @@
 import {
   HTTP_METHOD,
-  TALK_API,
   PlazaListResult,
   PlazaProfile,
   PlazaUpdateProfileDTO,
@@ -11,7 +10,7 @@ import {
   PlazaCrushResult,
   RustResponse,
 } from "@workspace/types";
-import { invoke_rust, parseBackendResponse } from "../httpService";
+import { getApiBase, invoke_rust, parseBackendResponse } from "../httpService";
 
 function parseData<T>(res: RustResponse): T {
   return parseBackendResponse<T>(res);
@@ -24,7 +23,7 @@ export const get_plaza_users = async (
 ): Promise<PlazaListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/plaza/list",
+    getApiBase() + "/plaza/list",
     JSON.stringify({
       page_num: pageNum,
       page_size: pageSize,
@@ -37,7 +36,7 @@ export const get_plaza_users = async (
 export const get_plaza_user = async (uuid: string): Promise<PlazaUser> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + `/plaza/user/${uuid}`,
+    getApiBase() + `/plaza/user/${uuid}`,
     ""
   );
   return parseData<PlazaUser>(res);
@@ -46,7 +45,7 @@ export const get_plaza_user = async (uuid: string): Promise<PlazaUser> => {
 export const get_plaza_profile = async (): Promise<PlazaProfile> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/plaza/profile",
+    getApiBase() + "/plaza/profile",
     ""
   );
   return parseData<PlazaProfile>(res);
@@ -57,7 +56,7 @@ export const update_plaza_profile = async (
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/plaza/profile/update",
+    getApiBase() + "/plaza/profile/update",
     JSON.stringify(dto)
   );
   return parseData<boolean>(res);
@@ -68,7 +67,7 @@ export const update_plaza_tags = async (
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/plaza/tag/update",
+    getApiBase() + "/plaza/tag/update",
     JSON.stringify(dto)
   );
   return parseData<boolean>(res);
@@ -79,7 +78,7 @@ export const switch_plaza_crush = async (
 ): Promise<PlazaCrushResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/plaza/like/switch",
+    getApiBase() + "/plaza/like/switch",
     JSON.stringify(dto)
   );
   return parseData<PlazaCrushResult>(res);
@@ -91,7 +90,7 @@ export const get_plaza_likes = async (
 ): Promise<PlazaListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/plaza/like/list",
+    getApiBase() + "/plaza/like/list",
     JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} })
   );
   return parseData<PlazaListResult>(res);
@@ -103,7 +102,7 @@ export const get_plaza_matches = async (
 ): Promise<PlazaListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/plaza/match/list",
+    getApiBase() + "/plaza/match/list",
     JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} })
   );
   return parseData<PlazaListResult>(res);

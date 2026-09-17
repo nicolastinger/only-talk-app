@@ -34,7 +34,7 @@ use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
 use crate::service::group_service::{parse_http_result, sync_group_list};
 use crate::utils::dns::resolve_ipv4;
-use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
+use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
 use crate::utils::session_uuid::single_session_uuid;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{
@@ -45,7 +45,7 @@ use crate::{
 
 /// 从服务端拉取当前用户+设备 唯一的本地加密库密钥(按 user_id + 设备指纹签发)
 async fn fetch_private_db_key() -> Result<String, anyhow::Error> {
-    let url = format!("{}/user/sqlite_key/fetch", TALK_API);
+    let url = format!("{}/user/sqlite_key/fetch", talk_api_base());
     // 设备指纹为小写 hex，无需额外转义
     let body = format!(
         "{{\"device_fingerprint\":\"{}\"}}",
@@ -314,7 +314,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
         if !reads.is_empty() {
             info!("发送已读消息(会话游标) {:?}", reads);
             match post_request(
-                format!("{}/session/read", TALK_API),
+                format!("{}/session/read", talk_api_base()),
                 serde_json::to_string(&serde_json::json!({ "reads": reads }))
                     .expect("序列化已读消息失败"),
             )
@@ -353,7 +353,7 @@ pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> 
         if !read_ids.is_empty() {
             info!("上报通知已读: {:?}", read_ids);
             match post_request(
-                format!("{}/notify/mark_read", TALK_API),
+                format!("{}/notify/mark_read", talk_api_base()),
                 serde_json::to_string(&read_ids).expect("序列化通知已读失败"),
             )
             .await
@@ -385,7 +385,7 @@ pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> 
 
 /// 获取未读通知
 pub async fn get_unread_notification() -> Result<(), anyhow::Error> {
-    let url = format!("{}/notify/get_user_unread_notification", TALK_API);
+    let url = format!("{}/notify/get_user_unread_notification", talk_api_base());
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
     let data = result.body;
     let result = serde_json::from_str::<HttpResult>(&data)?;
@@ -548,7 +548,7 @@ async fn sync_gap_sessions(sessions: &[(String, i64)]) -> Result<(), anyhow::Err
         .map(|(session_uuid, _)| serde_json::json!({ "session_uuid": session_uuid }))
         .collect();
     let body = serde_json::json!({ "sessions": req_sessions, "limit": GAP_PULL_LIMIT });
-    let resp = post_request(format!("{}/session/sync", TALK_API), body.to_string())
+    let resp = post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
         .await
         .map_err(|e| anyhow!(e))?;
     let result: HttpResult = parse_http_result(&resp.body)?;
@@ -580,7 +580,7 @@ async fn sync_gap_sessions(sessions: &[(String, i64)]) -> Result<(), anyhow::Err
     // 先落库再回报(宁重勿漏; 回报失败 → 下轮重拉, nano_id 去重兜住)
     if !acks.is_empty() {
         post_request(
-            format!("{}/session/synced", TALK_API),
+            format!("{}/session/synced", talk_api_base()),
             serde_json::to_string(&serde_json::json!({ "sessions": acks }))?,
         )
         .await
@@ -679,7 +679,7 @@ async fn run_backfill_task(task: &crate::entity::sync_task::SyncTask) -> Result<
             "sessions": [{ "session_uuid": session_uuid, "before_id": before_id }],
             "limit": BACKFILL_LIMIT,
         });
-        let resp = post_request(format!("{}/session/sync", TALK_API), body.to_string())
+        let resp = post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
             .await
             .map_err(|e| anyhow!(e))?;
         let result: HttpResult = parse_http_result(&resp.body)?;
@@ -833,7 +833,7 @@ async fn refresh_session_list() -> Result<(), anyhow::Error> {
     let mut cursor: Option<serde_json::Value> = None;
     loop {
         let body = serde_json::json!({ "cursor": cursor, "size": 50 });
-        let resp = post_request(format!("{}/session/list", TALK_API), body.to_string())
+        let resp = post_request(format!("{}/session/list", talk_api_base()), body.to_string())
             .await
             .map_err(|e| anyhow!(e))?;
         let result: HttpResult = parse_http_result(&resp.body)?;
@@ -1075,7 +1075,7 @@ async fn discover_quic_server_addr() -> SocketAddr {
     }
 
     // 尝试通过 API 获取 QUIC 服务器列表
-    let url = format!("{}/integrated/quic_servers", TALK_API);
+    let url = format!("{}/integrated/quic_servers", talk_api_base());
     match get_request(url).await {
         Ok(response) => match serde_json::from_str::<ApiResult>(&response.body) {
             Ok(result) => {
@@ -1096,7 +1096,7 @@ async fn discover_quic_server_addr() -> SocketAddr {
     }
 
     // 回退：DNS 解析默认域名
-    SocketAddr::V4(resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败"))
+    SocketAddr::V4(resolve_ipv4(&talk_api_domain(), 4433).await.expect("解析域名失败"))
 }
 
 #[cfg(test)]

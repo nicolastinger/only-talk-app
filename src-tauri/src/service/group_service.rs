@@ -11,7 +11,7 @@ use crate::entity::group::Group;
 use crate::entity::group_member::GroupMember;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::TALK_API;
+use crate::utils::global_static_str::talk_api_base;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::group_vo::{CreateGroupApiRequest, CreateGroupRequest, GroupMemberVo, GroupVo};
 
@@ -21,7 +21,7 @@ pub(crate) fn parse_http_result(data: &str) -> Result<HttpResult, anyhow::Error>
 
 /// 同步群聊列表
 pub async fn sync_group_list() -> Result<(), anyhow::Error> {
-    let url = format!("{}/group/chat/my/list", TALK_API);
+    let url = format!("{}/group/chat/my/list", talk_api_base());
     let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
@@ -56,7 +56,7 @@ pub async fn create_group(request: CreateGroupRequest) -> Result<GroupVo, anyhow
         max_members: None,
     };
 
-    let url = format!("{}/group/chat/create", TALK_API);
+    let url = format!("{}/group/chat/create", talk_api_base());
     let body = serde_json::to_string(&api_request)?;
     info!("创建群聊请求: {}", body);
     let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
@@ -101,7 +101,7 @@ pub async fn invite_group_members(
     group_id: &str,
     user_ids: Vec<String>,
 ) -> Result<Vec<String>, anyhow::Error> {
-    let url = format!("{}/group/chat/member/invite", TALK_API);
+    let url = format!("{}/group/chat/member/invite", talk_api_base());
     let body = serde_json::json!({
         "group_uuid": group_id,
         "user_uuids": user_ids
@@ -122,7 +122,7 @@ pub async fn invite_group_members(
 /// 接受群邀请
 #[allow(clippy::disallowed_methods)]
 pub async fn accept_group_invitation(group_id: &str) -> Result<(), anyhow::Error> {
-    let url = format!("{}/group/chat/member/invite/accept", TALK_API);
+    let url = format!("{}/group/chat/member/invite/accept", talk_api_base());
     let body = serde_json::json!({
         "group_uuid": group_id
     })
@@ -143,7 +143,7 @@ pub async fn accept_group_invitation(group_id: &str) -> Result<(), anyhow::Error
 /// 拒绝群邀请
 #[allow(clippy::disallowed_methods)]
 pub async fn decline_group_invitation(group_id: &str) -> Result<(), anyhow::Error> {
-    let url = format!("{}/group/chat/member/invite/decline", TALK_API);
+    let url = format!("{}/group/chat/member/invite/decline", talk_api_base());
     let body = serde_json::json!({
         "group_uuid": group_id
     })
@@ -166,7 +166,7 @@ pub async fn join_group(group_id: &str) -> Result<(), anyhow::Error> {
 /// 离开群聊
 pub async fn leave_group(group_id: &str) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
-    let url = format!("{}/group/chat/member/quit/{}", TALK_API, group_id);
+    let url = format!("{}/group/chat/member/quit/{}", talk_api_base(), group_id);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
@@ -184,7 +184,7 @@ pub async fn remove_group_member_service(
     group_id: &str,
     user_id: &str,
 ) -> Result<(), anyhow::Error> {
-    let url = format!("{}/group/chat/member/remove/{}/{}", TALK_API, group_id, user_id);
+    let url = format!("{}/group/chat/member/remove/{}/{}", talk_api_base(), group_id, user_id);
     let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
@@ -198,7 +198,7 @@ pub async fn remove_group_member_service(
 
 /// 同步群成员列表
 pub async fn sync_group_members(group_id: &str) -> Result<Vec<GroupMemberVo>, anyhow::Error> {
-    let url = format!("{}/group/chat/member/list/{}", TALK_API, group_id);
+    let url = format!("{}/group/chat/member/list/{}", talk_api_base(), group_id);
     let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 
@@ -228,7 +228,7 @@ pub async fn sync_group_members(group_id: &str) -> Result<Vec<GroupMemberVo>, an
 
 /// 获取群详情
 pub async fn get_group_info(group_id: &str) -> Result<GroupVo, anyhow::Error> {
-    let url = format!("{}/group/chat/info/{}", TALK_API, group_id);
+    let url = format!("{}/group/chat/info/{}", talk_api_base(), group_id);
     let result = get_request(url).await.map_err(|e| anyhow!(e))?;
     let response: HttpResult = parse_http_result(&result.body)?;
 

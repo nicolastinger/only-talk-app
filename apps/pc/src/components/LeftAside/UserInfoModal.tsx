@@ -1,5 +1,6 @@
 import UserTypeTag from '@/components/UserTypeTag';
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { DEFAULT_ICON } from '@/constants';
+import { getApiBase } from '@workspace/services';
 import { useBearStore } from '@/store/store';
 import {
   CameraOutlined,
@@ -141,7 +142,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       const uploadResult = await Promise.race([
         invoke<{ status: number; body: string }>('upload_file_request', {
-          url: `${TALK_API}/file_integrated/upload/user_avatar`,
+          url: `${getApiBase()}/file_integrated/upload/user_avatar`,
           filePath: compressedResult,
           fieldName: 'file',
         }),

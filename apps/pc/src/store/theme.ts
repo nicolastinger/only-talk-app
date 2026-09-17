@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { flushSync } from 'react-dom';
 import darkCss from '@/theme/dark.json';
 import lightCss from '@/theme/light.json';
-import { kv_get, kv_set } from '@workspace/services';
+import { getAppTheme, kv_get, kv_set, setConfig } from '@workspace/services';
+import { CLIENT_CONFIG_KEYS } from '@workspace/types';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ChatsFontSize = 'small' | 'medium' | 'large';
@@ -78,6 +79,7 @@ export const useThemeStore = create<ThemeState>()((set, get) => {
     void body.offsetHeight;
     body.style.transition = prevTransition;
     kv_set(THEME_KEY, next).catch(() => {});
+    setConfig(CLIENT_CONFIG_KEYS.appTheme, next).catch(() => {});
   };
 
   // 切换主题并播放圆形遮罩动画（参考 apps/web/src/theme.ts）
@@ -134,8 +136,11 @@ export const useThemeStore = create<ThemeState>()((set, get) => {
 
   kv_get(THEME_KEY)
     .then((value) => {
-      if (value && (THEME_MODES as string[]).includes(value)) {
-        set({ mode: value as ThemeMode });
+      // 会话级 kv 优先; 无记录时回退客户端配置表的默认主题(app.theme)
+      const theme =
+        value && (THEME_MODES as string[]).includes(value) ? value : getAppTheme();
+      if (theme && (THEME_MODES as string[]).includes(theme)) {
+        set({ mode: theme as ThemeMode });
       }
     })
     .catch(() => {});
@@ -156,6 +161,7 @@ export const useThemeStore = create<ThemeState>()((set, get) => {
       const to = getEffectiveMode(mode);
       if (from === to) {
         kv_set(THEME_KEY, mode).catch(() => {});
+        setConfig(CLIENT_CONFIG_KEYS.appTheme, mode).catch(() => {});
         set({ mode });
         return;
       }

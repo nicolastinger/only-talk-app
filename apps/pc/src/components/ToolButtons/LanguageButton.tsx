@@ -1,6 +1,7 @@
 import { getLocale, setLocale, useIntl } from '@umijs/max';
 import { Dropdown } from 'antd';
-import { kv_set } from '@workspace/services';
+import { kv_set, setConfig } from '@workspace/services';
+import { CLIENT_CONFIG_KEYS } from '@workspace/types';
 import styles from './LanguageButton.less';
 
 const LanguageButton = () => {
@@ -23,6 +24,7 @@ const LanguageButton = () => {
   const changeLanguage = (lang: string) => {
     setLocale(lang, false);
     kv_set('ui_language', lang).catch(() => {});
+    setConfig(CLIENT_CONFIG_KEYS.appLanguage, lang).catch(() => {});
   };
 
   const items = [

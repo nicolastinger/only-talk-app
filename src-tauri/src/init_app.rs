@@ -8,7 +8,7 @@ use fast_log::Config;
 use log::{error, info, LevelFilter};
 use tauri::{Manager, Wry};
 
-use crate::config::set_config;
+use crate::config::{init_persisted_config, set_config};
 use crate::dao::init_common_db::init_common_sqlite;
 use crate::utils::global_static_str::{
     get_env, APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
@@ -77,6 +77,9 @@ pub async fn init_app(
     }
     // 初始化公共数据库
     init_common_sqlite(sqlite_path).await.expect("初始化公共数据库失败!");
+
+    // 初始化并加载持久化配置(client_config 表 → 内存), 供 talk_api_base()/主题/语言解析
+    init_persisted_config().await.expect("初始化持久化配置失败!");
 
     // // 复制打包的资源文件到可访问目录（移动平台需要）
     // if let Some(handle) = app_handle {

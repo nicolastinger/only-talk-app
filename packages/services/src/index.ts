@@ -1,4 +1,5 @@
 export * from "./announcementService";
+export * from "./appConfig";
 export * from "./fileService";
 export * from "./groupService";
 export * from "./httpService";

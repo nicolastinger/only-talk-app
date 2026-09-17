@@ -1,6 +1,5 @@
 import {
   HTTP_METHOD,
-  TALK_API,
   FriendRequestInfoDTO,
   UserInfo,
   UserInfoWithCache,
@@ -13,7 +12,7 @@ import {
   CompleteProfileRequest,
   BlackListVo,
 } from "@workspace/types";
-import { invoke_rust, isBackendSuccess } from "../httpService";
+import { getApiBase, invoke_rust, isBackendSuccess } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
 
 export const get_friend_list = async (): Promise<FriendVo[]> => {
@@ -29,7 +28,7 @@ export const get_friend_info = async (uuid: string) => {
 export const add_friend = async (friend: FriendRequestInfoDTO) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/integrated/add_friend_with_notify",
+    getApiBase() + "/integrated/add_friend_with_notify",
     JSON.stringify(friend)
   );
 };
@@ -37,7 +36,7 @@ export const add_friend = async (friend: FriendRequestInfoDTO) => {
 export const process_friend = async (friend: FriendRequestInfoDTO) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/friend/process_friend",
+    getApiBase() + "/friend/process_friend",
     JSON.stringify(friend)
   );
 };
@@ -45,7 +44,7 @@ export const process_friend = async (friend: FriendRequestInfoDTO) => {
 export const sign_up_step1 = async (request: SignUpStep1Request) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/user/sign_up_step1",
+    getApiBase() + "/user/sign_up_step1",
     JSON.stringify(request)
   );
 };
@@ -53,7 +52,7 @@ export const sign_up_step1 = async (request: SignUpStep1Request) => {
 export const complete_profile = async (request: CompleteProfileRequest) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/user/complete_profile",
+    getApiBase() + "/user/complete_profile",
     JSON.stringify(request)
   );
 };
@@ -61,7 +60,7 @@ export const complete_profile = async (request: CompleteProfileRequest) => {
 export const send_verify_code = async (request: SendVerifyCodeRequest) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/user/send_verify_code",
+    getApiBase() + "/user/send_verify_code",
     JSON.stringify(request)
   );
 };
@@ -69,7 +68,7 @@ export const send_verify_code = async (request: SendVerifyCodeRequest) => {
 export const search_user_by_account = async (account: string) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/user/get_user_by_account/" + account,
+    getApiBase() + "/user/get_user_by_account/" + account,
     ""
   );
 };
@@ -78,7 +77,7 @@ export const search_user_by_account = async (account: string) => {
 export const get_user_info_by_uuid = async (uuid: string) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/user/get_user_by_uuid/" + uuid,
+    getApiBase() + "/user/get_user_by_uuid/" + uuid,
     ""
   );
 };
@@ -187,7 +186,7 @@ export const refresh_user_info = async (uuid: string) => {
 
 export const get_quic_servers = async (): Promise<QuicServerInfo[]> => {
   const response: HttpResponse = await invoke("get_request", {
-    url: TALK_API + "/integrated/quic_servers",
+    url: getApiBase() + "/integrated/quic_servers",
   });
   // 兼容真·HTTP 204 空响应体：视为成功但无数据
   if (!response.body) {
@@ -204,7 +203,7 @@ export const get_quic_servers = async (): Promise<QuicServerInfo[]> => {
 export const update_user_info = async (updateDto: UpdateUserDTO) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/user/update",
+    getApiBase() + "/user/update",
     JSON.stringify(updateDto)
   );
 };

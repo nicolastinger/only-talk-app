@@ -49,7 +49,7 @@ use crate::quic_service::center_service::process_text_msg_from_server::WebRTCSig
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
 use crate::service::user_service::{get_user_info, get_user_map};
-use crate::utils::global_static_str::{PLATFORM, TALK_API, ZERO_UUID};
+use crate::utils::global_static_str::{PLATFORM, ZERO_UUID, talk_api_base};
 use crate::utils::image_utils::compress_image_to_webp;
 use crate::utils::message_types::MSG_TYPE_P2P;
 use crate::utils::time::get_now_time_stamp_as_millis;
@@ -406,7 +406,7 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
 
     let group = query_group_by_id(&group_id).await?;
     if group.is_none() {
-        let url = format!("{}/group/chat/info/{}", TALK_API, group_id);
+        let url = format!("{}/group/chat/info/{}", talk_api_base(), group_id);
         let result = get_request(url).await.map_err(|e| anyhow!(e))?;
         let response: HttpResult =
             serde_json::from_str(&result.body).map_err(|e| anyhow!("解析响应失败: {}", e))?;
@@ -1108,7 +1108,7 @@ async fn upload_chat_file_server(
     file_path: &str,
     friend_uuid: &str,
 ) -> Result<UploadData, anyhow::Error> {
-    let url = format!("{}/file_integrated/upload/user_chat/{}", TALK_API, friend_uuid);
+    let url = format!("{}/file_integrated/upload/user_chat/{}", talk_api_base(), friend_uuid);
     let response = upload_file(&url, file_path, "file").await?;
 
     let status = response.status();
@@ -1133,7 +1133,7 @@ async fn upload_group_chat_file_server(
     file_path: &str,
     group_uuid: &str,
 ) -> Result<UploadData, anyhow::Error> {
-    let url = format!("{}/file_integrated/upload/group_chat/{}", TALK_API, group_uuid);
+    let url = format!("{}/file_integrated/upload/group_chat/{}", talk_api_base(), group_uuid);
     let response = upload_file(&url, file_path, "file").await?;
 
     let status = response.status();

@@ -7,11 +7,14 @@ import {
   showLoadingToast,
   closeToast,
   showConfirmDialog,
+  ActionSheet,
   Overlay,
 } from "vant";
 import type { HttpResponse, ResponseData, UserInfo } from "@workspace/types";
-import { TALK_API } from "@workspace/types";
+import { CLIENT_CONFIG_KEYS } from "@workspace/types";
 import {
+  getApiBase,
+  setConfig,
   getFiles,
   get_cached_user_info_by_account,
   get_cached_user_info,
@@ -33,6 +36,28 @@ const showPrivacy = ref(false);
 const privacyContent = ref("");
 const accountError = ref("");
 const passwordError = ref("");
+
+// 当前 API 地址(登录页可切换: 读写 client_config 的 server.api_base)
+const currentApi = ref(getApiBase());
+const showApiSheet = ref(false);
+const apiActions = [
+  { name: "开发环境 (http://127.0.0.1:8443)", value: "http://127.0.0.1:8443" },
+  { name: "生产环境 (https://onlytalk.cn)", value: "https://onlytalk.cn" },
+];
+const switchApi = () => {
+  showApiSheet.value = true;
+};
+const onSelectApi = async (action: { value?: string }) => {
+  const value = action?.value;
+  if (!value) return;
+  try {
+    await setConfig(CLIENT_CONFIG_KEYS.serverApiBase, value);
+    currentApi.value = value;
+    showToast({ message: "API 地址已切换", icon: "success" });
+  } catch {
+    showToast({ message: "切换失败", icon: "fail" });
+  }
+};
 
 const accountAvatar = ref<string | null>(null);
 const searchingAvatar = ref(false);
@@ -155,7 +180,7 @@ const handleQuickLogin = async () => {
   try {
     const response: HttpResponse = await invoke("quick_login", {
       refreshToken: user.refresh_token,
-      url: TALK_API,
+      url: getApiBase(),
     });
     const data: ResponseData = JSON.parse(response.body);
     if (isBackendSuccess(data.code)) {
@@ -264,7 +289,7 @@ const enterApp = async () => {
 
   try {
     const res: HttpResponse = await invoke("post_request", {
-      url: TALK_API + "/user/me",
+      url: getApiBase() + "/user/me",
       body: "",
     });
     const data: ResponseData<UserInfo> = JSON.parse(res.body);
@@ -298,7 +323,7 @@ const onLogin = async () => {
 
   try {
     const response: HttpResponse = await invoke("sign_in", {
-      url: TALK_API + "/user/sign_in",
+      url: getApiBase() + "/user/sign_in",
       body: {
         account: form.account,
         password: form.password,
@@ -355,6 +380,13 @@ onMounted(() => {
       <div class="bg-blob bg-blob-3"></div>
     </div>
     <div class="login-container">
+      <button class="api-gear" @click="switchApi" aria-label="服务器设置">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+          <path
+            d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.05 7.05 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.72 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.33.61.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.21.11.48.01.61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"
+          />
+        </svg>
+      </button>
       <template v-if="showQuickLogin && quickUsers.length">
         <div class="quick-login-section">
           <div class="quick-avatar-row">
@@ -558,6 +590,13 @@ onMounted(() => {
         </div>
       </div>
     </Overlay>
+    <ActionSheet
+      v-model:show="showApiSheet"
+      :actions="apiActions"
+      :description="`当前服务器: ${currentApi}`"
+      cancel-text="取消"
+      @select="onSelectApi"
+    />
   </div>
 </template>
 
@@ -645,6 +684,24 @@ onMounted(() => {
   width: 100%;
   max-width: 360px;
   padding: 0 28px;
+}
+.api-gear {
+  position: absolute;
+  top: -46px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+}
+.api-gear:active {
+  background: rgba(255, 255, 255, 0.18);
 }
 .logo-section {
   text-align: center;

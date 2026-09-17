@@ -10,7 +10,7 @@ import {
   isBackendSuccess,
   isHttpSuccess,
 } from "@workspace/services";
-import { TALK_API } from "@workspace/types";
+import { getApiBase } from "@workspace/services";
 import { resolveContentToTempFile } from "@/utils/tempImage";
 
 const router = useRouter();
@@ -93,7 +93,7 @@ const pickImages = async () => {
       const res = await invoke<{ status: number; body: string }>(
         "upload_file_request",
         {
-          url: `${TALK_API}/file_integrated/upload/moment`,
+          url: `${getApiBase()}/file_integrated/upload/moment`,
           filePath: compressed,
           fieldName: "file",
         }

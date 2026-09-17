@@ -1,4 +1,5 @@
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { DEFAULT_ICON } from '@/constants';
+import { getApiBase } from '@workspace/services';
 import { GroupVo } from '@workspace/types';
 import { update_group } from '@workspace/services';
 import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile } from '@workspace/services';
@@ -38,7 +39,7 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
       }
 
       const uploadResult = await invoke<{ status: number; body: string }>('upload_file_request', {
-        url: `${TALK_API}/file_integrated/upload/group_avatar/${groupInfo.group_uuid}`,
+        url: `${getApiBase()}/file_integrated/upload/group_avatar/${groupInfo.group_uuid}`,
         filePath: compressedResult,
         fieldName: 'file',
       });

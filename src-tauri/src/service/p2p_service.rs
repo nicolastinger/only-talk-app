@@ -23,7 +23,7 @@ use crate::quic_service::p2p_service::p2p_stream_quic_server::{
 };
 use crate::service::user_service::get_user_info;
 use crate::utils::dns::{resolve_ipv4, resolve_ipv6};
-use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
+use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
 use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
     MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
@@ -178,7 +178,7 @@ pub async fn get_nat_udp_ports() -> Result<NatUdpPorts, anyhow::Error> {
         data: NatUdpPorts,
     }
 
-    let url = format!("{}/integrated/nat_udp_ports", TALK_API);
+    let url = format!("{}/integrated/nat_udp_ports", talk_api_base());
     let resp = get_request(url).await.map_err(|e| anyhow!("获取NAT UDP端口失败: {}", e))?;
     let parsed: ApiResp =
         serde_json::from_str(&resp.body).map_err(|e| anyhow!("解析NAT UDP端口失败: {}", e))?;
@@ -204,7 +204,7 @@ pub async fn check_ipv6_support() {
             return;
         }
     };
-    let udp_socket_v6 = match resolve_ipv6(DOMAIN_NAME, ports.v6_port_1).await {
+    let udp_socket_v6 = match resolve_ipv6(&talk_api_domain(), ports.v6_port_1).await {
         Ok(addr) => addr,
         Err(e) => {
             info!("域名无IPv6记录，跳过IPv6检测 {}", e);
@@ -243,8 +243,8 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     let addr_json = serde_json::to_vec(&result)?;
     let addr_socket: SocketAddr = addr.parse()?;
     // 发送udp消息给服务器（通过DNS动态解析域名）
-    let udp_socket = resolve_ipv4(DOMAIN_NAME, nat_ports.v4_port_1).await?;
-    let udp_socket_2 = resolve_ipv4(DOMAIN_NAME, nat_ports.v4_port_2).await?;
+    let udp_socket = resolve_ipv4(&talk_api_domain(), nat_ports.v4_port_1).await?;
+    let udp_socket_2 = resolve_ipv4(&talk_api_domain(), nat_ports.v4_port_2).await?;
     udp_port_forward(addr_socket, udp_socket.into(), &addr_json).await?;
     udp_port_forward(addr_socket, udp_socket_2.into(), &addr_json).await?;
 
@@ -256,8 +256,8 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>()?;
     // 尝试通过DNS解析IPv6地址，域名无AAAA记录时跳过（正常情况）
     if let (Ok(udp_socket_v6), Ok(udp_socket_v6_2)) = (
-        resolve_ipv6(DOMAIN_NAME, nat_ports.v6_port_1).await,
-        resolve_ipv6(DOMAIN_NAME, nat_ports.v6_port_2).await,
+        resolve_ipv6(&talk_api_domain(), nat_ports.v6_port_1).await,
+        resolve_ipv6(&talk_api_domain(), nat_ports.v6_port_2).await,
     ) {
         udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(
             |x| {

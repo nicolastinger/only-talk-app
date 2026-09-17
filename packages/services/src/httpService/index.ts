@@ -16,7 +16,15 @@ export const setNotificationService = (service: NotificationService) => {
   notificationService = service;
 };
 
-const base_url: string = TALK_API;
+let base_url: string = TALK_API;
+
+/** 设置运行时 API 基础地址(由 appConfig.initAppConfig 从客户端配置表加载后调用) */
+export const setApiBase = (base: string) => {
+  base_url = base;
+};
+
+/** 获取运行时 API 基础地址(未初始化时回退 TALK_API 默认值) */
+export const getApiBase = (): string => base_url;
 
 /**
  * 后端业务成功码：

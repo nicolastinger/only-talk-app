@@ -7,6 +7,7 @@ pub mod chat_record_raw;
 pub mod chat_record_read;
 pub mod chat_record_send;
 pub mod chat_session;
+pub mod client_config;
 pub mod file_record;
 pub mod friend;
 pub mod group;

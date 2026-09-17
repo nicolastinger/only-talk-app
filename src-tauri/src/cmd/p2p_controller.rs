@@ -16,7 +16,7 @@ use crate::service::p2p_service::{
     send_p2p_video_config_service, send_p2p_video_frame_service,
 };
 use crate::utils::dns::resolve_ipv4;
-use crate::utils::global_static_str::DOMAIN_NAME;
+use crate::utils::global_static_str::talk_api_domain;
 
 /// 注册 P2P 媒体接收通道
 /// 前端创建 Channel 后调用此命令，将视频/音频帧的接收通道注册到 Rust 端。
@@ -50,7 +50,7 @@ pub async fn send_init_p2p_udp() -> Result<String, String> {
     let addr = format!("0.0.0.0:{}", udp_port);
     let nat_ports = get_nat_udp_ports().await.map_err(|e| e.to_string())?;
     let remote_addr =
-        resolve_ipv4(DOMAIN_NAME, nat_ports.v4_port_1).await.map_err(|e| e.to_string())?;
+        resolve_ipv4(&talk_api_domain(), nat_ports.v4_port_1).await.map_err(|e| e.to_string())?;
     send_udp_ping_msg(addr, remote_addr.to_string()).await.map_err(|e| e.to_string())?;
 
     Ok(format!("127.0.0.1:{}", udp_port))

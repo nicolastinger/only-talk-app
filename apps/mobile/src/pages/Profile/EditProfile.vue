@@ -10,7 +10,7 @@ import {
   isBackendSuccess,
   isHttpSuccess,
 } from "@workspace/services";
-import { TALK_API } from "@workspace/types";
+import { getApiBase } from "@workspace/services";
 import type { UserInfo } from "@workspace/types";
 import { resolveContentToTempFile } from "@/utils/tempImage";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
@@ -202,7 +202,7 @@ const pickAndUploadAvatar = async () => {
     const uploadResult = await invoke<{ status: number; body: string }>(
       "upload_file_request",
       {
-        url: `${TALK_API}/file_integrated/upload/user_avatar`,
+        url: `${getApiBase()}/file_integrated/upload/user_avatar`,
         filePath: compressedResult,
         fieldName: "file",
       }
@@ -223,7 +223,7 @@ const pickAndUploadAvatar = async () => {
           const res: { status: number; body: string } = await invoke(
             "post_request",
             {
-              url: TALK_API + "/user/me",
+              url: getApiBase() + "/user/me",
               body: "",
             }
           );

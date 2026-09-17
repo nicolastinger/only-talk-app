@@ -11,7 +11,7 @@ import {
   QuicReconnectButton,
   ThemeButton,
 } from '@/components/ToolButtons';
-import { TALK_API } from '@/constants';
+import { getApiBase } from '@workspace/services';
 import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
 import { useSystemNotify } from '@/hooks/useSystemNotify';
 import { useBearStore } from '@/store/store';
@@ -156,7 +156,7 @@ const HomeLayout = () => {
     // 从服务器获取用户信息
     try {
       const res: HttpResponse = await invoke('post_request', {
-        url: TALK_API + '/user/me',
+        url: getApiBase() + '/user/me',
         body: '',
       });
       const data: ResponseData<UserInfo> = JSON.parse(res.body);

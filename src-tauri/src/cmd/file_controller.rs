@@ -7,7 +7,7 @@ use tauri::{Manager, Runtime};
 
 use crate::config::get_config;
 use crate::service::file_service::get_file_by_biz_id_service;
-use crate::utils::global_static_str::{DEFAULT_IMAGE, RESOURCE_PATH, TALK_API};
+use crate::utils::global_static_str::{DEFAULT_IMAGE, RESOURCE_PATH, talk_api_base};
 use crate::vo::file_vo::FileVo;
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件
@@ -163,7 +163,7 @@ pub async fn get_file_by_biz_id(
         warn!("业务id不能为空");
         return Err("业务id不能为空".to_string());
     }
-    let url = format!("{}/file/download_link/pub_biz/{}", TALK_API, biz_id);
+    let url = format!("{}/file/download_link/pub_biz/{}", talk_api_base(), biz_id);
     let res = get_file_by_biz_id_service(biz_id, url, nano_id).await;
     match res {
         Ok(file_vo) => Ok(file_vo),
@@ -185,7 +185,7 @@ pub async fn get_chat_file_by_biz_id(
         warn!("业务id不能为空");
         return Err("业务id不能为空".to_string());
     }
-    let url = format!("{}/file/download_link/chat_biz/{}/1", TALK_API, biz_id);
+    let url = format!("{}/file/download_link/chat_biz/{}/1", talk_api_base(), biz_id);
     let res = get_file_by_biz_id_service(biz_id, url, nano_id).await;
     match res {
         Ok(file_vo) => Ok(file_vo),

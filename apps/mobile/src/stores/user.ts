@@ -1,8 +1,8 @@
 import { reactive, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { UserInfo, HttpResponse, ResponseData } from "@workspace/types";
-import { TALK_API } from "@workspace/types";
 import {
+  getApiBase,
   get_cached_user_info,
   cache_user_info,
   isBackendSuccess,
@@ -24,7 +24,7 @@ export const DEFAULT_AVATAR = "/images/default.jpg";
 async function fetchUserFromServer(): Promise<UserInfo | null> {
   try {
     const res: HttpResponse = await invoke("post_request", {
-      url: TALK_API + "/user/me",
+      url: getApiBase() + "/user/me",
       body: "",
     });
     const data: ResponseData<UserInfo> = JSON.parse(res.body);

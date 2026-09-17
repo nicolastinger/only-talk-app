@@ -10,10 +10,9 @@ import {
   MomentLikerListResult,
   MomentListResult,
   MomentVo,
-  TALK_API,
   RustResponse,
 } from "@workspace/types";
-import { invoke_rust, parseBackendResponse } from "../httpService";
+import { getApiBase, invoke_rust, parseBackendResponse } from "../httpService";
 
 function parseData<T>(res: RustResponse): T {
   return parseBackendResponse<T>(res);
@@ -26,7 +25,7 @@ export const get_moment_list = async (
 ): Promise<MomentListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/list",
+    getApiBase() + "/moment/list",
     JSON.stringify({
       page_num: pageNum,
       page_size: pageSize,
@@ -44,7 +43,7 @@ export const get_moment_detail = async (
 ): Promise<MomentVo> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + `/moment/detail/${momentUuid}`,
+    getApiBase() + `/moment/detail/${momentUuid}`,
     ""
   );
   return parseData<MomentVo>(res);
@@ -55,7 +54,7 @@ export const create_moment = async (
 ): Promise<MomentVo> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/create",
+    getApiBase() + "/moment/create",
     JSON.stringify(dto)
   );
   return parseData<MomentVo>(res);
@@ -64,7 +63,7 @@ export const create_moment = async (
 export const delete_moment = async (dto: DeleteMomentDTO): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/delete",
+    getApiBase() + "/moment/delete",
     JSON.stringify(dto)
   );
   return parseData<boolean>(res);
@@ -75,7 +74,7 @@ export const switch_moment_like = async (
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/like/switch",
+    getApiBase() + "/moment/like/switch",
     JSON.stringify(dto)
   );
   return parseData<boolean>(res);
@@ -86,7 +85,7 @@ export const switch_user_follow = async (
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/follow/switch",
+    getApiBase() + "/moment/follow/switch",
     JSON.stringify(dto)
   );
   return parseData<boolean>(res);
@@ -97,7 +96,7 @@ export const post_moment_comment = async (
 ): Promise<MomentCommentVo> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/comment",
+    getApiBase() + "/moment/comment",
     JSON.stringify(dto)
   );
   return parseData<MomentCommentVo>(res);
@@ -110,7 +109,7 @@ export const get_moment_comments = async (
 ): Promise<MomentCommentListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/comment/list",
+    getApiBase() + "/moment/comment/list",
     JSON.stringify({
       page_num: pageNum,
       page_size: pageSize,
@@ -127,7 +126,7 @@ export const get_moment_likers = async (
 ): Promise<MomentLikerListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/moment/like/list",
+    getApiBase() + "/moment/like/list",
     JSON.stringify({
       page_num: pageNum,
       page_size: pageSize,

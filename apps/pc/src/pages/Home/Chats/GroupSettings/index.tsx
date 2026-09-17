@@ -1,5 +1,6 @@
 import UserTypeTag from '@/components/UserTypeTag';
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { DEFAULT_ICON } from '@/constants';
+import { getApiBase } from '@workspace/services';
 import { useUserInfoList } from '@/hooks/useUserInfoList';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { useBearStore } from '@/store/store';
@@ -121,7 +122,7 @@ const GroupSettingsPage = () => {
       }
 
       const uploadResult = await invoke<{ status: number; body: string }>('upload_file_request', {
-        url: `${TALK_API}/file_integrated/upload/group_avatar/${groupInfo!.group_uuid}`,
+        url: `${getApiBase()}/file_integrated/upload/group_avatar/${groupInfo!.group_uuid}`,
         filePath: compressedResult,
         fieldName: 'file',
       });

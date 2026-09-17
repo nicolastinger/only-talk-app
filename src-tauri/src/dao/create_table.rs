@@ -7,6 +7,7 @@ use crate::entity::chat_record_ack::ChatRecordAck;
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
+use crate::entity::client_config::ClientConfig;
 use crate::entity::file_record::FileRecord;
 use crate::entity::friend::Friend;
 use crate::entity::group::Group;
@@ -24,6 +25,8 @@ use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 初始化公共数据库
 pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
+    // 客户端配置表最先建: 后续功能(api_base/主题/语言)读取依赖它
+    init_sqlite::<ClientConfig>(pool_sqlite).await?;
     init_sqlite::<FileRecord>(pool_sqlite).await?;
     init_sqlite::<UserInfo>(pool_sqlite).await?;
     init_sqlite::<UserToken>(pool_sqlite).await?;

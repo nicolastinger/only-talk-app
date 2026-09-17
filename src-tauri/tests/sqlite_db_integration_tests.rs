@@ -24,6 +24,7 @@ use app_lib::dao::chat_record_send::{
     update_chat_record_send, update_chat_record_send_status, update_chat_record_send_success,
 };
 use app_lib::dao::create_table::init_user_ddl;
+use app_lib::dao::client_config_db::{delete_config, get_all_configs, get_config, set_config};
 use app_lib::dao::file_record_db::{
     delete_file_record_by_id, increment_download_retry_count, insert_failed_file_record,
     insert_file_record, MAX_DOWNLOAD_RETRY_COUNT,
@@ -357,6 +358,30 @@ async fn file_record_db_insert_retry_limit_delete() {
             FileRecord::get_by_biz_id_include_failed(biz).await.expect("查询失败").is_empty(),
             "删除后不应再查到"
         );
+    })
+    .await;
+}
+
+/// 客户端配置表(client_config): upsert / 读取 / 删除
+#[tokio::test]
+async fn client_config_crud() {
+    with_common_db(|_pool| async move {
+        assert!(get_config("app.theme").await.expect("查询失败").is_none());
+
+        set_config("app.theme", "dark").await.expect("写入失败");
+        assert_eq!(get_config("app.theme").await.expect("查询失败").as_deref(), Some("dark"));
+
+        // upsert 覆盖
+        set_config("app.theme", "light").await.expect("覆盖失败");
+        assert_eq!(get_config("app.theme").await.expect("查询失败").as_deref(), Some("light"));
+
+        set_config("server.api_base", "http://127.0.0.1:8443").await.expect("写入失败");
+        let all = get_all_configs().await.expect("读取全部失败");
+        assert_eq!(all.len(), 2);
+
+        delete_config("app.theme").await.expect("删除失败");
+        assert!(get_config("app.theme").await.expect("查询失败").is_none());
+        assert_eq!(get_all_configs().await.expect("读取全部失败").len(), 1);
     })
     .await;
 }

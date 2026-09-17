@@ -3,11 +3,11 @@ import { useIntl } from '@umijs/max';
 import {
   convertPathToTauriUrl,
   create_moment,
+  getApiBase,
   isBackendSuccess,
   isHttpSuccess,
   selectFile,
 } from '@workspace/services';
-import { TALK_API } from '@workspace/types';
 import { Button, Input, Modal, Segmented, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/MomentComposer.less';
@@ -53,7 +53,7 @@ const MomentComposer = (props: {
         const res = await invoke<{ status: number; body: string }>(
           'upload_file_request',
           {
-            url: `${TALK_API}/file_integrated/upload/moment`,
+            url: `${getApiBase()}/file_integrated/upload/moment`,
             filePath: compressed,
             fieldName: 'file',
           },

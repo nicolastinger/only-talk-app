@@ -1,12 +1,11 @@
 import {
   HTTP_METHOD,
-  TALK_API,
   AnnouncementListResult,
   AnnouncementVO,
   AnnouncementReadUserListResult,
   RustResponse,
 } from "@workspace/types";
-import { invoke_rust, parseBackendResponse } from "../httpService";
+import { getApiBase, invoke_rust, parseBackendResponse } from "../httpService";
 
 function parseData<T>(res: RustResponse): T {
   return parseBackendResponse<T>(res);
@@ -18,7 +17,7 @@ export const get_announcement_list = async (
 ): Promise<AnnouncementListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/announcement/list",
+    getApiBase() + "/announcement/list",
     JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} })
   );
   return parseData<AnnouncementListResult>(res);
@@ -29,7 +28,7 @@ export const get_announcement_detail = async (
 ): Promise<AnnouncementVO> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + `/announcement/detail/${uuid}`,
+    getApiBase() + `/announcement/detail/${uuid}`,
     ""
   );
   return parseData<AnnouncementVO>(res);
@@ -40,7 +39,7 @@ export const mark_announcement_read = async (
 ): Promise<AnnouncementVO> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + `/announcement/read/${uuid}`,
+    getApiBase() + `/announcement/read/${uuid}`,
     ""
   );
   return parseData<AnnouncementVO>(res);
@@ -53,7 +52,7 @@ export const get_announcement_read_users = async (
 ): Promise<AnnouncementReadUserListResult> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + `/announcement/read/list/${uuid}`,
+    getApiBase() + `/announcement/read/list/${uuid}`,
     JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} })
   );
   return parseData<AnnouncementReadUserListResult>(res);

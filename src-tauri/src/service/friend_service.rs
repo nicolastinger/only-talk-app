@@ -13,7 +13,7 @@ use crate::dao::session_db::{hide_chat_session_db, show_chat_session_db};
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::TALK_API;
+use crate::utils::global_static_str::talk_api_base;
 use crate::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};
 use crate::vo::http_response::Response;
 use crate::APP_HANDLE;
@@ -48,7 +48,7 @@ pub async fn process_friend_notify_message(
 pub async fn delete_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
-    let url = format!("{}/friend/delete_friend/{}", TALK_API, friend_uuid);
+    let url = format!("{}/friend/delete_friend/{}", talk_api_base(), friend_uuid);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     info!("删除好友结果 {:?}", result.body);
@@ -79,7 +79,7 @@ pub async fn update_friend_list() -> Result<(), anyhow::Error> {
             last_version = last_update_friend.version;
         }
     }
-    let url = format!("{}/friend/get_friend/{}/{}", TALK_API, &last_uuid, last_version);
+    let url = format!("{}/friend/get_friend/{}/{}", talk_api_base(), &last_uuid, last_version);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     let data = result.body;
@@ -138,7 +138,7 @@ pub async fn search_friend_list(keyword: String) -> Result<Vec<FriendVo>, anyhow
 pub async fn block_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
-    let url = format!("{}/friend/block_friend/{}", TALK_API, friend_uuid);
+    let url = format!("{}/friend/block_friend/{}", talk_api_base(), friend_uuid);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     info!("拉黑好友结果 {:?}", result.body);
@@ -157,7 +157,7 @@ pub async fn block_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
 pub async fn unblock_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
-    let url = format!("{}/friend/unblock_friend/{}", TALK_API, friend_uuid);
+    let url = format!("{}/friend/unblock_friend/{}", talk_api_base(), friend_uuid);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     info!("取消拉黑好友结果 {:?}", result.body);

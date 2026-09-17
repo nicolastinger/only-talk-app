@@ -1,6 +1,5 @@
 import {
   HTTP_METHOD,
-  TALK_API,
   GroupInfoVo,
   GroupListItemVo,
   GroupMemberVo,
@@ -9,7 +8,7 @@ import {
   UnreadCountVo,
   RustResponse,
 } from "@workspace/types";
-import { invoke_rust, parseBackendResponse } from "../httpService";
+import { getApiBase, invoke_rust, parseBackendResponse } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
 
 function parseData<T>(res: RustResponse): T {
@@ -17,12 +16,12 @@ function parseData<T>(res: RustResponse): T {
 }
 
 export const get_group_list = async (): Promise<GroupListItemVo[]> => {
-  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/my/list", "");
+  const res = await invoke_rust(HTTP_METHOD.GET, getApiBase() + "/group/chat/my/list", "");
   return parseData<GroupListItemVo[]>(res);
 };
 
 export const get_group_info = async (groupId: string): Promise<GroupInfoVo> => {
-  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + `/group/chat/info/${groupId}`, "");
+  const res = await invoke_rust(HTTP_METHOD.GET, getApiBase() + `/group/chat/info/${groupId}`, "");
   return parseData<GroupInfoVo>(res);
 };
 
@@ -32,7 +31,7 @@ export const create_group = async (dto: {
   description?: string;
   max_members?: number;
 }): Promise<GroupInfoVo> => {
-  const res = await invoke_rust(HTTP_METHOD.POST, TALK_API + "/group/chat/create", JSON.stringify(dto));
+  const res = await invoke_rust(HTTP_METHOD.POST, getApiBase() + "/group/chat/create", JSON.stringify(dto));
   return parseData<GroupInfoVo>(res);
 };
 
@@ -42,19 +41,19 @@ export const update_group = async (dto: {
   avatar?: string;
   description?: string;
 }): Promise<boolean> => {
-  const res = await invoke_rust(HTTP_METHOD.PUT, TALK_API + "/group/chat/update", JSON.stringify(dto));
+  const res = await invoke_rust(HTTP_METHOD.PUT, getApiBase() + "/group/chat/update", JSON.stringify(dto));
   return parseData<boolean>(res);
 };
 
 export const dissolve_group = async (groupUuid: string): Promise<boolean> => {
-  const res = await invoke_rust(HTTP_METHOD.DELETE, TALK_API + `/group/chat/dissolve/${groupUuid}`, "");
+  const res = await invoke_rust(HTTP_METHOD.DELETE, getApiBase() + `/group/chat/dissolve/${groupUuid}`, "");
   return parseData<boolean>(res);
 };
 
 export const get_group_members = async (
   groupId: string,
 ): Promise<GroupMemberVo[]> => {
-  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + `/group/chat/member/list/${groupId}`, "");
+  const res = await invoke_rust(HTTP_METHOD.GET, getApiBase() + `/group/chat/member/list/${groupId}`, "");
   return parseData<GroupMemberVo[]>(res);
 };
 
@@ -64,7 +63,7 @@ export const invite_group_members = async (
 ): Promise<string[]> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/group/chat/member/invite",
+    getApiBase() + "/group/chat/member/invite",
     JSON.stringify({ group_uuid: groupId, user_uuids: userUuids }),
   );
   return parseData<string[]>(res);
@@ -75,7 +74,7 @@ export const accept_group_invitation = async (
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/group/chat/member/invite/accept",
+    getApiBase() + "/group/chat/member/invite/accept",
     JSON.stringify({ group_uuid: groupUuid }),
   );
   return parseData<boolean>(res);
@@ -86,19 +85,19 @@ export const decline_group_invitation = async (
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
-    TALK_API + "/group/chat/member/invite/decline",
+    getApiBase() + "/group/chat/member/invite/decline",
     JSON.stringify({ group_uuid: groupUuid }),
   );
   return parseData<boolean>(res);
 };
 
 export const get_pending_invitations = async (): Promise<GroupInvitationVo[]> => {
-  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/member/invite/pending", "");
+  const res = await invoke_rust(HTTP_METHOD.GET, getApiBase() + "/group/chat/member/invite/pending", "");
   return parseData<GroupInvitationVo[]>(res);
 };
 
 export const get_sent_invitations = async (): Promise<GroupInvitationVo[]> => {
-  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/member/invite/sent", "");
+  const res = await invoke_rust(HTTP_METHOD.GET, getApiBase() + "/group/chat/member/invite/sent", "");
   return parseData<GroupInvitationVo[]>(res);
 };
 
@@ -108,14 +107,14 @@ export const remove_group_member = async (
 ): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.DELETE,
-    TALK_API + `/group/chat/member/remove/${groupUuid}/${userUuid}`,
+    getApiBase() + `/group/chat/member/remove/${groupUuid}/${userUuid}`,
     "",
   );
   return parseData<boolean>(res);
 };
 
 export const quit_group = async (groupUuid: string): Promise<boolean> => {
-  const res = await invoke_rust(HTTP_METHOD.POST, TALK_API + `/group/chat/member/quit/${groupUuid}`, "");
+  const res = await invoke_rust(HTTP_METHOD.POST, getApiBase() + `/group/chat/member/quit/${groupUuid}`, "");
   return parseData<boolean>(res);
 };
 
@@ -124,7 +123,7 @@ export const set_member_role = async (dto: {
   user_uuid: string;
   role: number;
 }): Promise<boolean> => {
-  const res = await invoke_rust(HTTP_METHOD.PUT, TALK_API + "/group/chat/member/set_role", JSON.stringify(dto));
+  const res = await invoke_rust(HTTP_METHOD.PUT, getApiBase() + "/group/chat/member/set_role", JSON.stringify(dto));
   return parseData<boolean>(res);
 };
 
@@ -137,12 +136,12 @@ export const get_group_message_history = async (dto: {
   params.set("group_uuid", dto.group_uuid);
   if (dto.start !== undefined) params.set("start", String(dto.start));
   if (dto.size !== undefined) params.set("size", String(dto.size));
-  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + `/group/chat/message/history?${params.toString()}`, "");
+  const res = await invoke_rust(HTTP_METHOD.GET, getApiBase() + `/group/chat/message/history?${params.toString()}`, "");
   return parseData<GroupMessageVo[]>(res);
 };
 
 export const get_unread_group_messages = async (): Promise<UnreadCountVo[]> => {
-  const res = await invoke_rust(HTTP_METHOD.GET, TALK_API + "/group/chat/message/unread", "");
+  const res = await invoke_rust(HTTP_METHOD.GET, getApiBase() + "/group/chat/message/unread", "");
   return parseData<UnreadCountVo[]>(res);
 };
 

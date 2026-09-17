@@ -17,8 +17,9 @@ import {
   isBackendSuccess,
   isHttpSuccess,
 } from "@workspace/services";
+import { getApiBase } from "@workspace/services";
 import type { GroupInfoVo, GroupMemberVo, FriendVo } from "@workspace/types";
-import { TALK_API, ReportTargetType } from "@workspace/types";
+import { ReportTargetType } from "@workspace/types";
 import { useGroupMemberInfo } from "@/hooks/useGroupMemberInfo";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
@@ -206,7 +207,7 @@ const changeAvatar = async () => {
     const res = await invoke<{ status: number; body: string }>(
       "upload_file_request",
       {
-        url: `${TALK_API}/file_integrated/upload/group_avatar/${groupId}`,
+        url: `${getApiBase()}/file_integrated/upload/group_avatar/${groupId}`,
         filePath: compressed,
         fieldName: "file",
       }
