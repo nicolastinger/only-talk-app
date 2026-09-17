@@ -177,7 +177,7 @@ pub async fn clear_all_unread_sessions_service() -> Result<(), anyhow::Error> {
                 is_top: session.is_top,
                 group_id: session.group_id,
                 session_uuid: session.session_uuid,
-                synced_id: session.synced_id,
+                last_message_id: session.last_message_id,
             };
             clear_chat_session(chat_session).await?;
         }
@@ -284,7 +284,7 @@ pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), any
         is_top: last_chat_session.is_top,
         group_id: last_chat_session.group_id,
         session_uuid: last_chat_session.session_uuid,
-        synced_id: last_chat_session.synced_id,
+        last_message_id: last_chat_session.last_message_id,
     };
     clear_chat_session(chat_session).await?;
     Ok(())
@@ -352,7 +352,7 @@ pub async fn update_last_read_msg_from_db(
             is_top: 0,
             group_id: None,
             session_uuid: None,
-            synced_id: 0,
+            last_message_id: 0,
         };
         clear_chat_session(chat_session).await?;
     }
@@ -393,7 +393,7 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
         is_top: 0,
         group_id: None,
         session_uuid: None,
-        synced_id: 0,
+        last_message_id: 0,
     };
     // 创建会话窗口
     update_chat_session_db(&chat_session).await?;
@@ -457,7 +457,7 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
         is_top: 0,
         group_id: Some(group_id),
         session_uuid: None,
-        synced_id: 0,
+        last_message_id: 0,
     };
     update_chat_session_db(&chat_session).await?;
     Ok(())
@@ -729,7 +729,7 @@ async fn update_group_session_after_send(
             is_top: 0,
             group_id: Some(group_id.to_string()),
             session_uuid: None,
-            synced_id: 0,
+            last_message_id: 0,
         };
         update_chat_session_db(&chat_session).await?;
 

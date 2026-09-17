@@ -21,8 +21,8 @@ pub struct ChatSession {
     pub group_id: Option<String>,
     /// 会话标识: 单聊由用户对 v5 派生 / 群聊 = group_id
     pub session_uuid: Option<String>,
-    /// 本地已拉取位置(离线同步用)
-    pub synced_id: i64,
+    /// 会话事实: 服务端该会话最新消息 id(来自 /session/list); 缺口检测输入(任务12)
+    pub last_message_id: i64,
 }
 
 impl ChatSession {
@@ -51,7 +51,7 @@ impl ChatSession {
             is_top: chat_session_vo.is_top,
             group_id: chat_session_vo.group_id,
             session_uuid: chat_session_vo.session_uuid,
-            synced_id: chat_session_vo.synced_id,
+            last_message_id: chat_session_vo.last_message_id,
         })
     }
 }
@@ -72,7 +72,7 @@ impl SqliteStore for ChatSession {
             is_top INTEGER NOT NULL DEFAULT 0,
             session_type INTEGER NOT NULL DEFAULT 0,
             session_uuid TEXT DEFAULT NULL,
-            synced_id INTEGER NOT NULL DEFAULT 0,
+            last_message_id INTEGER NOT NULL DEFAULT 0,
             UNIQUE(send_user, recv_user),
             UNIQUE(session_uuid)
         )"#,
@@ -89,9 +89,24 @@ impl SqliteStore for ChatSession {
         let _ = sqlx::query("ALTER TABLE chat_session ADD COLUMN session_uuid TEXT DEFAULT NULL")
             .execute(pool_sqlite)
             .await; // Column already exists, ignore
-        let _ = sqlx::query("ALTER TABLE chat_session ADD COLUMN synced_id INTEGER NOT NULL DEFAULT 0")
+        let _ = sqlx::query(
+            "ALTER TABLE chat_session ADD COLUMN last_message_id INTEGER NOT NULL DEFAULT 0",
+        )
+        .execute(pool_sqlite)
+        .await; // Column already exists, ignore
+        // 任务12: 会话域收口 —— 执行位置迁出到同步域水位表, 然后删列(无包袱直迁)。
+        // 先搬后删; 新库无 synced_id 列时两条语句报错被忽略(幂等)。
+        let _ = sqlx::query(
+            r#"INSERT OR IGNORE INTO session_sync_state (session_uuid, synced_id, hist_floor, backfill, updated_at)
+               SELECT session_uuid, synced_id, NULL, 0, (CAST(strftime('%s','now') AS INTEGER) * 1000)
+               FROM chat_session
+               WHERE synced_id > 0 AND session_uuid IS NOT NULL"#,
+        )
+        .execute(pool_sqlite)
+        .await; // 列不存在/已迁移, ignore
+        let _ = sqlx::query("ALTER TABLE chat_session DROP COLUMN synced_id")
             .execute(pool_sqlite)
-            .await; // Column already exists, ignore
+            .await; // Column already dropped, ignore
         let _ = sqlx::query(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_session_su ON chat_session(session_uuid)",
         )

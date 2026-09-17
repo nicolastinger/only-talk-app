@@ -19,7 +19,9 @@ pub mod init_common_db;
 pub mod init_db;
 pub mod init_private_db;
 pub mod session_db;
+pub mod session_sync_state_db;
 pub mod store;
+pub mod sync_task_db;
 pub mod webrtc_signal_db;
 
 // 用户数据库

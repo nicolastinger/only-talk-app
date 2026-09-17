@@ -22,8 +22,8 @@ pub struct ChatSessionVo {
     pub group_id: Option<String>,
     /// 会话标识: 单聊由用户对 v5 派生 / 群聊 = group_id
     pub session_uuid: Option<String>,
-    /// 本地已拉取位置(离线同步用)
-    pub synced_id: i64,
+    /// 会话事实: 服务端该会话最新消息 id(来自 /session/list)
+    pub last_message_id: i64,
 }
 
 impl ChatSessionVo {
@@ -44,7 +44,7 @@ impl ChatSessionVo {
             friend_user_type: None,
             group_id: chat_session.group_id,
             session_uuid: chat_session.session_uuid,
-            synced_id: chat_session.synced_id,
+            last_message_id: chat_session.last_message_id,
         })
     }
 }

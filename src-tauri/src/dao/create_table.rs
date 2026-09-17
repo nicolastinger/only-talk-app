@@ -14,6 +14,8 @@ use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::group_member::GroupMember;
 use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::group_message_read::GroupMessageRead;
+use crate::entity::session_sync_state::SessionSyncState;
+use crate::entity::sync_task::SyncTask;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::user_info::UserInfo;
 use crate::entity::user_token::UserToken;
@@ -37,6 +39,9 @@ pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Err
 pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
     init_sqlite::<AppLog>(pool_sqlite).await?;
     init_sqlite::<ChatRecordRead>(pool_sqlite).await?;
+    // 任务12: 同步域两表必须先于 ChatSession —— 其 update_table 内做 synced_id 迁移(依赖本表已建)
+    init_sqlite::<SessionSyncState>(pool_sqlite).await?;
+    init_sqlite::<SyncTask>(pool_sqlite).await?;
     init_sqlite::<ChatSession>(pool_sqlite).await?;
     init_sqlite::<Friend>(pool_sqlite).await?;
     init_sqlite::<Group>(pool_sqlite).await?;

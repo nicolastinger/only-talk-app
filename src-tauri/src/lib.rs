@@ -73,6 +73,7 @@ use crate::cmd::p2p_controller::{
     send_p2p_video_call_response, send_p2p_video_config, send_p2p_video_frame, send_video_frame,
     start_video_channel,
 };
+use crate::cmd::sync_controller::{backfill_session, get_backfill_state, get_sync_history};
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
     get_cached_user_info_by_account, get_quic_connection_state, get_user_info_with_cache,
@@ -263,6 +264,9 @@ pub fn run() {
             ignore_send_msg,
             mark_group_read,
             get_chat_session_from_store,
+            backfill_session,
+            get_backfill_state,
+            get_sync_history,
             get_friend_info,
             delete_friend_command,
             mark_read,

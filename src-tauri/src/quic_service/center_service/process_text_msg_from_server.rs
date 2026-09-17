@@ -314,7 +314,7 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
             is_top: 0,
             group_id: None,
             session_uuid: None,
-            synced_id: 0,
+            last_message_id: 0,
         };
         if is_self {
             // 自己另一台设备回推：仅落库，不弹未读（列表预览由轮询/重进刷新）
@@ -397,7 +397,7 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
             is_top: 0,
             group_id: Some(group_id.clone()),
             session_uuid: None,
-            synced_id: 0,
+            last_message_id: 0,
         };
         if flag {
             chat_session.unread_count = 0;
@@ -530,7 +530,7 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         is_top: 0,
         group_id: if is_group { Some(recv_user) } else { None },
         session_uuid: None,
-        synced_id: 0,
+        last_message_id: 0,
     };
     clear_chat_session(chat_session).await?;
     Ok(())
