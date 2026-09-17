@@ -3,7 +3,6 @@ use std::path::PathBuf;
 
 use log::info;
 use reqwest::header::HeaderMap;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::command;
@@ -12,6 +11,7 @@ use crate::service::api_service::{
     post_form_data, upload_file, upload_file_with_fields, upload_multiple_files,
     upload_multiple_files_with_fields,
 };
+use crate::utils::http_client::http_client;
 use crate::utils::image_utils::compress_image_to_webp;
 use crate::GLOBAL_QUIC_USER_INFO;
 
@@ -23,7 +23,7 @@ pub struct ApiResponse {
 
 #[command]
 pub async fn get_request(url: String) -> Result<ApiResponse, String> {
-    let client = Client::new();
+    let client = http_client();
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
     let mut headers = HeaderMap::new();
@@ -39,7 +39,7 @@ pub async fn get_request(url: String) -> Result<ApiResponse, String> {
 
 #[command]
 pub async fn post_request(url: String, body: String) -> Result<ApiResponse, String> {
-    let client = Client::new();
+    let client = http_client();
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
     info!("token: {}", token);
@@ -64,7 +64,7 @@ pub async fn post_request(url: String, body: String) -> Result<ApiResponse, Stri
 
 #[command]
 pub async fn put_request(url: String, body: String) -> Result<ApiResponse, String> {
-    let client = Client::new();
+    let client = http_client();
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
     let mut headers = HeaderMap::new();
@@ -88,7 +88,7 @@ pub async fn put_request(url: String, body: String) -> Result<ApiResponse, Strin
 
 #[command]
 pub async fn delete_request(url: String, body: String) -> Result<ApiResponse, String> {
-    let client = Client::new();
+    let client = http_client();
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
     let mut headers = HeaderMap::new();
@@ -217,6 +217,7 @@ pub async fn compress_image_to_webp_command(input_path: String) -> Result<String
 #[cfg(target_os = "android")]
 fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String, String> {
     use std::io::Read;
+
     use tauri::Manager;
     use tauri_plugin_fs::FsExt;
 

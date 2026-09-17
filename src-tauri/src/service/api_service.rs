@@ -5,16 +5,17 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use reqwest::header::HeaderMap;
-use reqwest::{Client, Response};
+use reqwest::Response;
 use serde::Serialize;
 
+use crate::utils::http_client::{http_client_120, http_client_30, http_client_300};
 use crate::GLOBAL_QUIC_USER_INFO;
 
 pub async fn post_with_body(
     url: String,
     body: HashMap<String, String>,
 ) -> Result<Response, anyhow::Error> {
-    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+    let client = http_client_30();
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
@@ -26,7 +27,7 @@ pub async fn post_with_body(
 }
 
 pub async fn post_json<T: Serialize>(url: String, body: &T) -> Result<Response, anyhow::Error> {
-    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+    let client = http_client_30();
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
@@ -38,7 +39,7 @@ pub async fn post_json<T: Serialize>(url: String, body: &T) -> Result<Response, 
 }
 
 pub async fn get_with_token(url: String) -> Result<Response, anyhow::Error> {
-    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+    let client = http_client_30();
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
@@ -50,7 +51,7 @@ pub async fn get_with_token(url: String) -> Result<Response, anyhow::Error> {
 }
 
 pub async fn get_without_token(url: String) -> Result<Response, anyhow::Error> {
-    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+    let client = http_client_30();
     let response = client.get(&url).send().await?;
     Ok(response)
 }
@@ -82,7 +83,7 @@ pub async fn upload_file_with_fields(
 
     let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
 
-    let client = Client::builder().timeout(std::time::Duration::from_secs(120)).build()?;
+    let client = http_client_120();
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
@@ -144,7 +145,7 @@ pub async fn upload_multiple_files_with_fields(
         }
     }
 
-    let client = Client::builder().timeout(std::time::Duration::from_secs(300)).build()?;
+    let client = http_client_300();
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
@@ -192,7 +193,7 @@ pub async fn post_form_data(
     url: &str,
     fields: HashMap<String, String>,
 ) -> Result<Response, anyhow::Error> {
-    let client = Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
+    let client = http_client_30();
 
     let empty_token = String::new();
     let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();

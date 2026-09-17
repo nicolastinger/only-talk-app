@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
-use reqwest::{Client, Url};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::command;
@@ -13,6 +13,7 @@ use crate::entity::user_token::UserToken;
 use crate::service::p2p_service;
 use crate::service::user_service::{add_user_map, teardown_session, user_login};
 use crate::utils::global_static_str::DOMAIN_NAME;
+use crate::utils::http_client::http_client;
 use crate::GLOBAL_QUIC_USER_INFO;
 
 #[command]
@@ -21,7 +22,7 @@ pub async fn sign_in(
     mut body: HashMap<String, String>,
 ) -> Result<ApiResponse, String> {
     body.insert("device_fingerprint".to_string(), crate::utils::device_info::device_fingerprint());
-    let client = Client::new();
+    let client = http_client();
     let response = client.post(&url).json(&body).send().await.map_err(|e| e.to_string())?;
 
     let status = response.status().as_u16();
@@ -123,7 +124,7 @@ pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
         "device_fingerprint": crate::utils::device_info::device_fingerprint()
     });
 
-    let client = Client::new();
+    let client = http_client();
     let response = client.post(&refresh_url).json(&body).send().await.map_err(|e| e.to_string())?;
     let status = response.status().as_u16();
     let response_body = response.text().await.map_err(|e| e.to_string())?;
@@ -229,7 +230,7 @@ pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiRespon
         "device_fingerprint": crate::utils::device_info::device_fingerprint()
     });
 
-    let client = Client::new();
+    let client = http_client();
     let response = client.post(&refresh_url).json(&body).send().await.map_err(|e| e.to_string())?;
     let status = response.status().as_u16();
     let response_body = response.text().await.map_err(|e| e.to_string())?;
