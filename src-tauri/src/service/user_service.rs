@@ -25,8 +25,6 @@ use crate::entity::app_log::LOG_LEVEL_INFO;
 use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
-use crate::entity::session_sync_state::BACKFILL_NONE;
-use crate::entity::sync_task::{SYNC_KIND_BACKFILL, SYNC_KIND_GAP};
 use crate::entity::system_notification::SystemNotification;
 use crate::quic_service::center_service::text_quic_client::{spawn_client_loop, stop_client_loop};
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
@@ -98,13 +96,8 @@ pub(crate) async fn perform_session_login_tasks() -> Result<(), anyhow::Error> {
     sync_group_list().await.unwrap_or_else(|e| {
         error!("[session][login] 同步群聊列表失败(继续): {:?}", e);
     });
-    // 任务12: 先 refresh 落会话事实(last_message_id), 再缺口检测 + 静默补拉
-    refresh_session_list().await.unwrap_or_else(|e| {
-        error!("[session][login] 刷新会话列表失败(继续): {:?}", e);
-    });
-    sync_gap_messages().await.unwrap_or_else(|e| {
-        error!("[session][login] 离线同步失败(继续): {:?}", e);
-    });
+    // 任务12 简化: refresh 落会话事实(last_message_id) → 串行正向追平
+    refresh_and_forward().await;
     get_unread_notification().await.unwrap_or_else(|e| {
         error!("[session][login] 拉取未读通知失败(继续): {:?}", e);
     });
@@ -187,11 +180,6 @@ pub async fn start_session_tasks(cancel: CancellationToken) -> Result<(), anyhow
     let notify_task_key = schedule_key.clone();
     set.spawn(async move {
         send_notify_read_message(notify_task_key).await.expect("通知已读上报任务失败");
-    });
-    // 任务12: 同步域回填 worker(启动复位 + 批次清理 + 领取回填任务)
-    let worker_cancel = cancel.clone();
-    set.spawn(async move {
-        start_sync_worker(worker_cancel).await;
     });
 
     let mut count = 0u64;
@@ -412,7 +400,7 @@ pub async fn get_unread_notification() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// 重连后同步离线消息（任务12 §4.1）: 通知 → refresh → 缺口检测 → 静默补拉。
+/// 重连后同步离线消息(任务12 简化: 正向追平): 通知 → refresh → 串行逐会话追平。
 pub async fn sync_offline_messages() {
     // 设置同步中标志，阻止已读消息发送
     {
@@ -421,9 +409,7 @@ pub async fn sync_offline_messages() {
     }
 
     get_unread_notification().await.unwrap_or_else(|e| error!("拉取未读通知失败 {:?}", e));
-    // 任务12: 先 refresh 才有会话事实 last_message_id, 再据此检测缺口
-    refresh_session_list().await.unwrap_or_else(|e| error!("刷新会话列表失败 {:?}", e));
-    sync_gap_messages().await.unwrap_or_else(|e| error!("离线消息同步失败 {:?}", e));
+    refresh_and_forward().await;
 
     // 同步完成，移除标志
     {
@@ -432,14 +418,23 @@ pub async fn sync_offline_messages() {
     }
 }
 
-// ===== 任务12: 离线同步(客户端游标驱动) =====
+/// 刷新会话列表并正向追平离线消息(任务12 简化): 先 `refresh_session_list` 拿到
+/// 每个会话服务端最新 id(`last_message_id`), 再 `sync_sessions_forward` 串行追平。
+async fn refresh_and_forward() {
+    match refresh_session_list().await {
+        Ok(sessions) => {
+            if let Err(e) = sync_sessions_forward(&sessions).await {
+                error!("[session][sync] 离线消息正向追平失败 {:?}", e);
+            }
+        }
+        Err(e) => error!("[session][sync] 刷新会话列表失败 {:?}", e),
+    }
+}
 
-/// 静默补拉单会话条数(§4.1-3)。
-const GAP_PULL_LIMIT: u32 = 10;
-/// 回填单批条数(§4.2)。
-const BACKFILL_LIMIT: u32 = 50;
-/// 批次记录保留批数(§4.6-4)。
-const SYNC_BATCH_KEEP: i64 = 50;
+// ===== 任务12: 离线同步(正向追平, 客户端游标驱动) =====
+
+/// 单会话单次正向拉取条数。
+const SYNC_PULL_LIMIT: u32 = 100;
 
 #[derive(Debug, serde::Deserialize)]
 struct SyncResponse {
@@ -450,12 +445,12 @@ struct SyncResponse {
 
 #[derive(Debug, serde::Deserialize)]
 struct SyncSession {
+    #[allow(dead_code)]
     session_uuid: String,
     session_type: i16,
     messages: Vec<SyncMessage>,
     next_cursor: i64,
     has_more: bool,
-    truncated_by_window: bool,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -481,7 +476,7 @@ struct SessionListResponse {
     next_cursor: Option<SessionListCursor>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 struct SessionListItem {
     session_uuid: String,
     session_type: i16,
@@ -502,95 +497,79 @@ struct SessionListCursor {
     session_uuid: String,
 }
 
-/// 回填提示状态(任务12 §6.2): 前端进会话时据此决定弹窗/显进度。
-#[derive(Debug, serde::Serialize)]
-pub struct BackfillState {
-    /// 是否应弹「同步最近 7 天」提示(水位未回填过且无进行中任务)
-    pub should_prompt: bool,
-    /// 回填完成态: 0 未回填过 / 1 完成 / 2 跳过
-    pub backfill: i64,
-    /// 是否有待执行/执行中的回填任务
-    pub in_progress: bool,
-}
-
-/// 批次视图(任务12 §6.1): 批聚合 + 批内任务明细(可展开失败会话与原因)。
-#[derive(Debug, serde::Serialize)]
-pub struct SyncBatchView {
-    pub batch_id: i64,
-    pub total: i64,
-    pub success: i64,
-    pub failed: i64,
-    pub pending: i64,
-    pub tasks: Vec<crate::entity::sync_task::SyncTask>,
-}
-
-/// 缺口检测 + 静默补拉(任务12 §4.1-2/3)。需先 `refresh_session_list` 取得 `last_message_id`。
-pub async fn sync_gap_messages() -> Result<(), anyhow::Error> {
-    let me = get_user_info("uuid").await?;
-    let gaps = crate::dao::session_sync_state_db::list_gap_sessions(&me).await?;
-    sync_gap_sessions(&gaps).await
-}
-
-/// 静默补拉(任务12 §4.1-3): 单批, 每缺口会话拉最新 10 条。
+/// 正向追平(任务12 简化): 串行遍历会话, 把本地已同步的最新 id(`after_id`)发给服务端,
+/// 拉取窗口内 `id > after_id` 的消息, 直到追平服务端最新 id(`last_message_id`)或 7 天窗口尽头。
 ///
-/// 落库(nano_id 去重) → 回报 synced_id → 水位双写(`synced_id=next_cursor`;
-/// `hist_floor=min(既有, 本批最小 id)`) —— 首次拉取即建立连续前沿。
-async fn sync_gap_sessions(sessions: &[(String, i64)]) -> Result<(), anyhow::Error> {
-    if sessions.is_empty() {
-        return Ok(());
-    }
+/// 本地前沿 = `chat_record.server_id` / `group_chat_record.server_id` 的最大值(在线 QUIC 消息
+/// 无 server_id, 会在此被重新拉取, nano_id 去重兜底并顺带回填 server_id)。
+async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyhow::Error> {
     let me = get_user_info("uuid").await?;
-    let batch_id = crate::utils::time::get_now_time_stamp_as_millis()?;
-    info!("[session][sync] 静默补拉 {} 个缺口会话, batch_id={}", sessions.len(), batch_id);
-
-    let req_sessions: Vec<serde_json::Value> = sessions
-        .iter()
-        .map(|(session_uuid, _)| serde_json::json!({ "session_uuid": session_uuid }))
-        .collect();
-    let body = serde_json::json!({ "sessions": req_sessions, "limit": GAP_PULL_LIMIT });
-    let resp = post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
-        .await
-        .map_err(|e| anyhow!(e))?;
-    let result: HttpResult = parse_http_result(&resp.body)?;
-    if result.code != 200 || result.data.is_null() {
-        return Err(anyhow!("离线同步响应异常: code={}", result.code));
-    }
-    let sync: SyncResponse = serde_json::from_value(result.data)?;
-
-    let mut acks: Vec<serde_json::Value> = Vec::new();
-    for s in &sync.sessions {
-        let task_id =
-            crate::dao::sync_task_db::enqueue(batch_id, &s.session_uuid, SYNC_KIND_GAP).await?;
-        match apply_sync_session(&me, s).await {
-            Ok(new_count) => {
-                crate::dao::sync_task_db::record_batch(task_id, 1, new_count).await?;
-                crate::dao::sync_task_db::mark_success(task_id).await?;
-                acks.push(serde_json::json!({
-                    "session_uuid": s.session_uuid,
-                    "synced_id": s.next_cursor,
-                }));
+    let mut synced_sessions = 0usize;
+    for s in sessions {
+        let target = s.last_message_id;
+        if target <= 0 {
+            continue; // 服务端该会话无消息
+        }
+        // 本地前沿: 单聊按对端、群聊按 group_uuid
+        let mine = match s.session_type {
+            2 => local_max_group_server_id(&s.session_uuid).await?.unwrap_or(0),
+            _ => {
+                let Some(peer) = s.peer_uuid.as_ref().filter(|p| !p.is_empty()) else {
+                    continue;
+                };
+                local_max_server_id(&me, peer).await?.unwrap_or(0)
             }
-            Err(e) => {
-                crate::dao::sync_task_db::mark_failed(task_id, &e.to_string()).await?;
-                return Err(e);
+        };
+        if target <= mine {
+            continue; // 已追平
+        }
+
+        let mut after = mine;
+        let mut pulled = 0usize;
+        loop {
+            let body = serde_json::json!({
+                "sessions": [{ "session_uuid": s.session_uuid, "after_id": after }],
+                "limit": SYNC_PULL_LIMIT,
+            });
+            let resp = post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
+                .await
+                .map_err(|e| anyhow!(e))?;
+            let result: HttpResult = parse_http_result(&resp.body)?;
+            if result.code != 200 || result.data.is_null() {
+                return Err(anyhow!("离线同步响应异常: code={}", result.code));
+            }
+            let sync: SyncResponse = serde_json::from_value(result.data)?;
+            let Some(sess) = sync.sessions.first() else { break };
+            if sess.messages.is_empty() {
+                break; // 已追平服务端最新
+            }
+            apply_sync_session(&me, sess).await?;
+            pulled += 1;
+            after = sess.next_cursor;
+            if !sess.has_more {
+                break; // 窗口内取尽 → 追平最新 id 或 7 天窗口尽头
             }
         }
-    }
 
-    // 先落库再回报(宁重勿漏; 回报失败 → 下轮重拉, nano_id 去重兜住)
-    if !acks.is_empty() {
-        post_request(
-            format!("{}/session/synced", talk_api_base()),
-            serde_json::to_string(&serde_json::json!({ "sessions": acks }))?,
-        )
-        .await
-        .map_err(|e| anyhow!(e))?;
+        if pulled > 0 {
+            // 先落库再回报(宁重勿漏; 回报失败 → 下轮重拉, nano_id 去重兜住)
+            post_request(
+                format!("{}/session/synced", talk_api_base()),
+                serde_json::to_string(&serde_json::json!({
+                    "sessions": [{ "session_uuid": s.session_uuid, "synced_id": after }]
+                }))?,
+            )
+            .await
+            .map_err(|e| anyhow!(e))?;
+            synced_sessions += 1;
+            info!("[session][sync] 会话追平完成: {} (after={})", s.session_uuid, after);
+        }
     }
-    info!("[session][sync] 静默补拉完成: {} 个会话", sync.sessions.len());
+    info!("[session][sync] 正向追平完成: {} 个会话有增量", synced_sessions);
     Ok(())
 }
 
-/// 应用一批同步结果: 落库 + 水位双写; 返回本批新增消息数。
+/// 应用一批同步结果: 落库(nano_id 去重) + 回写 server_id + 更新会话表; 返回本批新增消息数。
 async fn apply_sync_session(me: &str, s: &SyncSession) -> Result<i64, anyhow::Error> {
     let mut new_count = 0i64;
     for msg in &s.messages {
@@ -602,153 +581,7 @@ async fn apply_sync_session(me: &str, s: &SyncSession) -> Result<i64, anyhow::Er
             new_count += 1;
         }
     }
-    // 水位双写: synced_id 只前进; hist_floor 压到本批最小 id(批内连续, 与上方衔接)
-    let hist_floor = s.messages.first().map(|m| m.id);
-    crate::dao::session_sync_state_db::upsert_pull_position(
-        &s.session_uuid,
-        s.next_cursor,
-        hist_floor,
-    )
-    .await?;
     Ok(new_count)
-}
-
-/// 入队一个会话的同意式回填(任务12 §4.6): 建批(batch_id=now) + 任务行(查重)。
-///
-/// 命令立即返回, 实际拉取由后台 worker 消化。
-pub async fn enqueue_backfill(session_uuid: &str) -> Result<(), anyhow::Error> {
-    if crate::dao::sync_task_db::has_pending(SYNC_KIND_BACKFILL, session_uuid).await? {
-        return Ok(()); // 已有待执行/执行中的回填, 不重复入队
-    }
-    let batch_id = crate::utils::time::get_now_time_stamp_as_millis()?;
-    crate::dao::sync_task_db::enqueue(batch_id, session_uuid, SYNC_KIND_BACKFILL).await?;
-    info!("[session][sync] 回填已入队: session={}, batch_id={}", session_uuid, batch_id);
-    Ok(())
-}
-
-/// 回填提示状态(任务12 §6.2)。
-pub async fn get_backfill_state(session_uuid: &str) -> Result<BackfillState, anyhow::Error> {
-    let state = crate::dao::session_sync_state_db::get_state(session_uuid).await?;
-    let backfill = state.as_ref().map(|s| s.backfill).unwrap_or(BACKFILL_NONE);
-    let in_progress =
-        crate::dao::sync_task_db::has_pending(SYNC_KIND_BACKFILL, session_uuid).await?;
-    Ok(BackfillState { should_prompt: backfill == BACKFILL_NONE && !in_progress, backfill, in_progress })
-}
-
-/// 批次视图(任务12 §6.1 `get_sync_history`)。
-pub async fn get_sync_history() -> Result<Vec<SyncBatchView>, anyhow::Error> {
-    let summaries = crate::dao::sync_task_db::history().await?;
-    let mut out = Vec::with_capacity(summaries.len());
-    for s in summaries {
-        let tasks = crate::dao::sync_task_db::list_batch_tasks(s.batch_id).await?;
-        out.push(SyncBatchView {
-            batch_id: s.batch_id,
-            total: s.total,
-            success: s.success,
-            failed: s.failed,
-            pending: s.pending,
-            tasks,
-        });
-    }
-    Ok(out)
-}
-
-/// 回填任务执行体(任务12 §4.2): 从 `hist_floor` 续翻, 走穿本地已有区域, 直至窗口底/截断。
-///
-/// 终止条件只有两条(不含「零新增」): `!has_more`(窗口内取尽)、`truncated_by_window`(更旧的出窗口)。
-/// 每批一律把 floor 压到批最小 id —— 零新增不再是终止信号, 只是继续向下。
-async fn run_backfill_task(task: &crate::entity::sync_task::SyncTask) -> Result<(), anyhow::Error> {
-    let session_uuid = &task.session_uuid;
-    // 连续前沿; NULL(从未拉取)时回退到已回报前沿(防御分支, 正常流程静默补拉已建立)
-    let mut before_id = match crate::dao::session_sync_state_db::get_hist_floor(session_uuid).await? {
-        Some(f) => f,
-        None => crate::dao::session_sync_state_db::get_state(session_uuid)
-            .await?
-            .map(|s| s.synced_id)
-            .unwrap_or(0),
-    };
-    if before_id <= 0 {
-        crate::dao::session_sync_state_db::complete_backfill(session_uuid).await?;
-        crate::dao::sync_task_db::mark_success(task.id).await?;
-        return Ok(());
-    }
-
-    let me = get_user_info("uuid").await?;
-    loop {
-        let body = serde_json::json!({
-            "sessions": [{ "session_uuid": session_uuid, "before_id": before_id }],
-            "limit": BACKFILL_LIMIT,
-        });
-        let resp = post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
-            .await
-            .map_err(|e| anyhow!(e))?;
-        let result: HttpResult = parse_http_result(&resp.body)?;
-        if result.code != 200 || result.data.is_null() {
-            return Err(anyhow!("回填同步响应异常: code={}", result.code));
-        }
-        let sync: SyncResponse = serde_json::from_value(result.data)?;
-        let Some(s) = sync.sessions.first() else { break };
-
-        let new_count = apply_sync_session(&me, s).await?;
-        crate::dao::sync_task_db::record_batch(task.id, 1, new_count).await?;
-        emit_backfill_progress(session_uuid, new_count);
-
-        // 无论本批是否新增, floor 一律压到批最小 id(apply_sync_session 已写水位)
-        let Some(min_id) = s.messages.first().map(|m| m.id) else { break };
-        before_id = min_id;
-
-        if !s.has_more {
-            break; // 窗口内已到头
-        }
-        if s.truncated_by_window {
-            break; // 更早的已出 7 天窗口
-        }
-    }
-    // 走到窗口底/截断 → 任务完成(新洞不可能形成, §4.2 不变式)
-    crate::dao::session_sync_state_db::complete_backfill(session_uuid).await?;
-    crate::dao::sync_task_db::mark_success(task.id).await?;
-    info!("[session][sync] 回填完成: session={}", session_uuid);
-    Ok(())
-}
-
-/// 回填进度事件(§6.2): worker 每完成一批回填。
-fn emit_backfill_progress(session_uuid: &str, new_count: i64) {
-    if let Some(handle) = APP_HANDLE.get() {
-        let payload = serde_json::json!({ "session_uuid": session_uuid, "new_count": new_count });
-        let _ = handle.emit("session_backfill_progress", payload.to_string());
-    }
-}
-
-/// 同步域后台 worker(任务12 §4.6): 启动复位 + 批次清理 → 循环领取回填任务。
-///
-/// 随会话 `cancel` 退出(由 `start_session_tasks` 托管)。
-pub async fn start_sync_worker(cancel: CancellationToken) {
-    if let Err(e) = crate::dao::sync_task_db::reset_running().await {
-        error!("[session][sync] 复位执行中任务失败: {:?}", e);
-    }
-    if let Err(e) = crate::dao::sync_task_db::prune_batches(SYNC_BATCH_KEEP).await {
-        error!("[session][sync] 批次清理失败: {:?}", e);
-    }
-    info!("[session][sync] 回填 worker 启动");
-    loop {
-        tokio::select! {
-            _ = cancel.cancelled() => {
-                info!("[session][sync] 回填 worker 收到取消, 退出");
-                return;
-            }
-            _ = tokio::time::sleep(Duration::from_secs(2)) => {}
-        }
-        match crate::dao::sync_task_db::claim_pending(SYNC_KIND_BACKFILL).await {
-            Ok(Some(task)) => {
-                if let Err(e) = run_backfill_task(&task).await {
-                    error!("[session][sync] 回填任务失败: {:?}", e);
-                    let _ = crate::dao::sync_task_db::mark_failed(task.id, &e.to_string()).await;
-                }
-            }
-            Ok(None) => {}
-            Err(e) => error!("[session][sync] 领取回填任务失败: {:?}", e),
-        }
-    }
 }
 
 /// 单聊同步消息落库(复用 insert_chat_record 去重链); 返回是否新增。
@@ -827,9 +660,12 @@ async fn insert_group_sync_message(me: &str, msg: &SyncMessage) -> Result<bool, 
     Ok(is_new)
 }
 
-/// 拉取 /session/list 并把服务端状态合并进本地会话表(任务07 §5.6 / 任务12: 落 last_message_id)。
-async fn refresh_session_list() -> Result<(), anyhow::Error> {
+/// 拉取 /session/list 并把服务端状态合并进本地会话表(任务07 §5.6)。
+///
+/// 返回全量会话 —— 客户端据此做正向追平: 每会话 `target = last_message_id`。
+async fn refresh_session_list() -> Result<Vec<SessionListItem>, anyhow::Error> {
     let me = get_user_info("uuid").await?;
+    let mut all = Vec::new();
     let mut cursor: Option<serde_json::Value> = None;
     loop {
         let body = serde_json::json!({ "cursor": cursor, "size": 50 });
@@ -843,6 +679,7 @@ async fn refresh_session_list() -> Result<(), anyhow::Error> {
         let list: SessionListResponse = serde_json::from_value(result.data)?;
         for s in &list.sessions {
             merge_local_session(&me, s).await?;
+            all.push(s.clone());
         }
         if !list.has_more {
             break;
@@ -858,7 +695,7 @@ async fn refresh_session_list() -> Result<(), anyhow::Error> {
             break;
         }
     }
-    Ok(())
+    Ok(all)
 }
 
 /// 把一条服务端会话合并进本地 chat_session(不覆盖本地角标; 落会话事实 last_message_id)。
@@ -1123,8 +960,7 @@ mod tests {
                     "raw": [104, 105]
                 }],
                 "next_cursor": 12345,
-                "has_more": false,
-                "truncated_by_window": false
+                "has_more": false
             }]
         }"#;
         let resp: SyncResponse = serde_json::from_str(json).expect("解析 SyncResponse 失败");

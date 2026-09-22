@@ -9,5 +9,4 @@ pub mod friend_controller;
 pub mod group_controller;
 pub mod notification_controller;
 pub mod p2p_controller;
-pub mod sync_controller;
 pub mod user_controller;

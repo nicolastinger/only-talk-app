@@ -16,8 +16,9 @@ use app_lib::dao::chat_record_ack::{
     update_chat_record_ack, update_chat_record_ack_prev_id,
 };
 use app_lib::dao::chat_record_db::{
-    insert_chat_record, query_chat_record_by_id_from_db, query_chat_record_by_type_from_db,
-    query_chat_record_from_db, query_last_chat_record, query_last_read_msg,
+    insert_chat_record, local_max_server_id, query_chat_record_by_id_from_db,
+    query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
+    query_last_read_msg, set_chat_record_server_id,
 };
 use app_lib::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
@@ -36,7 +37,8 @@ use app_lib::dao::friend_db::{
 };
 use app_lib::dao::get_db_client;
 use app_lib::dao::group_chat_record_db::{
-    insert_group_chat_record, query_group_chat_record_from_db, query_last_group_chat_record,
+    insert_group_chat_record, local_max_group_server_id, query_group_chat_record_from_db,
+    query_last_group_chat_record, set_group_server_id,
 };
 use app_lib::dao::group_message_ack::{
     insert_group_message_ack, query_group_message_ack_by_local_nano_id,
@@ -1123,6 +1125,122 @@ async fn group_message_read_upsert_query() {
 // ---------- 任务12: 同步域(水位表 + 任务表) ----------
 
 /// 任务12: 水位双写 —— synced_id 只前进, hist_floor 单调只向下。
+// ===== 任务12 简化: 正向追平(本地前沿 = max(server_id)) =====
+
+/// 正向追平: 单聊本地前沿(`after_id` 输入) = 双方消息中 max(server_id)。
+///
+/// 在线 QUIC 消息无 server_id → 重连重拉时 nano_id 去重、回填 server_id, 前沿自愈 ——
+/// 这正是 `sync_sessions_forward` 每次重连正向重拉的兜底语义。
+#[tokio::test]
+async fn forward_sync_single_frontier_self_heal() {
+    with_private_db(|_pool| async move {
+        // 无任何消息 → 前沿 None(客户端视为 0, 从窗口内最早起拉)
+        let stranger = "00000000-0000-0000-0000-00000000ffff";
+        assert_eq!(
+            local_max_server_id(ME, stranger).await.expect("查询前沿失败"),
+            None,
+            "无消息不应有前沿"
+        );
+
+        // 首次 HTTP 同步: 落库 + 回填 server_id
+        let synced = TextQuicMsgVo {
+            nano_id: "fs-1".to_string(),
+            text_type: 0,
+            raw: "synced".to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+        };
+        assert!(insert_chat_record(&synced).await.expect("插入消息失败"), "首次应新增");
+        set_chat_record_server_id("fs-1", 1001).await.expect("回填 server_id 失败");
+
+        // 在线 QUIC 已投递但无 server_id(真实场景: 在线消息到本地 server_id 恒 NULL)
+        let online = TextQuicMsgVo {
+            nano_id: "fs-2".to_string(),
+            text_type: 0,
+            raw: "online".to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+        };
+        assert!(insert_chat_record(&online).await.expect("插入在线消息失败"));
+
+        // 前沿只看 server_id → 未含在线消息(低估, 下次重连会重拉)
+        assert_eq!(local_max_server_id(ME, FRIEND).await.expect("查询前沿失败"), Some(1001));
+
+        // 重连重拉 fs-2(服务端补上 server_id=1002): 同 nano_id 去重(非新增)但回填 server_id → 前沿自愈
+        assert!(!insert_chat_record(&online).await.expect("插入在线消息失败"), "同 nano_id 应去重");
+        set_chat_record_server_id("fs-2", 1002).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_server_id(ME, FRIEND).await.expect("查询前沿失败"), Some(1002));
+
+        // 双向对称: 我发出的消息(有 server_id)也计入前沿
+        let sent = TextQuicMsgVo {
+            nano_id: "fs-3".to_string(),
+            text_type: 0,
+            raw: "sent".to_string(),
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 300,
+        };
+        assert!(insert_chat_record(&sent).await.expect("插入发送消息失败"));
+        set_chat_record_server_id("fs-3", 1003).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_server_id(ME, FRIEND).await.expect("查询前沿失败"), Some(1003));
+    })
+    .await;
+}
+
+/// 正向追平: 群聊本地前沿(`after_id` 输入) = 群消息中 max(server_id)。
+#[tokio::test]
+async fn forward_sync_group_frontier_self_heal() {
+    with_private_db(|_pool| async move {
+        let group = "00000000-0000-0000-0000-0000000000gg";
+
+        // 无 server_id → None(视为 0, 全量窗口起拉)
+        assert_eq!(
+            local_max_group_server_id(group).await.expect("查询前沿失败"),
+            None,
+            "无消息不应有前沿"
+        );
+
+        let rec1 = GroupChatRecord {
+            id: 0,
+            nano_id: "fg-1".to_string(),
+            text_type: 0,
+            raw: "group synced".to_string(),
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+            server_id: None,
+        };
+        assert!(GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"));
+        set_group_server_id("fg-1", 2001).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2001));
+
+        // 重拉同消息: 去重 + 回填幂等, 前沿不变
+        assert!(!GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"), "同 nano_id 应去重");
+        set_group_server_id("fg-1", 2001).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2001));
+
+        // 新消息 → 前沿推进
+        let rec2 = GroupChatRecord {
+            id: 0,
+            nano_id: "fg-2".to_string(),
+            text_type: 0,
+            raw: "newer".to_string(),
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+            server_id: None,
+        };
+        assert!(GroupChatRecord::insert(&rec2).await.expect("插入群聊消息失败"));
+        set_group_server_id("fg-2", 2002).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2002));
+    })
+    .await;
+}
+
+// ===== 任务12(旧版): 同步域两表(已随正向追平休眠, 表结构保留) =====
+
 #[tokio::test]
 async fn sync_state_pull_position_forward_and_floor_monotonic() {
     with_user_db(|_pool| async move {
