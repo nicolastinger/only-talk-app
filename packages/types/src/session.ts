@@ -92,3 +92,32 @@ export interface SessionControlRequest {
   /** pin/mute: 目标值(0/1); delete 忽略 */
   value?: number;
 }
+
+// ===== 任务12 正向追平: 追平记录(get_sync_history 命令) =====
+
+/** 单会话追平记录(一轮重连/登录 = 一批) */
+export interface SyncTaskItem {
+  id: number;
+  batch_id: number;
+  session_uuid: string;
+  /** 任务类型(恒为正向追平) */
+  kind: number;
+  /** 2-成功 3-失败 */
+  status: number;
+  batches: number;
+  new_count: number;
+  attempt: number;
+  last_error: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+/** 追平记录批次视图(get_sync_history 命令): 一轮一批 */
+export interface SyncBatchView {
+  batch_id: number;
+  total: number;
+  success: number;
+  failed: number;
+  pending: number;
+  tasks: SyncTaskItem[];
+}

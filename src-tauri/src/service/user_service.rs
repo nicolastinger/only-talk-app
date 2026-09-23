@@ -435,6 +435,8 @@ async fn refresh_and_forward() {
 
 /// 单会话单次正向拉取条数。
 const SYNC_PULL_LIMIT: u32 = 100;
+/// 追平记录保留批数(每轮重连 = 一批)。
+const SYNC_BATCH_KEEP: i64 = 50;
 
 #[derive(Debug, serde::Deserialize)]
 struct SyncResponse {
@@ -502,9 +504,14 @@ struct SessionListCursor {
 ///
 /// 本地前沿 = `chat_record.server_id` / `group_chat_record.server_id` 的最大值(在线 QUIC 消息
 /// 无 server_id, 会在此被重新拉取, nano_id 去重兜底并顺带回填 server_id)。
+///
+/// 每轮 = 一个批次(`batch_id = now`), 每个有增量并尝试追平的会话写一条**终态**记录到
+/// `sync_task`(成功/失败), 供前端 `get_sync_history` 查看追平结果。单会话失败不阻断整轮。
 async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyhow::Error> {
     let me = get_user_info("uuid").await?;
+    let batch_id = crate::utils::time::get_now_time_stamp_as_millis()?;
     let mut synced_sessions = 0usize;
+    let mut failed_sessions = 0usize;
     for s in sessions {
         let target = s.last_message_id;
         if target <= 0 {
@@ -526,47 +533,127 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
 
         let mut after = mine;
         let mut pulled = 0usize;
-        loop {
-            let body = serde_json::json!({
-                "sessions": [{ "session_uuid": s.session_uuid, "after_id": after }],
-                "limit": SYNC_PULL_LIMIT,
-            });
-            let resp = post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
-                .await
-                .map_err(|e| anyhow!(e))?;
-            let result: HttpResult = parse_http_result(&resp.body)?;
-            if result.code != 200 || result.data.is_null() {
-                return Err(anyhow!("离线同步响应异常: code={}", result.code));
+        let mut total_new = 0i64;
+        let pull_result: Result<(), anyhow::Error> = async {
+            loop {
+                let body = serde_json::json!({
+                    "sessions": [{ "session_uuid": s.session_uuid, "after_id": after }],
+                    "limit": SYNC_PULL_LIMIT,
+                });
+                let resp =
+                    post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
+                        .await
+                        .map_err(|e| anyhow!(e))?;
+                let result: HttpResult = parse_http_result(&resp.body)?;
+                if result.code != 200 || result.data.is_null() {
+                    return Err(anyhow!("离线同步响应异常: code={}", result.code));
+                }
+                let sync: SyncResponse = serde_json::from_value(result.data)?;
+                let Some(sess) = sync.sessions.first() else { break };
+                if sess.messages.is_empty() {
+                    break; // 已追平服务端最新
+                }
+                let new_count = apply_sync_session(&me, sess).await?;
+                total_new += new_count;
+                pulled += 1;
+                after = sess.next_cursor;
+                if !sess.has_more {
+                    break; // 窗口内取尽 → 追平最新 id 或 7 天窗口尽头
+                }
             }
-            let sync: SyncResponse = serde_json::from_value(result.data)?;
-            let Some(sess) = sync.sessions.first() else { break };
-            if sess.messages.is_empty() {
-                break; // 已追平服务端最新
-            }
-            apply_sync_session(&me, sess).await?;
-            pulled += 1;
-            after = sess.next_cursor;
-            if !sess.has_more {
-                break; // 窗口内取尽 → 追平最新 id 或 7 天窗口尽头
-            }
+            Ok(())
+        }
+        .await;
+
+        if let Err(e) = pull_result {
+            // 单会话失败 → 记失败, 继续下一会话(不阻断整轮)
+            failed_sessions += 1;
+            error!("[session][sync] 会话追平失败: {}, err={:?}", s.session_uuid, e);
+            let _ = crate::dao::sync_task_db::record_forward_catchup(
+                batch_id,
+                &s.session_uuid,
+                crate::entity::sync_task::SYNC_STATUS_FAILED,
+                pulled as i64,
+                total_new,
+                Some(&e.to_string()),
+            )
+            .await;
+            continue;
         }
 
         if pulled > 0 {
             // 先落库再回报(宁重勿漏; 回报失败 → 下轮重拉, nano_id 去重兜住)
-            post_request(
+            let report = post_request(
                 format!("{}/session/synced", talk_api_base()),
                 serde_json::to_string(&serde_json::json!({
                     "sessions": [{ "session_uuid": s.session_uuid, "synced_id": after }]
                 }))?,
             )
             .await
-            .map_err(|e| anyhow!(e))?;
+            .map_err(|e| anyhow!(e));
+            if let Err(e) = report {
+                failed_sessions += 1;
+                error!("[session][sync] 会话追平回报失败: {}, err={:?}", s.session_uuid, e);
+                let _ = crate::dao::sync_task_db::record_forward_catchup(
+                    batch_id,
+                    &s.session_uuid,
+                    crate::entity::sync_task::SYNC_STATUS_FAILED,
+                    pulled as i64,
+                    total_new,
+                    Some(&e.to_string()),
+                )
+                .await;
+                continue;
+            }
             synced_sessions += 1;
+            let _ = crate::dao::sync_task_db::record_forward_catchup(
+                batch_id,
+                &s.session_uuid,
+                crate::entity::sync_task::SYNC_STATUS_SUCCESS,
+                pulled as i64,
+                total_new,
+                None,
+            )
+            .await;
             info!("[session][sync] 会话追平完成: {} (after={})", s.session_uuid, after);
         }
     }
-    info!("[session][sync] 正向追平完成: {} 个会话有增量", synced_sessions);
+    // 记录有界: 仅保留最近 N 批
+    let _ = crate::dao::sync_task_db::prune_batches(SYNC_BATCH_KEEP).await;
+    info!(
+        "[session][sync] 正向追平完成: {} 个会话有增量, 失败 {} 个",
+        synced_sessions, failed_sessions
+    );
     Ok(())
+}
+
+/// 追平记录批次视图(任务12: `get_sync_history` 命令返回值)。
+#[derive(Debug, serde::Serialize)]
+pub struct SyncBatchView {
+    pub batch_id: i64,
+    pub total: i64,
+    pub success: i64,
+    pub failed: i64,
+    pub pending: i64,
+    pub tasks: Vec<crate::entity::sync_task::SyncTask>,
+}
+
+/// 追平记录历史(任务12: `get_sync_history` 命令): 按轮次(batch_id)聚合 + 明细。
+pub async fn get_sync_history() -> Result<Vec<SyncBatchView>, anyhow::Error> {
+    let summaries = crate::dao::sync_task_db::history().await?;
+    let mut out = Vec::with_capacity(summaries.len());
+    for s in summaries {
+        let tasks = crate::dao::sync_task_db::list_batch_tasks(s.batch_id).await?;
+        out.push(SyncBatchView {
+            batch_id: s.batch_id,
+            total: s.total,
+            success: s.success,
+            failed: s.failed,
+            pending: s.pending,
+            tasks,
+        });
+    }
+    Ok(out)
 }
 
 /// 应用一批同步结果: 落库(nano_id 去重) + 回写 server_id + 更新会话表; 返回本批新增消息数。

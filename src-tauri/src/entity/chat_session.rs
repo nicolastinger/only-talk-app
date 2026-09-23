@@ -94,19 +94,14 @@ impl SqliteStore for ChatSession {
         )
         .execute(pool_sqlite)
         .await; // Column already exists, ignore
-        // 任务12: 会话域收口 —— 执行位置迁出到同步域水位表, 然后删列(无包袱直迁)。
-        // 先搬后删; 新库无 synced_id 列时两条语句报错被忽略(幂等)。
-        let _ = sqlx::query(
-            r#"INSERT OR IGNORE INTO session_sync_state (session_uuid, synced_id, hist_floor, backfill, updated_at)
-               SELECT session_uuid, synced_id, NULL, 0, (CAST(strftime('%s','now') AS INTEGER) * 1000)
-               FROM chat_session
-               WHERE synced_id > 0 AND session_uuid IS NOT NULL"#,
-        )
-        .execute(pool_sqlite)
-        .await; // 列不存在/已迁移, ignore
+        // 任务12 收口(历史): 会话域执行位置迁出后删列; 新库无 synced_id 列时语句报错被忽略(幂等)。
+        // 旧版水位表 session_sync_state 已废除(本地前沿由 max(server_id) 推导) —— 残留表一并清理。
         let _ = sqlx::query("ALTER TABLE chat_session DROP COLUMN synced_id")
             .execute(pool_sqlite)
             .await; // Column already dropped, ignore
+        let _ = sqlx::query("DROP TABLE IF EXISTS session_sync_state")
+            .execute(pool_sqlite)
+            .await;
         let _ = sqlx::query(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_session_su ON chat_session(session_uuid)",
         )

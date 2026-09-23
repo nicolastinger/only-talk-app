@@ -52,14 +52,7 @@ use app_lib::dao::session_db::{
     hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
     search_chat_session_db, show_chat_session_db, update_chat_session_db,
 };
-use app_lib::dao::session_sync_state_db::{
-    complete_backfill, get_hist_floor, get_state, list_gap_sessions, set_backfill_status,
-    upsert_pull_position,
-};
-use app_lib::dao::sync_task_db::{
-    claim_pending, enqueue, has_pending, history, list_batch_tasks, mark_failed, mark_success,
-    prune_batches, record_batch, reset_running,
-};
+use app_lib::dao::sync_task_db::{history, list_batch_tasks, prune_batches, record_forward_catchup};
 use app_lib::dao::webrtc_signal_db::{
     insert_webrtc_signal, query_webrtc_signal_by_session, save_webrtc_signal,
 };
@@ -75,10 +68,7 @@ use app_lib::entity::group_chat_record::GroupChatRecord;
 use app_lib::entity::group_member::GroupMember;
 use app_lib::entity::group_message_ack::GroupMessageAck;
 use app_lib::entity::group_message_read::GroupMessageRead;
-use app_lib::entity::session_sync_state::{BACKFILL_DONE, BACKFILL_NONE};
-use app_lib::entity::sync_task::{
-    SYNC_KIND_BACKFILL, SYNC_KIND_GAP, SYNC_STATUS_FAILED, SYNC_STATUS_RUNNING,
-};
+use app_lib::entity::sync_task::{SYNC_STATUS_FAILED, SYNC_STATUS_SUCCESS};
 use app_lib::entity::system_notification::SystemNotification;
 use app_lib::entity::user_info::UserInfo;
 use app_lib::entity::user_token::UserToken;
@@ -1239,176 +1229,67 @@ async fn forward_sync_group_frontier_self_heal() {
     .await;
 }
 
-// ===== 任务12(旧版): 同步域两表(已随正向追平休眠, 表结构保留) =====
+// ===== 任务12 正向追平: 会话追平记录表(sync_task, 供前端查看追平成败) =====
+// 消费水位表 session_sync_state 已删除(本地前沿由 max(server_id) 推导)。
 
+/// 追平记录: 正向追平流程按「轮次 × 会话」写终态(成功/失败), 批次视图聚合 + 明细。
 #[tokio::test]
-async fn sync_state_pull_position_forward_and_floor_monotonic() {
-    with_user_db(|_pool| async move {
-        let su = "00000000-0000-0000-0000-0000000000aa";
-
-        // 首次建立: synced_id=5230, hist_floor=5221
-        upsert_pull_position(su, 5230, Some(5221)).await.expect("写水位失败");
-        let st = get_state(su).await.expect("读水位失败").expect("应有水位行");
-        assert_eq!(st.synced_id, 5230);
-        assert_eq!(st.hist_floor, Some(5221));
-        assert_eq!(st.backfill, BACKFILL_NONE);
-
-        // synced_id 只前进: 回退值被忽略
-        upsert_pull_position(su, 5000, None).await.expect("写水位失败");
-        assert_eq!(get_state(su).await.expect("读水位失败").expect("应有水位行").synced_id, 5230);
-
-        // hist_floor 取 min(只向下): 上方批次不改, 下方批次下压
-        upsert_pull_position(su, 5230, Some(5300)).await.expect("写水位失败");
-        assert_eq!(
-            get_hist_floor(su).await.expect("读 floor 失败"),
-            Some(5221),
-            "上方批次不应抬高 floor"
-        );
-        upsert_pull_position(su, 5230, Some(5100)).await.expect("写水位失败");
-        assert_eq!(
-            get_hist_floor(su).await.expect("读 floor 失败"),
-            Some(5100),
-            "下方批次应下压 floor"
-        );
-    })
-    .await;
-}
-
-/// 任务12: 回填完成态写入与读取。
-#[tokio::test]
-async fn sync_state_backfill_status_roundtrip() {
-    with_user_db(|_pool| async move {
-        let su = "00000000-0000-0000-0000-0000000000bb";
-        assert!(get_state(su).await.expect("读水位失败").is_none(), "无行应为 None");
-        set_backfill_status(su, BACKFILL_DONE).await.expect("写完成态失败");
-        let st = get_state(su).await.expect("读水位失败").expect("应建立水位行");
-        assert_eq!(st.backfill, BACKFILL_DONE);
-        complete_backfill(su).await.expect("写完成态失败");
-        assert_eq!(
-            get_state(su).await.expect("读水位失败").expect("应有水位行").backfill,
-            BACKFILL_DONE
-        );
-    })
-    .await;
-}
-
-/// 任务12: 缺口检测 = last_message_id > COALESCE(synced_id, 0)。
-#[tokio::test]
-async fn sync_state_gap_detection() {
-    with_user_db(|pool| async move {
-        for (su, last_id) in [("su-gap", 5230i64), ("su-eq", 5000i64), ("su-none", 100i64)] {
-            sqlx::query(
-                r#"INSERT INTO chat_session
-                     (nano_id, timestamp, text_type, unread_count, last_message, send_user, recv_user,
-                      session_type, is_show, is_top, session_uuid, last_message_id)
-                   VALUES ('', 0, 0, 0, '', ?1, ?2, 1, 1, 0, ?1, ?3)"#,
-            )
-            .bind(su)
-            .bind(ME)
-            .bind(last_id)
-            .execute(&pool)
-            .await
-            .expect("插入 chat_session 失败");
-        }
-        upsert_pull_position("su-eq", 5000, None).await.expect("写水位失败");
-        upsert_pull_position("su-none", 0, None).await.expect("写水位失败");
-
-        let gaps = list_gap_sessions(ME).await.expect("缺口检测失败");
-        let mut names: Vec<String> = gaps.iter().map(|(s, _)| s.clone()).collect();
-        names.sort();
-        assert_eq!(
-            names,
-            vec!["su-gap".to_string(), "su-none".to_string()],
-            "只检出 last_message_id > synced_id"
-        );
-    })
-    .await;
-}
-
-/// 任务12: 任务入队 → 查重 → 领取 → 记录 → 成功/失败; 批次视图聚合。
-#[tokio::test]
-async fn sync_task_enqueue_claim_finish_and_history() {
+async fn sync_task_record_forward_catchup_history() {
     with_user_db(|_pool| async move {
         let batch = 1_700_000_000_000i64;
-        assert!(!has_pending(SYNC_KIND_BACKFILL, "su1").await.expect("查重失败"));
-        enqueue(batch, "su1", SYNC_KIND_BACKFILL).await.expect("入队失败");
-        assert!(has_pending(SYNC_KIND_BACKFILL, "su1").await.expect("查重失败"), "入队后应有 pending");
-        enqueue(batch, "su2", SYNC_KIND_GAP).await.expect("入队失败");
 
-        let task = claim_pending(SYNC_KIND_BACKFILL).await.expect("领取失败").expect("应领到任务");
-        assert_eq!(task.session_uuid, "su1");
-        assert_eq!(task.status, SYNC_STATUS_RUNNING);
-        assert!(
-            has_pending(SYNC_KIND_BACKFILL, "su1").await.expect("查重失败"),
-            "执行中仍算 pending"
-        );
+        // 成功记录(批次 + 新增数)
+        record_forward_catchup(batch, "su1", SYNC_STATUS_SUCCESS, 2, 7, None)
+            .await
+            .expect("写成功记录失败");
+        // 失败记录(attempt=1, last_error 非空)
+        record_forward_catchup(batch, "su2", SYNC_STATUS_FAILED, 1, 2, Some("boom"))
+            .await
+            .expect("写失败记录失败");
 
-        record_batch(task.id, 3, 7).await.expect("记录失败");
-        mark_success(task.id).await.expect("置成功失败");
-        assert!(
-            !has_pending(SYNC_KIND_BACKFILL, "su1").await.expect("查重失败"),
-            "成功后不应 pending"
-        );
-
-        // 失败分支: attempt+1, last_error 非空
-        enqueue(batch, "su3", SYNC_KIND_BACKFILL).await.expect("入队失败");
-        let t3 = claim_pending(SYNC_KIND_BACKFILL).await.expect("领取失败").expect("应领到任务");
-        mark_failed(t3.id, "boom").await.expect("置失败失败");
         let detail = list_batch_tasks(batch).await.expect("批明细失败");
-        let t3 = detail.iter().find(|t| t.session_uuid == "su3").expect("应有 su3");
-        assert_eq!(t3.status, SYNC_STATUS_FAILED);
-        assert_eq!(t3.attempt, 1);
-        assert_eq!(t3.last_error.as_deref(), Some("boom"));
+        assert_eq!(detail.len(), 2, "同批 2 条记录");
+        let ok = detail.iter().find(|t| t.session_uuid == "su1").expect("应有 su1");
+        assert_eq!(ok.status, SYNC_STATUS_SUCCESS);
+        assert_eq!(ok.batches, 2);
+        assert_eq!(ok.new_count, 7);
+        assert_eq!(ok.attempt, 0);
+        assert!(ok.last_error.is_none(), "成功记录 last_error 应为空");
+        let bad = detail.iter().find(|t| t.session_uuid == "su2").expect("应有 su2");
+        assert_eq!(bad.status, SYNC_STATUS_FAILED);
+        assert_eq!(bad.attempt, 1);
+        assert_eq!(bad.last_error.as_deref(), Some("boom"));
 
         let sums = history().await.expect("批次视图失败");
         assert_eq!(sums.len(), 1, "同一 batch_id 聚为一批");
-        assert_eq!(sums[0].total, 3);
+        assert_eq!(sums[0].total, 2);
         assert_eq!(sums[0].success, 1);
         assert_eq!(sums[0].failed, 1);
-        assert_eq!(sums[0].pending, 1, "kind=0 的 su2 仍待执行");
+        assert_eq!(sums[0].pending, 0, "追平记录均为终态, 无 pending");
     })
     .await;
 }
 
-/// 任务12: 批次保留 —— 仅清理「全终态且不在最新 50 批内」, pending 永不清。
+/// 追平记录保留: 仅保留最近 `keep` 批。
 #[tokio::test]
-async fn sync_task_prune_keeps_recent_and_pending() {
+async fn sync_task_prune_keeps_recent() {
     with_user_db(|_pool| async move {
         for b in 0..60i64 {
-            let id = enqueue(1000 + b, &format!("su-{b}"), SYNC_KIND_BACKFILL).await.expect("入队失败");
-            mark_success(id).await.expect("置成功失败");
+            record_forward_catchup(1000 + b, &format!("su-{b}"), SYNC_STATUS_SUCCESS, 1, 0, None)
+                .await
+                .expect("写记录失败");
         }
-        // 1 条超龄 pending(最早批)
-        enqueue(1, "su-pending", SYNC_KIND_BACKFILL).await.expect("入队失败");
 
         let removed = prune_batches(50).await.expect("清理失败");
-        assert!(removed > 0, "应清理超龄终态行");
+        assert!(removed > 0, "应清理超龄批");
         let sums = history().await.expect("批次视图失败");
-        assert_eq!(sums.len(), 51, "最新 50 批 + 含 pending 的最早批");
-        let pending_left = sums.iter().find(|s| s.batch_id == 1).expect("含 pending 的批应保留");
-        assert_eq!(pending_left.pending, 1);
+        assert_eq!(sums.len(), 50, "仅保留最近 50 批");
+        assert_eq!(sums[0].batch_id, 1059, "最老批被清, 最新批保留");
     })
     .await;
 }
 
-/// 任务12: 启动复位 —— 执行中 → 待执行, worker 可续跑。
-#[tokio::test]
-async fn sync_task_reset_running() {
-    with_user_db(|_pool| async move {
-        let id = enqueue(7, "su-r", SYNC_KIND_BACKFILL).await.expect("入队失败");
-        let t = claim_pending(SYNC_KIND_BACKFILL).await.expect("领取失败").expect("应领到任务");
-        assert_eq!(t.id, id);
-        assert_eq!(t.status, SYNC_STATUS_RUNNING);
-        let n = reset_running().await.expect("复位失败");
-        assert_eq!(n, 1);
-        let t = claim_pending(SYNC_KIND_BACKFILL).await.expect("领取失败").expect("复位后应可再领");
-        assert_eq!(t.id, id);
-        assert_eq!(t.status, SYNC_STATUS_RUNNING);
-    })
-    .await;
-}
-
-/// 任务12: 列迁移 —— 旧库 synced_id 搬运到水位表并删列(幂等)。
+/// 列迁移: 旧库 synced_id 删列 + 残留水位表 session_sync_state 清理(幂等)。
 #[tokio::test]
 async fn chat_session_synced_id_migration() {
     with_user_db(|pool| async move {
@@ -1436,15 +1317,27 @@ async fn chat_session_synced_id_migration() {
         .execute(&pool)
         .await
         .expect("插旧行失败");
+        // 模拟旧版残留水位表
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS session_sync_state (session_uuid TEXT PRIMARY KEY, synced_id INTEGER NOT NULL DEFAULT 0)",
+        )
+        .execute(&pool)
+        .await
+        .expect("建残留水位表失败");
 
         init_user_ddl(&pool).await.expect("重跑迁移失败");
 
-        let st = get_state("su-mig").await.expect("读水位失败").expect("应搬运水位行");
-        assert_eq!(st.synced_id, 42, "synced_id 应搬入水位表");
         let cols = sqlx::query("PRAGMA table_info(chat_session)").fetch_all(&pool).await.expect("读列失败");
         let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
         assert!(!names.contains(&"synced_id".to_string()), "synced_id 列应已删除: {names:?}");
         assert!(names.contains(&"last_message_id".to_string()), "应新增 last_message_id: {names:?}");
+        let tables = sqlx::query(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='session_sync_state'",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("查表失败");
+        assert!(tables.is_empty(), "残留水位表应被清理");
 
         // 幂等: 再跑一次不报错
         init_user_ddl(&pool).await.expect("迁移应幂等");

@@ -4,25 +4,21 @@ use sqlx::{FromRow, SqlitePool};
 
 use crate::dao::store::SqliteStore;
 
-/// 任务类型: 静默补拉(重连轮)
-pub const SYNC_KIND_GAP: i64 = 0;
-/// 任务类型: 同意式回填
-pub const SYNC_KIND_BACKFILL: i64 = 1;
+/// 任务类型: 正向追平(重连/登录轮)
+pub const SYNC_KIND_FORWARD: i64 = 2;
 
-/// 任务状态: 待执行
+/// 任务状态: 待执行(保留, 未用于正向追平)
 pub const SYNC_STATUS_PENDING: i64 = 0;
-/// 任务状态: 执行中
+/// 任务状态: 执行中(保留, 未用于正向追平)
 pub const SYNC_STATUS_RUNNING: i64 = 1;
 /// 任务状态: 成功
 pub const SYNC_STATUS_SUCCESS: i64 = 2;
 /// 任务状态: 失败
 pub const SYNC_STATUS_FAILED: i64 = 3;
 
-/// 同步域任务表(任务12 §4.6): 执行记录(批次 × 会话, append)。
-///
-/// `batch_id` = 触发时刻毫秒 —— 一次重连/一次同意回填 = 一批; 批的成败由
-/// `GROUP BY batch_id` 派生(不存冗余计数, 避免漂移)。队列本体即任务行
-/// (`kind=1, status in {0,1}`), 按 `id` 序领取。
+/// 会话追平记录表(正向追平): 每轮重连/登录 = 一批(`batch_id` = 触发时刻毫秒),
+/// 每会话一条**终态**记录(成功/失败)。供前端 `get_sync_history` 查看
+/// "哪个会话追平成功/失败"。非队列 —— 记录由正向追平流程同步写入终态。
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct SyncTask {
     pub id: i64,
@@ -30,13 +26,13 @@ pub struct SyncTask {
     pub session_uuid: String,
     pub kind: i64,
     pub status: i64,
-    /// 本任务已消化拉取批次数
+    /// 本记录消化的拉取批次数
     pub batches: i64,
-    /// 本任务累计新增消息数
+    /// 本记录累计新增消息数
     pub new_count: i64,
-    /// 重试次数
+    /// 重试次数(失败时 1)
     pub attempt: i64,
-    /// 最近失败原因(成功时清空)
+    /// 失败原因(成功时 NULL)
     pub last_error: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,
