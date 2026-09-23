@@ -18,7 +18,12 @@ import { useCallManager } from "@/webrtc/callManager";
 import { getMyUuid } from "@/utils/api";
 import { attachViewportHeight } from "@/utils/viewport";
 import { resolveContentToTempFile } from "@/utils/tempImage";
-import { convertPathToTauriUrl, selectFile } from "@workspace/services";
+import {
+  convertPathToTauriUrl,
+  getAllFileExtensions,
+  getImageExtensions,
+  selectFile,
+} from "@workspace/services";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type { TextQuicMsgVo, ChatSessionVo, FriendVo } from "@workspace/types";
 import type { UiChatMessage } from "@/chat/types";
@@ -323,15 +328,15 @@ const selectAndSend = async (
   command: string
 ) => {
   try {
-    const filters =
-      media === "image"
-        ? [
-            {
-              name: "Images",
-              extensions: ["png", "jpg", "jpeg", "gif", "webp"],
-            },
-          ]
-        : undefined;
+    const filters = [
+      {
+        name: media === "image" ? "Images" : "Files",
+        extensions:
+          media === "image"
+            ? await getImageExtensions()
+            : await getAllFileExtensions(),
+      },
+    ];
     const filePaths = await selectFile(false, false, filters);
     if (!filePaths || filePaths.length === 0) return;
 

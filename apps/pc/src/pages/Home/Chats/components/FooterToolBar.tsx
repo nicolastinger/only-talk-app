@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
-import { selectFile } from '@workspace/services';
+import { getAllFileExtensions, getImageExtensions, selectFile } from '@workspace/services';
 import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
 import { message } from 'antd';
 import { nanoid } from 'nanoid';
@@ -119,7 +119,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
   const sendImage = async () => {
     try {
       const filePaths = await selectFile(false, false, [
-        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+        { name: 'Images', extensions: await getImageExtensions() },
       ]);
 
       if (filePaths && filePaths.length > 0) {
@@ -157,7 +157,9 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
 
   const sendFile = async () => {
     try {
-      const filePaths = await selectFile(false, false);
+      const filePaths = await selectFile(false, false, [
+        { name: 'Files', extensions: await getAllFileExtensions() },
+      ]);
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];

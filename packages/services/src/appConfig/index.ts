@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { CLIENT_CONFIG_KEYS, ClientConfigItem, TALK_API } from "@workspace/types";
+import { fetchFileTypeConfig } from "../fileTypeConfigService";
 import { setApiBase } from "../httpService";
 
 /**
@@ -18,6 +19,8 @@ export const initAppConfig = async (): Promise<void> => {
     items.forEach((item) => configMap.set(item.key, item.value));
     const apiBase = configMap.get(CLIENT_CONFIG_KEYS.serverApiBase);
     if (apiBase) setApiBase(apiBase);
+    // 预热服务端上传文件类型白名单(失败静默降级, 不阻塞启动)
+    fetchFileTypeConfig().catch(() => {});
   } catch (e) {
     console.error("初始化客户端配置失败:", e);
   }
@@ -30,7 +33,10 @@ export const getConfig = (key: string): string | undefined => configMap.get(key)
 export const setConfig = async (key: string, value: string): Promise<void> => {
   await invoke("set_client_config", { key, value });
   configMap.set(key, value);
-  if (key === CLIENT_CONFIG_KEYS.serverApiBase) setApiBase(value);
+  if (key === CLIENT_CONFIG_KEYS.serverApiBase) {
+    setApiBase(value);
+    fetchFileTypeConfig(true).catch(() => {});
+  }
 };
 
 /** 直接读表(不经内存), 一般无需使用 */

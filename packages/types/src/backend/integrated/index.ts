@@ -12,4 +12,19 @@ interface NatUdpPorts {
   v6_port_2: number;
 }
 
-export type { QuicServerInfo, NatUdpPorts };
+/** 文件类型分组(扩展名 + MIME) — 镜像 rs FileTypeGroup */
+interface FileTypeGroup {
+  extensions: string[];
+  mime_types: string[];
+}
+
+/** 上传文件类型白名单(GET /file_integrated/file_type_config 返回) — 镜像 rs FileTypeConfig */
+interface FileTypeConfig {
+  image: FileTypeGroup;
+  document: FileTypeGroup;
+  archive: FileTypeGroup;
+  audio: FileTypeGroup;
+  video: FileTypeGroup;
+}
+
+export type { QuicServerInfo, NatUdpPorts, FileTypeGroup, FileTypeConfig };
