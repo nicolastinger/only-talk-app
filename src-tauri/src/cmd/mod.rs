@@ -7,6 +7,7 @@ pub mod device_controller;
 pub mod file_controller;
 pub mod friend_controller;
 pub mod group_controller;
+pub mod log_controller;
 pub mod notification_controller;
 pub mod p2p_controller;
 pub mod sync_controller;

@@ -165,7 +165,7 @@
     .ant-checkbox-wrapper {
       color: var(--text-primary);
 
-      .ant-checkbox+span {
+      .ant-checkbox + span {
         color: var(--text-primary);
       }
     }
@@ -394,4 +394,22 @@
 .syncTaskError {
   margin-top: 4px;
   font-size: 12px;
+}
+
+// ===== 开发者面板 · 客户端日志 =====
+
+.logConsole {
+  max-height: 55vh;
+  overflow: auto;
+  margin: 0 0 8px;
+  padding: 12px;
+  border: 1px solid var(--divider-bg);
+  border-radius: 8px;
+  background: var(--color-gray-3);
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
 }

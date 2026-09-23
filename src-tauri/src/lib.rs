@@ -68,6 +68,7 @@ use crate::cmd::notification_controller::{
     batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level,
     get_system_notification, get_unread_notification_counts,
 };
+use crate::cmd::log_controller::{clear_app_logs, get_app_logs, get_client_log_files, read_client_log_file};
 use crate::cmd::p2p_controller::{
     close_p2p_connection, process_init_p2p_request, send_init_p2p_udp, send_p2p_audio_frame,
     send_p2p_file_data, send_p2p_file_transfer_request, send_p2p_file_transfer_response,
@@ -268,6 +269,10 @@ pub fn run() {
             mark_group_read,
             get_chat_session_from_store,
             get_sync_history,
+            get_app_logs,
+            clear_app_logs,
+            get_client_log_files,
+            read_client_log_file,
             get_friend_info,
             delete_friend_command,
             mark_read,
