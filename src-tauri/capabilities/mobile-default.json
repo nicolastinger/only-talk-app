@@ -1,8 +1,9 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "mobile-default",
-  "description": "Mobile application capability",
+  "description": "移动端 (Android) 应用能力 — 由 tauri.android.conf.json 引用",
   "windows": ["main"],
+  "platforms": ["android", "iOS"],
   "permissions": [
     "core:window:allow-start-dragging",
     "core:app:allow-default-window-icon",
@@ -13,7 +14,17 @@
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
+    "notification:default",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$DOCUMENT/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$RESOURCE/**" },
+        { "path": "$HOME/**" }
+      ]
+    },
     "core:default"
   ]
 }

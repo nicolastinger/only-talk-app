@@ -13,6 +13,7 @@
     "build:all": "pnpm build:types && pnpm build:services && pnpm build && pnpm build:mobile",
     "typecheck": "pnpm -r typecheck",
     "tauri": "tauri",
+    "android:build:split": "tauri android build --apk --split-per-abi --target aarch64 --target armv7",
     "lint": "prettier --cache --write .",
     "prepare": "husky install"
   },
