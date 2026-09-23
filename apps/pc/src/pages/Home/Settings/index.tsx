@@ -1,5 +1,6 @@
 import {
   BellOutlined,
+  CodeOutlined,
   InfoCircleOutlined,
   RadarChartOutlined,
   SettingOutlined,
@@ -13,6 +14,7 @@ import styles from './Settings.less';
 import AboutApp from './components/AboutApp';
 import AccountPrivacy from './components/AccountPrivacy';
 import BlackList from './components/BlackList';
+import DeveloperPanel from './components/DeveloperPanel';
 import GeneralSettings from './components/GeneralSettings';
 import NotificationSettings from './components/NotificationSettings';
 import PlazaSettings from './components/PlazaSettings';
@@ -63,6 +65,11 @@ const SettingsPage = () => {
       icon: <InfoCircleOutlined />,
       label: intl.formatMessage({ id: 'settings.about' }),
     },
+    {
+      key: 'developer',
+      icon: <CodeOutlined />,
+      label: intl.formatMessage({ id: 'settings.developer' }),
+    },
   ];
 
   const renderContent = () => {
@@ -79,6 +86,8 @@ const SettingsPage = () => {
         return <BlackList />;
       case 'about':
         return <AboutApp />;
+      case 'developer':
+        return <DeveloperPanel />;
       default:
         return <AccountPrivacy />;
     }

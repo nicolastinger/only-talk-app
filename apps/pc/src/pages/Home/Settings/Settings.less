@@ -346,3 +346,52 @@
     }
   }
 }
+
+// ===== 开发者面板 · 同步任务 =====
+
+.syncToolbar {
+  margin-bottom: 16px;
+}
+
+.syncBatchLabel {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.syncTaskRow {
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--divider-bg);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.syncTaskMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.syncTaskSession {
+  flex: 1;
+  min-width: 0;
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.syncTaskMeta {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.syncTaskError {
+  margin-top: 4px;
+  font-size: 12px;
+}
