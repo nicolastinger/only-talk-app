@@ -679,8 +679,12 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
 .session-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 4px 12px 12px;
+  margin: 0 12px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
 }
 
 .session-item {
@@ -688,17 +692,18 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  overflow: hidden;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  background: transparent;
+  border-bottom: 1px solid var(--border-light);
   cursor: pointer;
-  transition: transform var(--transition-fast);
+  transition: background var(--transition-fast);
 
   &:active {
-    transform: scale(0.98);
+    background: var(--surface-hover);
   }
+}
+
+.session-list :deep(.van-swipe-cell:last-child) .session-item {
+  border-bottom: none;
 }
 
 .avatar-wrapper {
