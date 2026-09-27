@@ -48,7 +48,11 @@ const ChatsLayout = () => {
     [],
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
-  const [hidePopoverKey, setHidePopoverKey] = useState<string>('');
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    item: ChatSessionVo;
+  } | null>(null);
 
   const { userInfo } = useBearStore();
   const refreshFlag = useBearStore((state) => state.refreshFlag);
@@ -159,6 +163,22 @@ const ChatsLayout = () => {
   }, [refreshFlag]);
 
   useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [contextMenu]);
+
+  useEffect(() => {
     console.log('chatSessionList', chatSessionList);
   }, [chatSessionList]);
 
@@ -210,13 +230,14 @@ const ChatsLayout = () => {
   const currentList = chatSessionList;
 
   return (
-    <Splitter>
-      <Splitter.Panel
-        min="20%"
-        max="50%"
-        defaultSize="32%"
-        className={styles.left}
-      >
+    <>
+      <Splitter>
+        <Splitter.Panel
+          min="20%"
+          max="50%"
+          defaultSize="32%"
+          className={styles.left}
+        >
         <div style={{ height: '100%' }}>
           <div className={styles.header}>
             <Search onSelect={(item) => routeToChat(item)} />
@@ -252,6 +273,10 @@ const ChatsLayout = () => {
                   key={item.nano_id}
                   className={styles.sessionItem}
                   onClick={() => routeToChat(item)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, item });
+                  }}
                 >
                   <Message
                     message={item.last_message}
@@ -267,38 +292,6 @@ const ChatsLayout = () => {
                     recv_user={item.recv_user}
                     isSelected={isSelected}
                   />
-                  <Popconfirm
-                    open={hidePopoverKey === item.nano_id}
-                    onOpenChange={(open) =>
-                      setHidePopoverKey(open ? item.nano_id : '')
-                    }
-                    title={intl.formatMessage({
-                      id: 'chatsLayout.hideSessionConfirm',
-                    })}
-                    okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
-                    cancelText={intl.formatMessage({
-                      id: 'chatsLayout.cancel',
-                    })}
-                    onConfirm={(e) => {
-                      e?.stopPropagation();
-                      setHidePopoverKey('');
-                      handleHideSession(item);
-                    }}
-                  >
-                    <button
-                      className={`${styles.deleteBtn} ${
-                        hidePopoverKey === item.nano_id
-                          ? styles.deleteBtnVisible
-                          : ''
-                      }`}
-                      title={intl.formatMessage({
-                        id: 'chatsLayout.hideSession',
-                      })}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DeleteIcon />
-                    </button>
-                  </Popconfirm>
                 </div>
               );
             })}
@@ -308,7 +301,28 @@ const ChatsLayout = () => {
       <Splitter.Panel className={styles.right}>
         <Outlet />
       </Splitter.Panel>
-    </Splitter>
+      </Splitter>
+      {contextMenu && (
+        <div
+          className={styles.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className={styles.contextMenuItem}
+            onClick={(e) => {
+              e.stopPropagation();
+              const item = contextMenu.item;
+              setContextMenu(null);
+              handleHideSession(item);
+            }}
+          >
+            <DeleteIcon />
+            <span>{intl.formatMessage({ id: 'chatsLayout.hideSession' })}</span>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

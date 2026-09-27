@@ -90,47 +90,33 @@
 
 .sessionItem {
   position: relative;
-  overflow: hidden;
+}
 
-  .deleteBtn {
-    position: absolute;
-    top: 50%;
-    right: 12px;
-    transform: translateY(-50%) scale(0.9);
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 6px;
-    background: rgba(249, 115, 22, 0.12);
-    color: #a1a1aa;
-    cursor: pointer;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
-    z-index: 2;
-  }
+.contextMenu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
 
-  // 悬停整行或确认弹层打开时才显示并允许交互
-  &:hover .deleteBtn,
-  .deleteBtnVisible {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(-50%) scale(1);
-  }
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #ef4444;
+  cursor: pointer;
+  transition: background 0.2s ease;
 
-  // 悬停后停顿一下再出现, 避免鼠标划过时闪烁; 移开则立即隐藏
-  &:hover .deleteBtn {
-    transition-delay: 0.4s;
-  }
-
-  .deleteBtn:hover {
-    background: rgba(249, 115, 22, 0.18);
-    color: #f97316;
+  &:hover {
+    background: rgba(239, 68, 68, 0.08);
   }
 
   .deleteIcon {

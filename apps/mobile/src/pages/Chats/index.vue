@@ -624,7 +624,7 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
 .session-list {
   display: flex;
   flex-direction: column;
-  margin: 0 12px 12px;
+  margin: 12px 12px 12px;
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);

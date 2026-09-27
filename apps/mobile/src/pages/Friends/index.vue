@@ -507,24 +507,30 @@ onUnmounted(() => {
 .entries {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 12px 10px;
+  margin: 0 12px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
 }
 
 .entry-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  padding: 14px 16px;
+  background: transparent;
+  border-bottom: 1px solid var(--border-light);
   cursor: pointer;
-  transition: transform var(--transition-fast);
+  transition: background var(--transition-fast);
+
+  &:last-child {
+    border-bottom: none;
+  }
 
   &:active {
-    transform: scale(0.98);
+    background: var(--surface-hover);
   }
 }
 

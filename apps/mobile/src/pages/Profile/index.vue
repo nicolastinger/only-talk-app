@@ -106,9 +106,7 @@ const goToFiles = () => {
           </svg>
         </div>
       </div>
-    </div>
 
-    <div class="menu-section">
       <div class="menu-item">
         <div class="menu-left">
           <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
@@ -122,9 +120,7 @@ const goToFiles = () => {
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-    </div>
 
-    <div class="menu-section">
       <div class="menu-item" @click="goToFiles">
         <div class="menu-left">
           <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
@@ -271,7 +267,7 @@ const goToFiles = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   transition: background var(--transition-fast);
@@ -286,7 +282,7 @@ const goToFiles = () => {
 .menu-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 .menu-right {
   display: flex;
