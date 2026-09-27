@@ -280,8 +280,8 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       const response = await update_user_info(updateData);
 
       if (response.netSuccess && isHttpSuccess(response.res.status)) {
-        const data = JSON.parse(response.res.body);
-        if (isBackendSuccess(data.code)) {
+        const data = response.res.body ? JSON.parse(response.res.body) : null;
+        if (data && isBackendSuccess(data.code)) {
           const updatedUserInfo = await refresh_user_info(userInfo.uuid);
           setUserInfo(updatedUserInfo);
           message.success(

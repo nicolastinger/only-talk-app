@@ -356,8 +356,8 @@ const onSave = async () => {
       updateDto: updateData,
     });
 
-    const response = JSON.parse(result);
-    if (isBackendSuccess(response.code)) {
+    const response = result ? JSON.parse(result) : null;
+    if (response && isBackendSuccess(response.code)) {
       const updatedInfo = {
         ...originalUserInfo,
         ...updateData,

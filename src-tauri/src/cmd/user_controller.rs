@@ -168,7 +168,8 @@ pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<Strin
 
     if status.is_success() {
         let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-        if http_result.code == 200 {
+        // 后端 update 走 success_empty()，业务成功码为 204（无数据），与 200 同样视为成功
+        if http_result.code == 200 || http_result.code == 204 {
             if let Some(uuid) = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned() {
                 if let Ok(Some(mut cached_user)) = UserInfo::query_by_uuid(&uuid).await {
                     if let Some(ref username) = update_dto.username {
@@ -179,9 +180,6 @@ pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<Strin
                     }
                     if update_dto.gender.is_some() {
                         cached_user.gender = update_dto.gender;
-                    }
-                    if update_dto.age.is_some() {
-                        cached_user.age = update_dto.age;
                     }
                     if update_dto.birthday.is_some() {
                         cached_user.birthday = update_dto.birthday;
