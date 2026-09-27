@@ -7,7 +7,7 @@
 ```
 登录 (user_login)
   └─ run_client(server_addr)          // 主循环，带状态机 + 自动重连
-       ├─ Connecting → Connected      // 连接成功，发 quic_connected
+       ├─ Connecting → Connected      // 连接成功，发 quic_reconnecting / quic_connected
        ├─ 保持连接（心跳 + 断连检测）
        ├─ Disconnected                // 断连，广播 quic_disconnected
        └─ 5s 后重试
@@ -102,6 +102,7 @@
 |---|---|---|
 | `quic_connected` | 连接成功 | `text_quic_client.rs:61` |
 | `quic_disconnected` | 断连；**断连状态下每 3 秒持续广播**直到恢复 | `text_quic_client.rs:120` |
+| `quic_reconnecting` | 进入 Connecting（每次重连尝试开始） | `text_quic_client.rs` |
 | `quic_sync_start` | 开始同步离线消息 | `text_quic_client.rs:67` |
 | `quic_sync_complete` | 离线消息同步完成 | `text_quic_client.rs:72` |
 
@@ -121,6 +122,15 @@
 3. 后台广播 `quic_disconnected`（每 3s，直到状态变化）。
 4. 等待 **5 秒**（`RECONNECT_DELAY_SECS`）后重试连接。
 5. 连接成功 → `Connected` → 发 `quic_connected` → 后台拉取离线消息（发 `quic_sync_start` / `quic_sync_complete`）。
+
+## 7.1 离线发送缓存队列（`service/send_queue.rs`）
+
+重连期间（`Connecting`/`Disconnected`）用户发送消息时，`send_text_msg_service` /
+`send_group_text_msg_service` 不再报错，而是将**已生成好的 QUIC 报文**入队到全局内存队列
+`GLOBAL_MSG_SEND_QUEUE`，返回成功。`quic_connected` 后 `run_client` spawn `drain_send_queue`
+慢速逐条补发（每条间隔 300ms）；发送前检查 `chat_record_send.send_status`（非 0/1 跳过，避免与
+定时补发 `process_no_send_success_msg` 重复），发送失败/再次断连则放回队首等下轮。消息本体仍
+持久化在 send/ack 表中，进程重启由定时补发任务兜底，不丢消息。WebRTC 信令（12-15、100）**不入队**。
 
 ## 8. 手动断开 / 重连命令
 

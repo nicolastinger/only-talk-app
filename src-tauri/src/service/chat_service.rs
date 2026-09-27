@@ -48,8 +48,9 @@ use crate::entity::Page;
 use crate::quic_service::center_service::process_text_msg_from_server::WebRTCSignalMessage;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
+use crate::service::send_queue;
 use crate::service::user_service::{get_user_info, get_user_map};
-use crate::utils::global_static_str::{PLATFORM, ZERO_UUID, talk_api_base};
+use crate::utils::global_static_str::{talk_api_base, PLATFORM, ZERO_UUID};
 use crate::utils::image_utils::compress_image_to_webp;
 use crate::utils::message_types::MSG_TYPE_P2P;
 use crate::utils::time::get_now_time_stamp_as_millis;
@@ -589,6 +590,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
 
     // 如果没有，则直接发送消息
     let raw: Vec<u8> = Vec::from(chat_record_send.raw);
+    let send_id = chat_record_ack.send_id.clone();
     let test_msg = generate_text_msg_without_nano(
         text_quic_msg.text_type,
         raw,
@@ -598,10 +600,21 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     )?;
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
+        server_book.get("SERVER_TEXT").map(|c| c.conn.clone())
     };
-
-    send_msg(test_msg, &conn).await
+    match conn {
+        Some(conn) => send_msg(test_msg, &conn).await,
+        None => {
+            // 重连期间: 进入全局离线发送队列, 上线后自动补发; 手动断开(Idle)则报错
+            if send_queue::should_queue_on_offline().await {
+                send_queue::enqueue(send_id.clone(), test_msg).await;
+                info!("[send_queue] QUIC 未连接，消息进入离线发送队列: {}", send_id);
+                Ok("已进入离线发送队列".to_string())
+            } else {
+                Err(anyhow!("QUIC连接未建立，请稍后重试"))
+            }
+        }
+    }
 }
 
 /// 发送 WebRTC 信令消息（独立通道）
@@ -684,6 +697,7 @@ pub async fn send_group_text_msg_service(
     .await?;
 
     let raw_bytes: Vec<u8> = Vec::from(raw);
+    let send_id = text_quic_msg.nano_id.clone();
     let test_msg = generate_text_msg_without_nano(
         text_quic_msg.text_type,
         raw_bytes,
@@ -694,10 +708,21 @@ pub async fn send_group_text_msg_service(
 
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
+        server_book.get("SERVER_TEXT").map(|c| c.conn.clone())
     };
-
-    send_msg(test_msg, &conn).await
+    match conn {
+        Some(conn) => send_msg(test_msg, &conn).await,
+        None => {
+            // 重连期间: 进入全局离线发送队列, 上线后自动补发; 手动断开(Idle)则报错
+            if send_queue::should_queue_on_offline().await {
+                send_queue::enqueue(send_id.clone(), test_msg).await;
+                info!("[send_queue] QUIC 未连接，群消息进入离线发送队列: {}", send_id);
+                Ok("已进入离线发送队列".to_string())
+            } else {
+                Err(anyhow!("QUIC连接未建立，请稍后重试"))
+            }
+        }
+    }
 }
 
 /// 发送群聊消息后更新会话列表

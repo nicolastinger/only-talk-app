@@ -1,6 +1,5 @@
 use std::net::SocketAddr;
-use std::sync::Arc;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context};
@@ -125,6 +124,10 @@ pub async fn run_client(
                 &server_addr.to_string(),
             )
             .await;
+            // 发送重连事件到前端
+            if let Some(handle) = APP_HANDLE.get() {
+                let _ = handle.emit("quic_reconnecting", "QUIC 正在重连");
+            }
         }
 
         // 尝试连接（可被取消：取消时丢弃 in-flight 握手与 endpoint；
@@ -193,6 +196,10 @@ pub async fn run_client(
                         if let Some(handle) = APP_HANDLE.get() {
                             let _ = handle.emit("quic_sync_complete", "离线消息同步完成");
                         }
+                    });
+                    // 消费离线发送队列（重连期间入队的消息，慢速逐条补发）
+                    tokio::spawn(async move {
+                        crate::service::send_queue::drain_send_queue().await;
                     });
                 }
 

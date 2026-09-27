@@ -1,4 +1,5 @@
 import AnnouncementBanner from '@/components/AnnouncementBanner';
+import ConnectionStatusTag from '@/components/ConnectionStatusTag';
 import DraggableHeader from '@/components/DraggableHeader';
 import MessageAlertBanner from '@/components/MessageAlertBanner';
 import { LeftAside } from '@/components/LeftAside';
@@ -43,7 +44,7 @@ const HomeLayout = () => {
   const setIsLogin = useBearStore((state) => state.setIsLogin);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
-  const { isConnected, resetConnection } = useQuicDisconnect();
+  const { isConnected, resetConnection, statusTag } = useQuicDisconnect();
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -261,7 +262,7 @@ const HomeLayout = () => {
           <Outlet />
         </div>
       </div>
-      {/* 新消息提醒横幅：点击跳转到对应会话窗口 */}
+      <ConnectionStatusTag statusTag={statusTag} />
       <MessageAlertBanner />
       <Modal
         title={intl.formatMessage({ id: 'homeLayout.closeWindow' })}

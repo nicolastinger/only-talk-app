@@ -3,8 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 type ConnectionState = "idle" | "connected" | "disconnected";
+type StatusTagState = "offline" | "reconnecting" | "online";
 
 const SYNC_TIMEOUT_MS = 3 * 60 * 1000; // 3 分钟
+const STATUS_TAG_ONLINE_MS = 3 * 1000; // 已上线标签展示时长
 // 断线重连遮罩最长显示时长：Rust 端每 5s 自动重连一次，
 // 超过该时长仍未连上则收起遮罩、回退到顶部横幅（后台继续自动重连）
 const RECONNECT_MASK_TIMEOUT_MS = 20 * 1000; // 20 秒
@@ -17,10 +19,13 @@ const state = reactive({
   reconnecting: false,
   // 断线重连期间的全屏遮罩（阻止用户误操作，重连成功或超时后收起）
   reconnectMaskVisible: false,
+  statusTag: null as StatusTagState | null,
 });
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 let maskTimer: ReturnType<typeof setTimeout> | null = null;
+let statusTagTimer: ReturnType<typeof setTimeout> | null = null;
+let wasConnected = true;
 let unlisteners: UnlistenFn[] = [];
 let monitorStarted = false;
 
@@ -35,6 +40,24 @@ const clearMaskTimer = () => {
   if (maskTimer) {
     clearTimeout(maskTimer);
     maskTimer = null;
+  }
+};
+
+const clearStatusTagTimer = () => {
+  if (statusTagTimer) {
+    clearTimeout(statusTagTimer);
+    statusTagTimer = null;
+  }
+};
+
+const showStatusTag = (statusTag: StatusTagState) => {
+  clearStatusTagTimer();
+  state.statusTag = statusTag;
+  if (statusTag === "online") {
+    // 已上线标签 3s 后自动关闭
+    statusTagTimer = setTimeout(() => {
+      state.statusTag = null;
+    }, STATUS_TAG_ONLINE_MS);
   }
 };
 
@@ -70,12 +93,24 @@ const registerListeners = async () => {
       if (droppedFromConnected) {
         showReconnectMask();
       }
+      // 首次断连显示"已离线"；重复广播不降级(重连中不回退)
+      if (wasConnected) {
+        wasConnected = false;
+        showStatusTag("offline");
+      }
     })
   );
   unlisteners.push(
     await listen<string>("quic_connected", () => {
       markConnected();
       hideReconnectMask();
+      wasConnected = true;
+      showStatusTag("online");
+    })
+  );
+  unlisteners.push(
+    await listen<string>("quic_reconnecting", () => {
+      showStatusTag("reconnecting");
     })
   );
   unlisteners.push(
@@ -127,6 +162,8 @@ export function stopQuicMonitor() {
   unlisteners = [];
   clearSyncTimer();
   clearMaskTimer();
+  clearStatusTagTimer();
   state.reconnectMaskVisible = false;
+  state.statusTag = null;
   monitorStarted = false;
 }
