@@ -8,7 +8,6 @@ import { onAction } from "@tauri-apps/plugin-notification";
 import BottomNav from "@/components/BottomNav/index.vue";
 import ConnectionStatusTag from "@/components/ConnectionStatusTag/index.vue";
 import QuicStatusBar from "@/components/QuicStatusBar/index.vue";
-import ReconnectOverlay from "@/components/ReconnectOverlay/index.vue";
 import SyncOverlay from "@/components/SyncOverlay/index.vue";
 import { startQuicMonitor, stopQuicMonitor } from "@/stores/quic";
 import {
@@ -189,7 +188,6 @@ onUnmounted(() => {
     <BottomNav v-if="showNav" />
     <ConnectionStatusTag />
     <QuicStatusBar />
-    <ReconnectOverlay />
     <SyncOverlay />
     <AnnouncementCenter />
   </div>
