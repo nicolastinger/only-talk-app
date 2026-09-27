@@ -206,6 +206,13 @@ textarea {
   --van-field-placeholder-text-color: var(--text-placeholder);
 }
 
+/* 禁止双指缩放/双击缩放, 保持可滚动 */
+html,
+body {
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
 /* Edge-to-edge: let fixed nav bars sit below the status bar. */
 .van-nav-bar {
   height: calc(46px + env(safe-area-inset-top));
