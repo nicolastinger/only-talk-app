@@ -1,5 +1,6 @@
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
+import { calcAgeFromBirthday } from '@/utils/format';
 import {
   CalendarOutlined,
   EnvironmentOutlined,
@@ -238,6 +239,7 @@ const FriendInfo = (props: { uuid: string }) => {
   const displayName = userInfo?.username || currentFriend?.friend_name || '-';
   const displayAccount =
     userInfo?.account || currentFriend?.friend_account || '-';
+  const friendAge = calcAgeFromBirthday(userInfo?.birthday);
 
   return (
     <div className={styles.container}>
@@ -267,10 +269,10 @@ const FriendInfo = (props: { uuid: string }) => {
                 ? genderMap[userInfo.gender]
                 : '-'}
             </span>
-            {userInfo?.age ? (
+            {friendAge ? (
               <span className={styles.chip}>
                 <CalendarOutlined />
-                {userInfo.age}
+                {friendAge}
               </span>
             ) : null}
           </div>

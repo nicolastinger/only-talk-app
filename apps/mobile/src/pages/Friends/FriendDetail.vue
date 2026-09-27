@@ -11,6 +11,7 @@ import {
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import { calcAgeFromBirthday } from "@/utils/time";
 import type { FriendVo, UserInfo } from "@workspace/types";
 import { ReportTargetType } from "@workspace/types";
 import ReportSheet from "@/components/ReportSheet.vue";
@@ -174,9 +175,11 @@ onMounted(loadDetail);
             getGenderText(detail.userInfo.gender)
           }}</span>
         </div>
-        <div class="info-item" v-if="detail.userInfo.age">
+        <div class="info-item" v-if="calcAgeFromBirthday(detail.userInfo?.birthday)">
           <span class="info-label">年龄</span
-          ><span class="info-value">{{ detail.userInfo.age }}</span>
+          ><span class="info-value">{{
+            calcAgeFromBirthday(detail.userInfo?.birthday)
+          }}</span>
         </div>
         <div class="info-item" v-if="detail.userInfo.email">
           <span class="info-label">邮箱</span

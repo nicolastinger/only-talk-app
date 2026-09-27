@@ -2,6 +2,7 @@ import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { getApiBase } from '@workspace/services';
 import { useBearStore } from '@/store/store';
+import { calcAgeFromBirthday } from '@/utils/format';
 import {
   CameraOutlined,
   CheckOutlined,
@@ -31,7 +32,6 @@ import {
   DatePicker,
   Form,
   Input,
-  InputNumber,
   message,
   Modal,
   Select,
@@ -228,7 +228,6 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       username: userInfo?.username,
       info: userInfo?.info,
       gender: userInfo?.gender,
-      age: userInfo?.age,
       birthday: userInfo?.birthday ? dayjs.unix(userInfo.birthday) : null,
       phone: userInfo?.phone,
       email: userInfo?.email,
@@ -255,9 +254,6 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       }
       if (values.gender !== userInfo?.gender) {
         updateData.gender = Number(values.gender);
-      }
-      if (values.age !== userInfo?.age) {
-        updateData.age = Number(values.age);
       }
       if (values.birthday) {
         const birthdayTimestamp = values.birthday.unix();
@@ -420,20 +416,6 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
               </Form.Item>
 
               <Form.Item
-                name="age"
-                label={intl.formatMessage({ id: 'userInfo.age' })}
-              >
-                <InputNumber
-                  min={0}
-                  max={150}
-                  style={{ width: '100%' }}
-                  placeholder={intl.formatMessage({
-                    id: 'userInfo.edit.agePlaceholder',
-                  })}
-                />
-              </Form.Item>
-
-              <Form.Item
                 name="birthday"
                 label={intl.formatMessage({ id: 'userInfo.birthday' })}
               >
@@ -553,7 +535,9 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
               <span className={styles.label}>
                 {intl.formatMessage({ id: 'userInfo.age' })}
               </span>
-              <span className={styles.value}>{userInfo?.age || '-'}</span>
+              <span className={styles.value}>
+                {calcAgeFromBirthday(userInfo?.birthday) ?? '-'}
+              </span>
             </div>
 
             <Collapse

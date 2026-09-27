@@ -83,3 +83,20 @@ export function formatMomentTime(timestampSeconds?: number): string {
   if (sameYear) return `${mm}-${dd}`;
   return `${date.getFullYear()}-${mm}-${dd}`;
 }
+
+/**
+ * 由生日(unix 秒)计算当前周岁年龄。生日未设置(<=0)返回 null。
+ * 服务端不再存储 age, 年龄一律按生日实时推算。
+ */
+export function calcAgeFromBirthday(birthday?: number): number | null {
+  if (!birthday || birthday <= 0) return null;
+  const now = new Date();
+  const birth = new Date(birthday * 1000);
+  if (Number.isNaN(birth.getTime())) return null;
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  return age;
+}

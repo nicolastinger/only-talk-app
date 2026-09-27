@@ -99,7 +99,7 @@ interface UserInfo {
   account?: string;
   icon?: string;
   gender?: number;
-  age?: number;
+  /** 生日 (Unix 秒)，年龄由生日与当前时间计算，服务端不再返回 age */
   birthday?: number;
   info?: string;
   phone?: string;
@@ -119,7 +119,6 @@ interface UpdateUserDTO {
   username?: string;
   info?: string;
   gender?: number;
-  age?: number;
   birthday?: number;
   phone?: string;
   email?: string;

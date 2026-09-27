@@ -2,6 +2,7 @@ import { openNewWindow } from '@/components/Window/OpenWindow';
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
+import { calcAgeFromBirthday } from '@/utils/format';
 import { LockOutlined, StopOutlined, UserOutlined } from '@ant-design/icons';
 import { getFiles } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
@@ -154,7 +155,9 @@ const AccountPrivacy = () => {
           <span className={styles.accountLabel}>
             {intl.formatMessage({ id: 'settings.accountPrivacy.age' })}
           </span>
-          <span className={styles.accountValue}>{userInfo?.age || '-'}</span>
+          <span className={styles.accountValue}>
+            {calcAgeFromBirthday(userInfo?.birthday) ?? '-'}
+          </span>
         </div>
         <div className={styles.accountInfo}>
           <span className={styles.accountLabel}>

@@ -52,7 +52,6 @@ const form = reactive({
   username: "",
   info: "",
   gender: null as number | null,
-  age: "",
   birthday: null as Date | null,
   phone: "",
   email: "",
@@ -83,7 +82,6 @@ function populateForm(info: UserInfo) {
   form.username = info.username || "";
   form.info = info.info || "";
   form.gender = info.gender ?? null;
-  form.age = info.age != null ? String(info.age) : "";
   form.birthday = info.birthday ? new Date(info.birthday * 1000) : null;
   if (form.birthday) {
     birthdayPickerValue.value = [
@@ -326,11 +324,6 @@ const onSave = async () => {
       updateData.gender = newGender;
     }
 
-    const newAge = form.age ? Number(form.age) : undefined;
-    if (newAge !== (originalUserInfo.age ?? undefined)) {
-      updateData.age = newAge;
-    }
-
     const newBirthday = form.birthday
       ? Math.floor(form.birthday.getTime() / 1000)
       : undefined;
@@ -461,15 +454,6 @@ const onSave = async () => {
           readonly
           is-link
           @click="showGenderSheet = true"
-        />
-
-        <van-field
-          v-model="form.age"
-          name="age"
-          label="年龄"
-          placeholder="请输入年龄"
-          type="digit"
-          clearable
         />
 
         <van-field

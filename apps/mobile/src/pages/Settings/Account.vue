@@ -5,6 +5,7 @@ import { showToast } from "vant";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { getMyAccount } from "@/utils/api";
+import { calcAgeFromBirthday } from "@/utils/time";
 import { kv_get, kv_set } from "@workspace/services";
 
 interface PrivacyPrefs {
@@ -117,7 +118,9 @@ const onChangePassword = () => {
       </div>
       <div class="account-info">
         <span class="account-label">年龄</span>
-        <span class="account-value">{{ userInfo?.age ?? "-" }}</span>
+        <span class="account-value">{{
+          calcAgeFromBirthday(userInfo?.birthday) ?? "-"
+        }}</span>
       </div>
       <div class="account-info">
         <span class="account-label">生日</span>
