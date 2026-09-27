@@ -96,9 +96,8 @@ pub async fn read_client_log_file(
     max_lines: Option<i64>,
 ) -> Result<LogFileContent, String> {
     let dir = log_dir()?;
-    let name = file_name
-        .filter(|n| !n.trim().is_empty())
-        .unwrap_or_else(|| LOG_FILE_NAME.to_string());
+    let name =
+        file_name.filter(|n| !n.trim().is_empty()).unwrap_or_else(|| LOG_FILE_NAME.to_string());
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err("非法文件名".to_string());
     }

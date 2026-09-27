@@ -18,26 +18,24 @@ pub static CONFIG_APP_LANGUAGE: &str = "app.language";
 /// HTTP API 基础地址: 优先取配置表 `server.api_base`, 未配置按运行环境兜底。
 /// dev → http://127.0.0.1:8443(网关方案后 actix 明文端口); prod → https://onlytalk.cn(nginx 443)。
 pub fn talk_api_base() -> String {
-    crate::config::get_config(CONFIG_SERVER_API_BASE)
-        .unwrap_or_else(|| {
-            if get_env() == "dev" {
-                "http://127.0.0.1:8443".to_string()
-            } else {
-                TALK_API.to_string()
-            }
-        })
+    crate::config::get_config(CONFIG_SERVER_API_BASE).unwrap_or_else(|| {
+        if get_env() == "dev" {
+            "http://127.0.0.1:8443".to_string()
+        } else {
+            TALK_API.to_string()
+        }
+    })
 }
 
 /// QUIC/NAT 域名: 优先取配置表 `server.domain`, 未配置按运行环境兜底。
 pub fn talk_api_domain() -> String {
-    crate::config::get_config(CONFIG_SERVER_DOMAIN)
-        .unwrap_or_else(|| {
-            if get_env() == "dev" {
-                "127.0.0.1".to_string()
-            } else {
-                DOMAIN_NAME.to_string()
-            }
-        })
+    crate::config::get_config(CONFIG_SERVER_DOMAIN).unwrap_or_else(|| {
+        if get_env() == "dev" {
+            "127.0.0.1".to_string()
+        } else {
+            DOMAIN_NAME.to_string()
+        }
+    })
 }
 
 // 用户发起好友申请

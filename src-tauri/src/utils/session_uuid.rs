@@ -18,8 +18,9 @@ fn namespace() -> Uuid {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde::Deserialize;
+
+    use super::*;
 
     #[derive(Deserialize)]
     struct VectorCase {

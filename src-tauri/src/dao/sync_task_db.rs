@@ -1,7 +1,7 @@
 use crate::dao::get_db_client;
 use crate::entity::sync_task::{
-    SYNC_STATUS_FAILED, SYNC_STATUS_PENDING, SYNC_STATUS_RUNNING, SYNC_STATUS_SUCCESS, SyncBatchSummary,
-    SyncTask,
+    SyncBatchSummary, SyncTask, SYNC_STATUS_FAILED, SYNC_STATUS_PENDING, SYNC_STATUS_RUNNING,
+    SYNC_STATUS_SUCCESS,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
 
@@ -82,11 +82,10 @@ pub async fn history() -> Result<Vec<SyncBatchSummary>, anyhow::Error> {
 /// 某批次的任务明细(可展开失败会话与原因)。
 pub async fn list_batch_tasks(batch_id: i64) -> Result<Vec<SyncTask>, anyhow::Error> {
     let pool_sqlite = get_db_client().await?;
-    let rows = sqlx::query_as::<_, SyncTask>(
-        "SELECT * FROM sync_task WHERE batch_id = ?1 ORDER BY id",
-    )
-    .bind(batch_id)
-    .fetch_all(&pool_sqlite)
-    .await?;
+    let rows =
+        sqlx::query_as::<_, SyncTask>("SELECT * FROM sync_task WHERE batch_id = ?1 ORDER BY id")
+            .bind(batch_id)
+            .fetch_all(&pool_sqlite)
+            .await?;
     Ok(rows)
 }

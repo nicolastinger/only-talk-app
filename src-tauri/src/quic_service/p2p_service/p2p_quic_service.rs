@@ -603,8 +603,9 @@ pub async fn send_media_frame(
 /// 消费者串行读取队列中的帧并写入 MediaData 发送流，网络背压时队列自然积压。
 /// 使用 DashMap entry API 保证并发初始化时只 spawn 一次消费者。
 fn init_media_send_queue(target_uuid: String) {
-    use crate::MediaSendQueue;
     use std::sync::atomic::AtomicU64;
+
+    use crate::MediaSendQueue;
 
     let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<u8>>(MEDIA_SEND_QUEUE_CAPACITY);
     let dropped_frames = Arc::new(AtomicU64::new(0));

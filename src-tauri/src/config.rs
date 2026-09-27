@@ -15,8 +15,8 @@ use crate::GLOBAL_CONFIG;
 pub async fn init_persisted_config() -> Result<(), anyhow::Error> {
     use crate::dao::client_config_db;
     use crate::utils::global_static_str::{
-        CONFIG_APP_LANGUAGE, CONFIG_APP_THEME, CONFIG_SERVER_API_BASE, CONFIG_SERVER_DOMAIN,
-        talk_api_base, talk_api_domain,
+        talk_api_base, talk_api_domain, CONFIG_APP_LANGUAGE, CONFIG_APP_THEME,
+        CONFIG_SERVER_API_BASE, CONFIG_SERVER_DOMAIN,
     };
 
     for (key, default) in [

@@ -25,8 +25,7 @@ pub async fn set_client_config(key: String, value: String) -> Result<(), String>
 /// 读取全部配置项(直接查公共库 client_config 表)。
 #[command]
 pub async fn get_all_client_config() -> Result<Vec<ClientConfigItem>, String> {
-    let rows =
-        crate::dao::client_config_db::get_all_configs().await.map_err(|e| e.to_string())?;
+    let rows = crate::dao::client_config_db::get_all_configs().await.map_err(|e| e.to_string())?;
     Ok(rows
         .into_iter()
         .filter_map(|row| match (row.config_key, row.config_value) {

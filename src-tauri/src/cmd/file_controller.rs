@@ -7,7 +7,7 @@ use tauri::{Manager, Runtime};
 
 use crate::config::get_config;
 use crate::service::file_service::get_file_by_biz_id_service;
-use crate::utils::global_static_str::{DEFAULT_IMAGE, RESOURCE_PATH, talk_api_base};
+use crate::utils::global_static_str::{talk_api_base, DEFAULT_IMAGE, RESOURCE_PATH};
 use crate::vo::file_vo::FileVo;
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件

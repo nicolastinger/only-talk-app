@@ -76,10 +76,9 @@ impl SqliteStore for UserInfo {
 
     async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
         // 迁移：补充 user_type 列（老库无此列，SQLite 不支持 ADD COLUMN IF NOT EXISTS）
-        let add_user_type =
-            sqlx::query(r#"ALTER TABLE user_info ADD COLUMN user_type INTEGER"#)
-                .execute(pool_sqlite)
-                .await;
+        let add_user_type = sqlx::query(r#"ALTER TABLE user_info ADD COLUMN user_type INTEGER"#)
+            .execute(pool_sqlite)
+            .await;
         let _ = add_user_type; // 列已存在，忽略
         Ok(())
     }

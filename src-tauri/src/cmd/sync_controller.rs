@@ -1,6 +1,4 @@
-use crate::service::user_service::{
-    SyncBatchView, get_sync_history as service_get_sync_history,
-};
+use crate::service::user_service::{get_sync_history as service_get_sync_history, SyncBatchView};
 
 /// 任务12: 会话追平记录历史(按轮次聚合 + 明细 —— 看哪些会话追平成功/失败)。
 #[tauri::command]
