@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -51,6 +51,27 @@ const typeMeta = (n: SystemNotification) =>
     label: "系统通知",
     color: "#8c8c8c",
   };
+
+/** hex 颜色转 rgba, 用于生成柔和底色/阴影 */
+const withAlpha = (hex: string, alpha: number) => {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+/** 类型图标底色(渐变) */
+const iconBg = (color: string) =>
+  `linear-gradient(135deg, ${color}, ${withAlpha(color, 0.55)})`;
+
+/** 类型图标阴影 */
+const iconShadow = (color: string) => `0 4px 10px ${withAlpha(color, 0.28)}`;
+
+/** 全部未读数(头部徽标) */
+const totalUnread = computed(
+  () => notifications.value.filter((n) => n.is_read === false).length
+);
 
 const getFiltered = (cat: Category) => {
   let list = notifications.value.filter((n) => n.level1 === cat.level1);
@@ -136,6 +157,7 @@ onUnmounted(() => {
 
 <template>
   <div class="notify-page">
+    <div class="notify-hero" />
     <div class="header">
       <button class="back-btn" @click="goBack">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -144,7 +166,13 @@ onUnmounted(() => {
           />
         </svg>
       </button>
-      <h1 class="title">通知中心</h1>
+      <div class="header-main">
+        <h1 class="title">通知中心</h1>
+        <p class="subtitle">好友、群组与动态的消息提醒</p>
+      </div>
+      <span v-if="totalUnread > 0" class="unread-chip">
+        {{ totalUnread }} 未读
+      </span>
     </div>
 
     <Tabs
@@ -188,17 +216,28 @@ onUnmounted(() => {
             :class="{ unread: n.is_read === false }"
             @click="markRead(n)"
           >
-            <div class="notify-head">
-              <span
-                class="type-tag"
-                :style="{ backgroundColor: typeMeta(n).color }"
-                >{{ typeMeta(n).label }}</span
-              >
-              <span class="notify-time">{{ formatTime(n.created_at) }}</span>
-              <span v-if="n.is_read === false" class="unread-dot" />
+            <div
+              class="notify-icon"
+              :style="{
+                background: iconBg(typeMeta(n).color),
+                boxShadow: iconShadow(typeMeta(n).color),
+              }"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+                />
+              </svg>
             </div>
-            <div v-if="n.title" class="notify-title">{{ n.title }}</div>
-            <div v-if="n.content" class="notify-content">{{ n.content }}</div>
+            <div class="notify-body">
+              <div class="notify-head">
+                <span class="type-tag">{{ typeMeta(n).label }}</span>
+                <span class="notify-time">{{ formatTime(n.created_at) }}</span>
+                <span v-if="n.is_read === false" class="unread-dot" />
+              </div>
+              <div v-if="n.title" class="notify-title">{{ n.title }}</div>
+              <div v-if="n.content" class="notify-content">{{ n.content }}</div>
+            </div>
           </div>
         </div>
       </Tab>
@@ -209,48 +248,119 @@ onUnmounted(() => {
 <style scoped lang="less">
 .notify-page {
   min-height: 100vh;
-  background: var(--bg-page, #f5f6fa);
+  background: var(--page-bg);
   padding-bottom: 24px;
 }
 
+/* 顶部柔光渐变装饰 */
+.notify-hero {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 220px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary) 14%, transparent) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
 .header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--header-bg, #fff);
   position: sticky;
   top: 0;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+  background: var(--header-bg);
+  background: color-mix(in srgb, var(--header-bg) 82%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-light);
 
   .back-btn {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border: none;
-    background: transparent;
+    border-radius: var(--radius-full);
+    background: var(--surface-alt);
     color: var(--text-primary);
     cursor: pointer;
+    transition: background-color var(--transition-fast),
+      transform var(--transition-fast);
+
+    &:active {
+      background: var(--surface-active);
+      transform: scale(0.92);
+    }
 
     svg {
-      width: 22px;
-      height: 22px;
+      width: 18px;
+      height: 18px;
     }
+  }
+
+  .header-main {
+    flex: 1;
+    min-width: 0;
   }
 
   .title {
     font-size: 17px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.2px;
     color: var(--text-primary);
     margin: 0;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin: 2px 0 0;
+  }
+
+  .unread-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-glow-sm);
   }
 }
 
 .notify-tabs {
+  position: relative;
+  z-index: 9;
+
   :deep(.van-tabs__wrap) {
-    background: var(--header-bg, #fff);
+    background: var(--header-bg);
+    background: color-mix(in srgb, var(--header-bg) 82%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  :deep(.van-tabs__line) {
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: var(--gradient-primary);
+  }
+
+  :deep(.van-tab) {
+    font-size: 14px;
   }
 }
 
@@ -258,28 +368,80 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 12px 16px 8px;
 
   .clear-count {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--text-tertiary);
+  }
+
+  :deep(.van-button) {
+    height: 26px;
+    padding: 0 12px;
+    font-size: 12px;
+    border-radius: var(--radius-full);
   }
 }
 
 .notify-list {
-  padding: 0 12px;
+  padding: 0 12px 4px;
 }
 
 .notify-item {
   position: relative;
-  background: var(--header-bg, #fff);
-  border-radius: 12px;
-  padding: 12px 14px;
+  display: flex;
+  gap: 12px;
+  padding: 14px;
   margin-bottom: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+
+  &:active {
+    transform: scale(0.985);
+    background: var(--surface-hover);
+  }
 
   &.unread {
-    box-shadow: inset 3px 0 0 var(--color-primary, #4a90ff);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 3px;
+      border-radius: var(--radius-full);
+      background: var(--gradient-primary);
+    }
   }
+}
+
+.notify-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: #fff;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.notify-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .notify-head {
@@ -291,38 +453,43 @@ onUnmounted(() => {
 .type-tag {
   display: inline-flex;
   align-items: center;
-  padding: 1px 8px;
-  border-radius: 999px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
   font-size: 11px;
-  line-height: 18px;
-  color: #fff;
+  font-weight: 500;
+  line-height: 16px;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
 }
 
 .notify-time {
   margin-left: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-tertiary);
 }
 
 .unread-dot {
   width: 8px;
   height: 8px;
+  flex-shrink: 0;
   border-radius: 50%;
-  background: #ef4444;
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-glow-sm);
 }
 
 .notify-title {
-  margin-top: 8px;
+  margin-top: 6px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  word-break: break-word;
 }
 
 .notify-content {
-  margin-top: 4px;
+  margin-top: 3px;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
   word-break: break-word;
 }
 
