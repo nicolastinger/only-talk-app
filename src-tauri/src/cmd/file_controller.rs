@@ -6,9 +6,11 @@ use tauri::path::BaseDirectory;
 use tauri::{Manager, Runtime};
 
 use crate::config::get_config;
-use crate::service::file_service::get_file_by_biz_id_service;
+use crate::service::file_service::{
+    delete_local_file_service, get_file_by_biz_id_service, get_local_file_list_service,
+};
 use crate::utils::global_static_str::{talk_api_base, DEFAULT_IMAGE, RESOURCE_PATH};
-use crate::vo::file_vo::FileVo;
+use crate::vo::file_vo::{FileVo, LocalFileVo};
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件
 #[tauri::command]
@@ -194,6 +196,22 @@ pub async fn get_chat_file_by_biz_id(
             Err(e.to_string())
         }
     }
+}
+
+/// 获取本地文件列表（文件管理: 分类筛选 + 名称/日期排序）
+#[tauri::command]
+pub async fn get_local_file_list(
+    file_type: Option<String>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
+) -> Result<Vec<LocalFileVo>, String> {
+    get_local_file_list_service(file_type, sort_by, sort_order).await.map_err(|e| e.to_string())
+}
+
+/// 删除本地文件（删物理文件 + 记录）
+#[tauri::command]
+pub async fn delete_local_file(id: i64) -> Result<(), String> {
+    delete_local_file_service(id).await.map_err(|e| e.to_string())
 }
 
 /// 调试命令：列出所有资源路径和文件

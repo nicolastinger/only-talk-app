@@ -3,6 +3,7 @@ use log::info;
 use sqlx::query;
 
 use crate::dao::get_common_db_client;
+use crate::entity::file_record::FileRecord;
 
 // 最大下载重试次数
 pub const MAX_DOWNLOAD_RETRY_COUNT: i32 = 5;
@@ -47,6 +48,34 @@ pub async fn delete_file_record_by_id(biz_id: &str, uuid: &str) -> Result<(), an
         .execute(&pool)
         .await?;
     info!("文件记录已删除: {}", biz_id);
+    Ok(())
+}
+
+/// 查询全部本地文件记录（仅正常状态，供文件管理列表展示）
+pub async fn list_all_files() -> Result<Vec<FileRecord>, anyhow::Error> {
+    let pool = get_common_db_client().await?;
+    let rows = sqlx::query_as::<_, FileRecord>(
+        "SELECT * FROM file_record WHERE status = 0 ORDER BY created_at DESC",
+    )
+    .fetch_all(&pool)
+    .await?;
+    Ok(rows)
+}
+
+/// 按主键查询文件记录
+pub async fn query_file_record_by_id(id: i64) -> Result<Option<FileRecord>, anyhow::Error> {
+    let pool = get_common_db_client().await?;
+    let row = sqlx::query_as::<_, FileRecord>("SELECT * FROM file_record WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(&pool)
+        .await?;
+    Ok(row)
+}
+
+/// 按主键删除文件记录
+pub async fn delete_file_record_by_pk(id: i64) -> Result<(), anyhow::Error> {
+    let pool = get_common_db_client().await?;
+    query("DELETE FROM file_record WHERE id = ?1").bind(id).execute(&pool).await?;
     Ok(())
 }
 

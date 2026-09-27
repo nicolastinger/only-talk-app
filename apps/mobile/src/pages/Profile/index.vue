@@ -44,6 +44,10 @@ const goToNotifications = () => {
 const onMenuClick = () => {
   router.push("/settings");
 };
+
+const goToFiles = () => {
+  router.push("/files");
+};
 </script>
 
 <template>
@@ -121,7 +125,7 @@ const onMenuClick = () => {
     </div>
 
     <div class="menu-section">
-      <div class="menu-item">
+      <div class="menu-item" @click="goToFiles">
         <div class="menu-left">
           <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
             <path

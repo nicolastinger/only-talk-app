@@ -51,7 +51,8 @@ use crate::cmd::config_controller::{
 };
 use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
-    debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
+    debug_resource_paths, delete_local_file, get_chat_file_by_biz_id, get_file_by_biz_id,
+    get_local_file, get_local_file_list,
 };
 use crate::cmd::friend_controller::{
     block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
@@ -301,6 +302,8 @@ pub fn run() {
             get_local_file,
             get_file_by_biz_id,
             get_chat_file_by_biz_id,
+            get_local_file_list,
+            delete_local_file,
             debug_resource_paths,
             send_image_msg,
             send_file_msg,

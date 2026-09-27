@@ -1,6 +1,7 @@
 import {
   BellOutlined,
   CodeOutlined,
+  FolderOutlined,
   InfoCircleOutlined,
   RadarChartOutlined,
   SettingOutlined,
@@ -15,6 +16,7 @@ import AboutApp from './components/AboutApp';
 import AccountPrivacy from './components/AccountPrivacy';
 import BlackList from './components/BlackList';
 import DeveloperPanel from './components/DeveloperPanel';
+import FileManager from './components/FileManager';
 import GeneralSettings from './components/GeneralSettings';
 import NotificationSettings from './components/NotificationSettings';
 import PlazaSettings from './components/PlazaSettings';
@@ -61,6 +63,11 @@ const SettingsPage = () => {
       label: intl.formatMessage({ id: 'settings.blacklistMenu' }),
     },
     {
+      key: 'files',
+      icon: <FolderOutlined />,
+      label: intl.formatMessage({ id: 'settings.fileManager.menu' }),
+    },
+    {
       key: 'about',
       icon: <InfoCircleOutlined />,
       label: intl.formatMessage({ id: 'settings.about' }),
@@ -84,6 +91,8 @@ const SettingsPage = () => {
         return <PlazaSettings />;
       case 'blacklist':
         return <BlackList />;
+      case 'files':
+        return <FileManager />;
       case 'about':
         return <AboutApp />;
       case 'developer':
