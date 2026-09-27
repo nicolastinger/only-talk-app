@@ -11,7 +11,11 @@ import styles from './styles/MessageBox.less';
 const imageCache = new Map<string, string>();
 
 const MessageBox = (
-  props: MessageQueueProps & { isSelected?: boolean; userType?: number },
+  props: MessageQueueProps & {
+    isSelected?: boolean;
+    userType?: number;
+    isGroup?: boolean;
+  },
 ) => {
   const {
     message,
@@ -24,6 +28,7 @@ const MessageBox = (
     recv_user,
     isSelected,
     userType,
+    isGroup,
   } = props;
 
   // 判断是否是自己给自己的会话
@@ -154,6 +159,7 @@ const MessageBox = (
             <div className={styles.title}>
               {title}
               <UserTypeTag type={userType} />
+              {isGroup && <span className={styles.groupBadge}>群</span>}
               {isSelfChat && (
                 <span className={styles.selfChatBadge}>📝 笔记</span>
               )}

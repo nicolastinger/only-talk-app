@@ -215,7 +215,6 @@ const highlightText = (text: string): string => {
   return result;
 };
 
-const sectionTab = ref(0);
 const searchList = computed(() => {
   const keyword = debouncedSearch.value;
   if (!keyword) return sessions.value;
@@ -226,15 +225,9 @@ const searchList = computed(() => {
   });
 });
 
-const visibleSessions = computed(() =>
-  searchList.value.filter((s) =>
-    sectionTab.value === 1 ? isGroupChat(s) : !isGroupChat(s)
-  )
-);
-
 const emptyText = computed(() => {
   if (debouncedSearch.value) return "未找到相关会话";
-  return sectionTab.value === 1 ? "暂无群聊会话" : "暂无单聊会话";
+  return "暂无会话";
 });
 
 const onRefresh = async () => {
@@ -381,23 +374,6 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
       </div>
     </div>
 
-    <div class="seg-tabs">
-      <button
-        class="seg-tab"
-        :class="{ active: sectionTab === 0 }"
-        @click="sectionTab = 0"
-      >
-        单聊
-      </button>
-      <button
-        class="seg-tab"
-        :class="{ active: sectionTab === 1 }"
-        @click="sectionTab = 1"
-      >
-        群聊
-      </button>
-    </div>
-
     <PullRefresh
       v-model="refreshing"
       :head-height="80"
@@ -406,8 +382,8 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
       loading-text="加载中..."
       @refresh="onRefresh"
     >
-      <div v-if="visibleSessions.length > 0" class="session-list">
-        <SwipeCell v-for="item in visibleSessions" :key="item.nano_id">
+      <div v-if="searchList.length > 0" class="session-list">
+        <SwipeCell v-for="item in searchList" :key="item.nano_id">
           <div
             class="session-item"
             :class="{ self: isSelfChat(item) }"
@@ -453,6 +429,7 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
                     class="session-name"
                     v-html="highlightText(getDisplayName(item))"
                   ></span>
+                  <span v-if="isGroupChat(item)" class="group-badge">群</span>
                   <UserTypeTag
                     v-if="item.session_type !== 2"
                     :type="item.friend_user_type"
@@ -644,38 +621,6 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   }
 }
 
-.seg-tabs {
-  margin: 8px 12px 10px;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xs);
-}
-
-.seg-tab {
-  flex: 1;
-  height: 34px;
-  border: none;
-  border-radius: calc(var(--radius-lg) - 5px);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  -webkit-tap-highlight-color: transparent;
-
-  &.active {
-    background: var(--gradient-primary);
-    color: #fff;
-    font-weight: 600;
-    box-shadow: var(--shadow-sm);
-  }
-}
-
 .session-list {
   display: flex;
   flex-direction: column;
@@ -802,6 +747,18 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+}
+
+.group-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  font-size: 10px;
+  line-height: 1.6;
+  font-weight: 600;
+  color: var(--brand-blue);
+  background: var(--brand-blue-bg);
+  border: 1px solid var(--brand-blue-border, rgba(64, 150, 255, 0.3));
+  border-radius: 4px;
 }
 
 .hl {

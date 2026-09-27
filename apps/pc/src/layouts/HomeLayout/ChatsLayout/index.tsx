@@ -2,16 +2,13 @@ import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
 import { useBearStore } from '@/store/store';
-import { MessageOutlined, TeamOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { history, Outlet, useIntl, useLocation } from '@umijs/max';
 import { clearAllUnreadSessions } from '@workspace/services';
 import { ChatSessionVo } from '@workspace/types';
-import { Button, Popconfirm, Segmented, Splitter } from 'antd';
-import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Popconfirm, Splitter } from 'antd';
+import React, { useEffect, useState } from 'react';
 import styles from './index.less';
-
-type ChatTabType = 'private' | 'group';
 
 const ClearIcon = () => (
   <svg
@@ -51,7 +48,6 @@ const ChatsLayout = () => {
     [],
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<ChatTabType>('private');
   const [hidePopoverKey, setHidePopoverKey] = useState<string>('');
 
   const { userInfo } = useBearStore();
@@ -67,13 +63,10 @@ const ChatsLayout = () => {
 
     if (currentFriend) {
       setSelectedSessionKey(currentFriend);
-      setActiveTab('private');
     } else if (selfUuid) {
       setSelectedSessionKey(selfUuid);
-      setActiveTab('private');
     } else if (groupId) {
       setSelectedSessionKey(groupId);
-      setActiveTab('group');
     }
   }, [location.search]);
 
@@ -185,6 +178,7 @@ const ChatsLayout = () => {
 
   const handleClearAllUnread = async () => {
     await clearAllUnreadSessions();
+    await get_chat_session();
   };
 
   const handleHideSession = async (item: ChatSessionVo) => {
@@ -213,52 +207,7 @@ const ChatsLayout = () => {
     }
   };
 
-  const privateChatList = useMemo(() => {
-    return chatSessionList.filter((item) => item.session_type !== 2);
-  }, [chatSessionList]);
-
-  const groupChatList = useMemo(() => {
-    return chatSessionList.filter((item) => item.session_type === 2);
-  }, [chatSessionList]);
-
-  const currentList = useMemo(() => {
-    return activeTab === 'private' ? privateChatList : groupChatList;
-  }, [activeTab, privateChatList, groupChatList]);
-
-  const tabOptions = [
-    {
-      value: 'private',
-      label: (
-        <div
-          style={{
-            padding: '4px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <MessageOutlined />
-          <span>{intl.formatMessage({ id: 'chatsLayout.privateChat' })}</span>
-        </div>
-      ),
-    },
-    {
-      value: 'group',
-      label: (
-        <div
-          style={{
-            padding: '4px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <TeamOutlined />
-          <span>{intl.formatMessage({ id: 'chatsLayout.groupChat' })}</span>
-        </div>
-      ),
-    },
-  ];
+  const currentList = chatSessionList;
 
   return (
     <Splitter>
@@ -287,14 +236,6 @@ const ChatsLayout = () => {
               />
             </Popconfirm>
           </div>
-          <div className={styles.tabContainer}>
-            <Segmented
-              value={activeTab}
-              onChange={(value) => setActiveTab(value as ChatTabType)}
-              options={tabOptions}
-              block
-            />
-          </div>
           <div className={styles.item} key="chat">
             {currentList.map((item: ChatSessionVo) => {
               const sessionKey =
@@ -319,6 +260,7 @@ const ChatsLayout = () => {
                     time={item.timestamp}
                     title={item.friend_name}
                     userType={item.friend_user_type}
+                    isGroup={item.session_type === 2}
                     count={item.unread_count}
                     text_type={item.text_type}
                     send_user={item.send_user}

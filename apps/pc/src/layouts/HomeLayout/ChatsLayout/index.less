@@ -38,48 +38,6 @@
   left: 0;
 }
 
-.tabContainer {
-  width: 100%;
-  padding: 8px 12px;
-  box-sizing: border-box;
-  background: var(--glass-bg);
-
-  :global {
-    .ant-segmented {
-      background: var(--segmented-bg);
-      padding: 3px;
-      border-radius: 10px;
-    }
-
-    .ant-segmented-item {
-      border-radius: 8px;
-      transition: all 0.3s ease;
-      color: var(--text-color-secondary);
-      font-size: 13px;
-    }
-
-    .ant-segmented-item-selected {
-      background: linear-gradient(
-        135deg,
-        var(--color-primary) 0%,
-        #4096ff 100%
-      );
-      color: #fff;
-      font-weight: 500;
-      box-shadow: 0 2px 8px rgba(64, 150, 255, 0.3);
-    }
-
-    .ant-segmented-thumb {
-      background: linear-gradient(
-        135deg,
-        var(--color-primary) 0%,
-        #4096ff 100%
-      );
-      border-radius: 8px;
-    }
-  }
-}
-
 .left {
   width: auto !important;
   overflow: hidden;
@@ -96,7 +54,7 @@
 
 .item {
   width: 100%;
-  height: calc(100% - 116px);
+  height: calc(100% - 48px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
