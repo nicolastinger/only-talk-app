@@ -69,6 +69,7 @@ const onSubmit = async () => {
     position="bottom"
     round
     closeable
+    teleport="body"
     class="report-sheet"
   >
     <div class="report-body">

@@ -121,13 +121,14 @@ const MomentCard = (props: {
   };
 
   return (
-    <div
-      className={styles.card}
-      style={{ '--seq': (index ?? 0) * 40 } as CSSProperties}
-      onClick={() => onOpenDetail?.(moment)}
-      role="button"
-      tabIndex={0}
-    >
+    <>
+      <div
+        className={styles.card}
+        style={{ '--seq': (index ?? 0) * 40 } as CSSProperties}
+        onClick={() => onOpenDetail?.(moment)}
+        role="button"
+        tabIndex={0}
+      >
       <MomentMedia images={images} onMediaLoad={onMediaLoad} />
 
       {moment.content && <div className={styles.content}>{moment.content}</div>}
@@ -207,6 +208,7 @@ const MomentCard = (props: {
           )}
         </div>
       </div>
+      </div>
 
       <ReportModal
         open={reportModalVisible}
@@ -215,7 +217,7 @@ const MomentCard = (props: {
         targetName={moment.username || ''}
         onClose={() => setReportModalVisible(false)}
       />
-    </div>
+    </>
   );
 };
 
