@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import type { Component } from "vue";
-import { useRouter } from "vue-router";
-import FeedSquare from "./feed/FeedSquare.vue";
-import FeedFollowing from "./feed/FeedFollowing.vue";
-import FeedMine from "./feed/FeedMine.vue";
+import { useRoute, useRouter } from "vue-router";
+import FriendSquare from "./friend/FriendSquare.vue";
+import FriendSwipe from "./friend/FriendSwipe.vue";
+import FriendCrush from "./friend/FriendCrush.vue";
+import FriendMatch from "./friend/FriendMatch.vue";
 
 interface RailItem {
   key: string;
@@ -13,45 +14,56 @@ interface RailItem {
 
 const railMenus: RailItem[] = [
   { key: "square", label: "广场" },
-  { key: "following", label: "关注" },
-  { key: "mine", label: "我的" },
+  { key: "swipe", label: "速配" },
+  { key: "crush", label: "我心动" },
+  { key: "match", label: "已匹配" },
 ];
 
 const activeKey = ref("square");
 
+const route = useRoute();
 const router = useRouter();
+
+// 支持从外部入口(如发现页金刚键)带 sub 参数直达指定子页
+onMounted(() => {
+  const sub = route.query.sub;
+  if (typeof sub === "string" && railMenus.some((item) => item.key === sub)) {
+    activeKey.value = sub;
+  }
+});
 
 const onSubTab = (key: string) => {
   activeKey.value = key;
 };
 
-const feedFeatures: Record<string, Component> = {
-  square: FeedSquare,
-  following: FeedFollowing,
-  mine: FeedMine,
+const friendFeatures: Record<string, Component> = {
+  square: FriendSquare,
+  swipe: FriendSwipe,
+  crush: FriendCrush,
+  match: FriendMatch,
 };
 </script>
 
 <template>
-  <div class="feed-page">
+  <div class="friend-page">
     <div class="header">
       <svg class="title-icon" viewBox="0 0 24 24" fill="currentColor">
         <path
-          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
         />
       </svg>
-      <span class="page-title">动态</span>
-      <button class="header-link" @click="router.push('/plaza/friend')">
+      <span class="page-title">交友</span>
+      <button class="header-link" @click="router.push('/plaza')">
         <svg class="header-link-icon" viewBox="0 0 24 24" fill="currentColor">
           <path
-            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+            d="M13 3c-4.97 0-9 4.03-9 9H1l4 4 4-4H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.51 0-2.91-.49-4.06-1.3l-1.42 1.44C8.04 20.3 9.94 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"
           />
         </svg>
-        <span>交友</span>
+        <span>动态</span>
       </button>
     </div>
 
-    <div class="feed-body">
+    <div class="friend-body">
       <div class="sub-tabs">
         <button
           v-for="item in railMenus"
@@ -65,14 +77,17 @@ const feedFeatures: Record<string, Component> = {
       </div>
 
       <section class="content">
-        <component :is="feedFeatures[activeKey]" :key="`feed-${activeKey}`" />
+        <component
+          :is="friendFeatures[activeKey]"
+          :key="`friend-${activeKey}`"
+        />
       </section>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.feed-page {
+.friend-page {
   min-height: 100vh;
   background: var(--page-bg);
   padding-bottom: 80px;
@@ -140,7 +155,7 @@ const feedFeatures: Record<string, Component> = {
   }
 }
 
-.feed-body {
+.friend-body {
   padding: 12px 16px 0;
 }
 

@@ -10,31 +10,37 @@ interface NavItem {
 
 const route = useRoute();
 const router = useRouter();
-const { chatBadge, friendBadge, plazaBadge } = useUnreadStore();
+const { chatBadge, friendBadge, friendPlazaBadge, feedBadge } =
+  useUnreadStore();
 
 const navItems: NavItem[] = [
   { name: "chat", path: "/chats" },
   { name: "friends", path: "/friends" },
-  { name: "discover", path: "/discover" },
-  { name: "plaza", path: "/plaza" },
+  { name: "friendPlaza", path: "/plaza/friend" },
+  { name: "feed", path: "/plaza" },
   { name: "profile", path: "/profile" },
 ];
 
 const badgeOf = (name: string) => {
   if (name === "chat") return chatBadge.value;
   if (name === "friends") return friendBadge.value;
-  if (name === "plaza") return plazaBadge.value;
+  if (name === "friendPlaza") return friendPlazaBadge.value;
+  if (name === "feed") return feedBadge.value;
   return 0;
 };
 
 const formatBadge = (count: number) => (count > 99 ? "99+" : String(count));
 
+// 最长前缀匹配，避免 /plaza 误命中 /plaza/friend
 const active = computed(() => {
   const path = route.path;
+  let best = "";
   for (const item of navItems) {
-    if (path.startsWith(item.path)) return item.path;
+    if (path === item.path || path.startsWith(item.path + "/")) {
+      if (item.path.length > best.length) best = item.path;
+    }
   }
-  return "/chats";
+  return best || "/chats";
 });
 
 const onChange = (path: string) => {
@@ -118,38 +124,33 @@ const onChange = (path: string) => {
         />
       </svg>
 
-      <!-- Discover: compass with pulsing ring -->
+      <!-- 交友广场: heart with pulsing ring -->
       <svg
-        v-else-if="item.name === 'discover'"
+        v-else-if="item.name === 'friendPlaza'"
         class="nav-icon"
         viewBox="0 0 32 32"
         fill="none"
       >
         <circle
-          class="compass-ring"
+          class="heart-pulse"
           cx="16"
           cy="16"
-          r="10.5"
+          r="10"
           stroke="currentColor"
-          stroke-width="1.8"
+          stroke-width="0.7"
         />
         <path
-          class="compass-needle"
-          d="M16 9.5L22 16 16 22.5 10 16Z"
-          fill="currentColor"
-        />
-        <circle
-          class="compass-core"
-          cx="16"
-          cy="16"
-          r="1.5"
-          fill="var(--nav-bg, rgba(255, 255, 255, 0.92))"
+          class="heart-base"
+          d="M16 27C16 27 5 20.5 5 13a5.5 5.5 0 0 1 11-3 5.5 5.5 0 0 1 11 3c0 7.5-11 14-11 14z"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linejoin="round"
         />
       </svg>
 
-      <!-- Plaza: globe with orbiting ring -->
+      <!-- 动态广场: globe with orbiting ring -->
       <svg
-        v-else-if="item.name === 'plaza'"
+        v-else-if="item.name === 'feed'"
         class="nav-icon"
         viewBox="0 0 32 32"
         fill="none"
@@ -398,39 +399,47 @@ const onChange = (path: string) => {
   }
 }
 
-// ===== Discover icon animations =====
-.compass-ring {
+// ===== 交友广场 icon animations =====
+.heart-pulse {
+  opacity: 0;
+}
+.nav-btn.active .heart-pulse {
+  animation: heartPulse 2s ease-out infinite;
   transform-origin: 16px 16px;
 }
-.nav-btn.active .compass-ring {
-  animation: compassPulse 2.4s ease-in-out infinite;
-}
-.nav-btn.active .compass-needle {
-  animation: needleGlow 2.4s ease-in-out infinite;
+.nav-btn.active .heart-base {
+  animation: heartBeat 2s ease-in-out infinite;
+  transform-origin: 16px 16px;
 }
 
-@keyframes compassPulse {
-  0%,
-  100% {
-    opacity: 0.7;
-    transform: rotate(0deg) scale(1);
+@keyframes heartPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
   }
-  50% {
-    opacity: 1;
-    transform: rotate(8deg) scale(1.05);
+  40% {
+    opacity: 0.5;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
   }
 }
-@keyframes needleGlow {
+@keyframes heartBeat {
   0%,
   100% {
-    opacity: 0.85;
+    transform: scale(1);
   }
-  50% {
-    opacity: 1;
+  12% {
+    transform: scale(1.12);
+  }
+  24% {
+    transform: scale(1);
   }
 }
 
-// ===== Plaza icon animations =====
+// ===== 动态广场 icon animations =====
 .orbit-ring {
   transform-origin: 16px 16px;
 }

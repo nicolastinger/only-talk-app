@@ -36,8 +36,10 @@ const notifyUnread = ref(0);
 const chatBadge = computed(() => chatUnread.value + friendReq.value + groupInvite.value);
 // 好友 tab 徽标：待处理好友请求 + 待处理群邀请
 const friendBadge = computed(() => friendReq.value + groupInvite.value);
-// 广场 tab 徽标：交友广场未读 + 动态未读（移动端广场与动态同属一个 tab）
-const plazaBadge = computed(() => plazaUnread.value + momentUnread.value);
+// 交友广场 tab 徽标：交友广场(心动/匹配)未读
+const friendPlazaBadge = computed(() => plazaUnread.value);
+// 动态广场 tab 徽标：动态(点赞/评论)未读
+const feedBadge = computed(() => momentUnread.value);
 
 const fetchSessions = async () => {
   try {
@@ -233,7 +235,8 @@ export const useUnreadStore = () => ({
   notifyUnread,
   chatBadge,
   friendBadge,
-  plazaBadge,
+  friendPlazaBadge,
+  feedBadge,
   refresh: refreshAll,
   hideSession,
   refreshFriendCounts: async () => {

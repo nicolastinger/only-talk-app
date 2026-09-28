@@ -58,6 +58,7 @@ const goToFiles = () => {
           d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
         />
       </svg>
+      <span class="page-title">我的</span>
     </div>
 
     <div class="user-card">
@@ -169,13 +170,28 @@ const goToFiles = () => {
   top: 0;
   z-index: 50;
   border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .title-icon {
   width: 26px;
   height: 26px;
   color: var(--brand-blue);
+  flex-shrink: 0;
   display: block;
+}
+
+.page-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-card {
