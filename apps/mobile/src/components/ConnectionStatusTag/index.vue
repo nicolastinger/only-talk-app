@@ -5,7 +5,14 @@ const { state } = useQuicStore();
 </script>
 
 <template>
-  <div v-if="state.statusTag" class="conn-tag" :class="`conn-tag--${state.statusTag}`">
+  <div
+    v-if="state.statusTag"
+    class="conn-tag"
+    :class="[
+      `conn-tag--${state.statusTag}`,
+      { 'conn-tag--below-bar': !state.isConnected },
+    ]"
+  >
     <span v-if="state.statusTag === 'reconnecting'" class="conn-tag__spinner" />
     <span>{{ state.statusTag === 'offline' ? '已离线' : state.statusTag === 'reconnecting' ? '重连中' : '已上线' }}</span>
   </div>
@@ -41,6 +48,11 @@ const { state } = useQuicStore();
 
   &--online {
     background: var(--color-success);
+  }
+
+  // QUIC 顶部连接条显示时(断连/重连中), 标签下移避开, 避免重叠
+  &--below-bar {
+    top: calc(env(safe-area-inset-top) + 56px);
   }
 
   &__spinner {
