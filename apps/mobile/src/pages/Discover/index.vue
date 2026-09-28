@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 
 interface Topic {
   id: number;
@@ -24,6 +25,15 @@ interface Activity {
   image: string;
 }
 
+interface QuickAction {
+  id: number;
+  name: string;
+  icon: string;
+  color: string;
+  to?: { path: string; query: Record<string, string> };
+}
+
+const router = useRouter();
 const searchQuery = ref("");
 
 const hotTopics = ref<Topic[]>([
@@ -77,12 +87,29 @@ const activities = ref<Activity[]>([
   },
 ]);
 
-const quickActions = [
+const quickActions: QuickAction[] = [
   { id: 1, name: "语音匹配", icon: "🎙️", color: "#6366f1" },
   { id: 2, name: "灵魂测试", icon: "🔮", color: "#8b5cf6" },
   { id: 3, name: "兴趣星球", icon: "🌍", color: "#06b6d4" },
-  { id: 4, name: "万人广场", icon: "📢", color: "#f59e0b" },
+  {
+    id: 4,
+    name: "广场",
+    icon: "📢",
+    color: "#f59e0b",
+    to: { path: "/plaza", query: { tab: "friend", sub: "square" } },
+  },
+  {
+    id: 5,
+    name: "卡片配对",
+    icon: "🎴",
+    color: "#ec4899",
+    to: { path: "/plaza", query: { tab: "friend", sub: "swipe" } },
+  },
 ];
+
+const goAction = (action: QuickAction) => {
+  if (action.to) router.push(action.to);
+};
 </script>
 
 <template>
@@ -109,6 +136,7 @@ const quickActions = [
         :key="action.id"
         class="quick-action-item"
         :style="{ '--action-color': action.color }"
+        @click="goAction(action)"
       >
         <div class="action-icon">{{ action.icon }}</div>
         <span class="action-name">{{ action.name }}</span>
@@ -265,8 +293,8 @@ const quickActions = [
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
   margin-bottom: 24px;
 }
 
@@ -275,15 +303,20 @@ const quickActions = [
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 12px;
+  padding: 12px 4px;
   background: rgba(var(--action-color-rgb), 0.1);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.94);
+  }
 }
 
 .action-icon {
   font-size: 24px;
+  color: var(--action-color);
 }
 
 .action-name {

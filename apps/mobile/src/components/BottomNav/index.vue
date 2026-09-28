@@ -15,6 +15,7 @@ const { chatBadge, friendBadge, plazaBadge } = useUnreadStore();
 const navItems: NavItem[] = [
   { name: "chat", path: "/chats" },
   { name: "friends", path: "/friends" },
+  { name: "discover", path: "/discover" },
   { name: "plaza", path: "/plaza" },
   { name: "profile", path: "/profile" },
 ];
@@ -114,6 +115,35 @@ const onChange = (path: string) => {
           stroke="currentColor"
           stroke-width="1.6"
           stroke-linecap="round"
+        />
+      </svg>
+
+      <!-- Discover: compass with pulsing ring -->
+      <svg
+        v-else-if="item.name === 'discover'"
+        class="nav-icon"
+        viewBox="0 0 32 32"
+        fill="none"
+      >
+        <circle
+          class="compass-ring"
+          cx="16"
+          cy="16"
+          r="10.5"
+          stroke="currentColor"
+          stroke-width="1.8"
+        />
+        <path
+          class="compass-needle"
+          d="M16 9.5L22 16 16 22.5 10 16Z"
+          fill="currentColor"
+        />
+        <circle
+          class="compass-core"
+          cx="16"
+          cy="16"
+          r="1.5"
+          fill="var(--nav-bg, rgba(255, 255, 255, 0.92))"
         />
       </svg>
 
@@ -362,6 +392,38 @@ const onChange = (path: string) => {
   0%,
   100% {
     opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// ===== Discover icon animations =====
+.compass-ring {
+  transform-origin: 16px 16px;
+}
+.nav-btn.active .compass-ring {
+  animation: compassPulse 2.4s ease-in-out infinite;
+}
+.nav-btn.active .compass-needle {
+  animation: needleGlow 2.4s ease-in-out infinite;
+}
+
+@keyframes compassPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(8deg) scale(1.05);
+  }
+}
+@keyframes needleGlow {
+  0%,
+  100% {
+    opacity: 0.85;
   }
   50% {
     opacity: 1;

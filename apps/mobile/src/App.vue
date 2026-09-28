@@ -39,7 +39,7 @@ const showNav = computed(() => {
   if (path === "/friends/requests" || path === "/friends/group-requests")
     return false;
   if (path.startsWith("/plaza/moment/")) return false;
-  return ["/chats", "/friends", "/plaza", "/profile"].includes(path);
+  return ["/chats", "/friends", "/discover", "/plaza", "/profile"].includes(path);
 });
 
 const setForeground = (value: "1" | "0") => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import type { Component } from "vue";
+import { useRoute } from "vue-router";
 import FriendSquare from "./friend/FriendSquare.vue";
 import FriendSwipe from "./friend/FriendSwipe.vue";
 import FriendCrush from "./friend/FriendCrush.vue";
@@ -39,6 +40,24 @@ const railMenus: Record<TopTab, RailItem[]> = {
 
 const topTab = ref<TopTab>("friend");
 const activeKey = ref("square");
+
+const route = useRoute();
+
+// 支持从外部入口(如发现页金刚键)带 tab/sub 参数直达指定子页
+onMounted(() => {
+  const tab = route.query.tab;
+  const sub = route.query.sub;
+  if (tab === "friend" || tab === "feed") {
+    topTab.value = tab;
+    activeKey.value = railMenus[tab][0].key;
+  }
+  if (
+    typeof sub === "string" &&
+    railMenus[topTab.value].some((item) => item.key === sub)
+  ) {
+    activeKey.value = sub;
+  }
+});
 
 const currentMenu = computed(() => railMenus[topTab.value]);
 
