@@ -60,6 +60,8 @@ export interface SyncMessage {
 export interface SyncSession {
   session_uuid: string;
   session_type: 1 | 2;
+  /** 服务端已读游标(user_session.last_read_id): id <= 该值的消息视为其他端已读, 不计未读 */
+  last_read_id: number;
   messages: SyncMessage[];
   /** 本批最大消息 id(= 末条 id; 空批 = 请求的 after_id); 客户端以此续拉并回报 /session/synced */
   next_cursor: number;

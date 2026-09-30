@@ -14,17 +14,25 @@ use crate::dao::app_log_db::log_quic_event;
 use crate::dao::chat_record_db::{
     insert_chat_record, local_max_server_id, query_read_peers, set_chat_record_server_id,
 };
+use crate::dao::chat_record_read::{
+    query_read_watermark, read_watermark_server_id, update_last_read_msg,
+};
 use crate::dao::get_db_client;
+use crate::dao::get_private_db_client;
 use crate::dao::group_chat_record_db::{local_max_group_server_id, set_group_server_id};
-use crate::dao::group_message_read::query_group_read_peers;
+use crate::dao::group_message_read::{
+    group_read_watermark_server_id, query_group_message_read, query_group_read_peers,
+    update_group_message_read,
+};
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
 use crate::dto::http_result::HttpResult;
 use crate::entity::app_log::LOG_LEVEL_INFO;
-use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
+use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE, ChatRecordRead};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
+use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::system_notification::SystemNotification;
 use crate::quic_service::center_service::text_quic_client::{spawn_client_loop, stop_client_loop};
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
@@ -239,7 +247,10 @@ pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-// 发送已读消息(任务07): 按会话聚合, 上报本地 max(server_id) 游标
+// 发送已读消息(任务07): 按会话聚合, 上报本地已读水位对应的服务端 id 游标。
+//
+// 任务04跨端: 上报值 = 已读水位(nano_id)在消息表里的 server_id, 而不是本地 max(server_id)。
+// 跨端回填的水位可能停在历史位置(其他端读到 id=3), 用 max 会把未读的 4、5 误报成已读。
 pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
@@ -262,7 +273,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
 
         let mut reads: Vec<serde_json::Value> = Vec::new();
 
-        // 单聊: 按对端聚合 → 派生 session_uuid → 本地 max(server_id)
+        // 单聊: 按对端聚合 → 派生 session_uuid → 已读水位对应的 server_id
         for (peer, ts) in query_read_peers(&uuid, timestamp).await? {
             if ts > timestamp {
                 timestamp = ts;
@@ -271,13 +282,13 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
                 (Ok(a), Ok(b)) => single_session_uuid(&a, &b).to_string(),
                 _ => continue,
             };
-            // 在线消息无 server_id → max 可能为 None/0 → 本次跳过(低估自愈, 见任务07 §5.1)
-            if let Some(max_id) = local_max_server_id(&uuid, &peer).await? {
-                if max_id > 0 {
+            // 水位消息尚无 server_id(如在线消息未回填) → 本次跳过, 下次同步后自愈
+            if let Some(read_id) = read_watermark_server_id(&uuid, &peer).await? {
+                if read_id > 0 {
                     reads.push(serde_json::json!({
                         "session_uuid": su,
                         "session_type": CHAT_TYPE_SINGLE,
-                        "last_read_id": max_id,
+                        "last_read_id": read_id,
                     }));
                 }
             }
@@ -288,12 +299,12 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
             if ts > group_timestamp {
                 group_timestamp = ts;
             }
-            if let Some(max_id) = local_max_group_server_id(&group).await? {
-                if max_id > 0 {
+            if let Some(read_id) = group_read_watermark_server_id(&group, &uuid).await? {
+                if read_id > 0 {
                     reads.push(serde_json::json!({
                         "session_uuid": group,
                         "session_type": CHAT_TYPE_GROUP,
-                        "last_read_id": max_id,
+                        "last_read_id": read_id,
                     }));
                 }
             }
@@ -450,6 +461,8 @@ struct SyncSession {
     #[allow(dead_code)]
     session_uuid: String,
     session_type: i16,
+    /// 服务端已读游标(user_session.last_read_id): id <= 该值的消息视为其他端已读, 不计未读
+    last_read_id: i64,
     messages: Vec<SyncMessage>,
     next_cursor: i64,
     has_more: bool,
@@ -489,6 +502,7 @@ struct SessionListItem {
     pinned: i16,
     #[allow(dead_code)]
     muted: i16,
+    #[allow(dead_code)]
     unread: i64,
 }
 
@@ -534,6 +548,7 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
         let mut after = mine;
         let mut pulled = 0usize;
         let mut total_new = 0i64;
+        let mut server_last_read_id = 0i64;
         let pull_result: Result<(), anyhow::Error> = async {
             loop {
                 let body = serde_json::json!({
@@ -553,7 +568,8 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
                 if sess.messages.is_empty() {
                     break; // 已追平服务端最新
                 }
-                let new_count = apply_sync_session(&me, sess).await?;
+                server_last_read_id = sess.last_read_id;
+                let new_count = apply_sync_session(&me, sess, sess.last_read_id).await?;
                 total_new += new_count;
                 pulled += 1;
                 after = sess.next_cursor;
@@ -582,6 +598,13 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
         }
 
         if pulled > 0 {
+            // 跨端已读回填: 把服务端 last_read_id 映射到本地水位(只在本地水位更旧时推进)
+            if let Err(e) = backfill_read_watermark(&me, s, server_last_read_id).await {
+                warn!(
+                    "[session][sync] 已读水位回填失败: {}, err={:?}",
+                    s.session_uuid, e
+                );
+            }
             // 先落库再回报(宁重勿漏; 回报失败 → 下轮重拉, nano_id 去重兜住)
             let report = post_request(
                 format!("{}/session/synced", talk_api_base()),
@@ -657,22 +680,99 @@ pub async fn get_sync_history() -> Result<Vec<SyncBatchView>, anyhow::Error> {
 }
 
 /// 应用一批同步结果: 落库(nano_id 去重) + 回写 server_id + 更新会话表; 返回本批新增消息数。
-async fn apply_sync_session(me: &str, s: &SyncSession) -> Result<i64, anyhow::Error> {
+///
+/// `server_last_read_id` 为服务端已读游标: `id <= 该值` 的消息是其他端已读的, 不计入未读角标。
+async fn apply_sync_session(
+    me: &str,
+    s: &SyncSession,
+    server_last_read_id: i64,
+) -> Result<i64, anyhow::Error> {
     let mut new_count = 0i64;
     for msg in &s.messages {
         if s.session_type == 1 {
-            if insert_single_sync_message(me, msg).await? {
+            if insert_single_sync_message(me, msg, server_last_read_id).await? {
                 new_count += 1;
             }
-        } else if insert_group_sync_message(me, msg).await? {
+        } else if insert_group_sync_message(me, msg, server_last_read_id).await? {
             new_count += 1;
         }
     }
     Ok(new_count)
 }
 
+/// 跨端已读回填: 同步完成后, 把服务端已读游标映射到本地水位(chat_record_read /
+/// group_message_read), 使本端 UI 直接呈现其他端已读位置, 后续 /session/read 上报不越位。
+///
+/// 只在本地无水位或水位比服务端游标更旧时推进 —— 不覆盖本端已读到的更前位置。
+async fn backfill_read_watermark(
+    me: &str,
+    s: &SessionListItem,
+    last_read_id: i64,
+) -> Result<(), anyhow::Error> {
+    if last_read_id <= 0 {
+        return Ok(());
+    }
+    let pool = get_private_db_client().await?;
+    if s.session_type == 2 {
+        let existing = query_group_message_read(&s.session_uuid, me).await?;
+        let row: Option<(String, i64)> = sqlx::query_as(
+            r#"SELECT nano_id, timestamp FROM group_chat_record WHERE group_id = ?1 AND server_id <= ?2 ORDER BY server_id DESC LIMIT 1"#,
+        )
+        .bind(&s.session_uuid)
+        .bind(last_read_id)
+        .fetch_optional(&pool)
+        .await?;
+        let Some((nano_id, ts)) = row else { return Ok(()) };
+        if let Some(existing) = existing {
+            if ts <= existing.timestamp {
+                return Ok(());
+            }
+        }
+        update_group_message_read(&GroupMessageRead {
+            id: 0,
+            nano_id,
+            group_uuid: s.session_uuid.clone(),
+            user_uuid: me.to_string(),
+            timestamp: ts,
+        })
+        .await?;
+    } else {
+        let Some(peer) = s.peer_uuid.as_ref().filter(|p| !p.is_empty()) else {
+            return Ok(());
+        };
+        let existing = query_read_watermark(me, peer).await?;
+        let row: Option<(String, i64)> = sqlx::query_as(
+            r#"SELECT nano_id, timestamp FROM chat_record WHERE ((send_user = ?1 AND recv_user = ?2) OR (send_user = ?2 AND recv_user = ?1)) AND server_id <= ?3 ORDER BY server_id DESC LIMIT 1"#,
+        )
+        .bind(me)
+        .bind(peer)
+        .bind(last_read_id)
+        .fetch_optional(&pool)
+        .await?;
+        let Some((nano_id, ts)) = row else { return Ok(()) };
+        if let Some(existing) = existing {
+            if ts <= existing.timestamp {
+                return Ok(());
+            }
+        }
+        update_last_read_msg(&ChatRecordRead {
+            id: 0,
+            nano_id,
+            timestamp: ts,
+            recv_user: me.to_string(),
+            send_user: peer.clone(),
+        })
+        .await?;
+    }
+    Ok(())
+}
+
 /// 单聊同步消息落库(复用 insert_chat_record 去重链); 返回是否新增。
-async fn insert_single_sync_message(me: &str, msg: &SyncMessage) -> Result<bool, anyhow::Error> {
+async fn insert_single_sync_message(
+    me: &str,
+    msg: &SyncMessage,
+    server_last_read_id: i64,
+) -> Result<bool, anyhow::Error> {
     let vo = TextQuicMsgVo {
         nano_id: msg.nano_id.clone(),
         text_type: msg.text_type,
@@ -690,12 +790,13 @@ async fn insert_single_sync_message(me: &str, msg: &SyncMessage) -> Result<bool,
         _ => String::new(),
     };
     let is_received = msg.recv_user == me;
+    let already_read = msg.id <= server_last_read_id; // 其他端已读的消息不计未读
     let chat_session = ChatSession {
         id: 0,
         nano_id: msg.nano_id.clone(),
         timestamp: msg.timestamp,
         text_type: msg.text_type,
-        unread_count: if is_new && is_received { 1 } else { 0 },
+        unread_count: if is_new && is_received && !already_read { 1 } else { 0 },
         last_message: vo.raw.clone(),
         recv_user: me.to_string(),
         send_user: peer,
@@ -711,7 +812,11 @@ async fn insert_single_sync_message(me: &str, msg: &SyncMessage) -> Result<bool,
 }
 
 /// 群聊同步消息落库(recv_user 即 group_uuid); 返回是否新增。
-async fn insert_group_sync_message(me: &str, msg: &SyncMessage) -> Result<bool, anyhow::Error> {
+async fn insert_group_sync_message(
+    me: &str,
+    msg: &SyncMessage,
+    server_last_read_id: i64,
+) -> Result<bool, anyhow::Error> {
     let group_id = msg.recv_user.clone();
     let raw = String::from_utf8_lossy(&msg.raw).to_string();
     let record = GroupChatRecord {
@@ -727,12 +832,13 @@ async fn insert_group_sync_message(me: &str, msg: &SyncMessage) -> Result<bool, 
     let is_new = GroupChatRecord::insert(&record).await?;
     set_group_server_id(&msg.nano_id, msg.id).await?;
 
+    let already_read = msg.id <= server_last_read_id; // 其他端已读的消息不计未读
     let chat_session = ChatSession {
         id: 0,
         nano_id: msg.nano_id.clone(),
         timestamp: msg.timestamp,
         text_type: msg.text_type,
-        unread_count: if is_new && msg.send_user != me { 1 } else { 0 },
+        unread_count: if is_new && msg.send_user != me && !already_read { 1 } else { 0 },
         last_message: raw,
         recv_user: me.to_string(),
         send_user: group_id.clone(),
@@ -807,12 +913,13 @@ async fn merge_local_session(me: &str, s: &SessionListItem) -> Result<(), anyhow
     .execute(&pool_sqlite)
     .await?;
     if res.rows_affected() < 1 {
-        // 本地尚无该会话(如好友通过预建、无本地消息): 建一行, 角标沿用服务端
+        // 本地尚无该会话(如好友通过预建、无本地消息): 建一行。
+        // 未读播种为 0 —— 新行随后必经 sync 按服务端 last_read_id 重算,
+        // 用服务端 unread 播种会与 sync 增量叠加造成双计(任务04跨端)。
         sqlx::query(
-            r#"INSERT INTO chat_session (nano_id, timestamp, text_type, unread_count, last_message, send_user, recv_user, session_type, is_show, is_top, group_id, session_uuid, last_message_id) VALUES ('', ?1, 0, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8, ?9, ?10)"#,
+            r#"INSERT INTO chat_session (nano_id, timestamp, text_type, unread_count, last_message, send_user, recv_user, session_type, is_show, is_top, group_id, session_uuid, last_message_id) VALUES ('', ?1, 0, 0, ?2, ?3, ?4, ?5, 1, ?6, ?7, ?8, ?9)"#,
         )
         .bind(s.last_message_at)
-        .bind(s.unread)
         .bind(&s.last_preview)
         .bind(&peer_or_group)
         .bind(me)

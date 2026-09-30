@@ -42,6 +42,29 @@ pub async fn query_group_message_read(
     Ok(record)
 }
 
+/// 跨端已读上报: 群已读水位 nano_id 对应的服务端 id(水位即已读位置, 而非本地 max)。
+pub async fn group_read_watermark_server_id(
+    group_uuid: &str,
+    user_uuid: &str,
+) -> Result<Option<i64>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let row: Option<(String,)> = sqlx::query_as(
+        r#"SELECT nano_id FROM group_message_read WHERE group_uuid = ?1 AND user_uuid = ?2"#,
+    )
+    .bind(group_uuid)
+    .bind(user_uuid)
+    .fetch_optional(&pool_sqlite)
+    .await?;
+    let Some((nano_id,)) = row else { return Ok(None) };
+    let row: Option<(i64,)> = sqlx::query_as(
+        r#"SELECT server_id FROM group_chat_record WHERE nano_id = ?1 AND server_id IS NOT NULL"#,
+    )
+    .bind(nano_id)
+    .fetch_optional(&pool_sqlite)
+    .await?;
+    Ok(row.map(|r| r.0))
+}
+
 /// 获取群聊已读消息（定时任务上报用）
 pub async fn query_group_last_read_msg(
     uuid: &str,
