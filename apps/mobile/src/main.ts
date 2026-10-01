@@ -1,5 +1,6 @@
 import { createApp } from "vue";
-import { initAppConfig } from "@workspace/services";
+import { showToast } from "vant";
+import { initAppConfig, setHttpErrorHandler } from "@workspace/services";
 import App from "./App.vue";
 import router from "./router";
 import UserTypeTag from "@/components/UserTypeTag.vue";
@@ -22,6 +23,18 @@ import {
 } from "vant";
 
 const app = createApp(App);
+
+// 注册统一 HTTP 错误中间层展示器(所有 http 接口的 604/500/401/403/404 等错误都在此统一展示)
+setHttpErrorHandler({
+  show: (result) => {
+    if (result.kind === "validation" && result.messages?.length) {
+      // 604 DTO 校验失败: 逐条输出字段规则错误(单条 toast 换行拼接)
+      showToast(result.messages.join("\n"));
+      return;
+    }
+    showToast(result.message || "请求失败");
+  },
+});
 
 app.use(router);
 app.component("UserTypeTag", UserTypeTag);

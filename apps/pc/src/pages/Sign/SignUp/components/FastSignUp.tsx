@@ -10,9 +10,9 @@ import {
 import { useIntl } from '@umijs/max';
 import {
   complete_profile,
+  isHttpSuccess,
   send_verify_code,
   sign_up_step1,
-  isHttpSuccess,
 } from '@workspace/services';
 import {
   CompleteProfileRequest,
@@ -156,20 +156,6 @@ const FastSignUp: React.FC = () => {
     if (codeError) validateCode(value);
   };
 
-  /** 展示后端返回的具体错误信息 */
-  const showBackendError = (res: RustResponse) => {
-    let msg = intl.formatMessage({ id: 'signUp.failed' });
-    try {
-      const body = JSON.parse(res.res.body);
-      if (body && typeof body.message === 'string' && body.message) {
-        msg = body.message;
-      }
-    } catch {
-      /* 非 JSON 响应时使用默认文案 */
-    }
-    message.error(msg);
-  };
-
   /** 判断是否为注册会话 token 失效(过期/不存在), 需回退第一步重新获取验证码 */
   const isTokenExpired = (res: RustResponse): boolean => {
     try {
@@ -191,9 +177,8 @@ const FastSignUp: React.FC = () => {
       if (res.netSuccess && isHttpSuccess(res.res.status)) {
         message.success(intl.formatMessage({ id: 'signUp.sendCodeSuccess' }));
         startCountdown(60);
-      } else {
-        showBackendError(res);
       }
+      // 失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
     } catch {
       message.error(intl.formatMessage({ id: 'signUp.sendCodeFail' }));
     } finally {
@@ -231,9 +216,8 @@ const FastSignUp: React.FC = () => {
         }
         setRegToken(token);
         setStep(2);
-      } else {
-        showBackendError(res);
       }
+      // 失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
     } catch {
       message.error(intl.formatMessage({ id: 'signUp.failed' }));
     } finally {
@@ -270,11 +254,10 @@ const FastSignUp: React.FC = () => {
           intl.formatMessage({ id: 'signUp.success' }, { username }),
         );
       } else if (isTokenExpired(res)) {
-        message.warning(intl.formatMessage({ id: 'signUp.tokenExpired' }));
+        // 会话失效: 错误信息已由中间层展示, 这里仅回退到第一步重新获取验证码
         setStep(1);
-      } else {
-        showBackendError(res);
       }
+      // 其余失败由 httpService 中间层统一展示(604 逐条/500 业务信息)
     } catch (error) {
       message.error(intl.formatMessage({ id: 'signUp.failed' }));
     } finally {

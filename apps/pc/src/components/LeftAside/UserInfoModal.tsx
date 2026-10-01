@@ -1,6 +1,5 @@
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
-import { getApiBase } from '@workspace/services';
 import { useBearStore } from '@/store/store';
 import { calcAgeFromBirthday } from '@/utils/format';
 import {
@@ -17,6 +16,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
 import {
   convertPathToTauriUrl,
+  getApiBase,
   getFiles,
   isBackendSuccess,
   isHttpSuccess,
@@ -288,12 +288,8 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
             intl.formatMessage({ id: 'userInfo.edit.updateSuccess' }),
           );
           setIsEditing(false);
-        } else {
-          message.error(
-            data.message ||
-              intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
-          );
         }
+        // 业务失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
       } else {
         message.error(
           response.error ||

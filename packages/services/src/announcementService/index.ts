@@ -18,7 +18,8 @@ export const get_announcement_list = async (
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + "/announcement/list",
-    JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} })
+    JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} }),
+    { autoShowError: false }
   );
   return parseData<AnnouncementListResult>(res);
 };
@@ -29,7 +30,8 @@ export const get_announcement_detail = async (
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + `/announcement/detail/${uuid}`,
-    ""
+    "",
+    { autoShowError: false }
   );
   return parseData<AnnouncementVO>(res);
 };
@@ -40,7 +42,8 @@ export const mark_announcement_read = async (
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + `/announcement/read/${uuid}`,
-    ""
+    "",
+    { autoShowError: false }
   );
   return parseData<AnnouncementVO>(res);
 };
@@ -53,7 +56,8 @@ export const get_announcement_read_users = async (
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + `/announcement/read/list/${uuid}`,
-    JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} })
+    JSON.stringify({ page_num: pageNum, page_size: pageSize, data: {} }),
+    { autoShowError: false }
   );
   return parseData<AnnouncementReadUserListResult>(res);
 };

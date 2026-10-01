@@ -90,7 +90,7 @@ const ProfileModal = (props: {
         version: 0,
         accept_status: 0,
       };
-      const result = await add_friend(dto);
+      const result = await add_friend(dto, { autoShowError: false });
       if (result.netSuccess && isHttpSuccess(result.res.status)) {
         setRequested(true);
         message.success(
@@ -100,6 +100,7 @@ const ProfileModal = (props: {
           ),
         );
       } else {
+        // 关闭中间层自动展示, 保留本地 i18n 错误文案映射
         message.error(intl.formatMessage({ id: mapAddFriendError(result) }));
       }
     } catch (error) {

@@ -12,7 +12,12 @@ import {
   CompleteProfileRequest,
   BlackListVo,
 } from "@workspace/types";
-import { getApiBase, invoke_rust, isBackendSuccess } from "../httpService";
+import {
+  getApiBase,
+  invoke_rust,
+  isBackendSuccess,
+  RequestOptions,
+} from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
 
 export const get_friend_list = async (): Promise<FriendVo[]> => {
@@ -25,11 +30,15 @@ export const get_friend_info = async (uuid: string) => {
   });
 };
 
-export const add_friend = async (friend: FriendRequestInfoDTO) => {
+export const add_friend = async (
+  friend: FriendRequestInfoDTO,
+  options?: RequestOptions
+) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + "/integrated/add_friend_with_notify",
-    JSON.stringify(friend)
+    JSON.stringify(friend),
+    options
   );
 };
 
@@ -69,7 +78,8 @@ export const search_user_by_account = async (account: string) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + "/user/get_user_by_account/" + account,
-    ""
+    "",
+    { autoShowError: false }
   );
 };
 
@@ -78,7 +88,8 @@ export const get_user_info_by_uuid = async (uuid: string) => {
   return await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + "/user/get_user_by_uuid/" + uuid,
-    ""
+    "",
+    { autoShowError: false }
   );
 };
 
@@ -98,7 +109,8 @@ export const get_friend_request_list = async (
   return await invoke_rust(
     HTTP_METHOD.POST,
     "/friend/get_friend_request_list",
-    JSON.stringify(friendRequestInfoDTO)
+    JSON.stringify(friendRequestInfoDTO),
+    { autoShowError: false }
   );
 };
 
@@ -108,7 +120,8 @@ export const get_accept_friend_request_list = async (
   return await invoke_rust(
     HTTP_METHOD.POST,
     "/friend/get_accept_friend_request_list",
-    JSON.stringify(friendRequestInfoDTO)
+    JSON.stringify(friendRequestInfoDTO),
+    { autoShowError: false }
   );
 };
 

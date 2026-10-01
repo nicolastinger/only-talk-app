@@ -33,7 +33,8 @@ export const get_moment_list = async (
         author_uuid: params?.authorUuid,
         feed: params?.feed,
       },
-    })
+    }),
+    { autoShowError: false }
   );
   return parseData<MomentListResult>(res);
 };
@@ -44,7 +45,8 @@ export const get_moment_detail = async (
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + `/moment/detail/${momentUuid}`,
-    ""
+    "",
+    { autoShowError: false }
   );
   return parseData<MomentVo>(res);
 };
@@ -114,7 +116,8 @@ export const get_moment_comments = async (
       page_num: pageNum,
       page_size: pageSize,
       data: { moment_uuid: momentUuid },
-    })
+    }),
+    { autoShowError: false }
   );
   return parseData<MomentCommentListResult>(res);
 };
@@ -131,7 +134,8 @@ export const get_moment_likers = async (
       page_num: pageNum,
       page_size: pageSize,
       data: { moment_uuid: momentUuid },
-    })
+    }),
+    { autoShowError: false }
   );
   return parseData<MomentLikerListResult>(res);
 };

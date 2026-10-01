@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { RustResponse } from "@workspace/types";
-import { getFiles, isBackendSuccess } from "@workspace/services";
+import {
+  getFiles,
+  isBackendSuccess,
+  parseValidationMessages,
+  VALIDATION_ERROR_CODE,
+} from "@workspace/services";
 
 export function parseResponse<T>(res: RustResponse): T {
   if (!res.netSuccess) {
@@ -16,6 +21,12 @@ export function parseResponse<T>(res: RustResponse): T {
     return true as T;
   }
   if (!isBackendSuccess(data.code)) {
+    if (data.code === VALIDATION_ERROR_CODE) {
+      const messages = parseValidationMessages(data.data);
+      if (messages.length > 0) {
+        throw new Error(messages.join("\n"));
+      }
+    }
     throw new Error(data.message || "请求失败");
   }
   return data.data as T;

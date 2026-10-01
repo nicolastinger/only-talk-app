@@ -5,8 +5,25 @@
 
 // 导入路由守卫工具函数和类
 import { setLocale } from '@umijs/max';
-import { getAppLanguage, initAppConfig } from '@workspace/services';
+import {
+  getAppLanguage,
+  initAppConfig,
+  setHttpErrorHandler,
+} from '@workspace/services';
+import { message } from 'antd';
 import { handleRouteChange, RouteInfo } from './utils/routeGuard';
+
+// 注册统一 HTTP 错误中间层展示器(所有 http 接口的 604/500/401/403/404 等错误都在此统一展示)
+setHttpErrorHandler({
+  show: (result) => {
+    if (result.kind === 'validation' && result.messages?.length) {
+      // 604 DTO 校验失败: 逐条输出字段规则错误
+      result.messages.forEach((msg) => message.error(msg));
+      return;
+    }
+    message.error(result.message || '请求失败');
+  },
+});
 
 // 路由守卫函数 - 监听每一次路由跳转
 // 这里只负责调用，具体逻辑封装在 routeGuard.ts 中

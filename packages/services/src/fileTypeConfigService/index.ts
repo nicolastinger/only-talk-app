@@ -33,7 +33,8 @@ export const fetchFileTypeConfig = async (
       const res = await invoke_rust(
         "get_request",
         "/file_integrated/file_type_config",
-        ""
+        "",
+        { autoShowError: false }
       );
       cachedConfig = parseBackendResponse<FileTypeConfig>(res);
       return cachedConfig;

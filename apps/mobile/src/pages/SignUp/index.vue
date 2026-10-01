@@ -113,19 +113,6 @@ onUnmounted(() => {
   if (timer) clearInterval(timer);
 });
 
-/** 提取后端返回的具体错误信息 */
-const getBackendMessage = (res: RustResponse, fallback: string): string => {
-  try {
-    const body = JSON.parse(res.res.body);
-    if (body && typeof body.message === "string" && body.message) {
-      return body.message;
-    }
-  } catch {
-    /* 非 JSON 响应时使用默认文案 */
-  }
-  return fallback;
-};
-
 /** 判断是否为注册会话 token 失效(过期/不存在), 需回退第一步重新获取验证码 */
 const isTokenExpired = (res: RustResponse): boolean => {
   try {
@@ -147,9 +134,8 @@ const handleSendCode = async () => {
     if (res.netSuccess && isHttpSuccess(res.res.status)) {
       showToast({ message: "验证码已发送，请注意查收", icon: "success" });
       startCountdown(60);
-    } else {
-      showToast(getBackendMessage(res, "验证码发送失败，请稍后重试"));
     }
+    // 失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
   } catch {
     showToast("验证码发送失败，请稍后重试");
   } finally {
@@ -181,9 +167,8 @@ const handleNext = async () => {
       }
       regToken.value = token;
       step.value = 2;
-    } else {
-      showToast(getBackendMessage(res, "注册失败"));
     }
+    // 失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
   } catch {
     showToast("注册失败");
   } finally {
@@ -217,11 +202,10 @@ const onFinish = async () => {
       });
       router.replace("/login");
     } else if (isTokenExpired(res)) {
-      showToast("注册会话已过期，请返回上一步重新获取验证码");
+      // 会话失效: 错误信息已由中间层展示, 这里仅回退到第一步重新获取验证码
       step.value = 1;
-    } else {
-      showToast(getBackendMessage(res, "注册失败"));
     }
+    // 其余失败由 httpService 中间层统一展示(604 逐条/500 业务信息)
   } catch {
     showToast("注册失败");
   } finally {
@@ -399,11 +383,7 @@ const goLogin = () => {
               aria-label="切换密码可见"
               @click.prevent="showPassword = !showPassword"
             >
-              <svg
-                v-if="showPassword"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
+              <svg v-if="showPassword" viewBox="0 0 24 24" fill="currentColor">
                 <path
                   d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28C2.77 7.81 1.58 9.44.85 11.25c1.73 4.39 6 7.5 11 7.5 1.4 0 2.74-.25 3.98-.7l2.29 2.29L20 18.73 3.73 2.5 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"
                 />
@@ -420,11 +400,7 @@ const goLogin = () => {
         </div>
 
         <div class="btn-row">
-          <button
-            class="ghost-btn"
-            :disabled="loading"
-            @click="handlePrev"
-          >
+          <button class="ghost-btn" :disabled="loading" @click="handlePrev">
             上一步
           </button>
           <button

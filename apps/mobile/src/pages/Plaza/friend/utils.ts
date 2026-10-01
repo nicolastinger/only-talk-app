@@ -71,7 +71,7 @@ export const sendPlazaFriendRequest = async (
       version: 0,
       accept_status: 0,
     };
-    parseResponse(await add_friend(dto));
+    parseResponse(await add_friend(dto, { autoShowError: false }));
     showToast({ message: "好友申请已发送", icon: "success" });
     return true;
   } catch (e) {
