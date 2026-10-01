@@ -27,6 +27,7 @@ impl SqliteStore for ChatRecordRead {
             timestamp INTEGER NOT NULL,
             send_user TEXT NOT NULL,
             recv_user TEXT NOT NULL,
+            reported_server_id INTEGER NOT NULL DEFAULT 0,
             UNIQUE(send_user, recv_user)
         )"#,
         )
@@ -35,7 +36,14 @@ impl SqliteStore for ChatRecordRead {
         Ok(())
     }
 
-    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        // 迁移：补充已读上报游标列(老库无此列, SQLite 不支持 ADD COLUMN IF NOT EXISTS)
+        let _ = sqlx::query(
+            r#"ALTER TABLE chat_record_read ADD COLUMN reported_server_id INTEGER NOT NULL DEFAULT 0"#,
+        )
+        .execute(pool_sqlite)
+        .await; // 列已存在则忽略
+
         Ok(())
     }
 

@@ -42,6 +42,40 @@ pub async fn query_group_message_read(
     Ok(record)
 }
 
+/// 上次成功上报到服务端的已读游标(未上报过为 0)。
+pub async fn group_read_reported_server_id(
+    group_uuid: &str,
+    user_uuid: &str,
+) -> Result<i64, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let row: Option<(i64,)> = sqlx::query_as(
+        r#"SELECT reported_server_id FROM group_message_read WHERE group_uuid = ?1 AND user_uuid = ?2"#,
+    )
+    .bind(group_uuid)
+    .bind(user_uuid)
+    .fetch_optional(&pool_sqlite)
+    .await?;
+    Ok(row.map(|r| r.0).unwrap_or(0))
+}
+
+/// 推进已读上报游标(只前进, 与服务端 update_last_read_id 同语义)。
+pub async fn update_group_reported_server_id(
+    group_uuid: &str,
+    user_uuid: &str,
+    reported_server_id: i64,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query(
+        r#"UPDATE group_message_read SET reported_server_id = ?1 WHERE group_uuid = ?2 AND user_uuid = ?3 AND reported_server_id < ?1"#,
+    )
+    .bind(reported_server_id)
+    .bind(group_uuid)
+    .bind(user_uuid)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}
+
 /// 跨端已读上报: 群已读水位 nano_id 对应的服务端 id(水位即已读位置, 而非本地 max)。
 pub async fn group_read_watermark_server_id(
     group_uuid: &str,

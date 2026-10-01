@@ -39,6 +39,37 @@ pub async fn query_read_watermark(
     Ok(record)
 }
 
+/// 上次成功上报到服务端的已读游标(未上报过为 0)。
+pub async fn read_reported_server_id(me: &str, peer: &str) -> Result<i64, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let row: Option<(i64,)> = sqlx::query_as(
+        r#"SELECT reported_server_id FROM chat_record_read WHERE recv_user = ?1 AND send_user = ?2"#,
+    )
+    .bind(me)
+    .bind(peer)
+    .fetch_optional(&pool_sqlite)
+    .await?;
+    Ok(row.map(|r| r.0).unwrap_or(0))
+}
+
+/// 推进已读上报游标(只前进, 与服务端 update_last_read_id 同语义)。
+pub async fn update_reported_server_id(
+    me: &str,
+    peer: &str,
+    reported_server_id: i64,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    sqlx::query(
+        r#"UPDATE chat_record_read SET reported_server_id = ?1 WHERE recv_user = ?2 AND send_user = ?3 AND reported_server_id < ?1"#,
+    )
+    .bind(reported_server_id)
+    .bind(me)
+    .bind(peer)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}
+
 /// 跨端已读上报: 已读水位 nano_id 对应的服务端 id(水位即已读位置, 而非本地 max)。
 ///
 /// 单聊水位表在主库、消息表在私库, 分两步查(不能跨库 JOIN)。

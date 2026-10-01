@@ -15,21 +15,22 @@ use crate::dao::chat_record_db::{
     insert_chat_record, local_max_server_id, query_read_peers, set_chat_record_server_id,
 };
 use crate::dao::chat_record_read::{
-    query_read_watermark, read_watermark_server_id, update_last_read_msg,
+    query_read_watermark, read_reported_server_id, read_watermark_server_id, update_last_read_msg,
+    update_reported_server_id,
 };
 use crate::dao::get_db_client;
 use crate::dao::get_private_db_client;
 use crate::dao::group_chat_record_db::{local_max_group_server_id, set_group_server_id};
 use crate::dao::group_message_read::{
-    group_read_watermark_server_id, query_group_message_read, query_group_read_peers,
-    update_group_message_read,
+    group_read_reported_server_id, group_read_watermark_server_id, query_group_message_read,
+    query_group_read_peers, update_group_message_read, update_group_reported_server_id,
 };
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
 use crate::dto::http_result::HttpResult;
 use crate::entity::app_log::LOG_LEVEL_INFO;
-use crate::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE, ChatRecordRead};
+use crate::entity::chat_record_read::{ChatRecordRead, CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::group_message_read::GroupMessageRead;
@@ -251,11 +252,13 @@ pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
 //
 // 任务04跨端: 上报值 = 已读水位(nano_id)在消息表里的 server_id, 而不是本地 max(server_id)。
 // 跨端回填的水位可能停在历史位置(其他端读到 id=3), 用 max 会把未读的 4、5 误报成已读。
+//
+// 上报游标持久化在 chat_record_read / group_message_read 的 reported_server_id 列:
+// 只上报「当前水位 server_id > 上次成功上报值」的会话, 服务端才乐意推进(update_last_read_id
+// 只前进, 重复上报同值会命中"未推进"路径)。会话进度 = 上报前水位, 上报成功才推进游标。
 pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
-    let mut timestamp = 0; // 单聊已读事件水位
-    let mut group_timestamp = 0; // 群聊已读事件水位
     let mut count = 0;
     while count < 1000000 {
         // 校验定时任务key
@@ -271,43 +274,53 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
             }
         }
 
+        // 本次待上报项: (session_uuid, session_type, last_read_id, 上报后待推进的 (peer|group, read_id))
         let mut reads: Vec<serde_json::Value> = Vec::new();
+        let mut pending_single: Vec<(String, i64)> = Vec::new();
+        let mut pending_group: Vec<(String, i64)> = Vec::new();
 
         // 单聊: 按对端聚合 → 派生 session_uuid → 已读水位对应的 server_id
-        for (peer, ts) in query_read_peers(&uuid, timestamp).await? {
-            if ts > timestamp {
-                timestamp = ts;
-            }
+        for (peer, _ts) in query_read_peers(&uuid, 0).await? {
             let su = match (Uuid::parse_str(&uuid), Uuid::parse_str(&peer)) {
                 (Ok(a), Ok(b)) => single_session_uuid(&a, &b).to_string(),
                 _ => continue,
             };
             // 水位消息尚无 server_id(如在线消息未回填) → 本次跳过, 下次同步后自愈
-            if let Some(read_id) = read_watermark_server_id(&uuid, &peer).await? {
-                if read_id > 0 {
-                    reads.push(serde_json::json!({
-                        "session_uuid": su,
-                        "session_type": CHAT_TYPE_SINGLE,
-                        "last_read_id": read_id,
-                    }));
-                }
+            let Some(read_id) = read_watermark_server_id(&uuid, &peer).await? else { continue };
+            if read_id <= 0 {
+                continue;
             }
+            // 上次已成功上报的游标: 未推进则跳过, 避免向服务端重复上报同值
+            let last_reported = read_reported_server_id(&uuid, &peer).await?;
+            if read_id <= last_reported {
+                continue;
+            }
+            reads.push(serde_json::json!({
+                "session_uuid": su,
+                "session_type": CHAT_TYPE_SINGLE,
+                "last_read_id": read_id,
+            }));
+            pending_single.push((peer, read_id));
         }
 
         // 群聊: group_uuid 即 session_uuid
-        for (group, ts) in query_group_read_peers(&uuid, group_timestamp).await? {
-            if ts > group_timestamp {
-                group_timestamp = ts;
+        for (group, _ts) in query_group_read_peers(&uuid, 0).await? {
+            let Some(read_id) = group_read_watermark_server_id(&group, &uuid).await? else {
+                continue;
+            };
+            if read_id <= 0 {
+                continue;
             }
-            if let Some(read_id) = group_read_watermark_server_id(&group, &uuid).await? {
-                if read_id > 0 {
-                    reads.push(serde_json::json!({
-                        "session_uuid": group,
-                        "session_type": CHAT_TYPE_GROUP,
-                        "last_read_id": read_id,
-                    }));
-                }
+            let last_reported = group_read_reported_server_id(&group, &uuid).await?;
+            if read_id <= last_reported {
+                continue;
             }
+            reads.push(serde_json::json!({
+                "session_uuid": group,
+                "session_type": CHAT_TYPE_GROUP,
+                "last_read_id": read_id,
+            }));
+            pending_group.push((group, read_id));
         }
 
         if !reads.is_empty() {
@@ -319,7 +332,23 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
             )
             .await
             {
-                Ok(m) => info!("发送已读消息成功 {:?}", m.body),
+                Ok(m) => {
+                    // 成功后推进本地上报游标(只前进); 失败则下轮重试
+                    let ok = parse_http_result(&m.body)
+                        .map(|r| r.code == 200 || r.code == 204)
+                        .unwrap_or(false);
+                    if ok {
+                        info!("发送已读消息成功 {:?}", m.body);
+                        for (peer, read_id) in pending_single {
+                            update_reported_server_id(&uuid, &peer, read_id).await?;
+                        }
+                        for (group, read_id) in pending_group {
+                            update_group_reported_server_id(&group, &uuid, read_id).await?;
+                        }
+                    } else {
+                        error!("发送已读消息失败(响应异常): {}", m.body);
+                    }
+                }
                 Err(e) => error!("发送已读消息失败 {:?}", e),
             }
         }
@@ -600,10 +629,7 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
         if pulled > 0 {
             // 跨端已读回填: 把服务端 last_read_id 映射到本地水位(只在本地水位更旧时推进)
             if let Err(e) = backfill_read_watermark(&me, s, server_last_read_id).await {
-                warn!(
-                    "[session][sync] 已读水位回填失败: {}, err={:?}",
-                    s.session_uuid, e
-                );
+                warn!("[session][sync] 已读水位回填失败: {}, err={:?}", s.session_uuid, e);
             }
             // 先落库再回报(宁重勿漏; 回报失败 → 下轮重拉, nano_id 去重兜住)
             let report = post_request(
@@ -704,6 +730,8 @@ async fn apply_sync_session(
 /// group_message_read), 使本端 UI 直接呈现其他端已读位置, 后续 /session/read 上报不越位。
 ///
 /// 只在本地无水位或水位比服务端游标更旧时推进 —— 不覆盖本端已读到的更前位置。
+/// 回填的水位即服务端已有游标, 同步把 reported_server_id 一并推进到该值, 避免下次
+/// /session/read 把同一游标重复上报(服务端"未推进"路径)。
 async fn backfill_read_watermark(
     me: &str,
     s: &SessionListItem,
@@ -736,6 +764,7 @@ async fn backfill_read_watermark(
             timestamp: ts,
         })
         .await?;
+        update_group_reported_server_id(&s.session_uuid, me, last_read_id).await?;
     } else {
         let Some(peer) = s.peer_uuid.as_ref().filter(|p| !p.is_empty()) else {
             return Ok(());
@@ -763,6 +792,7 @@ async fn backfill_read_watermark(
             send_user: peer.clone(),
         })
         .await?;
+        update_reported_server_id(me, peer, last_read_id).await?;
     }
     Ok(())
 }
