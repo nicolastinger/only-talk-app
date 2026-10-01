@@ -1,6 +1,6 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { history, useIntl } from '@umijs/max';
+import { history, useIntl, useLocation } from '@umijs/max';
 import { getFiles, getUnreadNotificationCounts } from '@workspace/services';
 import { get_group_list } from '@workspace/services';
 import { GroupInfoVo, GroupListItemVo } from '@workspace/types';
@@ -18,6 +18,10 @@ const GroupList = () => {
   const [invitationVisible, setInvitationVisible] = useState(false);
   const [groupInvitationUnread, setGroupInvitationUnread] = useState(0);
   const refreshFlag = useBearStore((state) => state.refreshFlag);
+  const location = useLocation();
+
+  const selectedGroupId =
+    new URLSearchParams(location.search).get('groupId') || '';
 
   useEffect(() => {
     getGroupList();
@@ -74,6 +78,7 @@ const GroupList = () => {
               <GroupBox
                 key={group.group_uuid}
                 group={group}
+                isSelected={selectedGroupId === group.group_uuid}
                 onClick={() => routeToGroupInfo(group.group_uuid)}
               />
             ))
@@ -112,10 +117,11 @@ const GroupList = () => {
 
 interface GroupBoxProps {
   group: GroupListItemVo;
+  isSelected?: boolean;
   onClick: () => void;
 }
 
-const GroupBox = ({ group, onClick }: GroupBoxProps) => {
+const GroupBox = ({ group, isSelected, onClick }: GroupBoxProps) => {
   const intl = useIntl();
   const [groupIcon, setGroupIcon] = useState<string | null>(null);
 
@@ -135,7 +141,10 @@ const GroupBox = ({ group, onClick }: GroupBoxProps) => {
   }, [group.avatar]);
 
   return (
-    <div className={styles.groupBox} onClick={onClick}>
+    <div
+      className={`${styles.groupBox} ${isSelected ? styles.selected : ''}`}
+      onClick={onClick}
+    >
       <div className={styles.left}>
         <Badge>
           <img
