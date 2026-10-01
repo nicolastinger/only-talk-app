@@ -1,0 +1,141 @@
+name: client-ci
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. 前端(apps/pc, Tauri 桌面前端)构建 + 类型检查, 产物供 src-tauri 编译使用
+  frontend:
+    name: 前端构建 (apps/pc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 类型检查
+        run: pnpm --filter @workspace/app-pc typecheck
+
+      - name: 构建前端
+        run: pnpm --filter @workspace/app-pc build
+
+      - name: 上传前端产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: pc-dist
+          path: apps/pc/dist
+          if-no-files-found: error
+
+  # 2. src-tauri Rust 检查: 格式化 / clippy / 测试
+  rust:
+    name: src-tauri 检查 (fmt/clippy/test)
+    runs-on: ubuntu-latest
+    needs: frontend
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      # src-tauri 编译时通过 tauri::generate_context! 内嵌前端产物, 必须先拿到 dist
+      - name: 下载前端产物
+        uses: actions/download-artifact@v4
+        with:
+          name: pc-dist
+          path: apps/pc/dist
+
+      - name: 安装系统依赖 (webkit2gtk 等)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      # rustfmt.toml 使用 nightly 专属选项(group_imports / imports_granularity),
+      # 稳定版 cargo fmt 会静默跳过, 必须用 nightly 校验真实项目风格
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 格式化检查 (nightly)
+        working-directory: src-tauri
+        run: cargo +nightly fmt --all --check
+
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: 测试
+        working-directory: src-tauri
+        run: cargo test --all-targets
+
+  # 3. 打包 Windows 安装包 (仅在 main / tag / 手动触发时执行, PR 跳过以节省 CI 时间)
+  bundle:
+    name: 打包 Windows 安装包
+    runs-on: windows-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+        (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')))
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # 仅打包 NSIS 安装器(避免 CI 上 WiX/MSI 的下载与兼容性问题)
+      - name: 构建并打包
+        run: pnpm tauri build --bundles nsis
+
+      - name: 上传安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: only-talk-windows
+          path: src-tauri/target/release/bundle/nsis/*
+          if-no-files-found: error
