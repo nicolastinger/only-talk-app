@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "only-talk",
+  "productName": "Only Talk",
   "version": "1.0.0",
   "identifier": "com.only.talk.app",
   "build": {
