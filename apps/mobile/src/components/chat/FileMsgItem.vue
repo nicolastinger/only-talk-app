@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { UiChatMessage } from "@/chat/types";
-import {
-  MSG_TYPE_FILE,
-  MSG_TYPE_GROUP_FILE,
-} from "@/chat/messageTypes";
+import { MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE } from "@/chat/messageTypes";
 import {
   basename,
   extensionOf,
@@ -20,7 +17,12 @@ const display = computed(() => {
   const { raw, text_type, nano_id } = props.msg.textMsg;
   if (isLocalFilePath(raw)) {
     const fileName = basename(raw);
-    return { fileName, fileSize: 0, fileType: extensionOf(fileName), localPath: raw };
+    return {
+      fileName,
+      fileSize: 0,
+      fileType: extensionOf(fileName),
+      localPath: raw,
+    };
   }
   if (text_type === MSG_TYPE_FILE) {
     const record = parsePrivateFileRecord(raw);
@@ -57,6 +59,9 @@ const display = computed(() => {
     :biz-id="display.bizId"
     :nano-id="display.nanoId"
     :local-path="display.localPath"
+    :sending="
+      !!props.msg.sendingFile && props.msg.ack === false && !props.msg.failed
+    "
   />
   <div v-else class="file-fallback">[文件]</div>
 </template>

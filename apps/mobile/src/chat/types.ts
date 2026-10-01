@@ -18,6 +18,8 @@ export interface UiChatMessage {
   imageUrl?: string | null;
   /** 图片发送中占位 */
   sendingImage?: boolean;
+  /** 文件上传中(展示上传动画) */
+  sendingFile?: boolean;
   /** 群聊发送者昵称（解析后填充） */
   senderName?: string;
   senderUuid?: string;

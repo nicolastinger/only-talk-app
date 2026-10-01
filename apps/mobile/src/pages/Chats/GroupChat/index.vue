@@ -383,6 +383,8 @@ const selectAndSendGroup = async (
     if (media === "image") {
       ui.imageUrl = localPreview || convertPathToTauriUrl(filePath);
       ui.sendingImage = true;
+    } else if (media === "file") {
+      ui.sendingFile = true;
     }
     messages.value.push(ui);
     await nextTick();
@@ -399,6 +401,7 @@ const selectAndSendGroup = async (
       if (idx !== -1) {
         messages.value[idx].failed = true;
         messages.value[idx].sendingImage = false;
+        messages.value[idx].sendingFile = false;
       }
       showToast({
         message: media === "image" ? "图片发送失败" : "文件发送失败",
@@ -449,6 +452,8 @@ const handleRetry = async (msg: UiChatMessage) => {
   if (type === MSG_TYPE_GROUP_IMAGE) {
     ui.imageUrl = convertPathToTauriUrl(raw);
     ui.sendingImage = true;
+  } else if (type === MSG_TYPE_GROUP_FILE) {
+    ui.sendingFile = true;
   }
   messages.value.push(ui);
   await nextTick();
@@ -472,6 +477,7 @@ const handleRetry = async (msg: UiChatMessage) => {
     if (i !== -1) {
       messages.value[i].failed = true;
       messages.value[i].sendingImage = false;
+      messages.value[i].sendingFile = false;
     }
     showToast({ message: "重发失败", icon: "fail" });
   }

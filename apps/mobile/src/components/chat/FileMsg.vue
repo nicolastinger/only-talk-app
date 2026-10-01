@@ -15,12 +15,14 @@ const props = defineProps<{
   nanoId?: string;
   /** 发送中的本地绝对路径 */
   localPath?: string;
+  /** 是否上传中(展示上传动画) */
+  sending?: boolean;
 }>();
 
 const busy = ref(false);
 
 const handleOpen = async () => {
-  if (busy.value) return;
+  if (busy.value || props.sending) return;
   busy.value = true;
   showLoadingToast({ message: "打开中...", forbidClick: true, duration: 0 });
   try {
@@ -61,14 +63,16 @@ const handleOpen = async () => {
       <div class="file-name">{{ fileName }}</div>
       <div class="file-meta">
         <span class="file-ext">.{{ fileType || "file" }}</span>
-        <span class="file-size">{{ formatFileSize(fileSize || 0) }}</span>
+        <span v-if="sending" class="file-size sending-text">上传中…</span>
+        <span v-else class="file-size">{{
+          formatFileSize(fileSize || 0)
+        }}</span>
       </div>
     </div>
-    <div class="file-action" aria-label="打开文件">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path
-          d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"
-        />
+    <div class="file-action" :class="{ sending }" aria-label="打开文件">
+      <span v-if="sending" class="spinner"></span>
+      <svg v-else viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
       </svg>
     </div>
   </div>
@@ -130,6 +134,9 @@ const handleOpen = async () => {
 .file-ext {
   color: var(--text-secondary);
 }
+.sending-text {
+  color: var(--brand-blue);
+}
 .file-action {
   flex-shrink: 0;
   width: 28px;
@@ -144,6 +151,22 @@ const handleOpen = async () => {
   svg {
     width: 16px;
     height: 16px;
+  }
+  &.sending {
+    border-color: var(--brand-blue);
+  }
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--brand-blue);
+  border-radius: 50%;
+  animation: file-spin 0.8s linear infinite;
+}
+@keyframes file-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

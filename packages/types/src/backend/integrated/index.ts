@@ -25,6 +25,7 @@ interface FileTypeConfig {
   archive: FileTypeGroup;
   audio: FileTypeGroup;
   video: FileTypeGroup;
+  application: FileTypeGroup;
 }
 
 export type { QuicServerInfo, NatUdpPorts, FileTypeGroup, FileTypeConfig };

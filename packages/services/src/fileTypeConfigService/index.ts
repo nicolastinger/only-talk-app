@@ -66,6 +66,7 @@ export const getAllFileExtensions = async (): Promise<string[]> => {
     config.archive,
     config.audio,
     config.video,
+    config.application,
   ];
   const extensions = groups
     .flatMap((g) => g?.extensions ?? [])

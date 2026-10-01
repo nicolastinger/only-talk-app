@@ -28,6 +28,7 @@ import { DEFAULT_AVATAR } from "@/stores/user";
 import type { TextQuicMsgVo, ChatSessionVo, FriendVo } from "@workspace/types";
 import type { UiChatMessage } from "@/chat/types";
 import {
+  MSG_TYPE_FILE,
   MSG_TYPE_IMAGE,
   MSG_TYPE_RECALL_FAILURE,
   MSG_TYPE_RECALL_SUCCESS,
@@ -378,6 +379,8 @@ const selectAndSend = async (
     if (media === "image") {
       ui.imageUrl = localPreview || convertPathToTauriUrl(filePath);
       ui.sendingImage = true;
+    } else if (media === "file") {
+      ui.sendingFile = true;
     }
     messages.value.push(ui);
     await nextTick();
@@ -393,6 +396,7 @@ const selectAndSend = async (
       if (idx !== -1) {
         messages.value[idx].failed = true;
         messages.value[idx].sendingImage = false;
+        messages.value[idx].sendingFile = false;
       }
       showToast({
         message: media === "image" ? "图片发送失败" : "文件发送失败",
@@ -422,6 +426,9 @@ const handleRetry = async (msg: UiChatMessage) => {
     }
   };
   update(false, false);
+  if (msg.textMsg.text_type === MSG_TYPE_FILE && idx !== -1) {
+    messages.value[idx].sendingFile = true;
+  }
   startAckTimer(msg.textMsg.nano_id);
   try {
     await invoke("retry_send_msg", { sendId: msg.textMsg.nano_id });

@@ -201,7 +201,9 @@ const senderAvatar = (msg: UiChatMessage): string => {
             <span>发送失败，点击重发</span>
           </div>
           <span
-            v-else-if="msg.ack === false && !msg.sendingImage"
+            v-else-if="
+              msg.ack === false && !msg.sendingImage && !msg.sendingFile
+            "
             class="ack-label pending"
             >发送中</span
           >
