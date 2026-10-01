@@ -18,7 +18,7 @@ use crate::dao::file_record_db::{
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord as ChatFileRecord};
 use crate::entity::file_record::FileRecord;
-use crate::service::api_service::{get_with_token, get_without_token, post_with_body};
+use crate::service::api_service::{get_without_token, post_with_body};
 use crate::utils::global_static_str::MONTHLY_RESOURCE_PATH;
 use crate::utils::uuid_utils;
 use crate::vo::file_vo::{FileVo, LocalFileVo};
@@ -206,15 +206,11 @@ pub async fn download_file_by_biz_service(
                 let file_url_str = file_url_str.to_string();
                 info!("下载文件URL: {}", file_url_str);
 
-                let is_public_bucket = file_url_str.contains("/user-avatar/")
-                    || file_url_str.contains("/group-avatar/");
+                let response = get_without_token(file_url_str).await?;
 
-                let response = if is_public_bucket {
-                    info!("公开桶文件，不带token下载");
-                    get_without_token(file_url_str).await?
-                } else {
-                    get_with_token(file_url_str).await?
-                };
+                if !response.status().is_success() {
+                    return Err(anyhow!("文件下载失败: HTTP {}", response.status()));
+                }
 
                 // 首先提取必要的header值，因为一旦使用bytes()方法后就无法再访问headers
                 let content_type = response
