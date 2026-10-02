@@ -40,6 +40,14 @@ onMounted(onScroll);
       <div v-for="(img, i) in images" :key="i" class="m-slide">
         <img
           :src="img"
+          class="m-img-bg"
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+          @error="($event.target as HTMLImageElement).style.display = 'none'"
+        />
+        <img
+          :src="img"
           class="m-img"
           draggable="false"
           @error="($event.target as HTMLImageElement).style.display = 'none'"
@@ -96,9 +104,24 @@ onMounted(onScroll);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 蒙版虚化背景: 原图铺满模糊层, 图片未填满容器时露出(对齐 PC MomentMedia.mediaBg) */
+.m-img-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(18px) saturate(1.3);
+  transform: scale(1.15);
 }
 
 .m-img {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
