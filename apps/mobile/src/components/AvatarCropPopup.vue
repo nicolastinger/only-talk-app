@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount } from "vue";
+import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
 
@@ -37,24 +37,34 @@ const initCropper = () => {
     guides: false,
     center: false,
     highlight: false,
+    // Android asset:// 静态协议不带 CORS, 关闭跨域克隆避免初始化失败
+    checkCrossOrigin: false,
     minContainerWidth: 0,
     minContainerHeight: 0,
   });
 };
 
-const onImgLoad = () => {
-  if (cropper || !imgEl.value || !props.src) return;
+// 销毁并重建实例。重建不再依赖 <img> 的 load 事件 —— Vant popup 的 lazyRender 会让
+// <img> 常驻 DOM, 再次打开同一张图 src 不变不会触发 load, 旧实现导致 cropper 永远为 null。
+const rebuildCropper = async () => {
+  cropper?.destroy();
+  cropper = null;
+  if (!props.show || !props.src || !imgEl.value) return;
+  await nextTick();
+  if (!props.show || !props.src || !imgEl.value) return;
   initCropper();
 };
 
 watch(
-  () => props.src,
-  (val) => {
-    if (cropper && val) {
-      cropper.replace(val);
-    }
-  }
+  [() => props.show, () => props.src],
+  () => {
+    rebuildCropper();
+  },
+  { immediate: true }
 );
+
+const onZoomIn = () => cropper?.zoom(0.1);
+const onZoomOut = () => cropper?.zoom(-0.1);
 
 const onConfirm = () => {
   if (!cropper || confirming.value) return;
@@ -97,7 +107,12 @@ onBeforeUnmount(() => {
     <div class="crop-body">
       <div class="crop-title">裁剪头像</div>
       <div class="crop-container">
-        <img ref="imgEl" :src="src" alt="avatar" class="crop-img" @load="onImgLoad" />
+        <img ref="imgEl" :src="src" alt="avatar" class="crop-img" />
+      </div>
+      <div class="crop-zoom">
+        <van-button size="small" plain type="default" icon="zoom-out" @click="onZoomOut" />
+        <span class="crop-zoom-tip">双指缩放 · 拖动调整位置</span>
+        <van-button size="small" plain type="default" icon="zoom-in" @click="onZoomIn" />
       </div>
       <div class="crop-footer">
         <van-button size="small" plain type="default" @click="onCancel">
@@ -137,6 +152,19 @@ onBeforeUnmount(() => {
   display: block;
   max-width: 100%;
   max-height: 100%;
+}
+
+.crop-zoom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.crop-zoom-tip {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
 }
 
 .crop-footer {
