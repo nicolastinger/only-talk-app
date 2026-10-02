@@ -11,6 +11,12 @@ export default {
     ignore: 'Ignore',
     gotIt: 'Got it',
   },
+  avatarCrop: {
+    title: 'Crop Avatar',
+    zoom: 'Zoom',
+    cancel: 'Cancel',
+    confirm: 'OK',
+  },
   report: {
     action: 'Report',
     title: 'Report',

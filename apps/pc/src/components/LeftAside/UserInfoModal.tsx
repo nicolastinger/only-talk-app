@@ -1,5 +1,6 @@
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
+import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper';
 import { useBearStore } from '@/store/store';
 import { calcAgeFromBirthday } from '@/utils/format';
 import {
@@ -54,6 +55,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
   const intl = useIntl();
   const userInfo = useBearStore((state) => state.userInfo);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
+  const { startCrop, cropModalElement } = useAvatarCropper();
   const [loading, setLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -114,26 +116,12 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       }
 
       const filePath = files[0];
+
+      const croppedPath = await startCrop(filePath);
+
       setLoading(true);
 
-      const compressedResult = await Promise.race([
-        invoke<string>('compress_image_to_webp_command', {
-          inputPath: filePath,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  intl.formatMessage({ id: 'userInfo.avatar.compressTimeout' }),
-                ),
-              ),
-            TIMEOUT_MS,
-          ),
-        ),
-      ]);
-
-      const preview = convertPathToTauriUrl(compressedResult);
+      const preview = convertPathToTauriUrl(croppedPath);
       if (preview) {
         setPreviewUrl(preview);
       }
@@ -143,7 +131,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       const uploadResult = await Promise.race([
         invoke<{ status: number; body: string }>('upload_file_request', {
           url: `${getApiBase()}/file_integrated/upload/user_avatar`,
-          filePath: compressedResult,
+          filePath: croppedPath,
           fieldName: 'file',
         }),
         new Promise<never>((_, reject) =>
@@ -199,6 +187,9 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
         );
       }
     } catch (error) {
+      if (error instanceof Error && error.message === CROP_CANCELLED_ERROR) {
+        return;
+      }
       console.error('头像更新失败:', error);
       message.error(
         (error instanceof Error ? error.message : String(error)) ||
@@ -622,6 +613,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           )}
         </div>
       </div>
+      {cropModalElement}
     </Modal>
   );
 };

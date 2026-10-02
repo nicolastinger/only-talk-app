@@ -13,6 +13,7 @@ import {
 import { getApiBase } from "@workspace/services";
 import type { UserInfo } from "@workspace/types";
 import { resolveContentToTempFile } from "@/utils/tempImage";
+import AvatarCropPopup, { CropRect } from "@/components/AvatarCropPopup.vue";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { useAvatar } from "@/hooks/useAvatar";
 
@@ -25,6 +26,29 @@ const uploading = ref(false);
 const previewUrl = ref<string | null>(null);
 const avatarUrl = ref<string | null>(null);
 let uploadCancelled = false;
+const cropShow = ref(false);
+const cropSrc = ref("");
+let cropResolver: ((rect: CropRect | null) => void) | null = null;
+
+const startCrop = (filePath: string): Promise<CropRect | null> => {
+  cropSrc.value = convertPathToTauriUrl(filePath) || "";
+  cropShow.value = true;
+  return new Promise<CropRect | null>((resolve) => {
+    cropResolver = resolve;
+  });
+};
+
+const onCropConfirm = (rect: CropRect) => {
+  cropResolver?.(rect);
+  cropResolver = null;
+  cropShow.value = false;
+};
+
+const onCropCancel = () => {
+  cropResolver?.(null);
+  cropResolver = null;
+  cropShow.value = false;
+};
 
 const genderOptions = [
   { name: "未知", value: 0 },
@@ -175,19 +199,28 @@ const pickAndUploadAvatar = async () => {
       }
     }
 
-    uploading.value = true;
-    showLoadingToast({ message: "压缩中...", forbidClick: true, duration: 0 });
+    const rect = await startCrop(filePath);
+    if (!rect) return;
 
-    const compressedResult = await invoke<string>(
-      "compress_image_to_webp_command",
-      {
-        inputPath: filePath,
-      }
-    );
+    uploading.value = true;
+    showLoadingToast({
+      message: "裁剪处理中...",
+      forbidClick: true,
+      duration: 0,
+    });
+
+    const compressedResult = await invoke<string>("crop_image_to_webp_command", {
+      inputPath: filePath,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      outputSize: 512,
+    });
 
     if (uploadCancelled) return;
 
-    console.log("Compressed result:", compressedResult);
+    console.log("Cropped result:", compressedResult);
 
     const preview = convertPathToTauriUrl(compressedResult);
     if (preview) {
@@ -525,6 +558,13 @@ const onSave = async () => {
         @cancel="showBirthdayPopup = false"
       />
     </van-popup>
+
+    <AvatarCropPopup
+      :show="cropShow"
+      :src="cropSrc"
+      @cancel="onCropCancel"
+      @confirm="onCropConfirm"
+    />
   </div>
 </template>
 

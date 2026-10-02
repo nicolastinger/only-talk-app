@@ -92,6 +92,50 @@ pub fn compress_image_to_webp(input_path: &std::path::Path) -> Result<PathBuf> {
     Ok(output_path)
 }
 
+/// 头像裁剪：按原始像素坐标裁剪为方形，缩放到 output_size×output_size 后编码 WebP 落盘。
+/// x/y/width/height 与 decode_image_optimized 矫正 EXIF 后的像素空间一致（与前端裁剪库对齐）。
+pub fn crop_image_to_webp(
+    input_path: &Path,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    output_size: u32,
+) -> Result<PathBuf> {
+    let start = Instant::now();
+
+    info!("[裁剪] 开始解码图片...");
+    let img = decode_image_optimized(input_path)?;
+
+    let x = x.min(img.width());
+    let y = y.min(img.height());
+    let width = width.min(img.width() - x);
+    let height = height.min(img.height() - y);
+
+    if width == 0 || height == 0 {
+        return Err(anyhow!("裁剪区域无效"));
+    }
+
+    info!("[裁剪] 裁剪区域: {}x{} at ({}, {})", width, height, x, y);
+    let cropped = img.crop_imm(x, y, width, height);
+    let square =
+        DynamicImage::ImageRgba8(image::imageops::resize(&cropped, output_size, output_size, FilterType::Triangle));
+
+    info!("[裁剪] 输出尺寸: {}x{}", output_size, output_size);
+    let final_data = encode_to_webp(&square)?;
+    info!("[裁剪] 编码完成，大小: {} bytes", final_data.len());
+
+    let output_path = get_output_path(input_path)?;
+    let mut output_file = File::create(&output_path)?;
+    output_file.write_all(&final_data)?;
+
+    let total_time = start.elapsed();
+    info!("[裁剪] 总耗时: {:?}", total_time);
+    info!("[裁剪] 输出路径: {:?}", output_path);
+
+    Ok(output_path)
+}
+
 fn get_output_path(input_path: &std::path::Path) -> Result<PathBuf> {
     let monthly_resource_path =
         get_config(MONTHLY_RESOURCE_PATH).ok_or_else(|| anyhow!("获取当月资源路径失败"))?;

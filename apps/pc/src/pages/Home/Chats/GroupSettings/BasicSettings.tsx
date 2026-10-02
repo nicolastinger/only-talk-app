@@ -1,4 +1,5 @@
 import { DEFAULT_ICON } from '@/constants';
+import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper';
 import { getApiBase } from '@workspace/services';
 import { GroupVo } from '@workspace/types';
 import { update_group } from '@workspace/services';
@@ -19,6 +20,7 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { startCrop, cropModalElement } = useAvatarCropper();
 
   const handleAvatarUpload = async () => {
     if (avatarUploading) return;
@@ -27,20 +29,19 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
       if (!files || files.length === 0) return;
 
       const filePath = files[0];
+
+      const croppedPath = await startCrop(filePath);
+
       setAvatarUploading(true);
 
-      const compressedResult = await invoke<string>('compress_image_to_webp_command', {
-        inputPath: filePath,
-      });
-
-      const preview = convertPathToTauriUrl(compressedResult);
+      const preview = convertPathToTauriUrl(croppedPath);
       if (preview) {
         setAvatarUrl(preview);
       }
 
       const uploadResult = await invoke<{ status: number; body: string }>('upload_file_request', {
         url: `${getApiBase()}/file_integrated/upload/group_avatar/${groupInfo.group_uuid}`,
-        filePath: compressedResult,
+        filePath: croppedPath,
         fieldName: 'file',
       });
 
@@ -65,6 +66,9 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
         message.error('群头像上传失败');
       }
     } catch (error) {
+      if (error instanceof Error && error.message === CROP_CANCELLED_ERROR) {
+        return;
+      }
       console.error('群头像更新失败:', error);
       message.error(
         (error instanceof Error ? error.message : String(error)) || '群头像更新失败',
@@ -169,6 +173,7 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
           {groupInfo.created_at ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN') : '-'}
         </div>
       </div>
+      {cropModalElement}
     </div>
   );
 };

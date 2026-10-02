@@ -27,9 +27,9 @@ pub mod vo;
 use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
-    compress_image_to_webp_command, copy_file_to_temp, delete_request, get_request,
-    post_form_data_request, post_request, put_request, upload_file_request,
-    upload_file_with_extra_fields_request, upload_multiple_files_request,
+    compress_image_to_webp_command, copy_file_to_temp, crop_image_to_webp_command,
+    delete_request, get_request, post_form_data_request, post_request, put_request,
+    upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request,
     upload_multiple_files_with_extra_fields_request,
 };
 use crate::cmd::auth_controller::{
@@ -229,7 +229,8 @@ pub fn run() {
             upload_multiple_files_request,
             upload_multiple_files_with_extra_fields_request,
             post_form_data_request,
-            compress_image_to_webp_command,
+compress_image_to_webp_command,
+            crop_image_to_webp_command,
             copy_file_to_temp,
             get_device_info,
             sign_in,

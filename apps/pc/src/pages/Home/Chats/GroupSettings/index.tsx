@@ -3,6 +3,7 @@ import { DEFAULT_ICON } from '@/constants';
 import { getApiBase } from '@workspace/services';
 import { useUserInfoList } from '@/hooks/useUserInfoList';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
+import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper';
 import { useBearStore } from '@/store/store';
 import { GroupInfoVo, GroupMemberVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
@@ -43,6 +44,7 @@ const GroupSettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { startCrop, cropModalElement } = useAvatarCropper();
 
   // Basic settings state
   const [editingName, setEditingName] = useState(false);
@@ -110,20 +112,19 @@ const GroupSettingsPage = () => {
       if (!files || files.length === 0) return;
 
       const filePath = files[0];
+
+      const croppedPath = await startCrop(filePath);
+
       setAvatarUploading(true);
 
-      const compressedResult = await invoke<string>('compress_image_to_webp_command', {
-        inputPath: filePath,
-      });
-
-      const preview = convertPathToTauriUrl(compressedResult);
+      const preview = convertPathToTauriUrl(croppedPath);
       if (preview) {
         setAvatarUrl(preview);
       }
 
       const uploadResult = await invoke<{ status: number; body: string }>('upload_file_request', {
         url: `${getApiBase()}/file_integrated/upload/group_avatar/${groupInfo!.group_uuid}`,
-        filePath: compressedResult,
+        filePath: croppedPath,
         fieldName: 'file',
       });
 
@@ -148,6 +149,9 @@ const GroupSettingsPage = () => {
         message.error(intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
       }
     } catch (error) {
+      if (error instanceof Error && error.message === CROP_CANCELLED_ERROR) {
+        return;
+      }
       console.error(intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }), error);
       message.error(
         (error instanceof Error ? error.message : String(error)) ||
@@ -703,6 +707,7 @@ const GroupSettingsPage = () => {
           }))}
         />
       </Modal>
+      {cropModalElement}
     </div>
   );
 };

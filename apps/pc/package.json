@@ -32,6 +32,7 @@
     "dayjs": "^1.11.13",
     "dva": "^2.4.1",
     "nanoid": "^5.1.5",
+    "react-easy-crop": "^6.2.3",
     "react-markdown": "^10.1.0",
     "react-tinder-card": "^1.6.4",
     "rehype-raw": "^7.0.0",

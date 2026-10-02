@@ -12,7 +12,7 @@ use crate::service::api_service::{
     upload_multiple_files_with_fields,
 };
 use crate::utils::http_client::http_client;
-use crate::utils::image_utils::compress_image_to_webp;
+use crate::utils::image_utils::{compress_image_to_webp, crop_image_to_webp};
 use crate::GLOBAL_QUIC_USER_INFO;
 
 #[derive(Serialize, Deserialize)]
@@ -207,6 +207,29 @@ pub async fn compress_image_to_webp_command(input_path: String) -> Result<String
     let result = tokio::task::spawn_blocking(move || compress_image_to_webp(&input))
         .await
         .map_err(|e| e.to_string())?;
+
+    let output_path = result.map_err(|e| e.to_string())?;
+    Ok(output_path.to_string_lossy().to_string())
+}
+
+/// 头像缩放裁剪 + 压缩：前端交互裁剪库输出原始像素坐标 (x, y, width, height)，
+/// 此处裁剪为方形并缩放到 output_size×output_size 后编码 WebP，返回输出文件路径。
+#[command]
+pub async fn crop_image_to_webp_command(
+    input_path: String,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    output_size: u32,
+) -> Result<String, String> {
+    let input = PathBuf::from(&input_path);
+
+    let result = tokio::task::spawn_blocking(move || {
+        crop_image_to_webp(&input, x, y, width, height, output_size)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
 
     let output_path = result.map_err(|e| e.to_string())?;
     Ok(output_path.to_string_lossy().to_string())

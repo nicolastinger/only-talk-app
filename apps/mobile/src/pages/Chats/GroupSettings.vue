@@ -14,6 +14,7 @@ import {
   set_member_role,
   get_friend_list,
   selectFile,
+  convertPathToTauriUrl,
   isBackendSuccess,
   isHttpSuccess,
 } from "@workspace/services";
@@ -25,6 +26,7 @@ import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { resolveContentToTempFile } from "@/utils/tempImage";
 import { DEFAULT_AVATAR, useUserStore } from "@/stores/user";
+import AvatarCropPopup, { CropRect } from "@/components/AvatarCropPopup.vue";
 import ReportSheet from "@/components/ReportSheet.vue";
 
 const route = useRoute();
@@ -47,6 +49,29 @@ const descDraft = ref("");
 const savingFlag = ref(false);
 const avatarUploading = ref(false);
 const showReport = ref(false);
+const cropShow = ref(false);
+const cropSrc = ref("");
+let cropResolver: ((rect: CropRect | null) => void) | null = null;
+
+const startCrop = (filePath: string): Promise<CropRect | null> => {
+  cropSrc.value = convertPathToTauriUrl(filePath) || "";
+  cropShow.value = true;
+  return new Promise<CropRect | null>((resolve) => {
+    cropResolver = resolve;
+  });
+};
+
+const onCropConfirm = (rect: CropRect) => {
+  cropResolver?.(rect);
+  cropResolver = null;
+  cropShow.value = false;
+};
+
+const onCropCancel = () => {
+  cropResolver?.(null);
+  cropResolver = null;
+  cropShow.value = false;
+};
 
 const memberUuids = computed(() =>
   members.value.map((m) => m.user_uuid).filter(Boolean)
@@ -198,10 +223,19 @@ const changeAvatar = async () => {
       const { tempPath } = await resolveContentToTempFile(filePath);
       filePath = tempPath;
     }
+
+    const rect = await startCrop(filePath);
+    if (!rect) return;
+
     avatarUploading.value = true;
-    showToast({ message: "处理头像中...", icon: "none" });
-    const compressed = await invoke<string>("compress_image_to_webp_command", {
+    showToast({ message: "裁剪处理中...", icon: "none" });
+    const compressed = await invoke<string>("crop_image_to_webp_command", {
       inputPath: filePath,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      outputSize: 512,
     });
     showToast({ message: "上传头像中...", icon: "none" });
     const res = await invoke<{ status: number; body: string }>(
@@ -762,6 +796,13 @@ const handleDissolve = async () => {
         </div>
       </div>
     </van-action-sheet>
+
+    <AvatarCropPopup
+      :show="cropShow"
+      :src="cropSrc"
+      @cancel="onCropCancel"
+      @confirm="onCropConfirm"
+    />
   </div>
 </template>
 

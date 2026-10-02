@@ -12,6 +12,12 @@ export default {
     ignore: '忽略此公告',
     gotIt: '我知道了',
   },
+  avatarCrop: {
+    title: '裁剪頭像',
+    zoom: '縮放',
+    cancel: '取消',
+    confirm: '確定',
+  },
   report: {
     action: '舉報',
     title: '舉報',
