@@ -302,6 +302,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
     <Modal
       open={visible}
       onCancel={onClose}
+      closable={false}
       footer={null}
       centered
       width={420}
