@@ -280,6 +280,10 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
     }
 
     let payload = serde_json::to_string(&msg)?;
+    info!(
+        "emit text_message: is_self={} send_user={} recv_user={} text_type={} nano_id={}",
+        is_self, msg.send_user, msg.recv_user, msg.text_type, msg.nano_id
+    );
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
 
     // 视频通话控制消息(12-15)不在此提前返回：仍更新会话列表，

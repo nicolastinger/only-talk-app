@@ -16,11 +16,14 @@ const useMessageApi = (sendUuid: string | null, recvUuid: string) => {
     const setupListener = async () => {
       unlisten = await listen<string>('text_message', (event) => {
         const text = JSON.parse(event.payload) as TextQuicMsgVo;
+        // 自己其他端发送的消息(self-echo)会被回推: send_user=我, recv_user=好友。
+        // 需在 recv_user 与 sendUuid 过滤之前放行。
+        if (sendUuid && text.send_user === recvUuid && text.recv_user === sendUuid) {
+          setTextMessage(text);
+          return;
+        }
         if (text.recv_user !== recvUuid) {
-          // 自己其他端发送的消息(self-echo)会被回推: send_user=我, recv_user=好友
-          if (!(sendUuid && text.send_user === recvUuid && text.recv_user === sendUuid)) {
-            return;
-          }
+          return;
         }
         // 监听某个账号
         if (sendUuid !== null) {
