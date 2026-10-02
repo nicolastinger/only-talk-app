@@ -28,6 +28,12 @@ pub fn http_client_120() -> &'static Client {
     CLIENT.get_or_init(|| build_with_timeout(120))
 }
 
+/// 600s(10分钟) 超时共享 Client(大文件下载)。
+pub fn http_client_600() -> &'static Client {
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    CLIENT.get_or_init(|| build_with_timeout(600))
+}
+
 /// 300s 超时共享 Client(大文件上传)。
 pub fn http_client_300() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();

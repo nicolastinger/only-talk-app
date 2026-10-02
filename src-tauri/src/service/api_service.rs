@@ -8,7 +8,7 @@ use reqwest::header::HeaderMap;
 use reqwest::Response;
 use serde::Serialize;
 
-use crate::utils::http_client::{http_client_120, http_client_30, http_client_300};
+use crate::utils::http_client::{http_client_120, http_client_30, http_client_300, http_client_600};
 use crate::GLOBAL_QUIC_USER_INFO;
 
 pub async fn post_with_body(
@@ -51,7 +51,8 @@ pub async fn get_with_token(url: String) -> Result<Response, anyhow::Error> {
 }
 
 pub async fn get_without_token(url: String) -> Result<Response, anyhow::Error> {
-    let client = http_client_30();
+    // 该函数用于下载文件(预签名 URL 拉取二进制), 用 10 分钟超时, 避免大文件下载超时
+    let client = http_client_600();
     let response = client.get(&url).send().await?;
     Ok(response)
 }
