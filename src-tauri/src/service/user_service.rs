@@ -399,12 +399,10 @@ pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> 
         let read_ids = SystemNotification::query_read_not_synced_ids(&uuid).await?;
         if !read_ids.is_empty() {
             info!("上报通知已读: {:?}", read_ids);
-            match post_request(
-                format!("{}/notify/mark_read", talk_api_base()),
-                serde_json::to_string(&read_ids).expect("序列化通知已读失败"),
-            )
-            .await
-            {
+            // 服务端 MarkReadDTO 期望 `{"ids": [...]}` 对象; 裸数组会 400(契约不匹配)
+            let body = serde_json::to_string(&serde_json::json!({ "ids": read_ids }))
+                .expect("序列化通知已读失败");
+            match post_request(format!("{}/notify/mark_read", talk_api_base()), body).await {
                 Ok(m) => {
                     let result = match serde_json::from_str::<HttpResult>(&m.body) {
                         Ok(r) => r,
