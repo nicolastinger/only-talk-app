@@ -406,17 +406,29 @@ pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> 
             .await
             {
                 Ok(m) => {
-                    let result =
-                        serde_json::from_str::<HttpResult>(&m.body).unwrap_or(HttpResult {
-                            code: -1,
-                            message: String::new(),
-                            data: serde_json::Value::Null,
-                        });
+                    let result = match serde_json::from_str::<HttpResult>(&m.body) {
+                        Ok(r) => r,
+                        Err(parse_err) => {
+                            // 响应体不是预期 JSON(如 404/500 的文本页): 带上状态码与原文便于定位
+                            error!(
+                                "通知已读上报失败: 响应解析失败 status={} body={} err={}",
+                                m.status, m.body, parse_err
+                            );
+                            HttpResult {
+                                code: -1,
+                                message: String::new(),
+                                data: serde_json::Value::Null,
+                            }
+                        }
+                    };
                     if result.code == 200 || result.code == 204 {
                         SystemNotification::mark_read_synced(&uuid, &read_ids).await?;
                         info!("通知已读上报成功: {:?}", read_ids);
                     } else {
-                        error!("通知已读上报失败: {}", result.message);
+                        error!(
+                            "通知已读上报失败: status={} code={} message={}",
+                            m.status, result.code, result.message
+                        );
                     }
                 }
                 Err(e) => {
