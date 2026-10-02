@@ -183,6 +183,7 @@ const pickAndUploadAvatar = async () => {
         const { tempPath } = await resolveContentToTempFile(filePath);
         filePath = tempPath;
         console.log("[DEBUG] Success! Resolved to:", filePath);
+        closeToast();
       } catch (error) {
         const errMsg = getErrorMessage(error, "Unknown error");
         console.error("[DEBUG] ERROR:", error);

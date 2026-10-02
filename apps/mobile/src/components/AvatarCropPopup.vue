@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { onBeforeUnmount, ref, watch } from "vue";
 import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
 
@@ -26,6 +26,8 @@ let cropper: Cropper | null = null;
 
 const initCropper = () => {
   if (!imgEl.value) return;
+  // 图片必须已加载完成(有真实尺寸), 否则 cropperjs 用 0 尺寸计算会卡死主线程
+  if (!imgEl.value.complete || !imgEl.value.naturalWidth) return;
   cropper = new Cropper(imgEl.value, {
     viewMode: 1,
     dragMode: "move",
@@ -44,21 +46,29 @@ const initCropper = () => {
   });
 };
 
-// 销毁并重建实例。重建不再依赖 <img> 的 load 事件 —— Vant popup 的 lazyRender 会让
-// <img> 常驻 DOM, 再次打开同一张图 src 不变不会触发 load, 旧实现导致 cropper 永远为 null。
-const rebuildCropper = async () => {
-  cropper?.destroy();
-  cropper = null;
-  if (!props.show || !props.src || !imgEl.value) return;
-  await nextTick();
-  if (!props.show || !props.src || !imgEl.value) return;
+// 图片加载完成后初始化。img 用 v-if="show" 每次打开都会重新挂载,
+// 重新设置 src 必然触发 load, 不依赖 src 是否变化(同图重开也生效)。
+const onImgLoad = () => {
+  if (cropper || !props.show || !props.src) return;
   initCropper();
 };
 
+const destroyCropper = () => {
+  try {
+    cropper?.destroy();
+  } catch (e) {
+    console.error("销毁裁剪器失败:", e);
+  }
+  cropper = null;
+};
+
+// show 关闭时销毁; 打开时 img 通过 v-if 重新挂载, load 事件驱动初始化
 watch(
-  [() => props.show, () => props.src],
-  () => {
-    rebuildCropper();
+  () => props.show,
+  (val) => {
+    if (!val) {
+      destroyCropper();
+    }
   },
   { immediate: true }
 );
@@ -84,13 +94,8 @@ const onConfirm = () => {
 
 const onCancel = () => emit("cancel");
 
-const onClosed = () => {
-  cropper?.destroy();
-  cropper = null;
-};
-
 onBeforeUnmount(() => {
-  cropper?.destroy();
+  destroyCropper();
 });
 </script>
 
@@ -100,19 +105,33 @@ onBeforeUnmount(() => {
     position="center"
     round
     class="avatar-crop-popup"
-    :style="{ width: '88%' }"
+    :style="{ width: '88%', zIndex: 3000 }"
     :close-on-click-overlay="false"
-    @closed="onClosed"
   >
     <div class="crop-body">
       <div class="crop-title">裁剪头像</div>
       <div class="crop-container">
-        <img ref="imgEl" :src="src" alt="avatar" class="crop-img" />
+        <img
+          v-if="show"
+          ref="imgEl"
+          :src="src"
+          alt="avatar"
+          class="crop-img"
+          @load="onImgLoad"
+        />
       </div>
       <div class="crop-zoom">
-        <van-button size="small" plain type="default" icon="zoom-out" @click="onZoomOut" />
+        <van-button size="small" plain type="default" @click="onZoomOut" aria-label="缩小">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="zoom-icon">
+            <path d="M5 11h14v2H5z" />
+          </svg>
+        </van-button>
         <span class="crop-zoom-tip">双指缩放 · 拖动调整位置</span>
-        <van-button size="small" plain type="default" icon="zoom-in" @click="onZoomIn" />
+        <van-button size="small" plain type="default" @click="onZoomIn" aria-label="放大">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="zoom-icon">
+            <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
+          </svg>
+        </van-button>
       </div>
       <div class="crop-footer">
         <van-button size="small" plain type="default" @click="onCancel">
@@ -165,6 +184,12 @@ onBeforeUnmount(() => {
 .crop-zoom-tip {
   font-size: 12px;
   color: var(--text-secondary, #999);
+}
+
+.zoom-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .crop-footer {

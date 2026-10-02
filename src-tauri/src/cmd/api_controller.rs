@@ -239,11 +239,12 @@ pub async fn crop_image_to_webp_command(
 /// 复制到应用数据目录 umi_gitee_temp，返回 Rust 可读的真实路径
 #[cfg(target_os = "android")]
 fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String, String> {
-    use std::io::Read;
+    use std::io::{copy, Write};
 
     use tauri::Manager;
     use tauri_plugin_fs::FsExt;
 
+    // 打开 ContentResolver 文件描述符(同步 JNI 调用, 大文件源 URI 解析可能慢)
     let mut file = app
         .fs()
         .open(
@@ -251,9 +252,6 @@ fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String,
             tauri_plugin_fs::OpenOptions::new().read(true).clone(),
         )
         .map_err(|e| format!("打开 content URI 失败: {}", e))?;
-
-    let mut data = Vec::new();
-    file.read_to_end(&mut data).map_err(|e| format!("读取 content URI 失败: {}", e))?;
 
     let base_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let temp_dir = base_dir.join("umi_gitee_temp");
@@ -265,7 +263,11 @@ fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String,
         .as_millis();
     let temp_file = temp_dir.join(format!("img_{}.jpg", timestamp));
 
-    std::fs::write(&temp_file, &data).map_err(|e| format!("写入临时文件失败: {}", e))?;
+    // 流式拷贝, 避免整图一次性读入内存(Vec)导致大图阻塞/内存峰值
+    let mut out = std::fs::File::create(&temp_file).map_err(|e| format!("创建临时文件失败: {}", e))?;
+    copy(&mut file, &mut out).map_err(|e| format!("复制 content URI 失败: {}", e))?;
+    out.flush().map_err(|e| format!("刷新临时文件失败: {}", e))?;
+
     info!("Content URI copied to: {}", temp_file.display());
     Ok(temp_file.to_string_lossy().to_string())
 }
@@ -286,7 +288,13 @@ pub async fn copy_file_to_temp(
 
     #[cfg(target_os = "android")]
     {
-        copy_android_content_uri(&app, &uri_or_path)
+        // 大文件同步复制会阻塞 tokio worker, 放入阻塞线程池避免卡住其他异步命令
+        let app = app.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            copy_android_content_uri(&app, &uri_or_path)
+        })
+        .await
+        .map_err(|e| format!("复制线程异常: {}", e))?
     }
 
     #[cfg(not(target_os = "android"))]
