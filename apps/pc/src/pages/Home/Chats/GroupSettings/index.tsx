@@ -7,7 +7,7 @@ import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper
 import { useBearStore } from '@/store/store';
 import { GroupInfoVo, GroupMemberVo } from '@workspace/types';
 import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
-import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile } from '@workspace/services';
+import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile, openImagePreviewWindow } from '@workspace/services';
 import { history, useSearchParams, useIntl } from '@umijs/max';
 import { Avatar, Button, Input, Modal, Select, Tag, message, Spin } from 'antd';
 import {
@@ -441,8 +441,10 @@ const GroupSettingsPage = () => {
         <div className={styles.groupHeader}>
           <div
             className={styles.avatarWrapper}
-            onClick={canManage ? handleAvatarClick : undefined}
-            style={canManage ? { cursor: 'pointer' } : undefined}
+            onClick={() => {
+              if (avatarUrl) openImagePreviewWindow([avatarUrl], 0);
+            }}
+            style={{ cursor: avatarUrl ? 'pointer' : 'default' }}
           >
             <Spin
               indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
@@ -456,7 +458,13 @@ const GroupSettingsPage = () => {
               />
             </Spin>
             {canManage && !avatarUploading && (
-              <div className={styles.avatarOverlay}>
+              <div
+                className={styles.avatarOverlay}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAvatarClick();
+                }}
+              >
                 <CameraOutlined style={{ fontSize: 20, color: '#fff' }} />
               </div>
             )}

@@ -15,6 +15,7 @@ import { calcAgeFromBirthday } from "@/utils/time";
 import type { FriendVo, UserInfo } from "@workspace/types";
 import { ReportTargetType } from "@workspace/types";
 import ReportSheet from "@/components/ReportSheet.vue";
+import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -30,6 +31,7 @@ const loading = ref(true);
 const loadError = ref(false);
 const avatarUrl = ref<string | null>(null);
 const showReport = ref(false);
+const showAvatarPreview = ref(false);
 
 /** 是否为自己的好友（非好友时只展示资料卡，不显示删除好友） */
 const isFriend = computed(() => !!detail.value.friendVo);
@@ -157,6 +159,7 @@ onMounted(loadDetail);
           <img
             :src="getAvatar()"
             class="profile-avatar"
+            @click="showAvatarPreview = true"
             @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
           />
           <h2 class="profile-name">
@@ -227,6 +230,13 @@ onMounted(loadDetail);
         :target-type="ReportTargetType.USER"
         :target-uuid="friendId"
         :target-name="getDisplayName()"
+      />
+
+      <ImagePreviewer
+        v-if="showAvatarPreview && getAvatar()"
+        :urls="[getAvatar()]"
+        :initial-index="0"
+        @close="showAvatarPreview = false"
       />
     </template>
   </div>

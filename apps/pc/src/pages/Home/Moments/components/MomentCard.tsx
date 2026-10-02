@@ -6,6 +6,7 @@ import { useIntl } from '@umijs/max';
 import {
   delete_moment,
   getFiles,
+  openImagePreviewWindow,
   switch_moment_like,
   switch_user_follow,
 } from '@workspace/services';
@@ -139,7 +140,10 @@ const MomentCard = (props: {
             src={avatar || DEFAULT_ICON}
             className={styles.avatar}
             alt="avatar"
-            onClick={handleOpenUser}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (avatar) openImagePreviewWindow([avatar], 0);
+            }}
             onError={(e) => {
               (e.target as HTMLImageElement).src = DEFAULT_ICON;
             }}

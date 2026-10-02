@@ -2,6 +2,7 @@
 import { ref, watch, onMounted } from "vue";
 import { useAvatar } from "@/hooks/useAvatar";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -13,6 +14,7 @@ const props = withDefaults(
 
 const { getAvatarUrl } = useAvatar();
 const url = ref("");
+const showPreview = ref(false);
 
 const load = async () => {
   if (!props.icon) {
@@ -30,6 +32,8 @@ onMounted(load);
   <span
     class="plaza-avatar"
     :style="{ width: `${size}px`, height: `${size}px` }"
+    :class="{ clickable: !!url }"
+    @click="url && (showPreview = true)"
   >
     <img
       v-if="url"
@@ -45,6 +49,13 @@ onMounted(load);
         />
       </svg>
     </span>
+
+    <ImagePreviewer
+      v-if="showPreview && url"
+      :urls="[url]"
+      :initial-index="0"
+      @close="showPreview = false"
+    />
   </span>
 </template>
 
@@ -56,6 +67,10 @@ onMounted(load);
   overflow: hidden;
   background: var(--surface-hover);
   vertical-align: middle;
+
+  &.clickable {
+    cursor: pointer;
+  }
 }
 
 .img {

@@ -4,6 +4,7 @@ import { useIntl } from '@umijs/max';
 import {
   get_moment_comments,
   getFiles,
+  openImagePreviewWindow,
   post_moment_comment,
 } from '@workspace/services';
 import { MomentCommentVo } from '@workspace/types';
@@ -94,7 +95,15 @@ const CommentModal = (props: {
         }}
         renderItem={(item) => (
           <List.Item key={item.id} className={styles.commentItem}>
-            <Avatar size={32} src={avatars[item.icon || ''] || DEFAULT_ICON} />
+            <Avatar
+              size={32}
+              src={avatars[item.icon || ''] || DEFAULT_ICON}
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const url = avatars[item.icon || ''];
+                if (url) openImagePreviewWindow([url], 0);
+              }}
+            />
             <div className={styles.commentBody}>
               <div className={styles.commentMeta}>
                 <span className={styles.name}>

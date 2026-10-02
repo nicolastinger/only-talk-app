@@ -16,6 +16,7 @@ import {
   get_group_info,
   get_group_members,
   getFiles,
+  openImagePreviewWindow,
 } from '@workspace/services';
 import { GroupInfoVo, GroupMemberVo, GroupVo } from '@workspace/types';
 import { Avatar, Button, Collapse, List, message, Spin } from 'antd';
@@ -161,6 +162,9 @@ const GroupInfoPage = () => {
               className={styles.icon}
               src={groupIcon || DEFAULT_ICON}
               alt="group avatar"
+              onClick={() => {
+                if (groupIcon) openImagePreviewWindow([groupIcon], 0);
+              }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = DEFAULT_ICON;
               }}

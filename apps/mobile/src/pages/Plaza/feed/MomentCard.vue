@@ -13,6 +13,7 @@ import { ReportTargetType } from "@workspace/types";
 import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { formatMomentTime } from "@/utils/time";
+import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import ReportSheet from "@/components/ReportSheet.vue";
 import MomentMedia from "./MomentMedia.vue";
@@ -26,6 +27,7 @@ const { getAvatarUrl } = useAvatar();
 const avatarUrl = ref("");
 const images = ref<string[]>([]);
 const myUuid = ref("");
+const showAvatarPreview = ref(false);
 
 const isSelf = computed(() => props.moment.author_uuid === myUuid.value);
 const busy = ref(false);
@@ -138,6 +140,7 @@ const onDelete = async () => {
             :src="avatar"
             alt="avatar"
             class="m-avatar-img"
+            @click.stop="avatarUrl && (showAvatarPreview = true)"
             @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
           />
         </span>
@@ -222,6 +225,13 @@ const onDelete = async () => {
       :target-type="ReportTargetType.MOMENT"
       :target-uuid="moment.uuid"
       :target-name="moment.username || ''"
+    />
+
+    <ImagePreviewer
+      v-if="showAvatarPreview && avatarUrl"
+      :urls="[avatarUrl]"
+      :initial-index="0"
+      @close="showAvatarPreview = false"
     />
   </div>
 </template>

@@ -3,7 +3,7 @@ import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper
 import { getApiBase } from '@workspace/services';
 import { GroupVo } from '@workspace/types';
 import { update_group } from '@workspace/services';
-import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile } from '@workspace/services';
+import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile, openImagePreviewWindow } from '@workspace/services';
 import { Avatar, Button, Form, Input, message, Spin } from 'antd';
 import { UserOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -100,7 +100,9 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
       <div className={styles.avatarSection}>
         <div
           className={styles.avatarWrapper}
-          onClick={handleAvatarUpload}
+          onClick={() => {
+            if (avatarUrl) openImagePreviewWindow([avatarUrl], 0);
+          }}
           style={{ cursor: 'pointer' }}
         >
           <Spin
@@ -117,7 +119,13 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
             />
           </Spin>
           {!avatarUploading && (
-            <div className={styles.avatarOverlay}>
+            <div
+              className={styles.avatarOverlay}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAvatarUpload();
+              }}
+            >
               <CameraOutlined style={{ fontSize: 20, color: '#fff' }} />
             </div>
           )}

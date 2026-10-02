@@ -1,4 +1,4 @@
-import { get_moment_likers, getFiles } from '@workspace/services';
+import { get_moment_likers, getFiles, openImagePreviewWindow } from '@workspace/services';
 import { MomentLikerVo } from '@workspace/types';
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
@@ -78,7 +78,15 @@ const LikersModal = (props: {
         <div className={styles.list}>
           {likers.map((l) => (
             <div key={l.uuid} className={styles.item}>
-              <Avatar size={36} src={avatars[l.icon || ''] || DEFAULT_ICON} />
+              <Avatar
+                size={36}
+                src={avatars[l.icon || ''] || DEFAULT_ICON}
+                style={{ cursor: 'pointer' }}
+                onClick={() => {
+                  const url = avatars[l.icon || ''];
+                  if (url) openImagePreviewWindow([url], 0);
+                }}
+              />
               <div className={styles.meta}>
                 <span className={styles.name}>
                   {l.username || l.uuid}

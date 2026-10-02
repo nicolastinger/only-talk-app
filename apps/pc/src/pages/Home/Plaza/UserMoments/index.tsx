@@ -2,7 +2,7 @@ import { DEFAULT_ICON } from '@/constants';
 import MomentList from '@/pages/Home/Moments/components/MomentList';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { history, useIntl, useLocation } from '@umijs/max';
-import { getFiles, get_plaza_user } from '@workspace/services';
+import { getFiles, get_plaza_user, openImagePreviewWindow } from '@workspace/services';
 import { PlazaUser } from '@workspace/types';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
@@ -40,6 +40,9 @@ const UserMoments = () => {
           className={styles.avatar}
           src={avatar || DEFAULT_ICON}
           alt="avatar"
+          onClick={() => {
+            if (avatar) openImagePreviewWindow([avatar], 0);
+          }}
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}

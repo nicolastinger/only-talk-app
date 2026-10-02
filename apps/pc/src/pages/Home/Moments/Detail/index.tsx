@@ -7,6 +7,7 @@ import {
   delete_moment,
   getFiles,
   get_moment_detail,
+  openImagePreviewWindow,
   switch_moment_like,
   switch_user_follow,
 } from '@workspace/services';
@@ -159,6 +160,9 @@ const MomentDetail = () => {
               src={avatar || DEFAULT_ICON}
               className={styles.avatar}
               alt="avatar"
+              onClick={() => {
+                if (avatar) openImagePreviewWindow([avatar], 0);
+              }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = DEFAULT_ICON;
               }}

@@ -9,6 +9,7 @@ import {
   get_friend_list,
   getFiles,
   invite_group_members,
+  openImagePreviewWindow,
 } from '@workspace/services';
 import { FriendVo, GroupMemberStoreVo, GroupVo } from '@workspace/types';
 import { Avatar, Button, List, message, Modal, Select, Spin } from 'antd';
@@ -188,6 +189,9 @@ const GroupInfoPage: React.FC = () => {
               className={styles.icon}
               src={groupIcon || DEFAULT_ICON}
               alt="group avatar"
+              onClick={() => {
+                if (groupIcon) openImagePreviewWindow([groupIcon], 0);
+              }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = DEFAULT_ICON;
               }}

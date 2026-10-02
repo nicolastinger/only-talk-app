@@ -28,6 +28,7 @@ import { resolveContentToTempFile } from "@/utils/tempImage";
 import { DEFAULT_AVATAR, useUserStore } from "@/stores/user";
 import AvatarCropPopup, { CropRect } from "@/components/AvatarCropPopup.vue";
 import ReportSheet from "@/components/ReportSheet.vue";
+import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -49,6 +50,7 @@ const descDraft = ref("");
 const savingFlag = ref(false);
 const avatarUploading = ref(false);
 const showReport = ref(false);
+const showAvatarPreview = ref(false);
 const cropShow = ref(false);
 const cropSrc = ref("");
 let cropResolver: ((rect: CropRect | null) => void) | null = null;
@@ -500,12 +502,12 @@ const handleDissolve = async () => {
 
     <template v-else-if="groupInfo">
       <div class="body">
-        <!-- 群信息头部 -->
+<!-- 群信息头部 -->
         <div class="group-head">
           <div
             class="group-avatar-wrap"
             :class="{ editable: canManage }"
-            @click="changeAvatar"
+            @click="showAvatarPreview = true"
           >
             <img
               :src="groupAvatarUrl || DEFAULT_AVATAR"
@@ -513,7 +515,7 @@ const handleDissolve = async () => {
               class="group-avatar"
               @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
             />
-            <span v-if="canManage" class="avatar-edit-badge">
+            <span v-if="canManage" class="avatar-edit-badge" @click.stop="changeAvatar">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path
                   d="M9 2l1.83 2H9c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-1.83L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"
@@ -644,6 +646,13 @@ const handleDissolve = async () => {
         :target-type="ReportTargetType.GROUP"
         :target-uuid="groupId"
         :target-name="groupInfo?.group_name || ''"
+      />
+
+      <ImagePreviewer
+        v-if="showAvatarPreview && groupAvatarUrl"
+        :urls="[groupAvatarUrl]"
+        :initial-index="0"
+        @close="showAvatarPreview = false"
       />
     </template>
 

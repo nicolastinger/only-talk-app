@@ -22,6 +22,7 @@ import {
   refresh_user_info,
   unblock_friend,
 } from '@workspace/services';
+import { openImagePreviewWindow } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
 import { Button, Collapse, message, Spin } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -252,6 +253,9 @@ const FriendInfo = (props: { uuid: string }) => {
               className={styles.icon}
               src={friendIcon || DEFAULT_ICON}
               alt="avatar"
+              onClick={() => {
+                if (friendIcon) openImagePreviewWindow([friendIcon], 0);
+              }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = DEFAULT_ICON;
               }}
