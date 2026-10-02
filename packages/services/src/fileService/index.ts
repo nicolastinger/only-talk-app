@@ -53,7 +53,28 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
 };
 
 /**
- * 获取文件列表
+ * 判断本地是否已存在该聊天文件（只查本地 file_record，不触发下载）
+ * @param bizId 业务ID
+ */
+export const hasLocalChatFile = async (bizId: string): Promise<boolean> => {
+  try {
+    return (await invoke("has_local_chat_file", { bizId })) as boolean;
+  } catch (error) {
+    console.error("has_local_chat_file failed:", error);
+    return false;
+  }
+};
+
+/**
+ * 打开本地文件（跨平台：桌面走系统默认程序，Android 经 FileProvider content:// URI）
+ * @param path 本地绝对路径
+ */
+export const openLocalFile = async (path: string): Promise<void> => {
+  await invoke("open_local_file", { path });
+};
+
+/**
+ * 获取本地文件列表
  * @param bizId 业务ID
  * @param nanoId 可选的消息nano_id，如果提供且raw中有文件名，则优先使用raw中的文件名
  * @returns 文件列表

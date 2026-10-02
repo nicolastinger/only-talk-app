@@ -4,10 +4,12 @@ use std::path::Path;
 use log::{error, info, warn};
 use tauri::path::BaseDirectory;
 use tauri::{Manager, Runtime};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::config::get_config;
 use crate::service::file_service::{
     delete_local_file_service, get_file_by_biz_id_service, get_local_file_list_service,
+    has_local_chat_file_service,
 };
 use crate::utils::global_static_str::{talk_api_base, DEFAULT_IMAGE, RESOURCE_PATH};
 use crate::vo::file_vo::{FileVo, LocalFileVo};
@@ -195,6 +197,79 @@ pub async fn get_chat_file_by_biz_id(
             error!("获取文件失败 {}", e);
             Err(e.to_string())
         }
+    }
+}
+
+/// 判断本地是否已存在该聊天文件（只查本地，不触发下载）
+#[tauri::command]
+pub async fn has_local_chat_file(biz_id: String) -> Result<bool, String> {
+    if biz_id.is_empty() {
+        warn!("业务id不能为空");
+        return Err("业务id不能为空".to_string());
+    }
+    has_local_chat_file_service(&biz_id).await.map_err(|e| {
+        error!("判断本地文件失败 {}", e);
+        e.to_string()
+    })
+}
+
+/// 打开本地文件（跨平台）
+/// - 桌面: 直接交给系统默认程序打开
+/// - Android: 复制到 cache 目录后经 FileProvider 生成 content:// URI 打开，
+///   裸路径无法被 Intent.ACTION_VIEW 解析(Android 需要 content:// 或 file:// 并授权)
+#[tauri::command]
+pub async fn open_local_file<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    path: String,
+) -> Result<(), String> {
+    if path.is_empty() {
+        return Err("文件路径不能为空".to_string());
+    }
+    let file_path = Path::new(&path);
+    if !file_path.is_file() {
+        warn!("文件不存在: {}", path);
+        return Err(format!("文件不存在: {}", path));
+    }
+
+    #[cfg(target_os = "android")]
+    {
+        // Android: 通过 FileProvider(content://) 打开, 复用 manifest 已声明的
+        // ${applicationId}.fileprovider + file_paths.xml 的 cache-path
+        let cache_dir = app
+            .path()
+            .cache_dir()
+            .map_err(|e| format!("获取缓存目录失败: {}", e))?;
+        let open_dir = cache_dir.join("open");
+        fs::create_dir_all(&open_dir).map_err(|e| format!("创建打开目录失败: {}", e))?;
+
+        let file_name = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| "无法获取文件名".to_string())?;
+
+        // 目标文件已存在则跳过复制(同名文件复用)
+        let dest = open_dir.join(file_name);
+        if !dest.is_file() {
+            fs::copy(file_path, &dest).map_err(|e| format!("复制文件到缓存失败: {}", e))?;
+        }
+
+        let authority = format!("{}.fileprovider", app.package_info().identifier);
+        // file_paths.xml: <cache-path name="my_cache_images" path="." />
+        let content_uri = format!("content://{}/my_cache_images/open/{}", authority, file_name);
+        info!("Android 打开文件 content:// URI: {}", content_uri);
+        app.opener().open_path(content_uri, None::<String>).map_err(|e| {
+            error!("Android 打开文件失败: {}", e);
+            e.to_string()
+        })
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        info!("打开本地文件: {}", path);
+        app.opener().open_path(path, None::<String>).map_err(|e| {
+            error!("打开文件失败: {}", e);
+            e.to_string()
+        })
     }
 }
 

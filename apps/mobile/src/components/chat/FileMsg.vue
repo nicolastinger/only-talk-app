@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { onMounted, ref, watch } from "vue";
 import { showToast, showLoadingToast, closeToast } from "vant";
 import { formatFileSize, getFileTypeColor } from "@/chat/format";
-import { loadChatFile, toLocalPath } from "@/chat/media";
+import { checkLocalChatFile, loadChatFile, toLocalPath } from "@/chat/media";
 import { isLocalFilePath } from "@/chat/messageParse";
+import { openLocalFile } from "@workspace/services";
 
 const props = defineProps<{
   fileName: string;
@@ -20,38 +20,94 @@ const props = defineProps<{
 }>();
 
 const busy = ref(false);
+const downloaded = ref(false);
+const checking = ref(false);
 
-const handleOpen = async () => {
+const resolveLocalPath = (): string | null => {
+  if (props.localPath || isLocalFilePath(props.fileName)) {
+    return props.localPath || props.fileName;
+  }
+  return null;
+};
+
+const openFile = async (path: string) => {
+  try {
+    await openLocalFile(path);
+  } catch (e) {
+    console.error("打开文件失败:", path, e);
+    showToast({ message: "打开文件失败", icon: "fail" });
+  }
+};
+
+const refreshDownloaded = async () => {
+  if (resolveLocalPath()) {
+    // 本地临时消息（发送中）视为已存在
+    downloaded.value = true;
+    checking.value = false;
+    return;
+  }
+  if (!props.bizId) {
+    downloaded.value = false;
+    checking.value = false;
+    return;
+  }
+  checking.value = true;
+  downloaded.value = await checkLocalChatFile(props.bizId);
+  checking.value = false;
+};
+
+const handleClick = async () => {
   if (busy.value || props.sending) return;
   busy.value = true;
-  showLoadingToast({ message: "打开中...", forbidClick: true, duration: 0 });
+
+  // 本地已有文件 → 直接打开
+  const localPath = resolveLocalPath();
+  if (localPath) {
+    await openFile(localPath);
+    busy.value = false;
+    return;
+  }
+
+  if (!props.bizId) {
+    showToast("无法获取文件路径");
+    busy.value = false;
+    return;
+  }
+
   try {
-    let path: string | null = null;
-    if (props.localPath || isLocalFilePath(props.fileName)) {
-      path = props.localPath || props.fileName;
-    } else if (props.bizId) {
+    if (downloaded.value) {
+      // 已下载 → 打开
+      showLoadingToast({ message: "打开中...", forbidClick: true, duration: 0 });
       const file = await loadChatFile(props.bizId, props.nanoId);
-      path = file?.tauri_file_path ? toLocalPath(file.tauri_file_path) : null;
-    }
-    if (!path) {
-      showToast("无法获取文件路径");
-      return;
-    }
-    try {
-      await openPath(path);
-    } catch (e) {
-      console.error("打开文件失败:", path, e);
-      showToast({ message: "打开文件失败", icon: "fail" });
+      if (file?.tauri_file_path) {
+        await openFile(toLocalPath(file.tauri_file_path));
+      } else {
+        downloaded.value = false;
+        showToast({ message: "打开文件失败", icon: "fail" });
+      }
+    } else {
+      // 未下载 → 仅保存到本地
+      showLoadingToast({ message: "下载中...", forbidClick: true, duration: 0 });
+      const file = await loadChatFile(props.bizId, props.nanoId);
+      if (file?.tauri_file_path) {
+        downloaded.value = true;
+        showToast({ message: "已保存", icon: "success" });
+      } else {
+        showToast({ message: "下载失败", icon: "fail" });
+      }
     }
   } finally {
     closeToast();
     busy.value = false;
   }
 };
+
+onMounted(refreshDownloaded);
+watch(() => props.bizId, refreshDownloaded);
 </script>
 
 <template>
-  <div class="file-msg" @click="handleOpen">
+  <div class="file-msg" @click="handleClick">
     <div class="file-icon" :style="{ color: getFileTypeColor(fileType) }">
       <svg viewBox="0 0 24 24" fill="currentColor">
         <path
@@ -64,13 +120,18 @@ const handleOpen = async () => {
       <div class="file-meta">
         <span class="file-ext">.{{ fileType || "file" }}</span>
         <span v-if="sending" class="file-size sending-text">上传中…</span>
+        <span v-else-if="checking" class="file-size sending-text">检测中…</span>
+        <span v-else-if="downloaded" class="file-size saved-text">已下载</span>
         <span v-else class="file-size">{{
           formatFileSize(fileSize || 0)
         }}</span>
       </div>
     </div>
-    <div class="file-action" :class="{ sending }" aria-label="打开文件">
+    <div class="file-action" :class="{ sending }" :aria-label="downloaded ? '打开文件' : '下载文件'">
       <span v-if="sending" class="spinner"></span>
+      <svg v-else-if="downloaded" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14 3v4a1 1 0 0 0 1 1h4v13H5V3h9zm1-2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-6-6h-1zM12 8h2v3h3v2h-5V8zm0 5H7v-1h5v1z" />
+      </svg>
       <svg v-else viewBox="0 0 24 24" fill="currentColor">
         <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
       </svg>
@@ -136,6 +197,9 @@ const handleOpen = async () => {
 }
 .sending-text {
   color: var(--brand-blue);
+}
+.saved-text {
+  color: var(--success-color, #07c160);
 }
 .file-action {
   flex-shrink: 0;

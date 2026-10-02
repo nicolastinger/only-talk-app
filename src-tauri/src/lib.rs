@@ -52,7 +52,7 @@ use crate::cmd::config_controller::{
 use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
     debug_resource_paths, delete_local_file, get_chat_file_by_biz_id, get_file_by_biz_id,
-    get_local_file, get_local_file_list,
+    get_local_file, get_local_file_list, has_local_chat_file, open_local_file,
 };
 use crate::cmd::friend_controller::{
     block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
@@ -303,6 +303,8 @@ compress_image_to_webp_command,
             get_local_file,
             get_file_by_biz_id,
             get_chat_file_by_biz_id,
+            has_local_chat_file,
+            open_local_file,
             get_local_file_list,
             delete_local_file,
             debug_resource_paths,

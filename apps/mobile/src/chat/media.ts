@@ -1,4 +1,4 @@
-import { getChatFileByBizId } from "@workspace/services";
+import { getChatFileByBizId, hasLocalChatFile } from "@workspace/services";
 
 /** 聊天图片/文件的本地解析缓存（对齐 PC 各 ChatBox 顶部的 imageCache） */
 
@@ -42,6 +42,16 @@ export const loadChatFile = async (bizId: string, nanoId?: string) => {
   } catch (e) {
     console.error("loadChatFile 失败:", bizId, e);
     return null;
+  }
+};
+
+/** 判断本地是否已下载该聊天文件（只查本地 file_record，不触发远程下载） */
+export const checkLocalChatFile = async (bizId: string): Promise<boolean> => {
+  try {
+    return await hasLocalChatFile(bizId);
+  } catch (e) {
+    console.error("checkLocalChatFile 失败:", bizId, e);
+    return false;
   }
 };
 

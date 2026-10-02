@@ -122,11 +122,11 @@ pub async fn get_file_by_biz_id_service(
     // 3、转换成VO
     let mut result = Vec::<FileVo>::new();
     for file in file_list.into_iter() {
-        // 添加文件数据读取
+        // 校验物理文件存在(仅检查, 不读取整个文件字节——大文件会撑爆移动端 IPC)
         let path = file.file_path.ok_or(anyhow::anyhow!("文件不存在"))?;
         let file_path = Path::new(&path);
-        let raw = fs::read(file_path);
-        if raw.is_err() {
+        let meta = fs::metadata(file_path);
+        if meta.is_err() || !meta.is_ok_and(|m| m.is_file()) {
             // 文件不存在
             error!("文件不存在: {:?}", file_path);
             // 递增下载重试次数
@@ -160,7 +160,7 @@ pub async fn get_file_by_biz_id_service(
             original_file_name: Some(final_file_name),
             original_file_path: None,
             absolute_file_path: Some(file_path.to_string_lossy().to_string()),
-            raw: Some(raw?),
+            raw: None,
             size: file.file_size,
             is_del: Some(0),
         };
@@ -169,6 +169,24 @@ pub async fn get_file_by_biz_id_service(
     }
 
     Ok(result)
+}
+
+/**
+ * 判断本地是否已存在该业务文件（只查本地记录 + 物理文件，不触发远程下载）
+ */
+pub async fn has_local_chat_file_service(biz_id: &str) -> Result<bool, anyhow::Error> {
+    if biz_id.is_empty() {
+        return Ok(false);
+    }
+    let file_list = FileRecord::get_by_biz_id(biz_id).await?;
+    for file in file_list.into_iter() {
+        if let Some(path) = file.file_path {
+            if Path::new(&path).is_file() {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 /**
