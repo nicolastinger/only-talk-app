@@ -42,33 +42,39 @@ pub async fn query_group_message_read(
     Ok(record)
 }
 
-/// 上次成功上报到服务端的已读游标(未上报过为 0)。
-pub async fn group_read_reported_server_id(
+/// 已读上报推进状态: 上次成功上报到服务端的已读位置(未上报过返回空串 + 0)。
+///
+/// `(nano_id, timestamp)`: nano_id 即上报内容, timestamp 用于"只推时间戳更新位置"的推进校验。
+pub async fn group_read_reported_position(
     group_uuid: &str,
     user_uuid: &str,
-) -> Result<i64, anyhow::Error> {
+) -> Result<(String, i64), anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let row: Option<(i64,)> = sqlx::query_as(
-        r#"SELECT reported_server_id FROM group_message_read WHERE group_uuid = ?1 AND user_uuid = ?2"#,
+    let row: Option<(String, i64)> = sqlx::query_as(
+        r#"SELECT reported_nano_id, reported_timestamp FROM group_message_read WHERE group_uuid = ?1 AND user_uuid = ?2"#,
     )
     .bind(group_uuid)
     .bind(user_uuid)
     .fetch_optional(&pool_sqlite)
     .await?;
-    Ok(row.map(|r| r.0).unwrap_or(0))
+    Ok(row.unwrap_or((String::new(), 0)))
 }
 
-/// 推进已读上报游标(只前进, 与服务端 update_last_read_id 同语义)。
-pub async fn update_group_reported_server_id(
+/// 推进已读上报位置: 上报成功后记录 nano_id 与对应时间戳。
+///
+/// 只允许推进到时间戳更新的位置(调用方已用 `timestamp > last_reported.timestamp` 把关)。
+pub async fn update_group_reported_position(
     group_uuid: &str,
     user_uuid: &str,
-    reported_server_id: i64,
+    reported_nano_id: &str,
+    reported_timestamp: i64,
 ) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     sqlx::query(
-        r#"UPDATE group_message_read SET reported_server_id = ?1 WHERE group_uuid = ?2 AND user_uuid = ?3 AND reported_server_id < ?1"#,
+        r#"UPDATE group_message_read SET reported_nano_id = ?1, reported_timestamp = ?2 WHERE group_uuid = ?3 AND user_uuid = ?4"#,
     )
-    .bind(reported_server_id)
+    .bind(reported_nano_id)
+    .bind(reported_timestamp)
     .bind(group_uuid)
     .bind(user_uuid)
     .execute(&pool_sqlite)
@@ -76,24 +82,20 @@ pub async fn update_group_reported_server_id(
     Ok(())
 }
 
-/// 跨端已读上报: 群已读水位 nano_id 对应的服务端 id(水位即已读位置, 而非本地 max)。
-pub async fn group_read_watermark_server_id(
+/// 已读上报: 当前已读水位的 nano_id(水位即已读位置)。
+///
+/// 客户端只上报 nano_id, 不做本地数值换算 —— 服务端按会话类型反查自己的消息 id 推进。
+/// 推进校验的时间戳不在水位表取, 而是按 nano_id 回查本地聊天记录表(`group_chat_record`)。
+pub async fn group_read_watermark_nano_id(
     group_uuid: &str,
     user_uuid: &str,
-) -> Result<Option<i64>, anyhow::Error> {
+) -> Result<Option<String>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let row: Option<(String,)> = sqlx::query_as(
         r#"SELECT nano_id FROM group_message_read WHERE group_uuid = ?1 AND user_uuid = ?2"#,
     )
     .bind(group_uuid)
     .bind(user_uuid)
-    .fetch_optional(&pool_sqlite)
-    .await?;
-    let Some((nano_id,)) = row else { return Ok(None) };
-    let row: Option<(i64,)> = sqlx::query_as(
-        r#"SELECT server_id FROM group_chat_record WHERE nano_id = ?1 AND server_id IS NOT NULL"#,
-    )
-    .bind(nano_id)
     .fetch_optional(&pool_sqlite)
     .await?;
     Ok(row.map(|r| r.0))

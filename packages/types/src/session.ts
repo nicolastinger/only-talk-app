@@ -75,11 +75,12 @@ export interface SyncResponse {
   sessions: SyncSession[];
 }
 
-/** 已读上报项(POST /session/read) */
+/** 已读上报项(POST /session/read, 新契约: 只报已读水位 nano_id, 服务端反查自己的消息 id) */
 export interface SessionReadItem {
   session_uuid: string;
   session_type: 1 | 2;
-  last_read_id: number;
+  /** 已读水位对应消息的 nano_id(客户端不做本地数值换算) */
+  last_read_nano_id: string;
 }
 
 /** 同步游标回报项(POST /session/synced) */
