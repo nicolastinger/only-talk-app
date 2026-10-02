@@ -481,6 +481,14 @@ watch(textMessage, async (msg) => {
     if (idx !== -1) messages.value[idx].failed = true;
     return;
   }
+  // 自己其他端发送的消息(self-echo)：send_user=我, recv_user=好友。
+  // 与移动端自己发送后 ACK 刷新的路径一致——直接重拉本地 sqlite
+  // (双向查询已包含 self-echo 消息)，避免依赖实时 push 的时序问题。
+  if (msg.send_user === meUuid.value && msg.recv_user === friendId) {
+    reloadFirstPage();
+    nextTick(() => scrollToBottom(true));
+    return;
+  }
   await pushMessage(msg);
   nextTick(() => scrollToBottom(true));
   invoke("mark_read_chat_session", { friendUuid: friendId }).catch(() => {});
