@@ -4,8 +4,8 @@
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
-  VideoCameraOutlined,
 } from '@ant-design/icons';
+import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
 import { Button, Spin } from 'antd';
 import React from 'react';
@@ -21,22 +21,36 @@ export type CallStage =
 
 interface CallScreenProps {
   callStage: CallStage;
+  /** 对方头像(未接听阶段覆盖远端视频区); 未取到用默认图标兜底 */
+  avatar?: string;
   onAccept: () => void;
   onReject: () => void;
 }
 const CallScreen: React.FC<CallScreenProps> = ({
   callStage,
+  avatar,
   onAccept,
   onReject,
 }) => {
   const intl = useIntl();
 
+  const renderAvatar = () => (
+    <div className={styles.callAvatar}>
+      <img
+        src={avatar || DEFAULT_ICON}
+        alt="avatar"
+        className={styles.callAvatarImg}
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = DEFAULT_ICON;
+        }}
+      />
+    </div>
+  );
+
   if (callStage === 'incoming') {
     return (
       <div className={styles.callScreen}>
-        <div className={styles.callAvatar}>
-          <VideoCameraOutlined />
-        </div>
+        {renderAvatar()}
         <div className={styles.callTitle}>
           {intl.formatMessage({ id: 'webRTCMessage.inviteReceived' })}
         </div>
@@ -65,9 +79,7 @@ const CallScreen: React.FC<CallScreenProps> = ({
   if (callStage === 'outgoing') {
     return (
       <div className={styles.callScreen}>
-        <div className={styles.callAvatar}>
-          <VideoCameraOutlined />
-        </div>
+        {renderAvatar()}
         <div className={styles.callTitle}>
           {intl.formatMessage({ id: 'chat.footer.webRTCInviteSent' })}
         </div>
@@ -79,9 +91,7 @@ const CallScreen: React.FC<CallScreenProps> = ({
   // rejected
   return (
     <div className={styles.callScreen}>
-      <div className={styles.callAvatar}>
-        <VideoCameraOutlined />
-      </div>
+      {renderAvatar()}
       <div className={styles.callTitle}>
         {intl.formatMessage({ id: 'webRTCMessage.rejected' })}
       </div>

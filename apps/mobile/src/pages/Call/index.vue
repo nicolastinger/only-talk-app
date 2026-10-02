@@ -29,6 +29,13 @@ const showRemoteVideo = computed(
     call.videoOn &&
     !!remoteStream.value
 );
+// 未接听/未接通时, 远端区域用对方头像全屏覆盖(接听后 showRemoteVideo 为真, 头像让位给视频)
+const showRemotePlaceholder = computed(
+  () =>
+    call.active &&
+    call.stage !== "idle" &&
+    !showRemoteVideo.value
+);
 const showLocalPreview = computed(
   () => isVideo.value && call.videoOn && !!localStream.value && call.stage !== "idle"
 );
@@ -149,6 +156,11 @@ const coverAvatar = computed(
       autoplay
       playsinline
     ></video>
+
+    <!-- 未接听/未接通: 对方头像全屏覆盖远端区域(接听后自动让位给视频) -->
+    <div v-show="showRemotePlaceholder" class="remote-placeholder">
+      <img :src="coverAvatar" class="remote-placeholder-img" alt="" />
+    </div>
 
     <!-- 本地预览（视频通话小窗） -->
     <video
@@ -317,6 +329,23 @@ const coverAvatar = computed(
   object-fit: contain;
   z-index: 1;
   background: #000;
+}
+.remote-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 25%, #232733 0%, #0b0d12 60%, #000 100%);
+}
+.remote-placeholder-img {
+  width: 38%;
+  max-width: 180px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .local-video {
   position: absolute;

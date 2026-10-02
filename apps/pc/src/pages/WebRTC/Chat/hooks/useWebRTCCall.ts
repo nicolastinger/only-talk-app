@@ -10,8 +10,11 @@
  * 组件层仅负责渲染，调用此 Hook 获取状态与动作。
  */
 import { updateWebRTCWindowState } from '@/hooks/useWebRTCSignalApi';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { initWebRTCConsoleCapture, useWebRTCLogs } from '@/services/webrtcLog';
 import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
+import { get_user_info_with_cache } from '@workspace/services';
+import { UserInfo } from '@workspace/types';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -80,10 +83,34 @@ export const useWebRTCCall = () => {
   const [activeView, setActiveView] = useState<'video' | 'log'>('video');
   const webRTCLogs = useWebRTCLogs();
 
+  // 对方用户信息(昵称/头像), 未接听阶段用头像覆盖远端视频区
+  const [friendUserInfo, setFriendUserInfo] = useState<UserInfo | null>(null);
+
   const isPreCall =
     callStage === 'incoming' ||
     callStage === 'outgoing' ||
     callStage === 'rejected';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!friendId) return;
+    (async () => {
+      try {
+        const result = await get_user_info_with_cache(friendId);
+        if (!cancelled) {
+          setFriendUserInfo(result.user_info);
+        }
+      } catch (error) {
+        console.error('[WebRTCChat] 获取对方用户信息失败:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [friendId]);
+
+  const { avatarMap } = useAvatarMap([friendUserInfo?.icon]);
+  const friendAvatar = avatarMap.get(friendUserInfo?.icon || '') || '';
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -718,6 +745,7 @@ export const useWebRTCCall = () => {
     localUserId,
     isInitiator,
     isPreCall,
+    friendAvatar,
     messages,
     inputText,
     connectionStatus,

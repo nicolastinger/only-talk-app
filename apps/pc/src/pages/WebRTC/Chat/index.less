@@ -80,6 +80,27 @@
   object-fit: contain;
 }
 
+.remotePlaceholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+  z-index: 2;
+}
+
+.remotePlaceholderImg {
+  width: 40%;
+  max-width: 160px;
+  border-radius: 50%;
+  object-fit: cover;
+  opacity: 0.9;
+}
+
 .localVideoContainer {
   position: absolute;
   bottom: 20px;
@@ -391,6 +412,13 @@
   font-size: 42px;
   color: #fff;
   background-color: #52c41a;
+  overflow: hidden;
+}
+
+.callAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .callTitle {

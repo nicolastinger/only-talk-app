@@ -29,6 +29,7 @@ const WebRTCChat: React.FC = () => {
   const intl = useIntl();
   const {
     isPreCall,
+    friendAvatar,
     messages,
     inputText,
     connectionStatus,
@@ -108,6 +109,7 @@ const WebRTCChat: React.FC = () => {
       ) : isPreCall ? (
         <CallScreen
           callStage={callStage}
+          avatar={friendAvatar}
           onAccept={() => {
             handleAccept().catch(() => {});
           }}
@@ -120,6 +122,8 @@ const WebRTCChat: React.FC = () => {
           <VideoPanel
             isVideoEnabled={isVideoEnabled}
             isAudioEnabled={isAudioEnabled}
+            connectionStatus={connectionStatus}
+            friendAvatar={friendAvatar}
             localVideoRef={localVideoRef}
             remoteVideoRef={remoteVideoRef}
             onToggleVideo={handleToggleVideo}
