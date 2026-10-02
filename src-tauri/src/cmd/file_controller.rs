@@ -253,7 +253,7 @@ pub async fn open_local_file<R: Runtime>(
             fs::copy(file_path, &dest).map_err(|e| format!("复制文件到缓存失败: {}", e))?;
         }
 
-        let authority = format!("{}.fileprovider", app.package_info().identifier);
+        let authority = format!("{}.fileprovider", app.config().identifier);
         // file_paths.xml: <cache-path name="my_cache_images" path="." />
         let content_uri = format!("content://{}/my_cache_images/open/{}", authority, file_name);
         info!("Android 打开文件 content:// URI: {}", content_uri);
