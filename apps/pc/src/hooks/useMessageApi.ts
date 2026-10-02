@@ -17,7 +17,10 @@ const useMessageApi = (sendUuid: string | null, recvUuid: string) => {
       unlisten = await listen<string>('text_message', (event) => {
         const text = JSON.parse(event.payload) as TextQuicMsgVo;
         if (text.recv_user !== recvUuid) {
-          return;
+          // 自己其他端发送的消息(self-echo)会被回推: send_user=我, recv_user=好友
+          if (!(sendUuid && text.send_user === recvUuid && text.recv_user === sendUuid)) {
+            return;
+          }
         }
         // 监听某个账号
         if (sendUuid !== null) {

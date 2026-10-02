@@ -22,10 +22,19 @@ export function useMessageApi(
         } else {
           // 1-on-1 mode: match by recv_user (my UUID)
           if (msg.recv_user !== targetUuid) return;
+          // 自己其他端发送的消息(self-echo)会被回推: send_user=我, recv_user=好友。
+          // 若好友不是当前会话对象也丢弃, 避免串会话。
           if (
             friendUuid &&
             msg.send_user !== friendUuid &&
-            msg.send_user !== "system"
+            msg.send_user !== "system" &&
+            msg.send_user !== targetUuid
+          )
+            return;
+          if (
+            msg.send_user === targetUuid &&
+            friendUuid &&
+            msg.recv_user !== friendUuid
           )
             return;
         }

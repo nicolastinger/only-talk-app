@@ -266,6 +266,9 @@ const ChatPage: React.FC = () => {
       let from = MessageFrom.Customer;
       if (textMessage.send_user == SYSTEM_ACCOUNT) {
         from = MessageFrom.System;
+      } else if (textMessage.send_user === meUuid) {
+        // 自己其他端发送的消息(self-echo)回推, 渲染为己方气泡
+        from = MessageFrom.Mine;
       }
       const temp: ChatMessage = {
         from,

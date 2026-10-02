@@ -317,8 +317,9 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
             last_message_id: 0,
         };
         if is_self {
-            // 自己另一台设备回推：仅落库，不弹未读（列表预览由轮询/重进刷新）
-            update_chat_session_db(&chat_session).await?;
+            // 自己另一台设备回推：仅落库并广播会话事件(type=1, unread_count=0)，
+            // 让会话列表实时置顶预览，不依赖轮询/重进刷新
+            update_session_list(chat_session).await?;
         } else if flag {
             chat_session.unread_count = 0;
             update_chat_session_db(&chat_session).await?;
@@ -333,8 +334,8 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
         chat_session.text_type = msg.text_type;
         chat_session.nano_id = msg.nano_id;
         if is_self {
-            // 自己另一台设备回推：只更新预览与内容，未读保持不变
-            update_chat_session_db(&chat_session).await?;
+            // 自己另一台设备回推：更新预览并广播会话事件，未读保持不变(0)
+            update_session_list(chat_session).await?;
         } else if flag {
             chat_session.unread_count = 0;
             update_chat_session_db(&chat_session).await?;
