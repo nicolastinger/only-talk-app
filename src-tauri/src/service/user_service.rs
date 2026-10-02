@@ -262,6 +262,14 @@ pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
 // (`chat_record` / `group_chat_record`) 的时间戳, **必须严格大于**上次已上报的时间戳才允许上报。
 // 水位表记录的时间戳是"阅读事件"水位, 可能被跨端回填推到历史位置; 聊天记录表的时间戳才是
 // 消息本身的先后顺序 —— 只推它更晚的消息, 避免把更旧位置重复推给服务端。
+//
+// 上报节流: 每次上报间隔随机 60~90 秒(打散各端上报时刻, 防"已读风暴"集中打服务端)。
+fn next_read_report_delay() -> Duration {
+    // 取 uuid v4 的 128 位随机数取模, 均匀落在 [0, 31) → 60 + r ∈ [60, 90]
+    let r = (Uuid::new_v4().as_u128() % 31) as u64;
+    Duration::from_secs(60 + r)
+}
+
 pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
@@ -364,7 +372,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
             }
         }
         count += 1;
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        tokio::time::sleep(next_read_report_delay()).await;
     }
     Ok(())
 }
