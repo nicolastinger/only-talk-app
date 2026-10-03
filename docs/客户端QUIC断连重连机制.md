@@ -44,6 +44,7 @@
 | uni 流接收循环 | 接收服务端单向流（消息推送、PONG 等） | `text_quic_client.rs:194` |
 | bidi send-half 保活 | 保持发送流存活直到断连 | `text_quic_client.rs:243` |
 | 心跳任务 | 周期发送 PING，检测断连 | `text_quic_client.rs:255` |
+| TTL 续期需求任务 | 每 2 分钟携带短效 token 发 `MSG_TYPE_TTL`，续期路由 key | `text_quic_client.rs:467` |
 
 ## 3. 心跳机制（应用层）
 
@@ -53,6 +54,15 @@
 - **回复**：服务端收到 PING 后回 `MSG_TYPE_PING`（payload = `"pong"`），客户端在 `process_ping_msg`（`process_text_msg_from_server.rs:556`）处理。
 - **身份防串扰**：每次心跳任务生成唯一 `ping_uuid` 存入 `GLOBAL_QUIC_USER_INFO`；重连后旧任务检测到 `ping_uuid` 变更即自行退出（`text_quic_client.rs:344`）。
 - **状态校验**：每次发送前检查 `GLOBAL_QUIC_STATE == Connected`，否则退出（`text_quic_client.rs:354`）。
+
+### 3.1 TTL 续期需求（客户端驱动路由 key 保活）
+
+路由 key（Redis `{platform}:QUIC:SERVER:{uuid}:TEXT`，TTL 7200s）的续期已由**服务端定时任务改为客户端驱动**：
+
+- **间隔**：每 **2 分钟**发送一次 `MSG_TYPE_TTL`（payload = `{"token": "<当前短效 access token>"}`）到 uni 流（`send_ttl_renew_msg`，`text_quic_client.rs:658`）。
+- **token 动态读取**：每次发送前从 `GLOBAL_QUIC_USER_INFO` 读当前 token（登录/刷新后即用新值）。
+- **服务端行为**：`verify_token` 校验签名 + 过期 + 归属（uuid/platform 与连接一致）通过后 `set_ex(key, server_index, 7200)` 续期；校验失败仅告警不续期，路由 key 到期自然下线。
+- **状态校验**：每次发送前检查 `GLOBAL_QUIC_STATE == Connected`，否则退出（重连后由新代连接重新启动本任务）。
 
 ## 4. 断连判定（触发条件汇总）
 

@@ -22,7 +22,7 @@ use crate::quic_service::connection_state::{
 use crate::quic_service::safe_configuration::configure_client;
 use crate::service::user_service::{get_user_info, insert_user_info, sync_offline_messages};
 use crate::utils::global_static_str::{PING, SYSTEM};
-use crate::utils::message_types::MSG_TYPE_PING;
+use crate::utils::message_types::{MSG_TYPE_PING, MSG_TYPE_TTL};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -464,6 +464,16 @@ async fn try_connect_once(
         });
     }
 
+    // 启动 TTL 续期需求（每 2 分钟携带短效 token，服务端校验通过后续期路由 key）
+    {
+        let conn = connection.clone();
+        tokio::spawn(async move {
+            if let Err(e) = send_ttl_renew_msg(conn).await {
+                error!("TTL 续期任务异常退出: {}", e);
+            }
+        });
+    }
+
     Ok((disconnect_rx, endpoint))
 }
 
@@ -638,6 +648,44 @@ async fn send_ping_msg(
                 }
             }
         };
+    }
+    Ok(())
+}
+
+/// 发送 TTL 续期需求消息：每 2 分钟携带当前短效 token 经 uni 流发送，
+/// 服务端校验 token 有效后续期用户路由 key（替代服务端定时续期）。
+/// 连接状态变更（重连/断开）即退出，由新代连接重新启动本任务。
+async fn send_ttl_renew_msg(conn: Connection) -> Result<(), anyhow::Error> {
+    let sender = get_user_info("uuid").await.context("获取uuid失败")?;
+    let mut refresh_interval = tokio::time::interval(Duration::from_secs(120));
+    loop {
+        refresh_interval.tick().await;
+
+        let state = *GLOBAL_QUIC_STATE.read().await;
+        if state != QuicConnectionState::Connected {
+            info!("连接状态已变更({:?})，TTL 续期任务退出", state);
+            break;
+        }
+
+        let token = match get_user_info("token").await {
+            Ok(t) => t,
+            Err(e) => {
+                warn!("获取 token 失败，跳过本次 TTL 续期: {}", e);
+                continue;
+            }
+        };
+        let mut map = serde_json::Map::new();
+        map.insert("token".to_string(), serde_json::Value::String(token));
+        let ttl_msg = generate_text_msg(
+            MSG_TYPE_TTL,
+            serde_json::to_vec(&map)?,
+            SYSTEM.to_string(),
+            sender.clone(),
+        )?;
+        match send_via_new_stream(&conn, &ttl_msg).await {
+            Ok(_) => info!("TTL 续期需求消息发送成功"),
+            Err(e) => warn!("TTL 续期需求消息发送失败: {}", e),
+        }
     }
     Ok(())
 }

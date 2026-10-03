@@ -128,6 +128,9 @@ pub const MSG_TYPE_SYSTEM: u16 = 10001;
 /// 同平台新连接建立后，通知旧客户端退出登录
 pub const MSG_TYPE_FORCE_LOGOUT: u16 = 10002;
 
+/// 客户端 TTL 续期需求消息（每 2 分钟携带短效 token 发送，服务端校验通过后续期用户路由 key）
+pub const MSG_TYPE_TTL: u16 = 10003;
+
 /// 当前会话好友
 pub const CURRENT_SESSION_FRIEND: &str = "current_session_friend";
 
