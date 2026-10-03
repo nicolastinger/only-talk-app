@@ -92,6 +92,15 @@ const onDelete = async (file: LocalFileVo) => {
   }
 };
 
+const onOpen = async (file: LocalFileVo) => {
+  try {
+    await invoke("open_local_file", { path: file.file_path });
+  } catch (e) {
+    console.error("打开文件失败:", file.file_path, e);
+    showToast({ message: "打开文件失败", icon: "fail" });
+  }
+};
+
 const thumb = (file: LocalFileVo) =>
   file.file_type === "image" ? convertFileSrc(file.file_path) : "";
 
@@ -168,7 +177,12 @@ onMounted(() => {
     />
 
     <div v-else class="file-list">
-      <div v-for="file in files" :key="file.id" class="file-item">
+<div
+        v-for="file in files"
+        :key="file.id"
+        class="file-item"
+        @click="onOpen(file)"
+      >
         <img
           v-if="file.file_type === 'image'"
           :src="thumb(file)"
@@ -185,7 +199,7 @@ onMounted(() => {
             <span>{{ formatTime(file.created_at) }}</span>
           </div>
         </div>
-        <button class="delete-btn" @click="onDelete(file)">删除</button>
+        <button class="delete-btn" @click.stop="onDelete(file)">删除</button>
       </div>
     </div>
   </div>

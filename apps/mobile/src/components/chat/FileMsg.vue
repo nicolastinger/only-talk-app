@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
-import { showToast, showLoadingToast, closeToast } from "vant";
+import { showToast } from "vant";
 import { formatFileSize, getFileTypeColor } from "@/chat/format";
 import { checkLocalChatFile, loadChatFile, toLocalPath } from "@/chat/media";
 import { isLocalFilePath } from "@/chat/messageParse";
@@ -60,44 +60,40 @@ const handleClick = async () => {
   if (busy.value || props.sending) return;
   busy.value = true;
 
-  // 本地已有文件 → 直接打开
-  const localPath = resolveLocalPath();
-  if (localPath) {
-    await openFile(localPath);
-    busy.value = false;
-    return;
-  }
-
-  if (!props.bizId) {
-    showToast("无法获取文件路径");
-    busy.value = false;
-    return;
-  }
-
   try {
-    if (downloaded.value) {
-      // 已下载 → 打开
-      showLoadingToast({ message: "打开中...", forbidClick: true, duration: 0 });
-      const file = await loadChatFile(props.bizId, props.nanoId);
-      if (file?.tauri_file_path) {
-        await openFile(toLocalPath(file.tauri_file_path));
-      } else {
-        downloaded.value = false;
-        showToast({ message: "打开文件失败", icon: "fail" });
-      }
-    } else {
-      // 未下载 → 仅保存到本地
-      showLoadingToast({ message: "下载中...", forbidClick: true, duration: 0 });
-      const file = await loadChatFile(props.bizId, props.nanoId);
-      if (file?.tauri_file_path) {
-        downloaded.value = true;
-        showToast({ message: "已保存", icon: "success" });
-      } else {
-        showToast({ message: "下载失败", icon: "fail" });
-      }
+    // 本地已有文件 → 直接打开
+    const localPath = resolveLocalPath();
+    if (localPath) {
+      await openFile(localPath);
+      return;
     }
+
+    if (!props.bizId) {
+      showToast("无法获取文件路径");
+      return;
+    }
+
+    // 未下载 → 下载到本地（不阻塞点击）
+    if (!downloaded.value) {
+      const file = await loadChatFile(props.bizId, props.nanoId);
+      if (!file?.tauri_file_path) {
+        showToast({ message: "下载失败", icon: "fail" });
+        return;
+      }
+      downloaded.value = true;
+    }
+
+    // 下载完成后直接打开（无需二次点击）
+    const file = await loadChatFile(props.bizId, props.nanoId);
+    if (!file?.tauri_file_path) {
+      showToast({ message: "打开文件失败", icon: "fail" });
+      return;
+    }
+    await openFile(toLocalPath(file.tauri_file_path));
+  } catch (e) {
+    console.error("文件下载/打开失败:", e);
+    showToast({ message: "操作失败", icon: "fail" });
   } finally {
-    closeToast();
     busy.value = false;
   }
 };

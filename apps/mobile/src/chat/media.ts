@@ -55,16 +55,29 @@ export const checkLocalChatFile = async (bizId: string): Promise<boolean> => {
   }
 };
 
-/** 从文件服务返回的 tauri 资源地址还原为可打开的本机路径（对齐 PC ChatFile.getLocalPath） */
+/** 从文件服务返回的 tauri 资源地址还原为可打开的本机路径（对齐 PC ChatFile.getLocalPath，兼容各端 asset 协议前缀） */
 export const toLocalPath = (tauriFilePath: string): string => {
   let localPath = tauriFilePath;
-  if (tauriFilePath.startsWith("http://asset.localhost/")) {
-    localPath = tauriFilePath.replace("http://asset.localhost/", "");
-    try {
-      localPath = decodeURIComponent(localPath);
-    } catch {
-      // keep as-is
+  const assetPrefixes = [
+    "http://asset.localhost/",
+    "https://asset.localhost/",
+    "asset://localhost/",
+    "tauri://localhost/",
+    "asset://",
+  ];
+  for (const prefix of assetPrefixes) {
+    if (tauriFilePath.startsWith(prefix)) {
+      localPath = tauriFilePath.slice(prefix.length);
+      break;
     }
+  }
+  // 去掉可能存在的查询/哈希后缀
+  const cutIdx = localPath.search(/[?#]/);
+  if (cutIdx > 0) localPath = localPath.slice(0, cutIdx);
+  try {
+    localPath = decodeURIComponent(localPath);
+  } catch {
+    // keep as-is
   }
   if (localPath.includes(":\\") && localPath.includes("/")) {
     localPath = localPath.replace(/\//g, "\\");
