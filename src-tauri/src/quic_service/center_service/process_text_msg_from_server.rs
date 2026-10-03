@@ -270,6 +270,12 @@ async fn process_call_control(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let me = get_user_info("uuid").await?;
 
+    // 自己另一台设备同步回推的消息(self-echo)：不发来电/响铃，避免本端自连回环
+    if msg.send_user == me {
+        info!("self-echo 跳过通话控制命令: send_user={} recv_user={}", msg.send_user, msg.recv_user);
+        return Ok(());
+    }
+
     // 发送者已被拉黑：不分发控制命令（不弹通话窗口）
     if msg.send_user != me && is_blocked_db(&me, &msg.send_user).await? {
         info!("发送者已被拉黑，跳过通话控制命令: {}", msg.send_user);
@@ -652,6 +658,14 @@ async fn process_local_notify_message(
 
 async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let me = get_user_info("uuid").await?;
+
+    // 自己另一台设备同步回推的信令(self-echo)：不回灌前端，避免本端自连回环
+    if msg.send_user == me {
+        info!("self-echo 跳过 WebRTC 信令: send_user={} recv_user={}", msg.send_user, msg.recv_user);
+        return Ok(());
+    }
+
     let signal: WebRTCSignalMessage = serde_json::from_str(&msg.raw)?;
 
     info!(

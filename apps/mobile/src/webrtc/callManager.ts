@@ -206,7 +206,8 @@ const onTextMessage = async (payload: string) => {
   const msg = parseTextQuicMsg(payload);
   if (!msg) return;
   const me = await ensureMe();
-  if (!me || msg.recv_user !== me) return;
+  // 不是发给我的 / 自己发给自己的消息(self-echo) 一律忽略，避免自呼形成本端自连
+  if (!me || msg.recv_user !== me || msg.send_user === me) return;
 
   if (
     msg.text_type !== 12 &&

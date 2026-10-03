@@ -191,6 +191,8 @@ const useWebRTCIncomingCall = () => {
         unlisten = await listen<string>('call_control', async (event) => {
           const text: TextQuicMsgVo = JSON.parse(event.payload);
           if (text.recv_user !== meUuid) return;
+          // 自己发给自己的邀请(self-echo)：忽略，避免打开自呼窗口形成本端自连
+          if (text.send_user === meUuid) return;
           if (text.text_type !== 12) return; // MSG_TYPE_P2P_VIDEO_CALL_INVITE
 
           let sessionId = '';
