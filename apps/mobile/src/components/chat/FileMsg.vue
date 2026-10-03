@@ -22,6 +22,7 @@ const props = defineProps<{
 const busy = ref(false);
 const downloaded = ref(false);
 const checking = ref(false);
+const downloading = ref(false);
 
 const resolveLocalPath = (): string | null => {
   if (props.localPath || isLocalFilePath(props.fileName)) {
@@ -73,27 +74,25 @@ const handleClick = async () => {
       return;
     }
 
-    // 未下载 → 下载到本地（不阻塞点击）
+    // 未下载 → 先下载到本地（内联下载中提示，不阻塞点击）
     if (!downloaded.value) {
-      const file = await loadChatFile(props.bizId, props.nanoId);
-      if (!file?.tauri_file_path) {
-        showToast({ message: "下载失败", icon: "fail" });
-        return;
-      }
-      downloaded.value = true;
+      downloading.value = true;
     }
-
-    // 下载完成后直接打开（无需二次点击）
+    // 下载(loadChatFile 内部会下载并落库)或取本地路径
     const file = await loadChatFile(props.bizId, props.nanoId);
     if (!file?.tauri_file_path) {
-      showToast({ message: "打开文件失败", icon: "fail" });
+      showToast({ message: downloaded.value ? "打开文件失败" : "下载失败", icon: "fail" });
       return;
     }
+    downloaded.value = true;
+
+    // 下载完成后直接打开（无需二次点击）
     await openFile(toLocalPath(file.tauri_file_path));
   } catch (e) {
     console.error("文件下载/打开失败:", e);
     showToast({ message: "操作失败", icon: "fail" });
   } finally {
+    downloading.value = false;
     busy.value = false;
   }
 };
@@ -116,6 +115,7 @@ watch(() => props.bizId, refreshDownloaded);
       <div class="file-meta">
         <span class="file-ext">.{{ fileType || "file" }}</span>
         <span v-if="sending" class="file-size sending-text">上传中…</span>
+        <span v-else-if="downloading" class="file-size sending-text">下载中…</span>
         <span v-else-if="checking" class="file-size sending-text">检测中…</span>
         <span v-else-if="downloaded" class="file-size saved-text">已下载</span>
         <span v-else class="file-size">{{
@@ -124,7 +124,7 @@ watch(() => props.bizId, refreshDownloaded);
       </div>
     </div>
     <div class="file-action" :class="{ sending }" :aria-label="downloaded ? '打开文件' : '下载文件'">
-      <span v-if="sending" class="spinner"></span>
+      <span v-if="sending || downloading" class="spinner"></span>
       <svg v-else-if="downloaded" viewBox="0 0 24 24" fill="currentColor">
         <path d="M14 3v4a1 1 0 0 0 1 1h4v13H5V3h9zm1-2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-6-6h-1zM12 8h2v3h3v2h-5V8zm0 5H7v-1h5v1z" />
       </svg>
