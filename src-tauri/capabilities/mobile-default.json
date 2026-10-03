@@ -25,6 +25,7 @@
         { "path": "$HOME/**" }
       ]
     },
+    "view:allow-view",
     "core:default"
   ]
 }

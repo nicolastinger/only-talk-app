@@ -4,6 +4,7 @@ use std::path::Path;
 use log::{error, info, warn};
 use tauri::path::BaseDirectory;
 use tauri::{Manager, Runtime};
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_opener::OpenerExt;
 
 use crate::config::get_config;
@@ -215,8 +216,9 @@ pub async fn has_local_chat_file(biz_id: String) -> Result<bool, String> {
 
 /// 打开本地文件（跨平台）
 /// - 桌面: 直接交给系统默认程序打开
-/// - Android: 复制到 cache 目录后经 FileProvider 生成 content:// URI 打开，
-///   裸路径无法被 Intent.ACTION_VIEW 解析(Android 需要 content:// 或 file:// 并授权)
+/// - Android: 复制到 cache 目录后交给 tauri-plugin-view，
+///   由插件经 FileProvider 生成 content:// URI 并带 FLAG_GRANT_READ_URI_PERMISSION
+///   打开（opener 插件移动端不支持打开文件且缺 URI 授权）
 #[tauri::command]
 pub async fn open_local_file<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -233,8 +235,8 @@ pub async fn open_local_file<R: Runtime>(
 
     #[cfg(target_os = "android")]
     {
-        // Android: 通过 FileProvider(content://) 打开, 复用 manifest 已声明的
-        // ${applicationId}.fileprovider + file_paths.xml 的 cache-path
+        // Android: 复制到 cache/open 目录后交给 view 插件打开,
+        // 复用 manifest 声明的 ${applicationId}.fileprovider + file_paths.xml 的 cache-path
         let cache_dir = app
             .path()
             .cache_dir()
@@ -253,14 +255,15 @@ pub async fn open_local_file<R: Runtime>(
             fs::copy(file_path, &dest).map_err(|e| format!("复制文件到缓存失败: {}", e))?;
         }
 
-        let authority = format!("{}.fileprovider", app.config().identifier);
-        // file_paths.xml: <cache-path name="my_cache_images" path="." />
-        let content_uri = format!("content://{}/my_cache_images/open/{}", authority, file_name);
-        info!("Android 打开文件 content:// URI: {}", content_uri);
-        app.opener().open_path(content_uri, None::<String>).map_err(|e| {
-            error!("Android 打开文件失败: {}", e);
-            e.to_string()
-        })
+        info!("Android 打开文件: {:?}", dest);
+        use tauri_plugin_view::ViewExt;
+        app.view()
+            .view(tauri_plugin_view::ViewRequest { path: Some(dest.to_string_lossy().into_owned()) })
+            .map_err(|e| {
+                error!("Android 打开文件失败: {}", e);
+                e.to_string()
+            })?;
+        Ok(())
     }
 
     #[cfg(not(target_os = "android"))]
