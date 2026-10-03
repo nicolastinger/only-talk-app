@@ -7,7 +7,6 @@ import {
   VideoCameraAddOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
-import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
 import { Button, Tooltip } from 'antd';
 import React from 'react';
@@ -16,10 +15,6 @@ import styles from '../index.less';
 interface VideoPanelProps {
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
-  /** 远端连接状态: connecting 时远端视频流未就绪, 用对方头像覆盖 */
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'failed';
-  /** 对方头像(远端流未就绪时覆盖显示) */
-  friendAvatar?: string;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
   onToggleVideo: () => void;
@@ -29,16 +24,12 @@ interface VideoPanelProps {
 const VideoPanel: React.FC<VideoPanelProps> = ({
   isVideoEnabled,
   isAudioEnabled,
-  connectionStatus,
-  friendAvatar,
   localVideoRef,
   remoteVideoRef,
   onToggleVideo,
   onToggleAudio,
 }) => {
   const intl = useIntl();
-  // 远端视频流未就绪(connecting/failed/disconnected)时, 用对方头像覆盖
-  const showRemotePlaceholder = connectionStatus !== 'connected';
 
   return (
     <div className={styles.videoPanel}>
@@ -50,18 +41,6 @@ const VideoPanel: React.FC<VideoPanelProps> = ({
             playsInline
             className={styles.remoteVideo}
           />
-          {showRemotePlaceholder && (
-            <div className={styles.remotePlaceholder}>
-              <img
-                src={friendAvatar || DEFAULT_ICON}
-                alt="avatar"
-                className={styles.remotePlaceholderImg}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = DEFAULT_ICON;
-                }}
-              />
-            </div>
-          )}
           <div className={styles.videoLabel}>
             {intl.formatMessage({ id: 'webrtc.remote' })}
           </div>
