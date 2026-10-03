@@ -5,16 +5,14 @@ use tokio::time::timeout;
 
 use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
 use crate::dao::chat_record_send::query_chat_record_send_by_user;
-use crate::dao::webrtc_signal_db::query_webrtc_signal_by_session;
 use crate::entity::chat_record_send::ChatRecordSend;
-use crate::entity::webrtc_signal::WebrtcSignal;
 use crate::entity::Page;
 use crate::service::chat_service::{
     get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
-    ignore_send_msg_service, retry_send_msg_service, send_file_msg_service,
-    send_group_file_msg_service, send_group_image_msg_service, send_group_text_msg_service,
-    send_image_msg_service, send_text_msg_service, send_webrtc_signal_service,
-    update_group_last_read_msg_service, update_last_read_msg_from_db,
+    ignore_send_msg_service, retry_send_msg_service, send_call_control_msg_service,
+    send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
+    send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
+    send_webrtc_signal_service, update_group_last_read_msg_service, update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -47,6 +45,30 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
 #[tauri::command]
 pub async fn send_webrtc_signal(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
     send_webrtc_signal_service(text_quic_msg).await.map_err(|e| e.to_string())
+}
+
+/// 发送视频通话控制消息（12-15，独立通道）
+///
+/// 自动生成一条 type=1 文本历史记录（prev_id 链、三方存储），
+/// 控制命令本身只转发不存储、失败不重发。
+#[tauri::command]
+pub async fn send_call_control_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        send_call_control_msg_service(text_quic_msg).await
+    })
+    .await;
+    match result {
+        Ok(Ok(_)) => Ok("success".to_string()),
+        Ok(Err(e)) => {
+            error!("发送通话控制消息失败,{}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("超时：10秒内未能获取锁 {}", elapsed);
+            Err("获取锁超时".to_string())
+        }
+    }
 }
 
 /// 发送群聊文本消息（无锁机制）
@@ -111,12 +133,6 @@ pub async fn get_chat_record_by_type(
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, String> {
     get_chat_record_by_type_service(text_quic_msg, text_type, page).await.map_err(|e| e.to_string())
-}
-
-/// 按会话 id 获取 WebRTC 信令明细（用于详情展示）
-#[tauri::command]
-pub async fn get_webrtc_signal_records(session_id: String) -> Result<Vec<WebrtcSignal>, String> {
-    query_webrtc_signal_by_session(&session_id).await.map_err(|e| e.to_string())
 }
 
 /// 获取群聊的本地聊天数据

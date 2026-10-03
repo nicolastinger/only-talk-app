@@ -38,8 +38,8 @@ use crate::cmd::auth_controller::{
 };
 use crate::cmd::chat_record_controller::{
     get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
-    get_pending_send_records, get_webrtc_signal_records, ignore_send_msg, mark_group_read,
-    mark_read, retry_send_msg, send_file_msg, send_group_file_msg, send_group_image_msg,
+    get_pending_send_records, ignore_send_msg, mark_group_read, mark_read, retry_send_msg,
+    send_call_control_msg, send_file_msg, send_group_file_msg, send_group_image_msg,
     send_group_text_msg, send_image_msg, send_text_msg, send_webrtc_signal,
 };
 use crate::cmd::chat_session_controller::{
@@ -217,6 +217,7 @@ pub fn run() {
         .invoke_handler(generate_handler![
             send_text_msg,
             send_webrtc_signal,
+            send_call_control_msg,
             send_group_text_msg,
             send_group_image_msg,
             send_group_file_msg,
@@ -266,7 +267,6 @@ compress_image_to_webp_command,
             start_video_channel,
             get_chat_record_from_store,
             get_chat_record_by_type,
-            get_webrtc_signal_records,
             get_group_chat_record_from_store,
             get_pending_send_records,
             retry_send_msg,

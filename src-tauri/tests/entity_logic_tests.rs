@@ -3,7 +3,7 @@
 //! 实体层纯逻辑单元测试：会话归一化、消息序列化(bincode/JSON)、常量。
 
 use app_lib::entity::chat_record_raw::{
-    ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
+    ChatRecordRaw, FileRecord, ImageRecord, TextRecord,
 };
 use app_lib::entity::chat_session::ChatSession;
 use app_lib::entity::quic_connection::{ConnectionType, FirstQuicMsg};
@@ -149,28 +149,6 @@ fn file_record_json_roundtrip() {
     let back = FileRecord::deserialize(&json).expect("反序列化失败");
     assert_eq!(back.file_name, "doc.pdf");
     assert_eq!(back.file_size, 2048);
-}
-
-#[test]
-fn webrtc_signal_record_json_uses_renamed_keys() {
-    let record = WebRTCSignalRecord {
-        prev_id: String::new(),
-        signal_type: "offer".to_string(),
-        sender: "a".to_string(),
-        receiver: "b".to_string(),
-        session_id: "s1".to_string(),
-        data: serde_json::from_str::<serde_json::Value>(r#"{"sdp":"v0"}"#).expect("构造 JSON 失败"),
-        timestamp: 123,
-    };
-    let json = record.json_serialize().expect("序列化失败");
-    let value: serde_json::Value = serde_json::from_str(&json).expect("解析失败");
-    assert_eq!(value["type"], "offer", "signal_type 应序列化为 type 键");
-    assert_eq!(value["sessionId"], "s1", "session_id 应序列化为 sessionId 键");
-
-    let back = WebRTCSignalRecord::deserialize(&json).expect("反序列化失败");
-    assert_eq!(back.signal_type, "offer");
-    assert_eq!(back.session_id, "s1");
-    assert_eq!(back.data["sdp"], "v0");
 }
 
 // ---------- quic_connection ----------

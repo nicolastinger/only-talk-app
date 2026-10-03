@@ -4,6 +4,7 @@ pub mod dns;
 pub mod global_static_str;
 pub mod http_client;
 pub mod image_utils;
+pub mod message_lifecycle;
 pub mod message_types;
 pub mod session_uuid;
 pub mod time;

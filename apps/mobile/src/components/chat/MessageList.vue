@@ -9,12 +9,7 @@ import {
   MSG_TYPE_GROUP_NOTIFICATION,
   MSG_TYPE_IMAGE,
   MSG_TYPE_P2P,
-  MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
-  MSG_TYPE_P2P_VIDEO_CALL_END,
-  MSG_TYPE_P2P_VIDEO_CALL_INVITE,
-  MSG_TYPE_P2P_VIDEO_CALL_REJECT,
   MSG_TYPE_SYSTEM,
-  MSG_TYPE_WEBRTC_SIGNAL,
 } from "@/chat/messageTypes";
 import { getMessageDisplayText } from "@/chat/messageParse";
 import FileMsgItem from "./FileMsgItem.vue";
@@ -22,7 +17,6 @@ import ImageMsg from "./ImageMsg.vue";
 import MsgTimeDivider from "./MsgTimeDivider.vue";
 import PrivacyMsg from "./PrivacyMsg.vue";
 import SystemMsg from "./SystemMsg.vue";
-import WebRtcMsg from "./WebRtcMsg.vue";
 
 const props = defineProps<{
   mode: "single" | "group";
@@ -71,20 +65,10 @@ const isSystemRow = (msg: UiChatMessage): boolean => {
 /** 内容类型分发（对齐 PC MineChatBox/CustomerChatBox renderMessage） */
 const contentKind = (
   textType: number
-): "text" | "image" | "file" | "webrtc" | "privacy" => {
+): "text" | "image" | "file" | "privacy" => {
   if (textType === MSG_TYPE_IMAGE || textType === MSG_TYPE_GROUP_IMAGE)
     return "image";
   if (textType === MSG_TYPE_GROUP_FILE) return "file";
-  if (
-    [
-      MSG_TYPE_P2P_VIDEO_CALL_INVITE,
-      MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
-      MSG_TYPE_P2P_VIDEO_CALL_REJECT,
-      MSG_TYPE_P2P_VIDEO_CALL_END,
-      MSG_TYPE_WEBRTC_SIGNAL,
-    ].includes(textType)
-  )
-    return "webrtc";
   if (textType === MSG_TYPE_P2P) return "privacy";
   return "text";
 };
@@ -167,15 +151,6 @@ const senderAvatar = (msg: UiChatMessage): string => {
             </div>
           </template>
 
-          <!-- 通话卡片 -->
-          <template v-else-if="contentKind(msg.textMsg.text_type) === 'webrtc'">
-            <WebRtcMsg
-              :text-type="msg.textMsg.text_type"
-              :is-mine="true"
-              :raw="msg.textMsg.raw"
-            />
-          </template>
-
           <!-- P2P 隐私 -->
           <template
             v-else-if="contentKind(msg.textMsg.text_type) === 'privacy'"
@@ -235,13 +210,6 @@ const senderAvatar = (msg: UiChatMessage): string => {
             <div class="file-bubble friend-file">
               <FileMsgItem :msg="msg" />
             </div>
-          </template>
-          <template v-else-if="contentKind(msg.textMsg.text_type) === 'webrtc'">
-            <WebRtcMsg
-              :text-type="msg.textMsg.text_type"
-              :is-mine="false"
-              :raw="msg.textMsg.raw"
-            />
           </template>
           <template
             v-else-if="contentKind(msg.textMsg.text_type) === 'privacy'"

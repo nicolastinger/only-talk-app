@@ -15,7 +15,6 @@ use crate::dao::group_message_ack::{
     query_group_message_ack_by_local_nano_id, update_group_message_ack_status,
 };
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
-use crate::dao::webrtc_signal_db::save_webrtc_signal;
 use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
@@ -78,15 +77,16 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
     info!("处理消息 {:?}", text_vec);
     for msg in text_vec {
         match msg.text_type {
-            // 单聊消息（含视频通话控制类型：邀请/接受/拒绝/结束）
-            MSG_TYPE_TEXT
-            | MSG_TYPE_IMAGE
-            | MSG_TYPE_FILE
-            | MSG_TYPE_P2P_VIDEO_CALL_INVITE
+            // 单聊消息（文本/图片/文件）
+            MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE => {
+                process_private_chat_message(msg).await?;
+            }
+            // 视频通话控制消息（12-15）：只转发控制命令，不落库、不进会话列表
+            MSG_TYPE_P2P_VIDEO_CALL_INVITE
             | MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
             | MSG_TYPE_P2P_VIDEO_CALL_REJECT
             | MSG_TYPE_P2P_VIDEO_CALL_END => {
-                process_private_chat_message(msg).await?;
+                process_call_control(msg).await?;
             }
             // 群聊消息
             MSG_TYPE_GROUP_TEXT | MSG_TYPE_GROUP_IMAGE | MSG_TYPE_GROUP_FILE => {
@@ -260,6 +260,29 @@ async fn is_group_message(recv_user: &str) -> bool {
         .await
         .map(|g| g.is_some())
         .unwrap_or(false)
+}
+
+/// 处理视频通话控制消息（CallControlLifecycle，12-15）
+///
+/// 只向前端分发 `call_control` 事件驱动通话 UI（邀请弹窗/接受/拒绝/结束）；
+/// 不落库、不进会话列表、不重发（服务端只转发不存储，历史由自动生成的文本记录承担）。
+async fn process_call_control(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let me = get_user_info("uuid").await?;
+
+    // 发送者已被拉黑：不分发控制命令（不弹通话窗口）
+    if msg.send_user != me && is_blocked_db(&me, &msg.send_user).await? {
+        info!("发送者已被拉黑，跳过通话控制命令: {}", msg.send_user);
+        return Ok(());
+    }
+
+    let payload = serde_json::to_string(&msg)?;
+    info!(
+        "emit call_control: send_user={} recv_user={} text_type={} nano_id={}",
+        msg.send_user, msg.recv_user, msg.text_type, msg.nano_id
+    );
+    APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("call_control", payload)?;
+    Ok(())
 }
 
 /// 处理单聊消息
@@ -479,22 +502,6 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         timestamp: msg.timestamp,
     };
 
-    // 视频通话控制消息(12-15)与 WebRTC 信令(100)：控制消息已不走 send/ack 表（发送方直接上送），
-    // 此处回执通常查不到发送记录而提前返回；12-15/100 均不落库、不更新会话（信号为瞬态）
-    if matches!(
-        ack_record.text_type,
-        MSG_TYPE_WEBRTC_SIGNAL
-            | MSG_TYPE_P2P_VIDEO_CALL_INVITE
-            | MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
-            | MSG_TYPE_P2P_VIDEO_CALL_REJECT
-            | MSG_TYPE_P2P_VIDEO_CALL_END
-    ) {
-        update_chat_record_ack(&ack_record.send_id, 1, &text_quic_msg_vo.nano_id).await?;
-        update_chat_record_send_success(&ack_record.send_id, &text_quic_msg_vo.nano_id).await?;
-        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
-        return Ok(());
-    }
-
     // 2.聊天插入数据库（使用INSERT OR IGNORE避免重复插入）
     insert_chat_record(&text_quic_msg_vo).await?;
 
@@ -682,22 +689,9 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
         }
     }
 
-    // 转发给前端（保持原始信令格式）
+    // 转发给前端（保持原始信令格式）；纯实时信令，不落库（服务端只转发不存储）
     let payload = serde_json::to_string(&msg)?;
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("webrtc_signal", payload)?;
-
-    // 明细落库 + 会话摘要更新（candidate 仅写明细，不更新摘要）
-    save_webrtc_signal(
-        &msg.nano_id,
-        signal.session_id.as_deref().unwrap_or_default(),
-        &signal.msg_type,
-        &signal.sender,
-        &signal.receiver,
-        &signal.data,
-        signal.timestamp,
-        signal.prev_id.as_deref().unwrap_or_default(),
-    )
-    .await?;
 
     Ok(())
 }

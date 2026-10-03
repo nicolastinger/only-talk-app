@@ -261,8 +261,8 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (textMessage) {
-      // 视频通话控制消息(12-15)：同样作为聊天气泡展示（WebRTCMessage），
-      // 用于在打开聊天窗时实时浮出 邀请/已接听/已拒绝/通话结束 卡片
+      // 实时消息：通话控制(12-15)/信令(100) 走独立事件 call_control/webrtc_signal，
+      // 不会进入 text_message，此处仅处理文本/图片/文件等历史消息类型。
       let from = MessageFrom.Customer;
       if (textMessage.send_user == SYSTEM_ACCOUNT) {
         from = MessageFrom.System;

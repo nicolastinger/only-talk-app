@@ -53,9 +53,6 @@ use app_lib::dao::session_db::{
     search_chat_session_db, show_chat_session_db, update_chat_session_db,
 };
 use app_lib::dao::sync_task_db::{history, list_batch_tasks, prune_batches, record_forward_catchup};
-use app_lib::dao::webrtc_signal_db::{
-    insert_webrtc_signal, query_webrtc_signal_by_session, save_webrtc_signal,
-};
 use app_lib::entity::app_log::LOG_LEVEL_INFO;
 use app_lib::entity::chat_record::ChatRecord;
 use app_lib::entity::chat_record_ack::ChatRecordAck;
@@ -73,7 +70,6 @@ use app_lib::entity::system_notification::SystemNotification;
 use app_lib::entity::user_info::UserInfo;
 use app_lib::entity::user_token::UserToken;
 use app_lib::service::user_service::insert_user_info;
-use app_lib::utils::message_types::MSG_TYPE_WEBRTC_SIGNAL;
 use app_lib::vo::text_quic_msg::TextQuicMsgVo;
 
 use common::{with_common_db, with_private_db, with_user_db};
@@ -856,79 +852,6 @@ async fn user_token_upsert_query_delete() {
 
         UserToken::delete_by_user_id(ME).await.expect("删除失败");
         assert!(UserToken::query_by_user_id(ME).await.expect("查询失败").is_none());
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn webrtc_signal_insert_query_and_summary() {
-    with_private_db(|_pool| async move {
-        insert_webrtc_signal(
-            "w1",
-            "s1",
-            "offer",
-            ME,
-            FRIEND,
-            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"x"}"#)
-                .expect("构造信令 JSON 失败"),
-            100,
-        )
-        .await
-        .expect("插入信令失败");
-        insert_webrtc_signal(
-            "w2",
-            "s1",
-            "answer",
-            FRIEND,
-            ME,
-            &serde_json::from_str::<serde_json::Value>(r#"{"sdp":"y"}"#)
-                .expect("构造信令 JSON 失败"),
-            200,
-        )
-        .await
-        .expect("插入信令失败");
-
-        let signals = query_webrtc_signal_by_session("s1").await.expect("按会话查询失败");
-        assert_eq!(signals.len(), 2);
-        assert_eq!(signals[0].msg_type, "offer");
-        assert_eq!(signals[1].msg_type, "answer");
-
-        // save_webrtc_signal: end 会额外写 chat_record 摘要(session::s1)
-        save_webrtc_signal(
-            "w3",
-            "s1",
-            "end",
-            ME,
-            FRIEND,
-            &serde_json::from_str::<serde_json::Value>(r#"{"end":true}"#)
-                .expect("构造信令 JSON 失败"),
-            300,
-            "w2",
-        )
-        .await
-        .expect("保存信令失败");
-        let signals = query_webrtc_signal_by_session("s1").await.expect("按会话查询失败");
-        assert_eq!(signals.len(), 3);
-
-        let summary =
-            query_chat_record_by_id_from_db("session::s1", ME).await.expect("查询信令摘要失败");
-        assert_eq!(summary.text_type, MSG_TYPE_WEBRTC_SIGNAL);
-
-        // candidate 不写摘要
-        save_webrtc_signal(
-            "w4",
-            "s2",
-            "candidate",
-            ME,
-            FRIEND,
-            &serde_json::from_str::<serde_json::Value>(r#"{"candidate":"c1"}"#)
-                .expect("构造信令 JSON 失败"),
-            400,
-            "",
-        )
-        .await
-        .expect("保存信令失败");
-        assert!(query_chat_record_by_id_from_db("session::s2", ME).await.is_err());
     })
     .await;
 }

@@ -14,8 +14,7 @@ use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
 };
 use crate::dao::chat_record_db::{
-    insert_chat_record, query_chat_record_by_type_from_db, query_chat_record_from_db,
-    query_last_chat_record,
+    query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
 };
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
@@ -31,13 +30,10 @@ use crate::dao::session_db::{
     query_group_chat_session, search_chat_session_db, update_chat_session_db,
     update_chat_session_local_db,
 };
-use crate::dao::webrtc_signal_db::save_webrtc_signal;
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::entity::chat_record_raw::{
-    ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
-};
+use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
@@ -45,14 +41,17 @@ use crate::entity::group::Group;
 use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::Page;
-use crate::quic_service::center_service::process_text_msg_from_server::WebRTCSignalMessage;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
 use crate::service::send_queue;
 use crate::service::user_service::{get_user_info, get_user_map};
 use crate::utils::global_static_str::{talk_api_base, PLATFORM, ZERO_UUID};
 use crate::utils::image_utils::compress_image_to_webp;
-use crate::utils::message_types::MSG_TYPE_P2P;
+use crate::utils::message_lifecycle::{CallControlLifecycle, MessageLifecycle};
+use crate::utils::message_types::{
+    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
+    MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_TEXT,
+};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::group_vo::GroupVo;
@@ -482,34 +481,23 @@ pub async fn get_group_chat_record_service(
     query_group_chat_record_from_db(&group_id, limit, offset).await
 }
 
-/// 发送文本消息
+/// 发送文本/图片/文件消息（TextLifecycle）
+///
+/// 通话控制消息(12-15)请走 send_call_control_msg，WebRTC 信令(100)请走 send_webrtc_signal。
 pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
+    if CallControlLifecycle::matches(text_quic_msg.text_type) {
+        return Err(anyhow!("通话控制消息(12-15)请使用 send_call_control_msg 命令"));
+    }
+    send_persistent_text_msg(text_quic_msg).await
+}
+
+/// 持久化消息发送（TextLifecycle）：计算 prev_id、写 chat_record_send/ack、
+/// 直接发送或入队等待补发；失败自动重发（断连进入离线发送队列）。
+pub async fn send_persistent_text_msg(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<String, anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let now = get_now_time_stamp_as_millis()?;
-
-    // 实时通话控制消息(12-15)：绝不进入待发送/回执表（否则断连时后台重发机制会重发，
-    // 导致重复邀请/接受/结束）。直接经 SERVER_TEXT 上送，发送失败即放弃（宁断连不重发）；
-    // 发送方本地落库供聊天历史展示。
-    if (12..=15).contains(&text_quic_msg.text_type) {
-        insert_chat_record(&text_quic_msg).await?;
-        let raw = text_quic_msg.raw.as_bytes().to_vec();
-        let test_msg = generate_text_msg_without_nano(
-            text_quic_msg.text_type,
-            raw,
-            text_quic_msg.recv_user.clone(),
-            sender,
-            text_quic_msg.nano_id.clone(),
-        )?;
-        let conn = {
-            let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-            server_book
-                .get("SERVER_TEXT")
-                .ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?
-                .conn
-                .clone()
-        };
-        return send_msg(test_msg, &conn).await;
-    }
 
     let msg = text_quic_msg.raw;
     let mut prev_id = ZERO_UUID.to_string();
@@ -617,30 +605,78 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     }
 }
 
-/// 发送 WebRTC 信令消息（独立通道）
+/// 通话控制消息(12-15) -> 文本历史记录文案（媒体区分语音/视频，默认视频）
+fn call_control_text(text_type: u16, raw: &str) -> Result<Option<String>, anyhow::Error> {
+    let media = serde_json::from_str::<serde_json::Value>(raw)
+        .ok()
+        .and_then(|v| v.get("media").and_then(|m| m.as_str()).map(|s| s.to_string()))
+        .unwrap_or_default();
+    let kind = if media == "audio" { "语音" } else { "视频" };
+    let text = match text_type {
+        MSG_TYPE_P2P_VIDEO_CALL_INVITE => format!("发起{}通话邀请", kind),
+        MSG_TYPE_P2P_VIDEO_CALL_ACCEPT => format!("已接听{}通话", kind),
+        MSG_TYPE_P2P_VIDEO_CALL_REJECT => format!("已拒绝{}通话", kind),
+        MSG_TYPE_P2P_VIDEO_CALL_END => format!("{}通话已结束", kind),
+        _ => return Ok(None),
+    };
+    Ok(Some(text))
+}
+
+/// 发送视频通话控制消息（CallControlLifecycle，12-15）
+///
+/// 1) 自动生成一条 type=1 文本记录（发起/已接听/已拒绝/已结束）走持久化文本管道
+///    （prev_id、A/B 本地 sqlite + 服务端三方存储、可重发）；
+/// 2) 控制命令本身直接经 SERVER_TEXT 上送：不进 send/ack 表、不落库、失败不重发，
+///    服务端只转发不存储。
+pub async fn send_call_control_msg_service(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<String, anyhow::Error> {
+    if !CallControlLifecycle::matches(text_quic_msg.text_type) {
+        return Err(anyhow!("send_call_control_msg 仅支持通话控制消息(12-15)"));
+    }
+    let sender = get_user_info("uuid").await?;
+
+    // 1. 自动生成文本历史记录（type=1）
+    if let Some(text) = call_control_text(text_quic_msg.text_type, &text_quic_msg.raw)? {
+        let text_msg = TextQuicMsgVo {
+            nano_id: nanoid::nanoid!(),
+            text_type: MSG_TYPE_TEXT,
+            raw: serde_json::json!({ "text": text, "prev_id": "", "platform": 0 }).to_string(),
+            recv_user: text_quic_msg.recv_user.clone(),
+            send_user: sender.clone(),
+            timestamp: text_quic_msg.timestamp,
+        };
+        send_persistent_text_msg(text_msg).await?;
+    }
+
+    // 2. 直接上送控制命令（不重发、不落库）
+    let raw = text_quic_msg.raw.as_bytes().to_vec();
+    let test_msg = generate_text_msg_without_nano(
+        text_quic_msg.text_type,
+        raw,
+        text_quic_msg.recv_user.clone(),
+        sender,
+        text_quic_msg.nano_id.clone(),
+    )?;
+    let conn = {
+        let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+        server_book
+            .get("SERVER_TEXT")
+            .ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?
+            .conn
+            .clone()
+    };
+    send_msg(test_msg, &conn).await
+}
+
+/// 发送 WebRTC 信令消息（SignalLifecycle，独立通道）
 ///
 /// 不走 send/ack 表、不设置 prev_id、不经发送锁，直接经 SERVER_TEXT 连接上送；
-/// 发送方本地历史由 save_webrtc_signal 落库（100 信令不再有服务器回执路径），
-/// 对端历史经 process_webrtc_signal 落库，双方对称。
+/// 服务端只转发不存储，客户端不落库、失败不重发（纯实时信令）。
 pub async fn send_webrtc_signal_service(
     text_quic_msg: TextQuicMsgVo,
 ) -> Result<String, anyhow::Error> {
     let sender = get_user_info("uuid").await?;
-
-    // 发送方本地保存信令明细 + 会话摘要
-    if let Ok(signal) = serde_json::from_str::<WebRTCSignalMessage>(&text_quic_msg.raw) {
-        save_webrtc_signal(
-            &text_quic_msg.nano_id,
-            signal.session_id.as_deref().unwrap_or_default(),
-            &signal.msg_type,
-            &signal.sender,
-            &signal.receiver,
-            &signal.data,
-            signal.timestamp,
-            signal.prev_id.as_deref().unwrap_or_default(),
-        )
-        .await?;
-    }
 
     let raw: Vec<u8> = Vec::from(text_quic_msg.raw);
     let test_msg = generate_text_msg_without_nano(
@@ -965,11 +1001,6 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
         }
         3 => {
             let mut chat_record_raw = <FileRecord as ChatRecordRaw>::deserialize(raw)?;
-            chat_record_raw.set_prev_id(prev_id);
-            chat_record_raw.json_serialize()
-        }
-        100 => {
-            let mut chat_record_raw = <WebRTCSignalRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         }

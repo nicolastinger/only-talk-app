@@ -14,12 +14,7 @@ import {
   MSG_TYPE_IMAGE,
   MSG_TYPE_P2P,
   MSG_TYPE_P2P_VIDEO_CALL,
-  MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
-  MSG_TYPE_P2P_VIDEO_CALL_END,
-  MSG_TYPE_P2P_VIDEO_CALL_INVITE,
-  MSG_TYPE_P2P_VIDEO_CALL_REJECT,
   MSG_TYPE_TEXT,
-  MSG_TYPE_WEBRTC_SIGNAL,
 } from "./messageTypes";
 
 /**
@@ -132,25 +127,6 @@ export const parseSystemContent = (raw: string): string => {
   return text || "[通知]";
 };
 
-/* ==================== WebRTC / 通话控制 ==================== */
-
-export interface ParsedSignal {
-  type: string;
-  sender?: string;
-  receiver?: string;
-  sessionId?: string;
-  data?: unknown;
-  timestamp?: number;
-  media?: string;
-}
-
-/** 解析 12-15 控制消息 与 100 信令 的 raw（存储格式的 WebRTC 记录） */
-export const parseSignalRecord = (raw: string): ParsedSignal | null => {
-  const parsed = tryParseJson<ParsedSignal>(raw);
-  if (!parsed || typeof parsed.type !== "string") return null;
-  return parsed;
-};
-
 /* ==================== 预览/兜底文案 ==================== */
 
 /** 会话列表 / 未知类型 的兜底文案（对齐 PC Search.formatMessage） */
@@ -172,22 +148,7 @@ export const getMessageDisplayText = (
     case MSG_TYPE_P2P:
       return "[隐私消息]";
     case MSG_TYPE_P2P_VIDEO_CALL:
-    case MSG_TYPE_P2P_VIDEO_CALL_INVITE:
       return "[视频通话邀请]";
-    case MSG_TYPE_P2P_VIDEO_CALL_ACCEPT:
-      return "[已接听]";
-    case MSG_TYPE_P2P_VIDEO_CALL_REJECT:
-      return "[已拒绝]";
-    case MSG_TYPE_P2P_VIDEO_CALL_END:
-      return "[通话结束]";
-    case MSG_TYPE_WEBRTC_SIGNAL: {
-      const signal = parseSignalRecord(raw);
-      if (signal?.type === "offer") return "[视频通话]";
-      if (signal?.type === "answer") return "[已接听]";
-      if (signal?.type === "end") return "[通话结束]";
-      if (signal?.type === "candidate") return "[通话信令]";
-      return "[WebRTC信令]";
-    }
     case MSG_TYPE_GROUP_NOTIFICATION:
       return parseSystemContent(raw);
     default:

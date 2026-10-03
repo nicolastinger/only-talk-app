@@ -124,7 +124,7 @@ export const useWebRTCCall = () => {
       send_user: localUserId,
       timestamp: Date.now(),
     };
-    await invoke('send_text_msg', { textQuicMsg: msg });
+    await invoke('send_call_control_msg', { textQuicMsg: msg });
   };
 
   // 发起方：发送邀请
@@ -495,13 +495,13 @@ export const useWebRTCCall = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [friendId]);
 
-  // 监听对方对通话邀请的回应：13=接受(发起offer)，14=拒绝
+  // 监听对方对通话邀请的回应（call_control）：13=接受(发起offer)，14=拒绝，15=结束
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
     const setupListener = async () => {
       try {
-        unlisten = await listen<string>('text_message', async (event) => {
+        unlisten = await listen<string>('call_control', async (event) => {
           const text: TextQuicMsgVo = JSON.parse(event.payload);
           if (text.recv_user !== localUserId || text.send_user !== friendId) {
             return;
@@ -519,6 +519,14 @@ export const useWebRTCCall = () => {
           } else if (text.text_type === 14) {
             console.log(`[WebRTCChat] 对方拒绝了通话请求`);
             setCallStage('rejected');
+            setTimeout(() => closeWebRTCWindow(), 2000);
+          } else if (text.text_type === 15) {
+            console.log(`[WebRTCChat] 对方结束了通话，关闭连接`);
+            const service = getWebRTCService();
+            if (service) {
+              await service.closeConnection(friendId);
+            }
+            setCallStage('ended');
             setTimeout(() => closeWebRTCWindow(), 2000);
           }
         });
@@ -671,22 +679,14 @@ export const useWebRTCCall = () => {
     try {
       const service = getWebRTCService();
       if (service) {
-        console.log(`[WebRTCChat.handleExit] 先发送结束信令，再关闭连接...`);
-        // 发送结束信令通知对端（对端会借此清理连接）
+        console.log(`[WebRTCChat.handleExit] 先发送结束控制消息(15)，再关闭连接...`);
+        // 发送 15-end 控制命令通知对端（自动生成"通话已结束"文本记录；对端据此清理连接）
         try {
-          const endSignal: WebRTCSignalMessage = {
-            type: 'end',
-            sender: localUserId,
-            receiver: friendId,
-            sessionId: service.sessionId,
-            data: {},
-            timestamp: Date.now(),
-          };
-          await service.sendSignal(endSignal);
-          console.log(`[WebRTCChat.handleExit] ✅ 结束信令已发送`);
+          await sendControlMsg(15, 'end', service.sessionId);
+          console.log(`[WebRTCChat.handleExit] ✅ 结束控制消息已发送`);
         } catch (sendEndErr) {
           console.error(
-            `[WebRTCChat.handleExit] 发送结束信令失败:`,
+            `[WebRTCChat.handleExit] 发送结束控制消息失败:`,
             sendEndErr,
           );
         }

@@ -10,7 +10,6 @@ import ChatImage from './ChatImage';
 import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/CustomerChatBox.less';
 import { TextBox } from './TextBox';
-import WebRTCMessage from './WebRTCMessage';
 
 const imageCache = new Map<string, string>();
 
@@ -149,12 +148,6 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
     switch (text_type) {
       case MSG_TYPE_PRIVACY:
         return <PrivacyModeMessage isMine={false} />;
-      case 100:
-      case 12:
-      case 13:
-      case 14:
-      case 15:
-        return <WebRTCMessage textType={text_type} isMine={false} raw={raw} />;
       default:
         return TextBox(raw);
     }
@@ -162,9 +155,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
 
   const isImageMessage = text_type === MSG_TYPE_IMAGE;
   const isFileMessage = text_type === MSG_TYPE_FILE;
-  const isSpecialMessage = [MSG_TYPE_PRIVACY, 100, 12, 13, 14, 15].includes(
-    text_type,
-  );
+  const isSpecialMessage = [MSG_TYPE_PRIVACY].includes(text_type);
 
   return (
     <div className={styles.container}>

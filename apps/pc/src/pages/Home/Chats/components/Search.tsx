@@ -45,21 +45,6 @@ const formatMessage = (message: string, textType: number): string => {
   if (textType === 5) {
     return '[视频通话]';
   }
-  if (textType === 12) {
-    return '[视频通话邀请]';
-  }
-  if (textType === 13) {
-    return '[已接听]';
-  }
-  if (textType === 14) {
-    return '[已拒绝]';
-  }
-  if (textType === 15) {
-    return '[通话结束]';
-  }
-  if (textType === 100) {
-    return '[WebRTC信令]';
-  }
   if (textType === 2004) {
     return '[群通知]';
   }

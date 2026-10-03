@@ -2,7 +2,7 @@
  * 移动端 WebRTC 通话编排管理器（单窗口单例）
  *
  * 职责（对应 PC 端 useWebRTCIncomingCall + useWebRTCCall，但适配单窗口 SPA）：
- * - 全局监听 text_message(12 邀请 / 13 接受 / 14 拒绝) 与 webrtc_signal(100 信令)
+ * - 全局监听 call_control(12 邀请 / 13 接受 / 14 拒绝 / 15 结束) 与 webrtc_signal(100 信令)
  * - 管理一次通话的全部状态（阶段/媒体/连接）
  * - 提供 发起/接听/拒绝/挂断/开关/切摄像头/重试 动作
  *
@@ -19,6 +19,7 @@ import {
   sendControlMsg,
   sendWebRTCSignal,
   MSG_TYPE_VIDEO_CALL_ACCEPT,
+  MSG_TYPE_VIDEO_CALL_END,
   MSG_TYPE_VIDEO_CALL_REJECT,
   type CallMediaType,
 } from "./signal";
@@ -207,7 +208,12 @@ const onTextMessage = async (payload: string) => {
   const me = await ensureMe();
   if (!me || msg.recv_user !== me) return;
 
-  if (msg.text_type !== 12 && msg.text_type !== 13 && msg.text_type !== 14) {
+  if (
+    msg.text_type !== 12 &&
+    msg.text_type !== 13 &&
+    msg.text_type !== 14 &&
+    msg.text_type !== 15
+  ) {
     return;
   }
   const ctrl = parseControl(msg.raw);
@@ -228,6 +234,12 @@ const onTextMessage = async (payload: string) => {
       return;
     }
     beginIncoming(friendId, ctrl.sessionId, ctrl.media);
+    return;
+  }
+
+  if (msg.text_type === 15 && ctrl.type === "end") {
+    console.log("[CallManager] 对方结束通话 (15-end)");
+    handleRemoteEnd();
     return;
   }
 
@@ -492,14 +504,15 @@ const hangup = async () => {
     call.stage === "failed";
   if (notifyPeer) {
     try {
-      await sendWebRTCSignal({
+      await sendControlMsg({
+        textType: MSG_TYPE_VIDEO_CALL_END,
         type: "end",
         sender: me,
         receiver: call.friendId,
         sessionId: call.sessionId,
       });
     } catch (e) {
-      console.error("[CallManager] 发送结束信令失败:", e);
+      console.error("[CallManager] 发送结束控制消息失败:", e);
     }
   }
   reset();
@@ -564,9 +577,9 @@ const installGlobalListeners = async () => {
   if (installed) return;
   installed = true;
   try {
-    await listen<string>("text_message", (event) => {
+    await listen<string>("call_control", (event) => {
       onTextMessage(event.payload).catch((e) =>
-        console.error("[CallManager] text_message 处理失败:", e)
+        console.error("[CallManager] call_control 处理失败:", e)
       );
     });
     await listen<string>("webrtc_signal", (event) => {

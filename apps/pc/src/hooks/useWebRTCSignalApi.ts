@@ -188,7 +188,7 @@ const useWebRTCIncomingCall = () => {
 
     const setupListener = async () => {
       try {
-        unlisten = await listen<string>('text_message', async (event) => {
+        unlisten = await listen<string>('call_control', async (event) => {
           const text: TextQuicMsgVo = JSON.parse(event.payload);
           if (text.recv_user !== meUuid) return;
           if (text.text_type !== 12) return; // MSG_TYPE_P2P_VIDEO_CALL_INVITE
