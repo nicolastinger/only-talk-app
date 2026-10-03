@@ -33,8 +33,8 @@ use crate::cmd::api_controller::{
     upload_multiple_files_with_extra_fields_request,
 };
 use crate::cmd::auth_controller::{
-    clear_user_info, delete_quick_login_user, get_quick_login_users, logout, quick_login,
-    refresh_token_command, sign_in,
+    clear_user_info, delete_quick_login_user, get_quick_login_users, github_login, logout,
+    quick_login, refresh_token_command, sign_in,
 };
 use crate::cmd::chat_record_controller::{
     get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
@@ -235,6 +235,7 @@ compress_image_to_webp_command,
             get_device_info,
             sign_in,
             refresh_token_command,
+            github_login,
             logout,
             clear_user_info,
             get_quick_login_users,

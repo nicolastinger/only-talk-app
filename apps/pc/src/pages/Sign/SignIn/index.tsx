@@ -4,7 +4,7 @@ import LoginSettingsModal from '@/components/LoginSettingsModal';
 import { openNewWindow } from '@/components/Window/OpenWindow';
 import { DEFAULT_ICON } from '@/constants';
 import { FormattedMessage } from '@@/exports';
-import { CloseOutlined, LockOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined, LeftOutlined, RightOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons';
+import { CloseOutlined, LockOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined, LeftOutlined, RightOutlined, DeleteOutlined, SettingOutlined, GithubOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
@@ -36,6 +36,7 @@ const LoginPage: React.FC = () => {
   const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [privacyContent, setPrivacyContent] = useState('');
   const [loading, setLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
   const [userCodeError, setUserCodeError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string>('');
@@ -275,6 +276,54 @@ const [settingsOpen, setSettingsOpen] = useState(false);
     fetchData(userCode, password);
   };
 
+  const handleGithubLogin = async () => {
+    if (!agreed) {
+      messageApi.warning(intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }));
+      return;
+    }
+    setGithubLoading(true);
+    try {
+      const response: HttpResponse = await invoke('github_login', {
+        url: getApiBase(),
+      });
+
+      const data: ResponseData = JSON.parse(response.body);
+      if (isBackendSuccess(data.code)) {
+        messageApi.open({
+          type: 'success',
+          content: <FormattedMessage id="signIn.success" />,
+        });
+        const webviewOptions: WebviewOptions = {
+          url: '/home/chats',
+          height: 600,
+          width: 800,
+          x: 200,
+          y: 200,
+        };
+        await openNewWindow('home', webviewOptions, Window.getCurrent(), 'Only Talk');
+      } else {
+        messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+      }
+    } catch (error: unknown) {
+      if (error != null && typeof error === 'string') {
+        try {
+          const result = JSON.parse(error);
+          if (result.message) {
+            messageApi.error(result.message);
+          } else if (result.code === 500) {
+            messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+          }
+        } catch {
+          messageApi.error(error);
+        }
+      } else {
+        messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
+      }
+    } finally {
+      setGithubLoading(false);
+    }
+  };
+
   const loadPrivacyMd = async () => {
     const res = await fetch('/markdown/privacy.md');
     const text = await res.text();
@@ -439,6 +488,11 @@ const [settingsOpen, setSettingsOpen] = useState(false);
 
               <button className={styles.loginBtn} onClick={onFinish} disabled={loading}>
                 {loading ? <span className={styles.loadingDot}>...</span> : intl.formatMessage({ id: 'signIn.submit' })}
+              </button>
+
+              <button className={styles.githubBtn} onClick={handleGithubLogin} disabled={githubLoading}>
+                <GithubOutlined className={styles.githubIcon} />
+                {githubLoading ? <span className={styles.loadingDot}>...</span> : '使用 GitHub 登录'}
               </button>
 
               <div className={styles.footerLinks}>
