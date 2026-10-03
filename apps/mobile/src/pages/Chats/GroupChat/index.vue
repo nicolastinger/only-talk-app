@@ -36,7 +36,7 @@ import {
   MSG_TYPE_RECALL_FAILURE,
   RELOAD_ON_ACK_TYPES,
 } from "@/chat/messageTypes";
-import { needTimeDivider, parseGroupImageBizId } from "@/chat/messageParse";
+import { isTransientMessageType, needTimeDivider, parseGroupImageBizId } from "@/chat/messageParse";
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -190,7 +190,8 @@ const loadMessages = async (page = 1, prepend = false) => {
     const list = data.filter(
       (m) =>
         m.text_type !== MSG_TYPE_RECALL_SUCCESS &&
-        m.text_type !== MSG_TYPE_RECALL_FAILURE
+        m.text_type !== MSG_TYPE_RECALL_FAILURE &&
+        !isTransientMessageType(m.text_type)
     );
     const chatMessages: UiChatMessage[] = [];
     for (let i = 0; i < list.length; i++) {

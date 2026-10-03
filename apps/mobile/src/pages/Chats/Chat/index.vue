@@ -34,7 +34,7 @@ import {
   MSG_TYPE_RECALL_SUCCESS,
   RELOAD_ON_ACK_TYPES,
 } from "@/chat/messageTypes";
-import { needTimeDivider, parsePrivateImageBizId } from "@/chat/messageParse";
+import { isTransientMessageType, needTimeDivider, parsePrivateImageBizId } from "@/chat/messageParse";
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -184,7 +184,8 @@ const loadMessages = async (page = 1, prepend = false) => {
     const list = data.filter(
       (m) =>
         m.text_type !== MSG_TYPE_RECALL_SUCCESS &&
-        m.text_type !== MSG_TYPE_RECALL_FAILURE
+        m.text_type !== MSG_TYPE_RECALL_FAILURE &&
+        !isTransientMessageType(m.text_type)
     );
     const chatMessages: UiChatMessage[] = await Promise.all(
       list.map(async (item, index, arr) => {
@@ -489,6 +490,8 @@ watch(textMessage, async (msg) => {
     nextTick(() => scrollToBottom(true));
     return;
   }
+  // 瞬态消息(12-15/100)走独立事件 call_control/webrtc_signal，不应经 text_message 进入列表
+  if (isTransientMessageType(msg.text_type)) return;
   await pushMessage(msg);
   nextTick(() => scrollToBottom(true));
   invoke("mark_read_chat_session", { friendUuid: friendId }).catch(() => {});

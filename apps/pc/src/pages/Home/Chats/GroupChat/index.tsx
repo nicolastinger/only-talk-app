@@ -20,6 +20,14 @@ import styles from './index.less';
 
 const PAGE_SIZE = 20;
 
+/** 瞬态消息(通话控制 12-15 / WebRTC 信令 100)：新生命周期下不入聊天历史，仅过滤历史遗留旧数据 */
+const isTransientType = (textType: number): boolean =>
+  textType === 12 ||
+  textType === 13 ||
+  textType === 14 ||
+  textType === 15 ||
+  textType === 100;
+
 const GroupChatPage: React.FC = () => {
   const intl = useIntl();
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
@@ -160,17 +168,19 @@ const GroupChatPage: React.FC = () => {
         return;
       }
 
-      const chatMessages: ChatMessage[] = data.map((item) => {
-        const from =
-          item.send_user === meUuid ? MessageFrom.Mine : MessageFrom.Customer;
-        const temp: ChatMessage = {
-          from,
-          text_msg_raw: item,
-          ack: undefined,
-          sender_uuid: item.send_user,
-        };
-        return temp;
-      });
+      const chatMessages: ChatMessage[] = data
+        .filter((item) => !isTransientType(item.text_type))
+        .map((item) => {
+          const from =
+            item.send_user === meUuid ? MessageFrom.Mine : MessageFrom.Customer;
+          const temp: ChatMessage = {
+            from,
+            text_msg_raw: item,
+            ack: undefined,
+            sender_uuid: item.send_user,
+          };
+          return temp;
+        });
 
       if (isInitial) {
         setMessageList(chatMessages);

@@ -14,7 +14,12 @@ import {
   MSG_TYPE_IMAGE,
   MSG_TYPE_P2P,
   MSG_TYPE_P2P_VIDEO_CALL,
+  MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
+  MSG_TYPE_P2P_VIDEO_CALL_END,
+  MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+  MSG_TYPE_P2P_VIDEO_CALL_REJECT,
   MSG_TYPE_TEXT,
+  MSG_TYPE_WEBRTC_SIGNAL,
 } from "./messageTypes";
 
 /**
@@ -170,3 +175,15 @@ export const isMineMessage = (
   msg: TextQuicMsgVo,
   meUuid: string
 ): boolean => msg.send_user === meUuid;
+
+/**
+ * 瞬态消息（通话控制 12-15 / WebRTC 信令 100）：
+ * 新生命周期下不应出现在聊天历史（控制命令只转发不存储，历史由自动生成的 type=1 文本记录承担）。
+ * 仅历史遗留的旧数据可能出现，加载时过滤，避免与文本记录重复渲染。
+ */
+export const isTransientMessageType = (textType: number): boolean =>
+  textType === MSG_TYPE_P2P_VIDEO_CALL_INVITE ||
+  textType === MSG_TYPE_P2P_VIDEO_CALL_ACCEPT ||
+  textType === MSG_TYPE_P2P_VIDEO_CALL_REJECT ||
+  textType === MSG_TYPE_P2P_VIDEO_CALL_END ||
+  textType === MSG_TYPE_WEBRTC_SIGNAL;
