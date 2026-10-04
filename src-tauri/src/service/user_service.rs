@@ -1200,6 +1200,7 @@ mod tests {
             "sessions": [{
                 "session_uuid": "3f2b",
                 "session_type": 1,
+                "last_read_id": 0,
                 "messages": [{
                     "id": 12345,
                     "nano_id": "n1",

@@ -6,6 +6,7 @@ use std::io::Read;
 use std::path::PathBuf;
 
 #[test]
+#[ignore = "依赖作者本机照片路径(D:\\漫展\\P1002642.JPG)与 Tauri app 初始化, 不可在 CI 运行; 本地用 cargo test -- --ignored 验证"]
 fn test_compress_real_image_p1017533() {
     let input_path = PathBuf::from(r"D:\漫展\P1002642.JPG");
 
