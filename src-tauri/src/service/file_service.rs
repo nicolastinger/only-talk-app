@@ -105,7 +105,7 @@ pub async fn get_file_by_biz_id_service(
                 } else {
                     // 首次下载就失败，没有记录，插入一条失败记录用于追踪重试次数
                     let uuid = uuid::Uuid::new_v4().to_string();
-                    let now = chrono::Local::now().timestamp();
+                    let now = crate::utils::time::get_now_time_stamp_as_millis().unwrap_or(0);
                     insert_failed_file_record(&biz_id, &uuid, now).await?;
                     increment_download_retry_count(&biz_id, &uuid).await?;
                 }

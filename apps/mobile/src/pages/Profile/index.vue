@@ -108,20 +108,6 @@ const goToFiles = () => {
         </div>
       </div>
 
-      <div class="menu-item">
-        <div class="menu-left">
-          <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
-            <path
-              d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
-            />
-          </svg>
-          <span class="menu-name">收藏</span>
-        </div>
-        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-        </svg>
-      </div>
-
       <div class="menu-item" @click="goToFiles">
         <div class="menu-left">
           <svg viewBox="0 0 24 24" fill="currentColor" class="menu-icon">
