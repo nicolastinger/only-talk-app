@@ -139,3 +139,13 @@ jobs:
           name: only-talk-windows
           path: src-tauri/target/release/bundle/nsis/*
           if-no-files-found: error
+
+      # 发布: 仅 tag(v*) 触发时把 NSIS 安装包发布到对应 GitHub Release。
+      # 资产生成后 GitHub 自动计算 SHA-256 digest, 供客户端更新校验使用。
+      - name: 发布到 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/release/bundle/nsis/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

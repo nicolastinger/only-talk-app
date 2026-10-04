@@ -9,4 +9,5 @@ export * from "./momentService";
 export * from "./notificationService";
 export * from "./plazaService";
 export * from "./reportService";
+export * from "./updateService";
 export * from "./userService";

@@ -11,4 +11,5 @@ pub mod log_controller;
 pub mod notification_controller;
 pub mod p2p_controller;
 pub mod sync_controller;
+pub mod update_controller;
 pub mod user_controller;

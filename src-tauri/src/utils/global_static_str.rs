@@ -14,6 +14,7 @@ pub static CONFIG_SERVER_API_BASE: &str = "server.api_base";
 pub static CONFIG_SERVER_DOMAIN: &str = "server.domain";
 pub static CONFIG_APP_THEME: &str = "app.theme";
 pub static CONFIG_APP_LANGUAGE: &str = "app.language";
+pub static CONFIG_UPDATE_GITHUB_REPO: &str = "update.github_repo";
 
 /// HTTP API 基础地址: 优先取配置表 `server.api_base`, 未配置按运行环境兜底。
 /// dev → http://127.0.0.1:8443(网关方案后 actix 明文端口); prod → https://onlytalk.cn(nginx 443)。

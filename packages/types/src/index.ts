@@ -11,5 +11,6 @@ export * from "./plaza";
 export * from "./report";
 export * from "./session";
 export * from "./theme";
+export * from "./update";
 export * from "./user";
 export * from "./webrtc";

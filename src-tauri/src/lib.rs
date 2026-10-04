@@ -81,6 +81,9 @@ use crate::cmd::p2p_controller::{
     start_video_channel,
 };
 use crate::cmd::sync_controller::get_sync_history;
+use crate::cmd::update_controller::{
+    download_update_package, get_latest_release, install_update,
+};
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
     get_cached_user_info_by_account, get_quic_connection_state, get_user_info_with_cache,
@@ -339,7 +342,10 @@ compress_image_to_webp_command,
             get_group_chat_session_list,
             search_group,
             search_chat_session,
-            session_uuid_cmd
+            session_uuid_cmd,
+            get_latest_release,
+            download_update_package,
+            install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

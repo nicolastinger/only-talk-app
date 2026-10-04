@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { showToast } from "vant";
+import { showDialog, showToast } from "vant";
 import { getVersion } from "@tauri-apps/api/app";
+import {
+  checkForUpdate,
+  downloadUpdatePackage,
+  formatFileSize,
+  installUpdate,
+} from "@workspace/services";
+import type { UpdateInfo } from "@workspace/types";
 
 const router = useRouter();
 const version = ref("1.0.0");
+const checking = ref(false);
+const downloading = ref(false);
+const updateInfo = ref<UpdateInfo | null>(null);
 
 onMounted(async () => {
   try {
@@ -21,6 +31,54 @@ const infoRows = [
   { name: "应用名称", value: "Only Talk" },
   { name: "当前版本", value: version },
 ];
+
+const onCheckUpdate = async () => {
+  if (checking.value || downloading.value) return;
+  checking.value = true;
+  try {
+    const result = await checkForUpdate();
+    if (!result.hasUpdate || !result.info) {
+      showToast({ message: "当前已是最新版本", icon: "success" });
+      return;
+    }
+    updateInfo.value = result.info;
+    const info = result.info;
+    const sizeText = formatFileSize(info.size);
+    await showDialog({
+      title: `发现新版本 v${info.version}`,
+      message: `更新包大小：${sizeText || "-"}\n\n${info.notes || "-"}`,
+      showCancelButton: !info.force_update,
+      confirmButtonText: "立即更新",
+      cancelButtonText: "稍后再说",
+      closeOnClickOverlay: !info.force_update,
+      closeOnPopstate: !info.force_update,
+    });
+    await onDownload();
+  } catch {
+    showToast({ message: "检查更新失败，请稍后重试", icon: "fail" });
+  } finally {
+    checking.value = false;
+  }
+};
+
+const onDownload = async () => {
+  const info = updateInfo.value;
+  if (!info || downloading.value) return;
+  downloading.value = true;
+  const toast = showToast({ type: "loading", message: "正在下载更新包...", duration: 0, forbidClick: true });
+  try {
+    const localPath = await downloadUpdatePackage(info);
+    toast.close();
+    showToast({ message: "下载完成，正在安装...", icon: "success" });
+    await installUpdate(localPath);
+  } catch (e) {
+    console.error("下载/安装更新失败:", e);
+    toast.close();
+    showToast({ message: "下载失败，请重试", icon: "fail" });
+  } finally {
+    downloading.value = false;
+  }
+};
 
 const onComingSoon = (row: string) => {
   showToast({ message: `${row}功能开发中`, icon: "none" });
@@ -48,6 +106,15 @@ const onComingSoon = (row: string) => {
     </div>
 
     <div class="menu-card">
+      <div class="menu-item" :class="{ disabled: checking || downloading }" @click="onCheckUpdate">
+        <span class="menu-name">{{ checking ? "正在检查..." : "检查更新" }}</span>
+        <span class="menu-update-status" v-if="checking || downloading">
+          {{ downloading ? "下载中..." : "" }}
+        </span>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+        </svg>
+      </div>
       <div class="menu-item" @click="onComingSoon('用户协议')">
         <span class="menu-name">用户协议</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
@@ -169,6 +236,11 @@ const onComingSoon = (row: string) => {
   cursor: pointer;
   transition: background var(--transition-fast);
 
+  &.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
   &:last-child {
     border-bottom: none;
   }
@@ -176,6 +248,11 @@ const onComingSoon = (row: string) => {
   &:active {
     background: var(--surface-hover);
   }
+}
+
+.menu-update-status {
+  font-size: 13px;
+  color: var(--brand-blue);
 }
 
 .menu-name {

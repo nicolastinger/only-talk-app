@@ -7,4 +7,5 @@ pub mod message_alert;
 pub mod p2p_service;
 pub mod send_queue;
 pub mod session_manager;
+pub mod update_service;
 pub mod user_service;

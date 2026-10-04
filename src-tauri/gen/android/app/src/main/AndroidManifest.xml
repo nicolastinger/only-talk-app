@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 申请电池优化豁免：避免 App 被 Doze/待机冻结导致后台收不到 QUIC 消息 -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 应用自更新：经 ACTION_VIEW 调起系统安装器安装 APK(Android 8+ 必需) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- 音视频通话（WebRTC）所需硬件 -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />

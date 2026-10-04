@@ -14,9 +14,10 @@ use crate::GLOBAL_CONFIG;
 /// 随后将整表加载进内存, 供 `talk_api_base()` 等运行时解析使用。
 pub async fn init_persisted_config() -> Result<(), anyhow::Error> {
     use crate::dao::client_config_db;
+    use crate::service::update_service::DEFAULT_GITHUB_REPO;
     use crate::utils::global_static_str::{
         talk_api_base, talk_api_domain, CONFIG_APP_LANGUAGE, CONFIG_APP_THEME,
-        CONFIG_SERVER_API_BASE, CONFIG_SERVER_DOMAIN,
+        CONFIG_SERVER_API_BASE, CONFIG_SERVER_DOMAIN, CONFIG_UPDATE_GITHUB_REPO,
     };
 
     for (key, default) in [
@@ -24,6 +25,7 @@ pub async fn init_persisted_config() -> Result<(), anyhow::Error> {
         (CONFIG_SERVER_DOMAIN, talk_api_domain()),
         (CONFIG_APP_THEME, "light".to_string()),
         (CONFIG_APP_LANGUAGE, "zh-CN".to_string()),
+        (CONFIG_UPDATE_GITHUB_REPO, DEFAULT_GITHUB_REPO.to_string()),
     ] {
         if client_config_db::get_config(key).await?.is_none() {
             client_config_db::set_config(key, &default).await?;

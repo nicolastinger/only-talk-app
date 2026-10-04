@@ -4,3 +4,4 @@ pub mod friend_vo;
 pub mod group_vo;
 pub mod http_response;
 pub mod text_quic_msg;
+pub mod update_vo;
