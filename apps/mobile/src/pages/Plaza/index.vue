@@ -2,6 +2,8 @@
 import { ref } from "vue";
 import type { Component } from "vue";
 import { useRouter } from "vue-router";
+import { useUnreadStore } from "@/stores/unread";
+import NotificationBell from "@/components/NotificationBell/index.vue";
 import FeedSquare from "./feed/FeedSquare.vue";
 import FeedFollowing from "./feed/FeedFollowing.vue";
 import FeedMine from "./feed/FeedMine.vue";
@@ -30,6 +32,10 @@ const feedFeatures: Record<string, Component> = {
   following: FeedFollowing,
   mine: FeedMine,
 };
+
+// 动态广场"本页通知"入口, 复用 /notifications 单类型模式
+const { momentUnread } = useUnreadStore();
+const goNotifications = () => router.push("/notifications?type=moments");
 </script>
 
 <template>
@@ -41,6 +47,7 @@ const feedFeatures: Record<string, Component> = {
         />
       </svg>
       <span class="page-title">动态</span>
+      <NotificationBell :count="momentUnread" @click="goNotifications" />
       <button class="header-link" @click="router.push('/plaza/friend')">
         <svg class="header-link-icon" viewBox="0 0 24 24" fill="currentColor">
           <path
@@ -112,6 +119,7 @@ const feedFeatures: Record<string, Component> = {
 }
 
 .header-link {
+  position: relative;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;

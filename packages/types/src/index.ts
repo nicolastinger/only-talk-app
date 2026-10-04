@@ -5,6 +5,7 @@ export * from "./friend";
 export * from "./log";
 export * from "./menu";
 export * from "./moment";
+export * from "./notification";
 export * from "./p2p";
 export * from "./plaza";
 export * from "./report";

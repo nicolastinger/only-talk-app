@@ -1,3 +1,6 @@
+import NotificationBell from '@/components/NotificationBell';
+import NotificationPanel from '@/components/NotificationPanel';
+import { useBearStore } from '@/store/store';
 import { PictureOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import { Tabs } from 'antd';
@@ -11,6 +14,8 @@ const Moments = () => {
   const [composerOpen, setComposerOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [tab, setTab] = useState('plaza');
+  const [notifyVisible, setNotifyVisible] = useState(false);
+  const menuUnread = useBearStore((state) => state.menuUnread);
 
   const handlePublished = () => {
     setRefreshKey((k) => k + 1);
@@ -27,10 +32,19 @@ const Moments = () => {
             {intl.formatMessage({ id: 'moments.subtitle' })}
           </div>
         </div>
-        <button className={styles.publishBtn} onClick={() => setComposerOpen(true)}>
-          <PictureOutlined />
-          <span>{intl.formatMessage({ id: 'moments.publish' })}</span>
-        </button>
+        <div className={styles.headerActions}>
+          <NotificationBell
+            count={menuUnread.moments}
+            onClick={() => setNotifyVisible(true)}
+          />
+          <button
+            className={styles.publishBtn}
+            onClick={() => setComposerOpen(true)}
+          >
+            <PictureOutlined />
+            <span>{intl.formatMessage({ id: 'moments.publish' })}</span>
+          </button>
+        </div>
       </div>
       <div className={styles.tabs}>
         <Tabs
@@ -53,16 +67,17 @@ const Moments = () => {
         />
       </div>
       <div className={styles.body}>
-        <MomentList
-          refreshKey={refreshKey}
-          feed={tab}
-          key={tab}
-        />
+        <MomentList refreshKey={refreshKey} feed={tab} key={tab} />
       </div>
       <MomentComposer
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
         onSuccess={handlePublished}
+      />
+      <NotificationPanel
+        visible={notifyVisible}
+        onClose={() => setNotifyVisible(false)}
+        type="moments"
       />
     </div>
   );

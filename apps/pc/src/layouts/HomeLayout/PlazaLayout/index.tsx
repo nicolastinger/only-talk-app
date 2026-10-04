@@ -1,14 +1,20 @@
+import NotificationBell from '@/components/NotificationBell';
+import NotificationPanel from '@/components/NotificationPanel';
 import CrushList from '@/pages/Home/Plaza/components/CrushList';
 import MatchList from '@/pages/Home/Plaza/components/MatchList';
 import PlazaList from '@/pages/Home/Plaza/components/PlazaList';
 import SwipeDeck from '@/pages/Home/Plaza/components/SwipeDeck';
+import { useBearStore } from '@/store/store';
 import { SettingOutlined } from '@ant-design/icons';
 import { history, useIntl } from '@umijs/max';
 import { Tabs } from 'antd';
+import { useState } from 'react';
 import styles from './index.less';
 
 const PlazaLayout = () => {
   const intl = useIntl();
+  const [notifyVisible, setNotifyVisible] = useState(false);
+  const menuUnread = useBearStore((state) => state.menuUnread);
 
   const routeToSettings = () => {
     history.push('/home/settings?tab=plaza');
@@ -48,10 +54,16 @@ const PlazaLayout = () => {
             {intl.formatMessage({ id: 'plaza.subtitle' })}
           </div>
         </div>
-        <button className={styles.manageBtn} onClick={routeToSettings}>
-          <SettingOutlined />
-          <span>{intl.formatMessage({ id: 'plaza.manage' })}</span>
-        </button>
+        <div className={styles.headerActions}>
+          <NotificationBell
+            count={menuUnread.plaza}
+            onClick={() => setNotifyVisible(true)}
+          />
+          <button className={styles.manageBtn} onClick={routeToSettings}>
+            <SettingOutlined />
+            <span>{intl.formatMessage({ id: 'plaza.manage' })}</span>
+          </button>
+        </div>
       </div>
       <div className={styles.body}>
         <Tabs
@@ -60,6 +72,11 @@ const PlazaLayout = () => {
           items={items}
         />
       </div>
+      <NotificationPanel
+        visible={notifyVisible}
+        onClose={() => setNotifyVisible(false)}
+        type="plaza"
+      />
     </div>
   );
 };

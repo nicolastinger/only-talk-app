@@ -2,6 +2,8 @@
 import { ref, onMounted } from "vue";
 import type { Component } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useUnreadStore } from "@/stores/unread";
+import NotificationBell from "@/components/NotificationBell/index.vue";
 import FriendSquare from "./friend/FriendSquare.vue";
 import FriendSwipe from "./friend/FriendSwipe.vue";
 import FriendCrush from "./friend/FriendCrush.vue";
@@ -36,6 +38,10 @@ const onSubTab = (key: string) => {
   activeKey.value = key;
 };
 
+// 交友广场"本页通知"入口, 复用 /notifications 单类型模式
+const { plazaUnread } = useUnreadStore();
+const goNotifications = () => router.push("/notifications?type=plaza");
+
 const friendFeatures: Record<string, Component> = {
   square: FriendSquare,
   swipe: FriendSwipe,
@@ -53,6 +59,7 @@ const friendFeatures: Record<string, Component> = {
         />
       </svg>
       <span class="page-title">交友</span>
+      <NotificationBell :count="plazaUnread" @click="goNotifications" />
       <button class="header-link" @click="router.push('/plaza')">
         <svg class="header-link-icon" viewBox="0 0 24 24" fill="currentColor">
           <path
@@ -127,6 +134,7 @@ const friendFeatures: Record<string, Component> = {
 }
 
 .header-link {
+  position: relative;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;

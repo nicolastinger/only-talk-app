@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { showToast, Tabs, Tab, Badge, Empty, Button } from "vant";
 import { clearUnreadByLevel } from "@workspace/services";
+import {
+  NOTIFICATION_LEVEL2,
+  type NotificationCategoryKey,
+} from "@workspace/types";
 import { useUnreadStore } from "@/stores/unread";
 import type { SystemNotification } from "@workspace/types";
 
+const route = useRoute();
 const router = useRouter();
 const { refresh: refreshUnread } = useUnreadStore();
 const goBack = () => router.back();
@@ -29,9 +34,50 @@ const categories: Category[] = [
   { key: "all", label: "全部", level1: 1, level2: undefined, clearLevel2: -1 },
   { key: "friend", label: "好友", level1: 1, level2: 1, clearLevel2: 1 },
   { key: "group", label: "群组", level1: 1, level2: 3, clearLevel2: 3 },
-  { key: "plaza", label: "交友广场", level1: 1, level2: 4, clearLevel2: 4 },
+  { key: "plaza", label: "交友", level1: 1, level2: 4, clearLevel2: 4 },
   { key: "moments", label: "动态", level1: 1, level2: 5, clearLevel2: 5 },
 ];
+
+// 支持外部入口带 type 参数: /notifications?type=friend|group|plaza|moments
+// 传入时只展示该分类(单类型模式), 不传则为通知中心全量模式
+const categoryKeys = [
+  "friend",
+  "group",
+  "plaza",
+  "moments",
+] as NotificationCategoryKey[];
+const pageType = computed<NotificationCategoryKey | null>(() => {
+  const q = route.query.type;
+  if (
+    typeof q === "string" &&
+    categoryKeys.includes(q as NotificationCategoryKey)
+  ) {
+    return q as NotificationCategoryKey;
+  }
+  return null;
+});
+
+const visibleCategories = computed<Category[]>(() => {
+  if (!pageType.value) return categories;
+  const level2 = NOTIFICATION_LEVEL2[pageType.value];
+  return categories.filter((c) => c.key !== "all" && c.level2 === level2);
+});
+
+const pageTitle = computed(() => {
+  if (!pageType.value) return "通知中心";
+  const labelMap: Record<NotificationCategoryKey, string> = {
+    friend: "好友通知",
+    group: "群组通知",
+    plaza: "交友通知",
+    moments: "动态通知",
+  };
+  return labelMap[pageType.value];
+});
+
+/** 单类型模式下当前展示的分类(仅一个) */
+const singleCategory = computed<Category>(
+  () => visibleCategories.value[0] || categories[0]
+);
 
 const TYPE_META: Record<string, { label: string; color: string }> = {
   "1-1-1": { label: "好友申请", color: "#1677ff" },
@@ -167,7 +213,7 @@ onUnmounted(() => {
         </svg>
       </button>
       <div class="header-main">
-        <h1 class="title">通知中心</h1>
+        <h1 class="title">{{ pageTitle }}</h1>
         <p class="subtitle">好友、群组与动态的消息提醒</p>
       </div>
       <span v-if="totalUnread > 0" class="unread-chip">
@@ -176,6 +222,7 @@ onUnmounted(() => {
     </div>
 
     <Tabs
+      v-if="!pageType"
       v-model:active="activeTab"
       color="var(--color-primary)"
       title-active-color="var(--text-primary)"
@@ -184,13 +231,9 @@ onUnmounted(() => {
       :line-height="2"
       class="notify-tabs"
     >
-      <Tab v-for="cat in categories" :key="cat.key">
+      <Tab v-for="cat in visibleCategories" :key="cat.key">
         <template #title>
-          <Badge
-            :content="unreadOf(cat)"
-            :show-zero="false"
-            :offset="[8, -2]"
-          >
+          <Badge :content="unreadOf(cat)" :show-zero="false" :offset="[8, -2]">
             <span>{{ cat.label }}</span>
           </Badge>
         </template>
@@ -242,6 +285,62 @@ onUnmounted(() => {
         </div>
       </Tab>
     </Tabs>
+
+    <!-- 单类型模式: 只展示该页面的通知, 清除按钮只清对应 level -->
+    <div v-else class="single-type">
+      <div class="clear-bar">
+        <span class="clear-count">{{
+          unreadOf(singleCategory) > 0
+            ? `${unreadOf(singleCategory)} 条未读`
+            : ""
+        }}</span>
+        <Button
+          size="small"
+          type="primary"
+          plain
+          @click="clearUnread(singleCategory)"
+        >
+          清空未读
+        </Button>
+      </div>
+
+      <div v-if="getFiltered(singleCategory).length === 0" class="empty-wrap">
+        <Empty description="暂无通知" />
+      </div>
+
+      <div v-else class="notify-list">
+        <div
+          v-for="n in getFiltered(singleCategory)"
+          :key="n.id"
+          class="notify-item"
+          :class="{ unread: n.is_read === false }"
+          @click="markRead(n)"
+        >
+          <div
+            class="notify-icon"
+            :style="{
+              background: iconBg(typeMeta(n).color),
+              boxShadow: iconShadow(typeMeta(n).color),
+            }"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+              />
+            </svg>
+          </div>
+          <div class="notify-body">
+            <div class="notify-head">
+              <span class="type-tag">{{ typeMeta(n).label }}</span>
+              <span class="notify-time">{{ formatTime(n.created_at) }}</span>
+              <span v-if="n.is_read === false" class="unread-dot" />
+            </div>
+            <div v-if="n.title" class="notify-title">{{ n.title }}</div>
+            <div v-if="n.content" class="notify-content">{{ n.content }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -398,8 +497,8 @@ onUnmounted(() => {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xs);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
-    background-color var(--transition-fast);
+  transition: transform var(--transition-fast),
+    box-shadow var(--transition-fast), background-color var(--transition-fast);
 
   &:active {
     transform: scale(0.985);
