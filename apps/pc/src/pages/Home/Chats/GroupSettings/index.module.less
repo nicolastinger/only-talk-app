@@ -298,93 +298,12 @@
   }
 }
 
-/* Members grid - QQ style */
-.memberGrid {
+/* Member list header (title + add button) */
+.memberListHeader {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 20px 16px;
-
-  .memberGridItem {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 56px;
-    cursor: default;
-
-    .memberAvatar {
-      border-radius: 8px;
-    }
-
-    .addMemberBtn {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      border: 1px dashed var(--color-gray-border-light);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      background-color: var(--color-gray-3);
-
-      &:hover {
-        border-color: var(--color-primary);
-        background-color: var(--color-primary-bg);
-
-        .addIcon {
-          color: var(--color-primary);
-        }
-      }
-
-      .addIcon {
-        font-size: 18px;
-        color: var(--color-gray-text-dark);
-        transition: color 0.2s;
-      }
-    }
-
-    .moreMembersBtn {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      background-color: var(--color-gray-3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background-color 0.2s;
-
-      &:hover {
-        background-color: var(--color-primary-bg);
-      }
-
-      .moreText {
-        font-size: 11px;
-        color: var(--color-gray-text-dark);
-        font-weight: 600;
-      }
-    }
-
-    .memberGridLabel {
-      font-size: 11px;
-      color: var(--color-gray-text-dark);
-      margin-top: 4px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      width: 100%;
-      text-align: center;
-    }
-
-    .meTag {
-      margin: 2px 0 0 !important;
-      padding: 0 4px !important;
-      font-size: 10px !important;
-      line-height: 16px !important;
-      height: 16px !important;
-    }
-  }
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 16px;
 }
 
 /* Info list */

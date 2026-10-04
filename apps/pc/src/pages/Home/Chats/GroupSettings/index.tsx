@@ -528,10 +528,6 @@ const GroupSettingsPage = () => {
     return null;
   }
 
-  // Display avatar list (first 8 members + add button)
-  const displayMembers = members.slice(0, 8);
-  const hasMoreMembers = members.length > 8;
-
   // Management action items
   const managementItems = [
     {
@@ -708,83 +704,6 @@ const GroupSettingsPage = () => {
           </div>
         ) : null}
 
-        {/* Members grid row - QQ style */}
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>
-            {intl.formatMessage({ id: 'groupSettings.groupMembers' })}
-          </div>
-          <div className={styles.memberGrid}>
-            {canManage && (
-              <div
-                key="add"
-                className={styles.memberGridItem}
-                onClick={() => {
-                  loadFriends();
-                  setInviteModalOpen(true);
-                }}
-              >
-                <div className={styles.addMemberBtn}>
-                  <UserAddOutlined className={styles.addIcon} />
-                </div>
-                <span className={styles.memberGridLabel}>
-                  {intl.formatMessage({ id: 'groupSettings.add' })}
-                </span>
-              </div>
-            )}
-            {displayMembers.map((member) => {
-              const info = memberInfoMap.get(member.user_uuid);
-              const displayName =
-                info?.username ||
-                member.nickname ||
-                intl.formatMessage({ id: 'groupSettings.members.member' });
-              const iconBizId = info?.icon;
-              const avatarSrc = iconBizId
-                ? avatarMap.get(iconBizId)
-                : undefined;
-              return (
-                <div key={member.user_uuid} className={styles.memberGridItem}>
-                  <Avatar
-                    size={40}
-                    shape="square"
-                    icon={<UserOutlined />}
-                    src={avatarSrc || DEFAULT_ICON}
-                    className={styles.memberAvatar}
-                  />
-                  <span className={styles.memberGridLabel}>
-                    {member.role === 2
-                      ? intl.formatMessage({
-                          id: 'groupSettings.members.owner',
-                        })
-                      : displayName.slice(0, 4)}
-                  </span>
-                  {member.user_uuid === userInfo?.uuid && (
-                    <Tag className={styles.meTag}>
-                      {intl.formatMessage({ id: 'groupSettings.members.me' })}
-                    </Tag>
-                  )}
-                </div>
-              );
-            })}
-            {hasMoreMembers && (
-              <div
-                key="more"
-                className={styles.memberGridItem}
-                onClick={() => {
-                  const el = document.getElementById('memberListSection');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                <div className={styles.moreMembersBtn}>
-                  <span className={styles.moreText}>+{members.length - 8}</span>
-                </div>
-                <span className={styles.memberGridLabel}>
-                  {intl.formatMessage({ id: 'groupSettings.more' })}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Group info items */}
         <div className={styles.section}>
           <div className={styles.sectionTitle}>
@@ -812,8 +731,23 @@ const GroupSettingsPage = () => {
 
         {/* Full member list */}
         <div className={styles.section} id="memberListSection">
-          <div className={styles.sectionTitle}>
-            {intl.formatMessage({ id: 'groupSettings.allMembers' })}
+          <div className={styles.memberListHeader}>
+            <div className={styles.sectionTitle}>
+              {intl.formatMessage({ id: 'groupSettings.allMembers' })}
+            </div>
+            {canManage && (
+              <Button
+                type="primary"
+                size="small"
+                icon={<UserAddOutlined />}
+                onClick={() => {
+                  loadFriends();
+                  setInviteModalOpen(true);
+                }}
+              >
+                {intl.formatMessage({ id: 'groupSettings.add' })}
+              </Button>
+            )}
           </div>
           <Input.Search
             placeholder={intl.formatMessage({
