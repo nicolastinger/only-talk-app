@@ -91,6 +91,8 @@ jobs:
         working-directory: src-tauri
         run: cargo +nightly fmt --all --check
 
+      # Linux 下 libsqlite3-sys(bundled-sqlcipher) 走系统 openssl(libssl-dev), 无需 OPENSSL_DIR;
+      # 仅 Windows bundle job 需要显式安装并设置 OPENSSL_DIR。
       - name: Clippy
         # 显式用 stable(默认工具链已被 nightly 覆盖, nightly 未装 clippy);
         # 不带 -D warnings: disallowed-methods 会命中 serde_json::json! 宏内部 unwrap, 属既有噪音
@@ -130,6 +132,9 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+
+      - name: 安装 OpenSSL (SQLCipher 构建依赖)
+        uses: ./.github/actions/setup-openssl
 
       # 仅打包 NSIS 安装器(避免 CI 上 WiX/MSI 的下载与兼容性问题)
       - name: 构建并打包
