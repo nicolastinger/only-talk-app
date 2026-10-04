@@ -3,7 +3,7 @@ import { useBearStore } from '@/store/store';
 import { history, useIntl, useLocation } from '@umijs/max';
 import { get_group_list, getFiles } from '@workspace/services';
 import { GroupListItemVo } from '@workspace/types';
-import { message } from 'antd';
+import { Badge, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/GroupList.less';
 

@@ -262,7 +262,7 @@ const GroupInfoPage = () => {
                 history.push(`/home/chats/group-settings?groupId=${groupId}`)
               }
             >
-              {intl.formatMessage({ id: 'groupSettings.groupSettings' })}
+              {intl.formatMessage({ id: 'groupSettings.title' })}
             </Button>
           )}
         </div>
