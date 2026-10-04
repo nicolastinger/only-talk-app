@@ -118,8 +118,12 @@ pub fn crop_image_to_webp(
 
     info!("[裁剪] 裁剪区域: {}x{} at ({}, {})", width, height, x, y);
     let cropped = img.crop_imm(x, y, width, height);
-    let square =
-        DynamicImage::ImageRgba8(image::imageops::resize(&cropped, output_size, output_size, FilterType::Triangle));
+    let square = DynamicImage::ImageRgba8(image::imageops::resize(
+        &cropped,
+        output_size,
+        output_size,
+        FilterType::Triangle,
+    ));
 
     info!("[裁剪] 输出尺寸: {}x{}", output_size, output_size);
     let final_data = encode_to_webp(&square)?;

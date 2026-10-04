@@ -264,7 +264,8 @@ fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String,
     let temp_file = temp_dir.join(format!("img_{}.jpg", timestamp));
 
     // 流式拷贝, 避免整图一次性读入内存(Vec)导致大图阻塞/内存峰值
-    let mut out = std::fs::File::create(&temp_file).map_err(|e| format!("创建临时文件失败: {}", e))?;
+    let mut out =
+        std::fs::File::create(&temp_file).map_err(|e| format!("创建临时文件失败: {}", e))?;
     copy(&mut file, &mut out).map_err(|e| format!("复制 content URI 失败: {}", e))?;
     out.flush().map_err(|e| format!("刷新临时文件失败: {}", e))?;
 
@@ -290,11 +291,9 @@ pub async fn copy_file_to_temp(
     {
         // 大文件同步复制会阻塞 tokio worker, 放入阻塞线程池避免卡住其他异步命令
         let app = app.clone();
-        tauri::async_runtime::spawn_blocking(move || {
-            copy_android_content_uri(&app, &uri_or_path)
-        })
-        .await
-        .map_err(|e| format!("复制线程异常: {}", e))?
+        tauri::async_runtime::spawn_blocking(move || copy_android_content_uri(&app, &uri_or_path))
+            .await
+            .map_err(|e| format!("复制线程异常: {}", e))?
     }
 
     #[cfg(not(target_os = "android"))]

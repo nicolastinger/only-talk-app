@@ -272,7 +272,10 @@ async fn process_call_control(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::
 
     // 自己另一台设备同步回推的消息(self-echo)：不发来电/响铃，避免本端自连回环
     if msg.send_user == me {
-        info!("self-echo 跳过通话控制命令: send_user={} recv_user={}", msg.send_user, msg.recv_user);
+        info!(
+            "self-echo 跳过通话控制命令: send_user={} recv_user={}",
+            msg.send_user, msg.recv_user
+        );
         return Ok(());
     }
 
@@ -662,7 +665,10 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
 
     // 自己另一台设备同步回推的信令(self-echo)：不回灌前端，避免本端自连回环
     if msg.send_user == me {
-        info!("self-echo 跳过 WebRTC 信令: send_user={} recv_user={}", msg.send_user, msg.recv_user);
+        info!(
+            "self-echo 跳过 WebRTC 信令: send_user={} recv_user={}",
+            msg.send_user, msg.recv_user
+        );
         return Ok(());
     }
 

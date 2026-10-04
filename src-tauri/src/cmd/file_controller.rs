@@ -237,10 +237,7 @@ pub async fn open_local_file<R: Runtime>(
     {
         // Android: 复制到 cache/open 目录后交给 view 插件打开,
         // 复用 manifest 声明的 ${applicationId}.fileprovider + file_paths.xml 的 cache-path
-        let cache_dir = app
-            .path()
-            .cache_dir()
-            .map_err(|e| format!("获取缓存目录失败: {}", e))?;
+        let cache_dir = app.path().cache_dir().map_err(|e| format!("获取缓存目录失败: {}", e))?;
         let open_dir = cache_dir.join("open");
         fs::create_dir_all(&open_dir).map_err(|e| format!("创建打开目录失败: {}", e))?;
 
@@ -258,7 +255,9 @@ pub async fn open_local_file<R: Runtime>(
         info!("Android 打开文件: {:?}", dest);
         use tauri_plugin_view::ViewExt;
         app.view()
-            .view(tauri_plugin_view::ViewRequest { path: Some(dest.to_string_lossy().into_owned()) })
+            .view(tauri_plugin_view::ViewRequest {
+                path: Some(dest.to_string_lossy().into_owned()),
+            })
             .map_err(|e| {
                 error!("Android 打开文件失败: {}", e);
                 e.to_string()

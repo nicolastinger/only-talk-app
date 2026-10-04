@@ -27,9 +27,9 @@ pub mod vo;
 use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
-    compress_image_to_webp_command, copy_file_to_temp, crop_image_to_webp_command,
-    delete_request, get_request, post_form_data_request, post_request, put_request,
-    upload_file_request, upload_file_with_extra_fields_request, upload_multiple_files_request,
+    compress_image_to_webp_command, copy_file_to_temp, crop_image_to_webp_command, delete_request,
+    get_request, post_form_data_request, post_request, put_request, upload_file_request,
+    upload_file_with_extra_fields_request, upload_multiple_files_request,
     upload_multiple_files_with_extra_fields_request,
 };
 use crate::cmd::auth_controller::{
@@ -81,9 +81,7 @@ use crate::cmd::p2p_controller::{
     start_video_channel,
 };
 use crate::cmd::sync_controller::get_sync_history;
-use crate::cmd::update_controller::{
-    download_update_package, get_latest_release, install_update,
-};
+use crate::cmd::update_controller::{download_update_package, get_latest_release, install_update};
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
     get_cached_user_info_by_account, get_quic_connection_state, get_user_info_with_cache,
@@ -235,7 +233,7 @@ pub fn run() {
             upload_multiple_files_request,
             upload_multiple_files_with_extra_fields_request,
             post_form_data_request,
-compress_image_to_webp_command,
+            compress_image_to_webp_command,
             crop_image_to_webp_command,
             copy_file_to_temp,
             get_device_info,

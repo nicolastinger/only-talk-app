@@ -152,8 +152,12 @@ pub async fn github_login(url: String, app: tauri::AppHandle) -> Result<ApiRespo
     if result.code != 200 {
         return Err(resp_body);
     }
-    let authorize_url =
-        result.data.get("authorize_url").and_then(|v| v.as_str()).ok_or("缺少 authorize_url")?.to_string();
+    let authorize_url = result
+        .data
+        .get("authorize_url")
+        .and_then(|v| v.as_str())
+        .ok_or("缺少 authorize_url")?
+        .to_string();
     let state = result.data.get("state").and_then(|v| v.as_str()).ok_or("缺少 state")?.to_string();
 
     // 2. 启动本机回环监听（GitHub OAuth App 回调地址须与配置一致）
@@ -162,14 +166,15 @@ pub async fn github_login(url: String, app: tauri::AppHandle) -> Result<ApiRespo
         .map_err(|e| format!("启动 GitHub 回调监听失败: {}", e))?;
 
     // 3. 系统浏览器打开授权页
-    app.opener().open_url(&authorize_url, None::<&str>).map_err(|e| format!("打开 GitHub 授权页失败: {}", e))?;
+    app.opener()
+        .open_url(&authorize_url, None::<&str>)
+        .map_err(|e| format!("打开 GitHub 授权页失败: {}", e))?;
 
     // 4. 等待回调（5 分钟超时）
     let (code, state_back, oauth_error) = tokio::time::timeout(
         std::time::Duration::from_secs(300),
         async {
-            loop {
-                let (mut socket, _) = listener.accept().await.map_err(|e| e.to_string())?;
+            let (mut socket, _) = listener.accept().await.map_err(|e| e.to_string())?;
                 let mut buf = [0u8; 4096];
                 let n = socket.read(&mut buf).await.map_err(|e| e.to_string())?;
                 let req_text = String::from_utf8_lossy(&buf[..n]).to_string();
@@ -195,12 +200,11 @@ pub async fn github_login(url: String, app: tauri::AppHandle) -> Result<ApiRespo
                 );
                 let _ = socket.write_all(http_resp.as_bytes()).await;
 
-                break Ok::<(Option<String>, Option<String>, Option<String>), String>((
+                Ok::<(Option<String>, Option<String>, Option<String>), String>((
                     params.get("code").cloned(),
                     params.get("state").cloned(),
                     params.get("error").cloned(),
-                ));
-            }
+                ))
         },
     )
     .await
@@ -223,15 +227,12 @@ pub async fn github_login(url: String, app: tauri::AppHandle) -> Result<ApiRespo
         "platform": "PC",
         "device_fingerprint": device_fp,
     });
-    let resp = client
-        .post(&callback_endpoint)
-        .json(&cb_body)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let resp =
+        client.post(&callback_endpoint).json(&cb_body).send().await.map_err(|e| e.to_string())?;
     let status = resp.status().as_u16();
     let response_body = resp.text().await.map_err(|e| e.to_string())?;
-    let cb_result: HttpResult = serde_json::from_str(&response_body).map_err(|_| response_body.clone())?;
+    let cb_result: HttpResult =
+        serde_json::from_str(&response_body).map_err(|_| response_body.clone())?;
     if cb_result.code != 200 {
         return Err(response_body);
     }

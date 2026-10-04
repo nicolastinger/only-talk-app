@@ -66,7 +66,7 @@ impl SqliteStore for FileRecord {
             .execute(pool_sqlite)
             .await
             .ok(); // 忽略列已存在的错误
-        // 迁移：历史 created_at/updated_at 存的是秒, 统一转成毫秒(当前写入已是毫秒)
+                   // 迁移：历史 created_at/updated_at 存的是秒, 统一转成毫秒(当前写入已是毫秒)
         sqlx::query(
             r#"UPDATE file_record SET created_at = created_at * 1000 WHERE created_at > 0 AND created_at < 100000000000"#,
         )

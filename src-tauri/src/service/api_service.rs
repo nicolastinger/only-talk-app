@@ -8,7 +8,9 @@ use reqwest::header::HeaderMap;
 use reqwest::Response;
 use serde::Serialize;
 
-use crate::utils::http_client::{http_client_120, http_client_30, http_client_300, http_client_600};
+use crate::utils::http_client::{
+    http_client_120, http_client_30, http_client_300, http_client_600,
+};
 use crate::GLOBAL_QUIC_USER_INFO;
 
 pub async fn post_with_body(

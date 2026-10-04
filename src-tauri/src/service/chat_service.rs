@@ -660,11 +660,7 @@ pub async fn send_call_control_msg_service(
     )?;
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book
-            .get("SERVER_TEXT")
-            .ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?
-            .conn
-            .clone()
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
     };
     send_msg(test_msg, &conn).await
 }

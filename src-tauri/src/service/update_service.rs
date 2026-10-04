@@ -50,11 +50,8 @@ const FORCE_UPDATE_MARKER: &str = "<!-- force-update -->";
 /// - 其他桌面平台: 暂不支持自动安装, 返回 None
 #[cfg(target_os = "android")]
 fn pick_asset(assets: &[GitHubAsset]) -> Option<GitHubAsset> {
-    let mut list: Vec<GitHubAsset> = assets
-        .iter()
-        .filter(|a| a.name.to_lowercase().ends_with(".apk"))
-        .cloned()
-        .collect();
+    let mut list: Vec<GitHubAsset> =
+        assets.iter().filter(|a| a.name.to_lowercase().ends_with(".apk")).cloned().collect();
     list.sort_by_key(|a| if a.name.to_lowercase().contains("universal") { 0 } else { 1 });
     list.into_iter().next()
 }
@@ -69,9 +66,7 @@ fn pick_asset(assets: &[GitHubAsset]) -> Option<GitHubAsset> {
         })
         .cloned()
         .collect();
-    list.sort_by_key(|a| {
-        if a.name.to_lowercase().ends_with(".exe") { 0 } else { 1 }
-    });
+    list.sort_by_key(|a| if a.name.to_lowercase().ends_with(".exe") { 0 } else { 1 });
     list.into_iter().next()
 }
 
@@ -105,10 +100,8 @@ pub async fn get_latest_release() -> Result<Option<UpdateInfo>, anyhow::Error> {
         return Err(anyhow!("GitHub API 请求失败: HTTP {}", resp.status()));
     }
 
-    let release: GitHubRelease = resp
-        .json()
-        .await
-        .with_context(|| "解析 GitHub Release 响应失败")?;
+    let release: GitHubRelease =
+        resp.json().await.with_context(|| "解析 GitHub Release 响应失败")?;
     let asset = match pick_asset(&release.assets) {
         Some(asset) => asset,
         None => return Ok(None),
@@ -172,11 +165,7 @@ pub async fn download_update_package<R: Runtime>(
     let target = dest_dir.join(&file_name);
 
     let client = http_client_600();
-    let resp = client
-        .get(&url)
-        .send()
-        .await
-        .with_context(|| "下载更新包失败")?;
+    let resp = client.get(&url).send().await.with_context(|| "下载更新包失败")?;
     if !resp.status().is_success() {
         return Err(anyhow!("下载更新包失败: HTTP {}", resp.status()));
     }

@@ -19,8 +19,6 @@ use crate::dao::chat_record_read::{
     query_read_watermark, read_reported_position, read_watermark_nano_id, update_last_read_msg,
     update_reported_position,
 };
-use crate::dao::get_db_client;
-use crate::dao::get_private_db_client;
 use crate::dao::group_chat_record_db::{
     group_chat_record_timestamp_by_nano_id, local_max_group_server_id, set_group_server_id,
 };
@@ -31,6 +29,7 @@ use crate::dao::group_message_read::{
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
+use crate::dao::{get_db_client, get_private_db_client};
 use crate::dto::http_result::HttpResult;
 use crate::entity::app_log::LOG_LEVEL_INFO;
 use crate::entity::chat_record_read::{ChatRecordRead, CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
