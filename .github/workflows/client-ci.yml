@@ -107,6 +107,9 @@ jobs:
   bundle:
     name: 打包 Windows 安装包
     runs-on: windows-latest
+    # 发布 GitHub Release + 上传资产需要写权限(GITHUB_TOKEN 默认可能只有读)
+    permissions:
+      contents: write
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' &&
