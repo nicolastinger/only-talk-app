@@ -54,6 +54,7 @@ const ReportModal = (props: {
       open={open}
       onOk={handleSubmit}
       onCancel={onClose}
+      closable={false}
       okText={intl.formatMessage({ id: 'report.submit' })}
       cancelText={intl.formatMessage({ id: 'report.cancel' })}
       confirmLoading={submitting}

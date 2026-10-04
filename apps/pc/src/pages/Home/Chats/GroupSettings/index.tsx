@@ -1,15 +1,12 @@
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
-import { getApiBase } from '@workspace/services';
-import { useUserInfoList } from '@/hooks/useUserInfoList';
+import {
+  CROP_CANCELLED_ERROR,
+  useAvatarCropper,
+} from '@/hooks/useAvatarCropper';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
-import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper';
+import { useUserInfoList } from '@/hooks/useUserInfoList';
 import { useBearStore } from '@/store/store';
-import { GroupInfoVo, GroupMemberVo } from '@workspace/types';
-import { get_group_info, get_group_members, update_group, quit_group, dissolve_group, get_friend_list, invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
-import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile, openImagePreviewWindow } from '@workspace/services';
-import { history, useSearchParams, useIntl } from '@umijs/max';
-import { Avatar, Button, Input, Modal, Select, Tag, message, Spin } from 'antd';
 import {
   ArrowLeftOutlined,
   CameraOutlined,
@@ -23,9 +20,29 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { history, useIntl, useSearchParams } from '@umijs/max';
+import {
+  convertPathToTauriUrl,
+  dissolve_group,
+  get_friend_list,
+  get_group_info,
+  get_group_members,
+  getApiBase,
+  getFiles,
+  invite_group_members,
+  isBackendSuccess,
+  isHttpSuccess,
+  openImagePreviewWindow,
+  quit_group,
+  remove_group_member,
+  selectFile,
+  set_member_role,
+  update_group,
+} from '@workspace/services';
+import { FriendVo, GroupInfoVo, GroupMemberVo } from '@workspace/types';
+import { Avatar, Button, Input, message, Modal, Select, Spin, Tag } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './index.module.less';
-import { FriendVo } from '@workspace/types';
 
 const GroupSettingsPage = () => {
   const intl = useIntl();
@@ -99,7 +116,10 @@ const GroupSettingsPage = () => {
         setMembers(memberList.value || []);
       }
     } catch (error) {
-      console.error(intl.formatMessage({ id: 'groupSettings.loadFailed' }), error);
+      console.error(
+        intl.formatMessage({ id: 'groupSettings.loadFailed' }),
+        error,
+      );
     } finally {
       setLoading(false);
     }
@@ -122,15 +142,26 @@ const GroupSettingsPage = () => {
         setAvatarUrl(preview);
       }
 
-      const uploadResult = await invoke<{ status: number; body: string }>('upload_file_request', {
-        url: `${getApiBase()}/file_integrated/upload/group_avatar/${groupInfo!.group_uuid}`,
-        filePath: croppedPath,
-        fieldName: 'file',
-      });
+      const uploadResult = await invoke<{ status: number; body: string }>(
+        'upload_file_request',
+        {
+          url: `${getApiBase()}/file_integrated/upload/group_avatar/${
+            groupInfo!.group_uuid
+          }`,
+          filePath: croppedPath,
+          fieldName: 'file',
+        },
+      );
 
       if (isHttpSuccess(uploadResult.status)) {
-        const responseBody = uploadResult.body ? JSON.parse(uploadResult.body) : null;
-        if (responseBody && isBackendSuccess(responseBody.code) && responseBody.data) {
+        const responseBody = uploadResult.body
+          ? JSON.parse(uploadResult.body)
+          : null;
+        if (
+          responseBody &&
+          isBackendSuccess(responseBody.code) &&
+          responseBody.data
+        ) {
           const bizId = responseBody.data;
           const FileVos = await getFiles(bizId);
           const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
@@ -138,21 +169,33 @@ const GroupSettingsPage = () => {
           if (tauriFilePath) {
             setGroupInfo({ ...groupInfo!, avatar: bizId });
             setAvatarUrl(tauriFilePath);
-            message.success(intl.formatMessage({ id: 'groupSettings.avatar.updateSuccess' }));
+            message.success(
+              intl.formatMessage({ id: 'groupSettings.avatar.updateSuccess' }),
+            );
           } else {
-            message.error(intl.formatMessage({ id: 'groupSettings.avatar.getFileFailed' }));
+            message.error(
+              intl.formatMessage({ id: 'groupSettings.avatar.getFileFailed' }),
+            );
           }
         } else {
-          message.error(responseBody?.msg || intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
+          message.error(
+            responseBody?.msg ||
+              intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }),
+          );
         }
       } else {
-        message.error(intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }));
+        message.error(
+          intl.formatMessage({ id: 'groupSettings.avatar.uploadFailed' }),
+        );
       }
     } catch (error) {
       if (error instanceof Error && error.message === CROP_CANCELLED_ERROR) {
         return;
       }
-      console.error(intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }), error);
+      console.error(
+        intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }),
+        error,
+      );
       message.error(
         (error instanceof Error ? error.message : String(error)) ||
           intl.formatMessage({ id: 'groupSettings.avatar.updateFailed' }),
@@ -163,14 +206,17 @@ const GroupSettingsPage = () => {
   };
 
   const isOwner = groupInfo?.owner_uuid === userInfo?.uuid;
-  const isAdmin = members.some((m) => m.user_uuid === userInfo?.uuid && m.role >= 1);
+  const isAdmin = members.some(
+    (m) => m.user_uuid === userInfo?.uuid && m.role >= 1,
+  );
   const canManage = isOwner || isAdmin;
 
   const memberUuids = useMemo(
     () => members.map((m) => m.user_uuid).filter(Boolean),
     [members],
   );
-  const { userInfoMap: memberInfoMap, loading: memberInfoLoading } = useUserInfoList(memberUuids);
+  const { userInfoMap: memberInfoMap, loading: memberInfoLoading } =
+    useUserInfoList(memberUuids);
 
   // 收集所有成员的 icon bizId，批量转换为可用的头像 URL
   const memberIconBizIds = useMemo(() => {
@@ -243,23 +289,39 @@ const GroupSettingsPage = () => {
       setFriendList(friends.filter((f) => !memberIds.has(f.friend_id)));
       setSelectedFriends([]);
     } catch {
-      message.error(intl.formatMessage({ id: 'groupSettings.members.getFriendListFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'groupSettings.members.getFriendListFailed' }),
+      );
     }
   };
 
   const handleInvite = async () => {
     if (selectedFriends.length === 0) {
-      message.warning(intl.formatMessage({ id: 'groupSettings.members.selectFriendsToInvite' }));
+      message.warning(
+        intl.formatMessage({
+          id: 'groupSettings.members.selectFriendsToInvite',
+        }),
+      );
       return;
     }
     setInviteLoading(true);
     try {
-      const invited = await invite_group_members(groupInfo!.group_uuid, selectedFriends);
-      message.success(intl.formatMessage({ id: 'groupSettings.members.inviteSent' }, { count: invited.length }));
+      const invited = await invite_group_members(
+        groupInfo!.group_uuid,
+        selectedFriends,
+      );
+      message.success(
+        intl.formatMessage(
+          { id: 'groupSettings.members.inviteSent' },
+          { count: invited.length },
+        ),
+      );
       setInviteModalOpen(false);
       loadData();
     } catch {
-      message.error(intl.formatMessage({ id: 'groupSettings.members.inviteFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'groupSettings.members.inviteFailed' }),
+      );
     } finally {
       setInviteLoading(false);
     }
@@ -268,17 +330,31 @@ const GroupSettingsPage = () => {
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
       title: intl.formatMessage({ id: 'groupSettings.members.removeMember' }),
-      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: memberInfoMap.get(member.user_uuid)?.username || member.user_uuid }),
+      content: intl.formatMessage(
+        { id: 'groupSettings.members.removeMemberConfirm' },
+        {
+          name:
+            memberInfoMap.get(member.user_uuid)?.username || member.user_uuid,
+        },
+      ),
       okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
       okButtonProps: { danger: true },
       cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await remove_group_member(groupInfo!.group_uuid, member.user_uuid);
-          message.success(intl.formatMessage({ id: 'groupSettings.members.removeMemberSuccess' }));
+          message.success(
+            intl.formatMessage({
+              id: 'groupSettings.members.removeMemberSuccess',
+            }),
+          );
           loadData();
         } catch {
-          message.error(intl.formatMessage({ id: 'groupSettings.members.removeMemberFailed' }));
+          message.error(
+            intl.formatMessage({
+              id: 'groupSettings.members.removeMemberFailed',
+            }),
+          );
         }
       },
     });
@@ -291,10 +367,18 @@ const GroupSettingsPage = () => {
         user_uuid: member.user_uuid,
         role,
       });
-      message.success(role === 1 ? intl.formatMessage({ id: 'groupSettings.members.setAdminSuccess' }) : intl.formatMessage({ id: 'groupSettings.members.removeAdminSuccess' }));
+      message.success(
+        role === 1
+          ? intl.formatMessage({ id: 'groupSettings.members.setAdminSuccess' })
+          : intl.formatMessage({
+              id: 'groupSettings.members.removeAdminSuccess',
+            }),
+      );
       loadData();
     } catch {
-      message.error(intl.formatMessage({ id: 'groupSettings.members.setRoleFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'groupSettings.members.setRoleFailed' }),
+      );
     }
   };
 
@@ -309,10 +393,14 @@ const GroupSettingsPage = () => {
       onOk: async () => {
         try {
           await quit_group(groupInfo!.group_uuid);
-          message.success(intl.formatMessage({ id: 'groupSettings.leaveGroupSuccess' }));
+          message.success(
+            intl.formatMessage({ id: 'groupSettings.leaveGroupSuccess' }),
+          );
           history.push('/home/chats/dashboard');
         } catch {
-          message.error(intl.formatMessage({ id: 'groupSettings.leaveGroupFailed' }));
+          message.error(
+            intl.formatMessage({ id: 'groupSettings.leaveGroupFailed' }),
+          );
         }
       },
     });
@@ -321,26 +409,37 @@ const GroupSettingsPage = () => {
   const handleDissolve = () => {
     Modal.confirm({
       title: intl.formatMessage({ id: 'groupSettings.dissolveGroup' }),
-      content: intl.formatMessage({ id: 'groupSettings.dissolveGroupConfirm' }, { name: groupInfo?.group_name }),
+      content: intl.formatMessage(
+        { id: 'groupSettings.dissolveGroupConfirm' },
+        { name: groupInfo?.group_name },
+      ),
       okText: intl.formatMessage({ id: 'groupSettings.dissolveGroupBtn' }),
       okButtonProps: { danger: true },
       cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await dissolve_group(groupInfo!.group_uuid);
-          message.success(intl.formatMessage({ id: 'groupSettings.dissolveGroupSuccess' }));
+          message.success(
+            intl.formatMessage({ id: 'groupSettings.dissolveGroupSuccess' }),
+          );
           history.push('/home/chats/dashboard');
         } catch {
-          message.error(intl.formatMessage({ id: 'groupSettings.dissolveGroupFailed' }));
+          message.error(
+            intl.formatMessage({ id: 'groupSettings.dissolveGroupFailed' }),
+          );
         }
       },
     });
   };
 
   const handleTransferOwnership = async () => {
-    const membersToTransfer = members.filter((m) => m.user_uuid !== userInfo?.uuid);
+    const membersToTransfer = members.filter(
+      (m) => m.user_uuid !== userInfo?.uuid,
+    );
     if (membersToTransfer.length === 0) {
-      message.warning(intl.formatMessage({ id: 'groupSettings.noMemberToTransfer' }));
+      message.warning(
+        intl.formatMessage({ id: 'groupSettings.noMemberToTransfer' }),
+      );
       return;
     }
 
@@ -355,12 +454,16 @@ const GroupSettingsPage = () => {
           </div>
           <Select
             style={{ width: '100%' }}
-            placeholder={intl.formatMessage({ id: 'groupSettings.selectMember' })}
+            placeholder={intl.formatMessage({
+              id: 'groupSettings.selectMember',
+            })}
             onChange={(val) => {
               selectedUser = val;
             }}
             options={membersToTransfer.map((m) => ({
-              label: `${memberInfoMap.get(m.user_uuid)?.username || m.user_uuid} (${m.user_uuid})`,
+              label: `${
+                memberInfoMap.get(m.user_uuid)?.username || m.user_uuid
+              } (${m.user_uuid})`,
               value: m.user_uuid,
             }))}
           />
@@ -371,7 +474,9 @@ const GroupSettingsPage = () => {
       cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         if (!selectedUser) {
-          message.warning(intl.formatMessage({ id: 'groupSettings.selectMemberToTransfer' }));
+          message.warning(
+            intl.formatMessage({ id: 'groupSettings.selectMemberToTransfer' }),
+          );
           return Promise.reject();
         }
         try {
@@ -380,10 +485,14 @@ const GroupSettingsPage = () => {
             user_uuid: selectedUser,
             role: 2,
           });
-          message.success(intl.formatMessage({ id: 'groupSettings.transferSuccess' }));
+          message.success(
+            intl.formatMessage({ id: 'groupSettings.transferSuccess' }),
+          );
           loadData();
         } catch {
-          message.error(intl.formatMessage({ id: 'groupSettings.transferFailed' }));
+          message.error(
+            intl.formatMessage({ id: 'groupSettings.transferFailed' }),
+          );
           return Promise.reject();
         }
       },
@@ -392,18 +501,25 @@ const GroupSettingsPage = () => {
 
   const copyGroupId = () => {
     if (groupInfo?.group_uuid) {
-      navigator.clipboard.writeText(groupInfo.group_uuid).then(() => {
-        message.success(intl.formatMessage({ id: 'groupSettings.groupIdCopied' }));
-      }).catch(() => {
-        message.error(intl.formatMessage({ id: 'groupSettings.copyFailed' }));
-      });
+      navigator.clipboard
+        .writeText(groupInfo.group_uuid)
+        .then(() => {
+          message.success(
+            intl.formatMessage({ id: 'groupSettings.groupIdCopied' }),
+          );
+        })
+        .catch(() => {
+          message.error(intl.formatMessage({ id: 'groupSettings.copyFailed' }));
+        });
     }
   };
 
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
-        <div className={styles.loadingText}>{intl.formatMessage({ id: 'groupSettings.loading' })}</div>
+        <div className={styles.loadingText}>
+          {intl.formatMessage({ id: 'groupSettings.loading' })}
+        </div>
       </div>
     );
   }
@@ -418,12 +534,30 @@ const GroupSettingsPage = () => {
 
   // Management action items
   const managementItems = [
-    { label: intl.formatMessage({ id: 'groupSettings.groupId' }), value: groupInfo.group_uuid, icon: <CopyOutlined />, onClick: copyGroupId, showArrow: true },
-    { label: intl.formatMessage({ id: 'groupSettings.members.owner' }), value: (() => {
-      const owner = members.find((m) => m.role === 2);
-      return owner ? (memberInfoMap.get(owner.user_uuid)?.username || owner.user_uuid) : '-';
-    })(), icon: <SafetyCertificateOutlined /> },
-    { label: intl.formatMessage({ id: 'groupSettings.createdAt' }), value: groupInfo.created_at ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN') : '-', icon: null },
+    {
+      label: intl.formatMessage({ id: 'groupSettings.groupId' }),
+      value: groupInfo.group_uuid,
+      icon: <CopyOutlined />,
+      onClick: copyGroupId,
+      showArrow: true,
+    },
+    {
+      label: intl.formatMessage({ id: 'groupSettings.members.owner' }),
+      value: (() => {
+        const owner = members.find((m) => m.role === 2);
+        return owner
+          ? memberInfoMap.get(owner.user_uuid)?.username || owner.user_uuid
+          : '-';
+      })(),
+      icon: <SafetyCertificateOutlined />,
+    },
+    {
+      label: intl.formatMessage({ id: 'groupSettings.createdAt' }),
+      value: groupInfo.created_at
+        ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN')
+        : '-',
+      icon: null,
+    },
   ];
 
   return (
@@ -432,7 +566,9 @@ const GroupSettingsPage = () => {
         <span className={styles.backBtn} onClick={() => history.back()}>
           <ArrowLeftOutlined />
         </span>
-        <span className={styles.headerTitle}>{intl.formatMessage({ id: 'groupSettings.title' })}</span>
+        <span className={styles.headerTitle}>
+          {intl.formatMessage({ id: 'groupSettings.title' })}
+        </span>
         <span style={{ width: 32 }} />
       </div>
 
@@ -480,10 +616,21 @@ const GroupSettingsPage = () => {
                   maxLength={50}
                   className={styles.nameInput}
                 />
-                <Button type="primary" size="small" onClick={handleSaveName} loading={saving}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={handleSaveName}
+                  loading={saving}
+                >
                   {intl.formatMessage({ id: 'groupSettings.members.confirm' })}
                 </Button>
-                <Button size="small" onClick={() => { setEditingName(false); setGroupName(groupInfo.group_name); }}>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setEditingName(false);
+                    setGroupName(groupInfo.group_name);
+                  }}
+                >
                   {intl.formatMessage({ id: 'groupSettings.members.cancel' })}
                 </Button>
               </div>
@@ -491,12 +638,21 @@ const GroupSettingsPage = () => {
               <div className={styles.nameRow}>
                 <span className={styles.groupName}>{groupInfo.group_name}</span>
                 {canManage && (
-                  <Button type="text" size="small" icon={<EditOutlined />} onClick={() => setEditingName(true)} />
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => setEditingName(true)}
+                  />
                 )}
               </div>
             )}
             <div className={styles.memberCount}>
-              <TeamOutlined /> {intl.formatMessage({ id: 'groupSettings.members.memberCount' }, { count: members.length })}
+              <TeamOutlined />{' '}
+              {intl.formatMessage(
+                { id: 'groupSettings.members.memberCount' },
+                { count: members.length },
+              )}
             </div>
           </div>
         </div>
@@ -513,59 +669,100 @@ const GroupSettingsPage = () => {
               autoFocus
             />
             <div className={styles.descEditActions}>
-              <Button type="primary" size="small" onClick={handleSaveDesc} loading={saving}>
+              <Button
+                type="primary"
+                size="small"
+                onClick={handleSaveDesc}
+                loading={saving}
+              >
                 {intl.formatMessage({ id: 'groupSettings.members.confirm' })}
               </Button>
-              <Button size="small" onClick={() => { setEditingDesc(false); setGroupDesc(groupInfo.description || ''); }}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setEditingDesc(false);
+                  setGroupDesc(groupInfo.description || '');
+                }}
+              >
                 {intl.formatMessage({ id: 'groupSettings.members.cancel' })}
               </Button>
             </div>
           </div>
         ) : groupInfo.description ? (
-          <div className={styles.descSection} onClick={() => canManage && setEditingDesc(true)}>
+          <div
+            className={styles.descSection}
+            onClick={() => canManage && setEditingDesc(true)}
+          >
             <span className={styles.descText}>{groupInfo.description}</span>
             {canManage && <EditOutlined className={styles.descEditIcon} />}
           </div>
         ) : canManage ? (
-          <div className={styles.descEmpty} onClick={() => setEditingDesc(true)}>
-            <span>{intl.formatMessage({ id: 'groupSettings.addDescription' })}</span>
+          <div
+            className={styles.descEmpty}
+            onClick={() => setEditingDesc(true)}
+          >
+            <span>
+              {intl.formatMessage({ id: 'groupSettings.addDescription' })}
+            </span>
             <EditOutlined className={styles.descEditIcon} />
           </div>
         ) : null}
 
         {/* Members grid row - QQ style */}
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>{intl.formatMessage({ id: 'groupSettings.groupMembers' })}</div>
+          <div className={styles.sectionTitle}>
+            {intl.formatMessage({ id: 'groupSettings.groupMembers' })}
+          </div>
           <div className={styles.memberGrid}>
             {canManage && (
-              <div key="add" className={styles.memberGridItem} onClick={() => { loadFriends(); setInviteModalOpen(true); }}>
+              <div
+                key="add"
+                className={styles.memberGridItem}
+                onClick={() => {
+                  loadFriends();
+                  setInviteModalOpen(true);
+                }}
+              >
                 <div className={styles.addMemberBtn}>
                   <UserAddOutlined className={styles.addIcon} />
                 </div>
-                <span className={styles.memberGridLabel}>{intl.formatMessage({ id: 'groupSettings.add' })}</span>
+                <span className={styles.memberGridLabel}>
+                  {intl.formatMessage({ id: 'groupSettings.add' })}
+                </span>
               </div>
             )}
             {displayMembers.map((member) => {
               const info = memberInfoMap.get(member.user_uuid);
-              const displayName = info?.username || member.nickname || intl.formatMessage({ id: 'groupSettings.members.member' });
+              const displayName =
+                info?.username ||
+                member.nickname ||
+                intl.formatMessage({ id: 'groupSettings.members.member' });
               const iconBizId = info?.icon;
-              const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
+              const avatarSrc = iconBizId
+                ? avatarMap.get(iconBizId)
+                : undefined;
               return (
-              <div key={member.user_uuid} className={styles.memberGridItem}>
-                <Avatar
-                  size={40}
-                  shape="square"
-                  icon={<UserOutlined />}
-                  src={avatarSrc || DEFAULT_ICON}
-                  className={styles.memberAvatar}
-                />
-                <span className={styles.memberGridLabel}>
-                  {member.role === 2 ? intl.formatMessage({ id: 'groupSettings.members.owner' }) : displayName.slice(0, 4)}
-                </span>
-                {member.user_uuid === userInfo?.uuid && (
-                  <Tag className={styles.meTag}>{intl.formatMessage({ id: 'groupSettings.members.me' })}</Tag>
-                )}
-              </div>
+                <div key={member.user_uuid} className={styles.memberGridItem}>
+                  <Avatar
+                    size={40}
+                    shape="square"
+                    icon={<UserOutlined />}
+                    src={avatarSrc || DEFAULT_ICON}
+                    className={styles.memberAvatar}
+                  />
+                  <span className={styles.memberGridLabel}>
+                    {member.role === 2
+                      ? intl.formatMessage({
+                          id: 'groupSettings.members.owner',
+                        })
+                      : displayName.slice(0, 4)}
+                  </span>
+                  {member.user_uuid === userInfo?.uuid && (
+                    <Tag className={styles.meTag}>
+                      {intl.formatMessage({ id: 'groupSettings.members.me' })}
+                    </Tag>
+                  )}
+                </div>
               );
             })}
             {hasMoreMembers && (
@@ -580,7 +777,9 @@ const GroupSettingsPage = () => {
                 <div className={styles.moreMembersBtn}>
                   <span className={styles.moreText}>+{members.length - 8}</span>
                 </div>
-                <span className={styles.memberGridLabel}>{intl.formatMessage({ id: 'groupSettings.more' })}</span>
+                <span className={styles.memberGridLabel}>
+                  {intl.formatMessage({ id: 'groupSettings.more' })}
+                </span>
               </div>
             )}
           </div>
@@ -588,14 +787,24 @@ const GroupSettingsPage = () => {
 
         {/* Group info items */}
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>{intl.formatMessage({ id: 'groupSettings.groupInfo' })}</div>
+          <div className={styles.sectionTitle}>
+            {intl.formatMessage({ id: 'groupSettings.groupInfo' })}
+          </div>
           <div className={styles.infoList}>
             {managementItems.map((item) => (
-              <div key={item.label} className={styles.infoItem} onClick={item.onClick}>
-                {item.icon && <span className={styles.infoIcon}>{item.icon}</span>}
+              <div
+                key={item.label}
+                className={styles.infoItem}
+                onClick={item.onClick}
+              >
+                {item.icon && (
+                  <span className={styles.infoIcon}>{item.icon}</span>
+                )}
                 <span className={styles.infoLabel}>{item.label}</span>
                 <span className={styles.infoValue}>{item.value}</span>
-                {item.showArrow && <span className={styles.arrow}>&rsaquo;</span>}
+                {item.showArrow && (
+                  <span className={styles.arrow}>&rsaquo;</span>
+                )}
               </div>
             ))}
           </div>
@@ -603,9 +812,13 @@ const GroupSettingsPage = () => {
 
         {/* Full member list */}
         <div className={styles.section} id="memberListSection">
-          <div className={styles.sectionTitle}>{intl.formatMessage({ id: 'groupSettings.allMembers' })}</div>
+          <div className={styles.sectionTitle}>
+            {intl.formatMessage({ id: 'groupSettings.allMembers' })}
+          </div>
           <Input.Search
-            placeholder={intl.formatMessage({ id: 'groupSettings.members.searchMember' })}
+            placeholder={intl.formatMessage({
+              id: 'groupSettings.members.searchMember',
+            })}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             prefix={<SearchOutlined style={{ color: '#bbb' }} />}
@@ -616,26 +829,62 @@ const GroupSettingsPage = () => {
             {filteredMembers.map((member) => {
               const isSelf = member.user_uuid === userInfo?.uuid;
               const info = memberInfoMap.get(member.user_uuid);
-              const displayName = info?.username || member.nickname || member.user_uuid;
+              const displayName =
+                info?.username || member.nickname || member.user_uuid;
               const iconBizId = info?.icon;
-              const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
-              const actions: { label: React.ReactNode; onClick: () => void }[] = [];
+              const avatarSrc = iconBizId
+                ? avatarMap.get(iconBizId)
+                : undefined;
+              const actions: { label: React.ReactNode; onClick: () => void }[] =
+                [];
               if (!isSelf && isOwner) {
                 if (member.role === 0) {
-                  actions.push({ label: intl.formatMessage({ id: 'groupSettings.members.setAdmin' }), onClick: () => handleSetRole(member, 1) });
+                  actions.push({
+                    label: intl.formatMessage({
+                      id: 'groupSettings.members.setAdmin',
+                    }),
+                    onClick: () => handleSetRole(member, 1),
+                  });
                 }
                 if (member.role === 1) {
-                  actions.push({ label: intl.formatMessage({ id: 'groupSettings.members.removeAdmin' }), onClick: () => handleSetRole(member, 0) });
+                  actions.push({
+                    label: intl.formatMessage({
+                      id: 'groupSettings.members.removeAdmin',
+                    }),
+                    onClick: () => handleSetRole(member, 0),
+                  });
                 }
-                actions.push({ label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>, onClick: () => handleKick(member) });
+                actions.push({
+                  label: (
+                    <span style={{ color: 'var(--color-error)' }}>
+                      {intl.formatMessage({
+                        id: 'groupSettings.members.removeMember',
+                      })}
+                    </span>
+                  ),
+                  onClick: () => handleKick(member),
+                });
               } else if (!isSelf && isAdmin && member.role === 0) {
-                actions.push({ label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>, onClick: () => handleKick(member) });
+                actions.push({
+                  label: (
+                    <span style={{ color: 'var(--color-error)' }}>
+                      {intl.formatMessage({
+                        id: 'groupSettings.members.removeMember',
+                      })}
+                    </span>
+                  ),
+                  onClick: () => handleKick(member),
+                });
               }
 
               return (
                 <div key={member.user_uuid} className={styles.memberListItem}>
                   <div className={styles.memberListItemInfo}>
-                    <Avatar size={36} icon={<UserOutlined />} src={avatarSrc || DEFAULT_ICON} />
+                    <Avatar
+                      size={36}
+                      icon={<UserOutlined />}
+                      src={avatarSrc || DEFAULT_ICON}
+                    />
                     <div className={styles.memberTextInfo}>
                       <div>
                         <span className={styles.memberListItemName}>
@@ -643,19 +892,39 @@ const GroupSettingsPage = () => {
                         </span>
                         <UserTypeTag type={info?.user_type} />
                         {member.role > 0 && (
-                          <span className={`${styles.roleTag} ${member.role === 2 ? styles.roleOwner : styles.roleAdmin}`}>
+                          <span
+                            className={`${styles.roleTag} ${
+                              member.role === 2
+                                ? styles.roleOwner
+                                : styles.roleAdmin
+                            }`}
+                          >
                             {ROLE_TEXT[member.role]}
                           </span>
                         )}
-                        {isSelf && <Tag style={{ marginLeft: 4 }} color="blue">{intl.formatMessage({ id: 'groupSettings.members.me' })}</Tag>}
+                        {isSelf && (
+                          <Tag style={{ marginLeft: 4 }} color="blue">
+                            {intl.formatMessage({
+                              id: 'groupSettings.members.me',
+                            })}
+                          </Tag>
+                        )}
                       </div>
-                      <span className={styles.memberItemId}>{info?.account || member.user_uuid}</span>
+                      <span className={styles.memberItemId}>
+                        {info?.account || member.user_uuid}
+                      </span>
                     </div>
                   </div>
                   {actions.length > 0 && (
                     <div className={styles.memberActions}>
                       {actions.map((action, idx) => (
-                        <Button key={idx} type="text" size="small" onClick={action.onClick} className={styles.actionBtn}>
+                        <Button
+                          key={idx}
+                          type="text"
+                          size="small"
+                          onClick={action.onClick}
+                          className={styles.actionBtn}
+                        >
                           {action.label}
                         </Button>
                       ))}
@@ -670,17 +939,31 @@ const GroupSettingsPage = () => {
         {/* Danger zone */}
         <div className={styles.section}>
           {!isOwner && (
-            <Button danger block className={styles.dangerBtn} onClick={handleLeaveGroup}>
+            <Button
+              danger
+              block
+              className={styles.dangerBtn}
+              onClick={handleLeaveGroup}
+            >
               {intl.formatMessage({ id: 'groupSettings.leaveGroup' })}
             </Button>
           )}
           {isOwner && (
             <>
-              <Button block className={styles.transferBtn} onClick={handleTransferOwnership}>
+              <Button
+                block
+                className={styles.transferBtn}
+                onClick={handleTransferOwnership}
+              >
                 {intl.formatMessage({ id: 'groupSettings.transferOwnership' })}
               </Button>
               <div style={{ height: 12 }} />
-              <Button danger block className={styles.dangerBtn} onClick={handleDissolve}>
+              <Button
+                danger
+                block
+                className={styles.dangerBtn}
+                onClick={handleDissolve}
+              >
                 {intl.formatMessage({ id: 'groupSettings.dissolveGroup' })}
               </Button>
             </>
@@ -696,6 +979,7 @@ const GroupSettingsPage = () => {
         open={inviteModalOpen}
         onOk={handleInvite}
         onCancel={() => setInviteModalOpen(false)}
+        closable={false}
         confirmLoading={inviteLoading}
         okText={intl.formatMessage({ id: 'groupSettings.members.invite' })}
         cancelText={intl.formatMessage({ id: 'groupSettings.members.cancel' })}
@@ -706,7 +990,9 @@ const GroupSettingsPage = () => {
         <Select
           mode="multiple"
           style={{ width: '100%' }}
-          placeholder={intl.formatMessage({ id: 'groupSettings.members.selectFriend' })}
+          placeholder={intl.formatMessage({
+            id: 'groupSettings.members.selectFriend',
+          })}
           value={selectedFriends}
           onChange={setSelectedFriends}
           options={friendList.map((f) => ({

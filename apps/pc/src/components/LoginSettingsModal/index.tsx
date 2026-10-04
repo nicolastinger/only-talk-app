@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Input, Modal, Radio, Space, Typography, message } from 'antd';
-import { CLIENT_CONFIG_KEYS } from '@workspace/types';
 import { getApiBase, setConfig } from '@workspace/services';
+import { CLIENT_CONFIG_KEYS } from '@workspace/types';
+import { Input, Modal, Radio, Space, Typography, message } from 'antd';
+import { useEffect, useState } from 'react';
 import styles from './index.less';
 
 const PRESET_DEV = 'http://127.0.0.1:8443';
@@ -18,7 +18,10 @@ interface LoginSettingsModalProps {
  * 登录页设置弹窗(类 QQ 登录页「设置」入口)。
  * 目前提供服务器地址选择: 开发/生产/自定义, 保存到公共库 client_config 的 server.api_base。
  */
-const LoginSettingsModal: React.FC<LoginSettingsModalProps> = ({ open, onClose }) => {
+const LoginSettingsModal: React.FC<LoginSettingsModalProps> = ({
+  open,
+  onClose,
+}) => {
   const [mode, setMode] = useState<ServerMode>('prod');
   const [custom, setCustom] = useState('');
   const [saving, setSaving] = useState(false);
@@ -39,7 +42,12 @@ const LoginSettingsModal: React.FC<LoginSettingsModalProps> = ({ open, onClose }
   }, [open]);
 
   const handleOk = async () => {
-    const value = mode === 'dev' ? PRESET_DEV : mode === 'prod' ? PRESET_PROD : custom.trim();
+    const value =
+      mode === 'dev'
+        ? PRESET_DEV
+        : mode === 'prod'
+        ? PRESET_PROD
+        : custom.trim();
     if (!value) {
       message.warning('请输入服务器地址');
       return;
@@ -61,6 +69,7 @@ const LoginSettingsModal: React.FC<LoginSettingsModalProps> = ({ open, onClose }
       open={open}
       title="设置"
       onCancel={onClose}
+      closable={false}
       onOk={handleOk}
       confirmLoading={saving}
       okText="保存"
@@ -70,7 +79,10 @@ const LoginSettingsModal: React.FC<LoginSettingsModalProps> = ({ open, onClose }
     >
       <div className={styles.section}>
         <div className={styles.sectionTitle}>服务器设置</div>
-        <Radio.Group value={mode} onChange={(e) => setMode(e.target.value as ServerMode)}>
+        <Radio.Group
+          value={mode}
+          onChange={(e) => setMode(e.target.value as ServerMode)}
+        >
           <Space direction="vertical" size={10}>
             <Radio value="dev">
               开发环境 <span className={styles.hint}>{PRESET_DEV}</span>

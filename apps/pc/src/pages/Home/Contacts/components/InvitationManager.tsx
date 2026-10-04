@@ -78,8 +78,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
         groups: counts.groups,
         plaza: counts.plaza,
         moments: counts.moments,
-        total:
-          counts.contacts + counts.groups + counts.plaza + counts.moments,
+        total: counts.contacts + counts.groups + counts.plaza + counts.moments,
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);
@@ -308,6 +307,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
       }
       open={visible}
       onCancel={onCancel}
+      closable={false}
       footer={null}
       width={520}
     >

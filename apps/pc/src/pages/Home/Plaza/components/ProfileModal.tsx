@@ -115,6 +115,7 @@ const ProfileModal = (props: {
     <Modal
       open={!!user}
       onCancel={onClose}
+      closable={false}
       footer={null}
       centered
       width={420}

@@ -6,8 +6,8 @@ import {
   add_friend,
   cache_user_info,
   getFiles,
-  search_user_by_account,
   isHttpSuccess,
+  search_user_by_account,
 } from '@workspace/services';
 import { FriendRequestInfoDTO, UserInfo } from '@workspace/types';
 import { Avatar, Button, Form, Input, List, message, Modal } from 'antd';
@@ -207,6 +207,7 @@ const SearchFriend = () => {
         open={isModalVisible}
         onOk={handleAddFriend}
         onCancel={handleCancel}
+        closable={false}
         okText={intl.formatMessage({ id: 'friendRequest.sendRequest' })}
         cancelText={intl.formatMessage({ id: 'friendRequest.cancel' })}
       >

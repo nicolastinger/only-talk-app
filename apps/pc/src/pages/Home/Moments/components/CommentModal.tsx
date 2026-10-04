@@ -79,6 +79,7 @@ const CommentModal = (props: {
       title={intl.formatMessage({ id: 'moments.comments.title' })}
       open={open}
       onCancel={onClose}
+      closable={false}
       footer={null}
       centered
       className={styles.modal}

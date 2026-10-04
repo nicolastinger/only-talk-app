@@ -502,6 +502,7 @@ export default {
     search: 'Search',
     addFriend: 'Add Friend',
     friendNotification: 'Friend Requests',
+    groupNotification: 'Group Notifications',
   },
   search: {
     placeholder: 'Search',

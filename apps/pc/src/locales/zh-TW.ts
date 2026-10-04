@@ -495,6 +495,7 @@ export default {
     search: '搜索',
     addFriend: '添加好友',
     friendNotification: '好友通知',
+    groupNotification: '群組通知',
   },
   search: {
     placeholder: '搜索',

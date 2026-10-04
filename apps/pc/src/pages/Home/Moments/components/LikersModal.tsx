@@ -1,8 +1,12 @@
-import { get_moment_likers, getFiles, openImagePreviewWindow } from '@workspace/services';
-import { MomentLikerVo } from '@workspace/types';
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useIntl } from '@umijs/max';
+import {
+  get_moment_likers,
+  getFiles,
+  openImagePreviewWindow,
+} from '@workspace/services';
+import { MomentLikerVo } from '@workspace/types';
 import { Avatar, Empty, Modal, Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/LikersModal.less';
@@ -34,7 +38,8 @@ const LikersModal = (props: {
         for (const l of res.list) {
           if (l.icon && !record[l.icon]) {
             const files = await getFiles(l.icon);
-            if (files?.[0]?.tauri_file_path) record[l.icon] = files[0].tauri_file_path;
+            if (files?.[0]?.tauri_file_path)
+              record[l.icon] = files[0].tauri_file_path;
           }
         }
         setAvatars(record);
@@ -61,6 +66,7 @@ const LikersModal = (props: {
       title={intl.formatMessage({ id: 'moments.likers.title' })}
       open={open}
       onCancel={onClose}
+      closable={false}
       footer={null}
       centered
       className={styles.modal}
@@ -99,7 +105,10 @@ const LikersModal = (props: {
             </div>
           ))}
           {hasMore && (
-            <button className={styles.loadMore} onClick={() => load(page + 1, false)}>
+            <button
+              className={styles.loadMore}
+              onClick={() => load(page + 1, false)}
+            >
               {intl.formatMessage({ id: 'moments.loadMore' })}
             </button>
           )}

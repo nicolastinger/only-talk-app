@@ -113,6 +113,7 @@ const MomentComposer = (props: {
       title={intl.formatMessage({ id: 'moments.composer.title' })}
       open={open}
       onCancel={onClose}
+      closable={false}
       footer={[
         <Button key="cancel" onClick={onClose}>
           {intl.formatMessage({ id: 'moments.composer.cancel' })}

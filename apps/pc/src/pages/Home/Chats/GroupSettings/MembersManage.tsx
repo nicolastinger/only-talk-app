@@ -1,15 +1,30 @@
 import UserTypeTag from '@/components/UserTypeTag';
-import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
-import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { DEFAULT_ICON } from '@/constants';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
+import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
-import { invite_group_members, remove_group_member, set_member_role } from '@workspace/services';
-import { FriendVo, GroupInfoVo, GroupMemberVo } from '@workspace/types';
-import { Avatar, Button, Dropdown, Input, List, MenuProps, Modal, Select, Space, message, Tag } from 'antd';
-import { UserOutlined, PlusOutlined, MoreOutlined } from '@ant-design/icons';
+import { MoreOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from '@umijs/max';
+import {
+  invite_group_members,
+  remove_group_member,
+  set_member_role,
+} from '@workspace/services';
+import { FriendVo, GroupInfoVo, GroupMemberVo } from '@workspace/types';
+import {
+  Avatar,
+  Button,
+  Dropdown,
+  Input,
+  List,
+  MenuProps,
+  message,
+  Modal,
+  Select,
+  Tag,
+} from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './index.module.less';
 
 interface Props {
@@ -25,7 +40,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const ROLE_TEXT: Record<number, string> = {
     2: intl.formatMessage({ id: 'groupSettings.members.owner' }),
     1: intl.formatMessage({ id: 'groupSettings.members.admin' }),
-    0: intl.formatMessage({ id: 'groupSettings.members.member' })
+    0: intl.formatMessage({ id: 'groupSettings.members.member' }),
   };
   const [searchText, setSearchText] = useState('');
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -34,7 +49,9 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const [inviteLoading, setInviteLoading] = useState(false);
 
   const isOwner = groupInfo.owner_uuid === userInfo?.uuid;
-  const isAdmin = members.some((m) => m.user_uuid === userInfo?.uuid && m.role >= 1);
+  const isAdmin = members.some(
+    (m) => m.user_uuid === userInfo?.uuid && m.role >= 1,
+  );
   const canManage = isOwner || isAdmin;
 
   const memberUuids = useMemo(
@@ -68,23 +85,39 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
       setFriendList(friends.filter((f) => !memberIds.has(f.friend_id)));
       setSelectedFriends([]);
     } catch {
-      message.error(intl.formatMessage({ id: 'groupSettings.members.getFriendListFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'groupSettings.members.getFriendListFailed' }),
+      );
     }
   };
 
   const handleInvite = async () => {
     if (selectedFriends.length === 0) {
-      message.warning(intl.formatMessage({ id: 'groupSettings.members.selectFriendsToInvite' }));
+      message.warning(
+        intl.formatMessage({
+          id: 'groupSettings.members.selectFriendsToInvite',
+        }),
+      );
       return;
     }
     setInviteLoading(true);
     try {
-      const invited = await invite_group_members(groupInfo.group_uuid, selectedFriends);
-      message.success(intl.formatMessage({ id: 'groupSettings.members.inviteSent' }, { count: invited.length }));
+      const invited = await invite_group_members(
+        groupInfo.group_uuid,
+        selectedFriends,
+      );
+      message.success(
+        intl.formatMessage(
+          { id: 'groupSettings.members.inviteSent' },
+          { count: invited.length },
+        ),
+      );
       setInviteModalOpen(false);
       onUpdate();
     } catch {
-      message.error(intl.formatMessage({ id: 'groupSettings.members.inviteFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'groupSettings.members.inviteFailed' }),
+      );
     } finally {
       setInviteLoading(false);
     }
@@ -93,17 +126,31 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   const handleKick = (member: GroupMemberVo) => {
     Modal.confirm({
       title: intl.formatMessage({ id: 'groupSettings.members.removeMember' }),
-      content: intl.formatMessage({ id: 'groupSettings.members.removeMemberConfirm' }, { name: memberInfoMap.get(member.user_uuid)?.username || member.user_uuid }),
+      content: intl.formatMessage(
+        { id: 'groupSettings.members.removeMemberConfirm' },
+        {
+          name:
+            memberInfoMap.get(member.user_uuid)?.username || member.user_uuid,
+        },
+      ),
       okText: intl.formatMessage({ id: 'groupSettings.members.confirm' }),
       okButtonProps: { danger: true },
       cancelText: intl.formatMessage({ id: 'groupSettings.members.cancel' }),
       onOk: async () => {
         try {
           await remove_group_member(groupInfo.group_uuid, member.user_uuid);
-          message.success(intl.formatMessage({ id: 'groupSettings.members.removeMemberSuccess' }));
+          message.success(
+            intl.formatMessage({
+              id: 'groupSettings.members.removeMemberSuccess',
+            }),
+          );
           onUpdate();
         } catch {
-          message.error(intl.formatMessage({ id: 'groupSettings.members.removeMemberFailed' }));
+          message.error(
+            intl.formatMessage({
+              id: 'groupSettings.members.removeMemberFailed',
+            }),
+          );
         }
       },
     });
@@ -116,12 +163,18 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
         user_uuid: member.user_uuid,
         role,
       });
-      message.success(role === 1
-        ? intl.formatMessage({ id: 'groupSettings.members.setAdminSuccess' })
-        : intl.formatMessage({ id: 'groupSettings.members.removeAdminSuccess' }));
+      message.success(
+        role === 1
+          ? intl.formatMessage({ id: 'groupSettings.members.setAdminSuccess' })
+          : intl.formatMessage({
+              id: 'groupSettings.members.removeAdminSuccess',
+            }),
+      );
       onUpdate();
     } catch {
-      message.error(intl.formatMessage({ id: 'groupSettings.members.setRoleFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'groupSettings.members.setRoleFailed' }),
+      );
     }
   };
 
@@ -144,19 +197,29 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
       if (member.role === 1) {
         items.push({
           key: 'member',
-          label: intl.formatMessage({ id: 'groupSettings.members.removeAdmin' }),
+          label: intl.formatMessage({
+            id: 'groupSettings.members.removeAdmin',
+          }),
           onClick: () => handleSetRole(member, 0),
         });
       }
       items.push({
         key: 'kick',
-        label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>,
+        label: (
+          <span style={{ color: 'var(--color-error)' }}>
+            {intl.formatMessage({ id: 'groupSettings.members.removeMember' })}
+          </span>
+        ),
         onClick: () => handleKick(member),
       });
     } else if (isAdmin && member.role === 0) {
       items.push({
         key: 'kick',
-        label: <span style={{ color: 'var(--color-error)' }}>{intl.formatMessage({ id: 'groupSettings.members.removeMember' })}</span>,
+        label: (
+          <span style={{ color: 'var(--color-error)' }}>
+            {intl.formatMessage({ id: 'groupSettings.members.removeMember' })}
+          </span>
+        ),
         onClick: () => handleKick(member),
       });
     }
@@ -177,16 +240,27 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   return (
     <div>
       <div className={styles.memberListHeader}>
-        <span>{intl.formatMessage({ id: 'groupSettings.members.memberCount' }, { count: members.length })}</span>
+        <span>
+          {intl.formatMessage(
+            { id: 'groupSettings.members.memberCount' },
+            { count: members.length },
+          )}
+        </span>
         {canManage && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setInviteModalOpen(true)}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setInviteModalOpen(true)}
+          >
             {intl.formatMessage({ id: 'groupSettings.members.inviteMember' })}
           </Button>
         )}
       </div>
 
       <Input.Search
-        placeholder={intl.formatMessage({ id: 'groupSettings.members.searchMember' })}
+        placeholder={intl.formatMessage({
+          id: 'groupSettings.members.searchMember',
+        })}
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
         style={{ marginBottom: 16 }}
@@ -197,37 +271,54 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
         dataSource={filteredMembers}
         renderItem={(member) => {
           const info = memberInfoMap.get(member.user_uuid);
-          const displayName = info?.username || member.nickname || member.user_uuid;
+          const displayName =
+            info?.username || member.nickname || member.user_uuid;
           const iconBizId = info?.icon;
           const avatarSrc = iconBizId ? avatarMap.get(iconBizId) : undefined;
           return (
-          <div className={styles.memberItem}>
-            <div className={styles.memberInfo}>
-              <Avatar size={32} icon={<UserOutlined />} src={avatarSrc || DEFAULT_ICON} />
-              <div>
+            <div className={styles.memberItem}>
+              <div className={styles.memberInfo}>
+                <Avatar
+                  size={32}
+                  icon={<UserOutlined />}
+                  src={avatarSrc || DEFAULT_ICON}
+                />
                 <div>
-                  <span className={styles.memberName}>
-                    {displayName}
+                  <div>
+                    <span className={styles.memberName}>{displayName}</span>
+                    <UserTypeTag type={info?.user_type} />
+                    {member.role > 0 && (
+                      <span
+                        className={`${styles.roleTag} ${
+                          member.role === 2
+                            ? styles.roleOwner
+                            : styles.roleAdmin
+                        }`}
+                      >
+                        {ROLE_TEXT[member.role]}
+                      </span>
+                    )}
+                    {member.user_uuid === userInfo?.uuid && (
+                      <Tag style={{ marginLeft: 4 }} color="blue">
+                        {intl.formatMessage({ id: 'groupSettings.members.me' })}
+                      </Tag>
+                    )}
+                  </div>
+                  <span className={styles.memberId}>
+                    {info?.account || member.user_uuid}
                   </span>
-                  <UserTypeTag type={info?.user_type} />
-                  {member.role > 0 && (
-                    <span className={`${styles.roleTag} ${member.role === 2 ? styles.roleOwner : styles.roleAdmin}`}>
-                      {ROLE_TEXT[member.role]}
-                    </span>
-                  )}
-                  {member.user_uuid === userInfo?.uuid && (
-                    <Tag style={{ marginLeft: 4 }} color="blue">{intl.formatMessage({ id: 'groupSettings.members.me' })}</Tag>
-                  )}
                 </div>
-                <span className={styles.memberId}>{info?.account || member.user_uuid}</span>
               </div>
+              {(getMemberActions(member) || []).length > 0 && (
+                <Dropdown
+                  menu={{ items: getMemberActions(member) }}
+                  placement="bottomRight"
+                  trigger={['click']}
+                >
+                  <Button type="text" size="small" icon={<MoreOutlined />} />
+                </Dropdown>
+              )}
             </div>
-            {(getMemberActions(member) || []).length > 0 && (
-              <Dropdown menu={{ items: getMemberActions(member) }} placement="bottomRight" trigger={['click']}>
-                <Button type="text" size="small" icon={<MoreOutlined />} />
-              </Dropdown>
-            )}
-          </div>
           );
         }}
       />
@@ -237,6 +328,7 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
         open={inviteModalOpen}
         onOk={handleInvite}
         onCancel={() => setInviteModalOpen(false)}
+        closable={false}
         confirmLoading={inviteLoading}
         okText={intl.formatMessage({ id: 'groupSettings.members.invite' })}
         cancelText={intl.formatMessage({ id: 'groupSettings.members.cancel' })}
@@ -247,7 +339,9 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
         <Select
           mode="multiple"
           style={{ width: '100%' }}
-          placeholder={intl.formatMessage({ id: 'groupSettings.members.selectFriend' })}
+          placeholder={intl.formatMessage({
+            id: 'groupSettings.members.selectFriend',
+          })}
           value={selectedFriends}
           onChange={setSelectedFriends}
           options={friendList.map((f) => ({

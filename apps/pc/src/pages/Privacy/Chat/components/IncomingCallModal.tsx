@@ -27,6 +27,7 @@ const IncomingCallModal: React.FC<IncomingCallModalProps> = ({
       open={open}
       onOk={onAccept}
       onCancel={onReject}
+      closable={false}
       okText={intl.formatMessage({ id: 'privacyChat.accept' })}
       cancelText={intl.formatMessage({ id: 'privacyChat.reject' })}
     >

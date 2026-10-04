@@ -81,6 +81,7 @@ const MatchModal = (props: { user: PlazaUser | null; onClose: () => void }) => {
     <Modal
       open={!!user}
       onCancel={onClose}
+      closable={false}
       footer={null}
       centered
       width={380}

@@ -3,31 +3,31 @@ import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import {
   CheckOutlined,
+  ClearOutlined,
   ClockCircleOutlined,
   CloseOutlined,
   UserOutlined,
-  ClearOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
 import {
-  get_accept_friend_request_list,
-  get_user_info_with_cache,
-  get_friend_request_list,
-  getFiles,
-  process_friend_request,
-  readContactsNotification,
   clearUnreadByLevel,
+  get_accept_friend_request_list,
+  get_friend_request_list,
+  get_user_info_with_cache,
+  getFiles,
   getUnreadNotificationCounts,
   isHttpSuccess,
+  process_friend_request,
+  readContactsNotification,
 } from '@workspace/services';
 import {
   FriendRequestInfo,
   FriendRequestInfoDTO,
   UserInfo,
 } from '@workspace/types';
-import { Avatar, Button, Modal, Tabs, Popconfirm } from 'antd';
+import { Avatar, Button, Modal, Popconfirm, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 
@@ -61,8 +61,7 @@ const FriendRequestsModal = ({
         groups: counts.groups,
         plaza: counts.plaza,
         moments: counts.moments,
-        total:
-          counts.contacts + counts.groups + counts.plaza + counts.moments,
+        total: counts.contacts + counts.groups + counts.plaza + counts.moments,
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);
@@ -408,7 +407,13 @@ const FriendRequestsModal = ({
   return (
     <Modal
       title={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <span className={styles.modalTitle}>
             {intl.formatMessage({ id: 'friendRequest.title' })}
           </span>
@@ -426,6 +431,7 @@ const FriendRequestsModal = ({
       }
       open={visible}
       onCancel={onClose}
+      closable={false}
       footer={null}
       width={560}
       className={styles.friendRequestsModal}

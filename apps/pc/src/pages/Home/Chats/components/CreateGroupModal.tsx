@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { FriendVo, GroupInfoVo } from '@workspace/types';
-import {
-  get_friend_list,
-  create_group,
-  invite_group_members,
-  create_group_chat_session,
-} from '@workspace/services';
-import { Modal, Input, Select, message } from 'antd';
 import { history } from '@umijs/max';
+import {
+  create_group,
+  create_group_chat_session,
+  get_friend_list,
+  invite_group_members,
+} from '@workspace/services';
+import { FriendVo, GroupInfoVo } from '@workspace/types';
+import { Input, Modal, Select, message } from 'antd';
+import { useEffect, useState } from 'react';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -74,6 +74,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       open={visible}
       onOk={handleCreate}
       onCancel={onCancel}
+      closable={false}
       confirmLoading={loading}
       okText="创建"
       cancelText="取消"

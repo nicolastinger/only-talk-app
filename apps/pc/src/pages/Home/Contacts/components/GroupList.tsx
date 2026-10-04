@@ -1,22 +1,15 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { history, useIntl, useLocation } from '@umijs/max';
-import { getFiles, getUnreadNotificationCounts } from '@workspace/services';
-import { get_group_list } from '@workspace/services';
-import { GroupInfoVo, GroupListItemVo } from '@workspace/types';
-import { Badge, message } from 'antd';
-import { PlusOutlined, MailOutlined } from '@ant-design/icons';
+import { get_group_list, getFiles } from '@workspace/services';
+import { GroupListItemVo } from '@workspace/types';
+import { message } from 'antd';
 import { useEffect, useState } from 'react';
-import CreateGroupModal from './CreateGroupModal';
-import InvitationManager from './InvitationManager';
 import styles from './styles/GroupList.less';
 
 const GroupList = () => {
   const intl = useIntl();
   const [groups, setGroups] = useState<GroupListItemVo[]>([]);
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [invitationVisible, setInvitationVisible] = useState(false);
-  const [groupInvitationUnread, setGroupInvitationUnread] = useState(0);
   const refreshFlag = useBearStore((state) => state.refreshFlag);
   const location = useLocation();
 
@@ -25,30 +18,13 @@ const GroupList = () => {
 
   useEffect(() => {
     getGroupList();
-    fetchGroupInvitationUnread();
   }, []);
 
   useEffect(() => {
     if (refreshFlag > 0) {
       getGroupList();
-      fetchGroupInvitationUnread();
     }
   }, [refreshFlag]);
-
-  useEffect(() => {
-    if (!invitationVisible) {
-      fetchGroupInvitationUnread();
-    }
-  }, [invitationVisible]);
-
-  const fetchGroupInvitationUnread = async () => {
-    try {
-      const counts = await getUnreadNotificationCounts();
-      setGroupInvitationUnread(counts.groups || 0);
-    } catch (e) {
-      console.log('获取群邀请未读数失败', e);
-    }
-  };
 
   const getGroupList = async () => {
     try {
@@ -57,17 +33,14 @@ const GroupList = () => {
       setGroups(groupList || []);
     } catch (error) {
       console.error('获取群组列表失败', error);
-      message.error(intl.formatMessage({ id: 'contacts.groupList.fetchError' }));
+      message.error(
+        intl.formatMessage({ id: 'contacts.groupList.fetchError' }),
+      );
     }
   };
 
   const routeToGroupInfo = (groupId: string) => {
     history.push('/home/contacts/group?groupId=' + groupId);
-  };
-
-  const handleCreateSuccess = async (group: GroupInfoVo) => {
-    setCreateModalVisible(false);
-    await getGroupList();
   };
 
   return (
@@ -84,33 +57,6 @@ const GroupList = () => {
             ))
           : null}
       </div>
-      <div className={styles.bottomBar}>
-        <Badge count={groupInvitationUnread} size="small" offset={[-4, 2]}>
-          <div
-            className={styles.invitationBtn}
-            onClick={() => setInvitationVisible(true)}
-          >
-            <MailOutlined />
-            <span>{intl.formatMessage({ id: 'contacts.groupList.invitationManage' })}</span>
-          </div>
-        </Badge>
-        <div
-          className={styles.createBtn}
-          onClick={() => setCreateModalVisible(true)}
-        >
-          <PlusOutlined />
-          <span>{intl.formatMessage({ id: 'contacts.groupList.createGroup' })}</span>
-        </div>
-      </div>
-      <CreateGroupModal
-        visible={createModalVisible}
-        onCancel={() => setCreateModalVisible(false)}
-        onSuccess={handleCreateSuccess}
-      />
-      <InvitationManager
-        visible={invitationVisible}
-        onCancel={() => setInvitationVisible(false)}
-      />
     </div>
   );
 };
@@ -159,7 +105,10 @@ const GroupBox = ({ group, isSelected, onClick }: GroupBoxProps) => {
       </div>
       <div className={styles.center}>
         <div className={styles.centerTitle}>{group.group_name}</div>
-        <div className={styles.centerText}>{group.member_count} {intl.formatMessage({ id: 'contacts.groupList.members' })}</div>
+        <div className={styles.centerText}>
+          {group.member_count}{' '}
+          {intl.formatMessage({ id: 'contacts.groupList.members' })}
+        </div>
       </div>
     </div>
   );

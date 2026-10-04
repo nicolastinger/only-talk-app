@@ -1,8 +1,8 @@
 import AnnouncementBanner from '@/components/AnnouncementBanner';
 import ConnectionStatusTag from '@/components/ConnectionStatusTag';
 import DraggableHeader from '@/components/DraggableHeader';
-import MessageAlertBanner from '@/components/MessageAlertBanner';
 import { LeftAside } from '@/components/LeftAside';
+import MessageAlertBanner from '@/components/MessageAlertBanner';
 import OnlineStatusSwitch from '@/components/OnlineStatusSwitch';
 import {
   CamouflageButton,
@@ -12,7 +12,6 @@ import {
   QuicReconnectButton,
   ThemeButton,
 } from '@/components/ToolButtons';
-import { getApiBase } from '@workspace/services';
 import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
 import { useSystemNotify } from '@/hooks/useSystemNotify';
 import { useBearStore } from '@/store/store';
@@ -27,7 +26,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Window } from '@tauri-apps/api/window';
 import { Outlet, history, useIntl } from '@umijs/max';
-import { cache_user_info, get_cached_user_info } from '@workspace/services';
+import {
+  cache_user_info,
+  getApiBase,
+  get_cached_user_info,
+} from '@workspace/services';
 import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
 import { Modal } from 'antd';
 import { useEffect, useState } from 'react';
@@ -53,9 +56,11 @@ const HomeLayout = () => {
     listen<string>('force_logout', (event) => {
       setForceLogoutReason(event.payload || '');
       setForceLogoutVisible(true);
-    }).then((stop) => {
-      unlisten = stop;
-    }).catch(console.error);
+    })
+      .then((stop) => {
+        unlisten = stop;
+      })
+      .catch(console.error);
     return () => unlisten?.();
   }, []);
 
@@ -221,14 +226,20 @@ const HomeLayout = () => {
             <div className={styles.quicReconnectTip}>
               <span className={styles.tipIcon}>⚠️</span>
               <span className={styles.tipText}>
-                {intl.formatMessage({ id: 'homeLayout.connectionDisconnected' })}
+                {intl.formatMessage({
+                  id: 'homeLayout.connectionDisconnected',
+                })}
               </span>
               <div
                 className={styles.tipReconnectButton}
                 onClick={handleReconnect}
               >
                 <ReloadOutlined spin={isReconnecting} />
-                <span>{isReconnecting ? intl.formatMessage({ id: 'homeLayout.reconnecting' }) : intl.formatMessage({ id: 'homeLayout.reconnect' })}</span>
+                <span>
+                  {isReconnecting
+                    ? intl.formatMessage({ id: 'homeLayout.reconnecting' })
+                    : intl.formatMessage({ id: 'homeLayout.reconnect' })}
+                </span>
               </div>
             </div>
           )}
@@ -268,11 +279,14 @@ const HomeLayout = () => {
         title={intl.formatMessage({ id: 'homeLayout.closeWindow' })}
         open={closeModalVisible}
         onCancel={() => setCloseModalVisible(false)}
+        closable={false}
         footer={null}
         centered
       >
         <div style={{ padding: '16px 0' }}>
-          <p style={{ marginBottom: 16 }}>{intl.formatMessage({ id: 'homeLayout.selectCloseMethod' })}</p>
+          <p style={{ marginBottom: 16 }}>
+            {intl.formatMessage({ id: 'homeLayout.selectCloseMethod' })}
+          </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button
               onClick={hideToTray}
@@ -313,7 +327,8 @@ const HomeLayout = () => {
         centered
       >
         <p style={{ padding: '16px 0' }}>
-          {forceLogoutReason || intl.formatMessage({ id: 'homeLayout.forceLogoutContent' })}
+          {forceLogoutReason ||
+            intl.formatMessage({ id: 'homeLayout.forceLogoutContent' })}
         </p>
       </Modal>
     </div>

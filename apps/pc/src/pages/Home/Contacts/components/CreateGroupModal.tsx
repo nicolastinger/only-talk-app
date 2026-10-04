@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { GroupInfoVo } from '@workspace/types';
-import { create_group } from '@workspace/services';
-import { Modal, Input, InputNumber, message } from 'antd';
 import { useIntl } from '@umijs/max';
+import { create_group } from '@workspace/services';
+import { GroupInfoVo } from '@workspace/types';
+import { Input, InputNumber, message, Modal } from 'antd';
+import { useEffect, useState } from 'react';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -31,7 +31,9 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   const handleCreate = async () => {
     if (!groupName.trim()) {
-      message.warning(intl.formatMessage({ id: 'contacts.createGroup.nameRequired' }));
+      message.warning(
+        intl.formatMessage({ id: 'contacts.createGroup.nameRequired' }),
+      );
       return;
     }
     setLoading(true);
@@ -42,7 +44,9 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         description: description.trim() || undefined,
         max_members: maxMembers,
       });
-      message.success(intl.formatMessage({ id: 'contacts.createGroup.success' }));
+      message.success(
+        intl.formatMessage({ id: 'contacts.createGroup.success' }),
+      );
       onSuccess(group);
     } catch (err) {
       console.error('创建群聊失败', err);
@@ -58,27 +62,37 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       open={visible}
       onOk={handleCreate}
       onCancel={onCancel}
+      closable={false}
       confirmLoading={loading}
       okText={intl.formatMessage({ id: 'contacts.createGroup.create' })}
       cancelText={intl.formatMessage({ id: 'contacts.createGroup.cancel' })}
     >
       <div style={{ marginBottom: 16 }}>
-        <label>{intl.formatMessage({ id: 'contacts.createGroup.nameLabel' })} <span style={{ color: 'red' }}>*</span></label>
+        <label>
+          {intl.formatMessage({ id: 'contacts.createGroup.nameLabel' })}{' '}
+          <span style={{ color: 'red' }}>*</span>
+        </label>
         <Input
           value={groupName}
           onChange={(e) => setGroupName(e.target.value)}
-          placeholder={intl.formatMessage({ id: 'contacts.createGroup.namePlaceholder' })}
+          placeholder={intl.formatMessage({
+            id: 'contacts.createGroup.namePlaceholder',
+          })}
           maxLength={100}
           showCount
           style={{ marginTop: 8 }}
         />
       </div>
       <div style={{ marginBottom: 16 }}>
-        <label>{intl.formatMessage({ id: 'contacts.createGroup.descLabel' })}</label>
+        <label>
+          {intl.formatMessage({ id: 'contacts.createGroup.descLabel' })}
+        </label>
         <Input.TextArea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder={intl.formatMessage({ id: 'contacts.createGroup.descPlaceholder' })}
+          placeholder={intl.formatMessage({
+            id: 'contacts.createGroup.descPlaceholder',
+          })}
           maxLength={500}
           showCount
           rows={3}
@@ -86,7 +100,9 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         />
       </div>
       <div>
-        <label>{intl.formatMessage({ id: 'contacts.createGroup.maxMembersLabel' })}</label>
+        <label>
+          {intl.formatMessage({ id: 'contacts.createGroup.maxMembersLabel' })}
+        </label>
         <InputNumber
           value={maxMembers}
           onChange={(val) => setMaxMembers(val || 500)}

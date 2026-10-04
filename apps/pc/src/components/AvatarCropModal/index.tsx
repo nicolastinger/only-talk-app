@@ -51,6 +51,7 @@ const AvatarCropModal: React.FC<AvatarCropModalProps> = ({
     <Modal
       open={open}
       onCancel={onCancel}
+      closable={false}
       width={420}
       centered
       footer={null}

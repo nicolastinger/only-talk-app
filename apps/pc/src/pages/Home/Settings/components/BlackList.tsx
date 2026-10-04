@@ -5,12 +5,21 @@ import {
   block_friend,
   get_black_list,
   getFiles,
+  isHttpSuccess,
   search_user_by_account,
   unblock_friend,
-  isHttpSuccess,
 } from '@workspace/services';
 import { BlackListVo, UserInfo } from '@workspace/types';
-import { Button, Card, Empty, Input, Modal, Spin, Typography, message } from 'antd';
+import {
+  Button,
+  Card,
+  Empty,
+  Input,
+  message,
+  Modal,
+  Spin,
+  Typography,
+} from 'antd';
 import { useEffect, useState } from 'react';
 import styles from '../Settings.less';
 
@@ -52,7 +61,9 @@ const BlackList = () => {
       setAvatarMap(avatarMap);
     } catch (error) {
       console.error('获取黑名单失败:', error);
-      message.error(intl.formatMessage({ id: 'settings.blacklist.loadFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'settings.blacklist.loadFailed' }),
+      );
     } finally {
       setLoading(false);
     }
@@ -86,10 +97,14 @@ const BlackList = () => {
           setSearchAvatar(await getUserIcon(user.icon || ''));
         } else {
           setSearchResult(null);
-          message.info(intl.formatMessage({ id: 'settings.blacklist.notFound' }));
+          message.info(
+            intl.formatMessage({ id: 'settings.blacklist.notFound' }),
+          );
         }
       } else {
-        message.error(intl.formatMessage({ id: 'settings.blacklist.notFound' }));
+        message.error(
+          intl.formatMessage({ id: 'settings.blacklist.notFound' }),
+        );
       }
     } catch (error) {
       console.error('搜索用户失败:', error);
@@ -104,7 +119,9 @@ const BlackList = () => {
     setBlockLoading(true);
     try {
       await block_friend(searchResult.uuid);
-      message.success(intl.formatMessage({ id: 'settings.blacklist.blockSuccess' }));
+      message.success(
+        intl.formatMessage({ id: 'settings.blacklist.blockSuccess' }),
+      );
       setBlockConfirmVisible(false);
       setSearchResult(null);
       setSearchKey('');
@@ -112,7 +129,9 @@ const BlackList = () => {
       loadList();
     } catch (error) {
       console.error('拉黑失败:', error);
-      message.error(intl.formatMessage({ id: 'settings.blacklist.blockFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'settings.blacklist.blockFailed' }),
+      );
     } finally {
       setBlockLoading(false);
     }
@@ -121,11 +140,15 @@ const BlackList = () => {
   const handleUnblock = async (uuid: string) => {
     try {
       await unblock_friend(uuid);
-      message.success(intl.formatMessage({ id: 'settings.blacklist.unblockSuccess' }));
+      message.success(
+        intl.formatMessage({ id: 'settings.blacklist.unblockSuccess' }),
+      );
       loadList();
     } catch (error) {
       console.error('取消拉黑失败:', error);
-      message.error(intl.formatMessage({ id: 'settings.blacklist.unblockFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'settings.blacklist.unblockFailed' }),
+      );
     }
   };
 
@@ -149,7 +172,12 @@ const BlackList = () => {
             onChange={(e) => setSearchKey(e.target.value)}
             onPressEnter={handleSearch}
             suffix={
-              <Button type="primary" size="small" loading={searching} onClick={handleSearch}>
+              <Button
+                type="primary"
+                size="small"
+                loading={searching}
+                onClick={handleSearch}
+              >
                 {intl.formatMessage({ id: 'settings.blacklist.search' })}
               </Button>
             }
@@ -175,7 +203,11 @@ const BlackList = () => {
                 {searchResult.account || '-'}
               </Text>
             </div>
-            <Button size="small" danger onClick={() => setBlockConfirmVisible(true)}>
+            <Button
+              size="small"
+              danger
+              onClick={() => setBlockConfirmVisible(true)}
+            >
               {blockText}
             </Button>
           </div>
@@ -183,7 +215,11 @@ const BlackList = () => {
 
         <Spin spinning={loading}>
           {list.length === 0 ? (
-            <Empty description={intl.formatMessage({ id: 'settings.blacklist.empty' })} />
+            <Empty
+              description={intl.formatMessage({
+                id: 'settings.blacklist.empty',
+              })}
+            />
           ) : (
             list.map((item) => (
               <div key={item.uuid} className={styles.blacklistItem}>
@@ -214,10 +250,13 @@ const BlackList = () => {
       </Card>
 
       <Modal
-        title={intl.formatMessage({ id: 'settings.blacklist.blockConfirmTitle' })}
+        title={intl.formatMessage({
+          id: 'settings.blacklist.blockConfirmTitle',
+        })}
         open={blockConfirmVisible}
         onOk={handleBlock}
         onCancel={() => setBlockConfirmVisible(false)}
+        closable={false}
         okText={blockText}
         cancelText={cancelText}
         okButtonProps={{ danger: true, loading: blockLoading }}

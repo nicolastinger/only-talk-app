@@ -1,6 +1,6 @@
-import { useBearStore } from '@/store/store';
 import ReportModal from '@/components/ReportModal';
 import UserTypeTag from '@/components/UserTypeTag';
+import { useBearStore } from '@/store/store';
 import {
   BellOutlined,
   DeleteOutlined,
@@ -10,7 +10,11 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { history, useIntl } from '@umijs/max';
-import { block_friend, delete_friend, unblock_friend } from '@workspace/services';
+import {
+  block_friend,
+  delete_friend,
+  unblock_friend,
+} from '@workspace/services';
 import { FriendVo, ReportTargetType } from '@workspace/types';
 import { Dropdown, Modal, message } from 'antd';
 import React, { useState } from 'react';
@@ -85,7 +89,9 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
 
     try {
       await unblock_friend(friendInfo.friend_id);
-      message.success(intl.formatMessage({ id: 'chat.topBar.unblockedSuccess' }));
+      message.success(
+        intl.formatMessage({ id: 'chat.topBar.unblockedSuccess' }),
+      );
       triggerRefresh();
     } catch (error) {
       message.error(intl.formatMessage({ id: 'chat.topBar.unblockedFailed' }));
@@ -155,6 +161,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
         open={deleteModalVisible}
         onOk={confirmDeleteFriend}
         onCancel={() => setDeleteModalVisible(false)}
+        closable={false}
         okText={intl.formatMessage({ id: 'chat.topBar.confirm' })}
         cancelText={intl.formatMessage({ id: 'chat.topBar.cancel' })}
         okButtonProps={{ danger: true }}
@@ -174,6 +181,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
         open={blockModalVisible}
         onOk={confirmBlock}
         onCancel={() => setBlockModalVisible(false)}
+        closable={false}
         okText={intl.formatMessage({ id: 'chat.topBar.confirm' })}
         cancelText={intl.formatMessage({ id: 'chat.topBar.cancel' })}
         okButtonProps={{ danger: true }}

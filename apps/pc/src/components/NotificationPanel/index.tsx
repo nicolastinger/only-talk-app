@@ -319,6 +319,7 @@ const NotificationPanel = ({
       title={renderTitle()}
       open={visible}
       onCancel={onClose}
+      closable={false}
       footer={null}
       width={560}
       className={styles.notificationPanel}

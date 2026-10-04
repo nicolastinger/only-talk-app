@@ -321,6 +321,7 @@ const GroupInfoPage: React.FC = () => {
         open={inviteModalOpen}
         onOk={handleInvite}
         onCancel={() => setInviteModalOpen(false)}
+        closable={false}
         confirmLoading={inviteLoading}
         okText={intl.formatMessage({ id: 'groupSettings.members.invite' })}
         cancelText={intl.formatMessage({ id: 'groupSettings.members.cancel' })}
