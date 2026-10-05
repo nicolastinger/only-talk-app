@@ -157,6 +157,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/Settings/Account.vue"),
       },
       {
+        path: "auth-factor",
+        name: "SettingsAuthFactor",
+        component: () => import("@/pages/Settings/AuthFactor.vue"),
+      },
+      {
+        path: "change-password",
+        name: "SettingsChangePassword",
+        component: () => import("@/pages/Settings/ChangePassword.vue"),
+      },
+      {
         path: "blacklist",
         name: "SettingsBlacklist",
         component: () => import("@/pages/Settings/BlackList.vue"),

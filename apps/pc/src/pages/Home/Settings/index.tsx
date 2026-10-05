@@ -4,6 +4,7 @@ import {
   FolderOutlined,
   InfoCircleOutlined,
   RadarChartOutlined,
+  SafetyCertificateOutlined,
   SettingOutlined,
   StopOutlined,
   UserOutlined,
@@ -14,6 +15,7 @@ import { useEffect, useState } from 'react';
 import styles from './Settings.less';
 import AboutApp from './components/AboutApp';
 import AccountPrivacy from './components/AccountPrivacy';
+import AuthFactor from './components/AuthFactor';
 import BlackList from './components/BlackList';
 import DeveloperPanel from './components/DeveloperPanel';
 import FileManager from './components/FileManager';
@@ -41,6 +43,11 @@ const SettingsPage = () => {
       key: 'account',
       icon: <UserOutlined />,
       label: intl.formatMessage({ id: 'settings.account' }),
+    },
+    {
+      key: 'authFactor',
+      icon: <SafetyCertificateOutlined />,
+      label: intl.formatMessage({ id: 'settings.authFactor.menu' }),
     },
     {
       key: 'general',
@@ -83,6 +90,8 @@ const SettingsPage = () => {
     switch (activeTab) {
       case 'account':
         return <AccountPrivacy />;
+      case 'authFactor':
+        return <AuthFactor />;
       case 'general':
         return <GeneralSettings />;
       case 'notification':

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { showToast } from "vant";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { getMyAccount } from "@/utils/api";
@@ -53,9 +52,10 @@ const genderLabel = (gender?: number) => {
 const formatBirthday = (timestamp?: number) => {
   if (!timestamp) return "-";
   const date = new Date(timestamp * 1000);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-    date.getDate()
-  ).padStart(2, "0")}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 onMounted(async () => {
@@ -73,8 +73,10 @@ const goEditProfile = () => router.push("/profile/edit");
 
 const goBlacklist = () => router.push("/settings/blacklist");
 
+const goAuthFactor = () => router.push("/settings/auth-factor");
+
 const onChangePassword = () => {
-  showToast({ message: "暂不支持修改密码", icon: "none" });
+  router.push("/settings/change-password");
 };
 </script>
 
@@ -95,7 +97,9 @@ const onChangePassword = () => {
             {{ userInfo?.username || account || "用户" }}
             <UserTypeTag :type="userInfo?.user_type" />
           </div>
-          <div class="user-account">账号：{{ userInfo?.account || account || "-" }}</div>
+          <div class="user-account">
+            账号：{{ userInfo?.account || account || "-" }}
+          </div>
         </div>
       </div>
       <div class="account-info">
@@ -124,7 +128,9 @@ const onChangePassword = () => {
       </div>
       <div class="account-info">
         <span class="account-label">生日</span>
-        <span class="account-value">{{ formatBirthday(userInfo?.birthday) }}</span>
+        <span class="account-value">{{
+          formatBirthday(userInfo?.birthday)
+        }}</span>
       </div>
       <div class="account-info">
         <span class="account-label">个人简介</span>
@@ -141,6 +147,12 @@ const onChangePassword = () => {
       </div>
       <div class="link-row" @click="goBlacklist">
         <span class="link-name">黑名单管理</span>
+        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+        </svg>
+      </div>
+      <div class="link-row" @click="goAuthFactor">
+        <span class="link-name">二次认证</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>

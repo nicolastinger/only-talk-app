@@ -11,7 +11,7 @@ import {
   Overlay,
 } from "vant";
 import type { HttpResponse, ResponseData, UserInfo } from "@workspace/types";
-import { CLIENT_CONFIG_KEYS } from "@workspace/types";
+import { CLIENT_CONFIG_KEYS, AuthFactorType } from "@workspace/types";
 import {
   getApiBase,
   setConfig,
@@ -21,6 +21,7 @@ import {
   search_user_by_account,
   cache_user_info,
   get_quic_servers,
+  list_auth_factors,
   isBackendSuccess,
 } from "@workspace/services";
 import { useAuthStore } from "@/stores/auth";
@@ -309,6 +310,32 @@ const enterApp = async () => {
   closeToast();
   showToast({ message: "登录成功", icon: "success" });
   router.replace("/chats");
+  // 登录后检查是否已绑定二次认证因素, 未绑定则引导绑定邮箱(可跳过)
+  checkAuthFactorBound();
+};
+
+/** 登录后检查二次认证因素; 未绑定邮箱则弹提示引导绑定 */
+const checkAuthFactorBound = async () => {
+  try {
+    const data = await list_auth_factors();
+    const hasEmail = data.list.some(
+      (f) => f.factor_type === AuthFactorType.EMAIL
+    );
+    if (hasEmail) return;
+    try {
+      await showConfirmDialog({
+        title: "二次认证",
+        message: "为了账号安全，建议绑定邮箱二次认证。是否现在绑定？",
+        confirmButtonText: "去绑定",
+        cancelButtonText: "稍后",
+      });
+      router.push("/settings/auth-factor");
+    } catch {
+      /* 用户选择稍后 */
+    }
+  } catch (e) {
+    console.log("检查二次认证因素失败", e);
+  }
 };
 
 const onLogin = async () => {

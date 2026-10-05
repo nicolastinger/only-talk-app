@@ -1,17 +1,18 @@
-import { openNewWindow } from '@/components/Window/OpenWindow';
 import UserTypeTag from '@/components/UserTypeTag';
+import { openNewWindow } from '@/components/Window/OpenWindow';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { calcAgeFromBirthday } from '@/utils/format';
 import { LockOutlined, StopOutlined, UserOutlined } from '@ant-design/icons';
-import { getFiles } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window, WindowOptions } from '@tauri-apps/api/window';
 import { history, useIntl } from '@umijs/max';
+import { getFiles } from '@workspace/services';
 import { Button, Card, Checkbox, Divider, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from '../Settings.less';
+import ChangePasswordModal from './ChangePasswordModal';
 
 const { Title, Text } = Typography;
 
@@ -21,6 +22,7 @@ const AccountPrivacy = () => {
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [changePwdOpen, setChangePwdOpen] = useState(false);
 
   useEffect(() => {
     const loadAvatar = async (icon: string) => {
@@ -46,8 +48,10 @@ const AccountPrivacy = () => {
   };
 
   const genderLabel = (gender?: number) => {
-    if (gender === 2) return intl.formatMessage({ id: 'settings.accountPrivacy.male' });
-    if (gender === 3) return intl.formatMessage({ id: 'settings.accountPrivacy.female' });
+    if (gender === 2)
+      return intl.formatMessage({ id: 'settings.accountPrivacy.male' });
+    if (gender === 3)
+      return intl.formatMessage({ id: 'settings.accountPrivacy.female' });
     return '-';
   };
 
@@ -130,7 +134,9 @@ const AccountPrivacy = () => {
             {intl.formatMessage({ id: 'settings.accountPrivacy.phoneNumber' })}
           </span>
           <span className={styles.accountValue}>
-            {userInfo?.phone ? `${userInfo.phone.slice(0, 3)}****${userInfo.phone.slice(-4)}` : '-'}
+            {userInfo?.phone
+              ? `${userInfo.phone.slice(0, 3)}****${userInfo.phone.slice(-4)}`
+              : '-'}
           </span>
         </div>
         <div className={styles.accountInfo}>
@@ -149,7 +155,9 @@ const AccountPrivacy = () => {
           <span className={styles.accountLabel}>
             {intl.formatMessage({ id: 'settings.accountPrivacy.gender' })}
           </span>
-          <span className={styles.accountValue}>{genderLabel(userInfo?.gender)}</span>
+          <span className={styles.accountValue}>
+            {genderLabel(userInfo?.gender)}
+          </span>
         </div>
         <div className={styles.accountInfo}>
           <span className={styles.accountLabel}>
@@ -163,7 +171,9 @@ const AccountPrivacy = () => {
           <span className={styles.accountLabel}>
             {intl.formatMessage({ id: 'settings.accountPrivacy.birthday' })}
           </span>
-          <span className={styles.accountValue}>{formatBirthday(userInfo?.birthday)}</span>
+          <span className={styles.accountValue}>
+            {formatBirthday(userInfo?.birthday)}
+          </span>
         </div>
       </Card>
 
@@ -198,10 +208,10 @@ const AccountPrivacy = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Button
-          onClick={() => history.push('/home/settings?tab=blacklist')}
-        >
-          {intl.formatMessage({ id: 'settings.accountPrivacy.manageBlacklist' })}
+        <Button onClick={() => history.push('/home/settings?tab=blacklist')}>
+          {intl.formatMessage({
+            id: 'settings.accountPrivacy.manageBlacklist',
+          })}
         </Button>
         <Text type="secondary" className={styles.description}>
           {intl.formatMessage({ id: 'settings.accountPrivacy.blacklistDesc' })}
@@ -218,13 +228,19 @@ const AccountPrivacy = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Button type="primary">
+        <Button type="primary" onClick={() => setChangePwdOpen(true)}>
           {intl.formatMessage({ id: 'settings.accountPrivacy.changePassword' })}
         </Button>
         <Text type="secondary" className={styles.description}>
           {intl.formatMessage({ id: 'settings.accountPrivacy.securityDesc' })}
         </Text>
       </Card>
+
+      <ChangePasswordModal
+        open={changePwdOpen}
+        onClose={() => setChangePwdOpen(false)}
+        onGoBind={() => history.push('/home/settings?tab=authFactor')}
+      />
     </div>
   );
 };

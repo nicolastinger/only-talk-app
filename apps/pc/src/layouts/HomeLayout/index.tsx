@@ -30,11 +30,20 @@ import {
   cache_user_info,
   getApiBase,
   get_cached_user_info,
+  list_auth_factors,
 } from '@workspace/services';
-import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
+import {
+  AuthFactorType,
+  HttpResponse,
+  ResponseData,
+  UserInfo,
+} from '@workspace/types';
 import { Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
+
+// 同一次应用运行内只提示一次二次认证绑定引导
+let authFactorChecked = false;
 
 const HomeLayout = () => {
   const intl = useIntl();
@@ -189,9 +198,43 @@ const HomeLayout = () => {
     }
   };
 
+  // 登录后检查是否已绑定二次认证因素, 未绑定则引导绑定邮箱(可跳过)
+  const checkAuthFactorBound = async () => {
+    if (authFactorChecked) return;
+    authFactorChecked = true;
+    try {
+      const data = await list_auth_factors();
+      const hasEmail = data.list.some(
+        (f) => f.factor_type === AuthFactorType.EMAIL,
+      );
+      if (hasEmail) return;
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'settings.authFactor.title' }),
+        content: intl.formatMessage({
+          id: 'settings.authFactor.loginPrompt',
+          defaultMessage: '为了账号安全，建议绑定邮箱二次认证。是否现在绑定？',
+        }),
+        okText: intl.formatMessage({
+          id: 'settings.authFactor.goBind',
+          defaultMessage: '去绑定',
+        }),
+        cancelText: intl.formatMessage({
+          id: 'settings.authFactor.later',
+          defaultMessage: '稍后',
+        }),
+        onOk: () => {
+          history.push('/home/settings?tab=authFactor');
+        },
+      });
+    } catch (error) {
+      console.log('检查二次认证因素失败', error);
+    }
+  };
+
   //初始化用户信息
   useEffect(() => {
     initUserInfo();
+    checkAuthFactorBound();
   }, []);
 
   return (

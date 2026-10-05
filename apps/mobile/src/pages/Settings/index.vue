@@ -50,6 +50,13 @@ const groups: { title: string; items: SettingsEntry[] }[] = [
         path: "/settings/account",
       },
       {
+        key: "auth-factor",
+        name: "二次认证",
+        desc: "绑定邮箱二次认证",
+        icon: "authFactor",
+        path: "/settings/auth-factor",
+      },
+      {
         key: "blacklist",
         name: "黑名单",
         desc: "管理已拉黑的人",
@@ -167,6 +174,16 @@ const onLogout = () => {
             >
               <path
                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+              />
+            </svg>
+            <svg
+              v-else-if="item.icon === 'authFactor'"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="menu-icon"
+            >
+              <path
+                d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"
               />
             </svg>
             <svg

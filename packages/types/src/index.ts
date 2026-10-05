@@ -1,3 +1,4 @@
+export * from "./authFactor";
 export * from "./backend";
 export * from "./constants";
 export * from "./file";
