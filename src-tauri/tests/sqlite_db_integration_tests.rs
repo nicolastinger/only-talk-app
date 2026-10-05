@@ -18,7 +18,7 @@ use app_lib::dao::chat_record_ack::{
 use app_lib::dao::chat_record_db::{
     delete_chat_record_db, insert_chat_record, local_max_server_id,
     query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
-    query_last_chat_record, query_last_read_msg, set_chat_record_server_id,
+    query_last_chat_record, query_last_read_msg, recall_chat_record_db, set_chat_record_server_id,
 };
 use app_lib::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
@@ -38,7 +38,8 @@ use app_lib::dao::friend_db::{
 use app_lib::dao::get_db_client;
 use app_lib::dao::group_chat_record_db::{
     delete_group_chat_record_db, insert_group_chat_record, local_max_group_server_id,
-    query_group_chat_record_from_db, query_last_group_chat_record, set_group_server_id,
+    query_group_chat_record_by_id, query_group_chat_record_from_db, query_last_group_chat_record,
+    recall_group_chat_record_db, set_group_server_id,
 };
 use app_lib::dao::group_message_ack::{
     insert_group_message_ack, query_group_message_ack_by_local_nano_id,
@@ -72,6 +73,9 @@ use app_lib::entity::system_notification::SystemNotification;
 use app_lib::entity::user_info::UserInfo;
 use app_lib::entity::user_token::UserToken;
 use app_lib::service::user_service::insert_user_info;
+use app_lib::service::chat_service::{
+    resolve_group_recall_target, resolve_single_recall_target,
+};
 use app_lib::vo::text_quic_msg::TextQuicMsgVo;
 
 use common::{with_common_db, with_private_db, with_user_db};
@@ -1398,6 +1402,139 @@ async fn group_chat_record_soft_delete_filters() {
 
         let by_group = GroupChatRecord::query_by_group_id(group, 10, 0).await.expect("查询失败");
         assert_eq!(by_group.len(), 1);
+    })
+    .await;
+}
+
+/// 单聊撤回: 仅发送者本人可撤回; 命中后清空 raw 并置 deleted=1 从历史消失。
+#[tokio::test]
+async fn chat_record_recall_clears_and_deletes() {
+    with_private_db(|pool| async move {
+        for (nano, ts) in [("m1", 100i64), ("m2", 200i64)] {
+            let msg = TextQuicMsgVo {
+                nano_id: nano.to_string(),
+                text_type: 1,
+                raw: format!("raw-{nano}"),
+                recv_user: FRIEND.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+            };
+            insert_chat_record(&msg).await.expect("插入失败");
+        }
+
+        // 非发送者撤回不生效
+        assert!(!recall_chat_record_db("m1", FRIEND).await.expect("撤回失败"));
+        // 本人撤回生效
+        assert!(recall_chat_record_db("m1", ME).await.expect("撤回失败"));
+        // 重复撤回不生效(已 deleted)
+        assert!(!recall_chat_record_db("m1", ME).await.expect("撤回失败"));
+
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].nano_id, "m2");
+
+        // 内容已清空且 deleted 置 1
+        let row = sqlx::query("SELECT raw, deleted FROM chat_record WHERE nano_id = 'm1'")
+            .fetch_one(&pool)
+            .await
+            .expect("查询失败");
+        assert_eq!(row.get::<String, _>("raw"), "");
+        assert_eq!(row.get::<i64, _>("deleted"), 1);
+    })
+    .await;
+}
+
+/// 群聊撤回: 仅发送者本人可撤回; 命中后清空 raw 并置 deleted=1。
+#[tokio::test]
+async fn group_chat_record_recall_clears_and_deletes() {
+    with_private_db(|pool| async move {
+        let group = "00000000-0000-0000-0000-0000000000gg";
+        for (nano, ts) in [("g1", 100i64), ("g2", 200i64)] {
+            let rec = GroupChatRecord {
+                id: 0,
+                nano_id: nano.to_string(),
+                text_type: 2001,
+                raw: format!("g-{nano}"),
+                group_id: group.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+                server_id: None,
+            };
+            GroupChatRecord::insert(&rec).await.expect("插入失败");
+        }
+
+        // 撤回前可按 nano_id 查到
+        assert!(query_group_chat_record_by_id("g1", group).await.expect("查询失败").is_some());
+
+        assert!(!recall_group_chat_record_db("g1", group, FRIEND).await.expect("撤回失败"));
+        assert!(recall_group_chat_record_db("g1", group, ME).await.expect("撤回失败"));
+        assert!(!recall_group_chat_record_db("g1", group, ME).await.expect("撤回失败"));
+
+        let list = query_group_chat_record_from_db(group, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].nano_id, "g2");
+        assert!(query_group_chat_record_by_id("g1", group).await.expect("查询失败").is_none());
+
+        let row = sqlx::query("SELECT raw, deleted FROM group_chat_record WHERE nano_id = 'g1'")
+            .fetch_one(&pool)
+            .await
+            .expect("查询失败");
+        assert_eq!(row.get::<String, _>("raw"), "");
+        assert_eq!(row.get::<i64, _>("deleted"), 1);
+    })
+    .await;
+}
+
+/// 撤回目标归一：前端本地 nano_id 通过发送表/群 ack 映射回服务端 nano_id。
+///
+/// 前端乐观消息持有本地 nano_id，ACK 后 `chat_record` 落库为服务端 nano_id，
+/// 撤回时需先归一，否则"刚发的消息"会查不到原消息。
+#[tokio::test]
+async fn recall_target_resolves_local_to_server_id() {
+    with_private_db(|_pool| async move {
+        // 单聊：ack 已确认 -> 返回服务端 id
+        let ack = ChatRecordAck {
+            id: 0,
+            msg_id: "server-1".to_string(),
+            prev_id: String::new(),
+            send_id: "local-1".to_string(),
+            platform: 0,
+            ack_status: 1,
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 100,
+        };
+        insert_chat_record_ack(&ack).await.expect("插入失败");
+        assert_eq!(resolve_single_recall_target("local-1").await, "server-1");
+
+        // 未确认(ack_status=0, msg_id 空) -> 原样返回
+        let pending = ChatRecordAck {
+            msg_id: String::new(),
+            send_id: "local-2".to_string(),
+            ack_status: 0,
+            ..ack
+        };
+        insert_chat_record_ack(&pending).await.expect("插入失败");
+        assert_eq!(resolve_single_recall_target("local-2").await, "local-2");
+
+        // 无记录(历史/同步消息) -> 原样返回
+        assert_eq!(resolve_single_recall_target("server-1").await, "server-1");
+
+        // 群聊：ack_status=1 -> 返回服务端 id
+        let ack = GroupMessageAck {
+            id: 0,
+            nano_id: "server-g1".to_string(),
+            local_nano_id: "local-g1".to_string(),
+            group_uuid: "group-1".to_string(),
+            send_user: ME.to_string(),
+            text_type: 2001,
+            ack_status: 1,
+            raw: "{}".to_string(),
+            timestamp: 100,
+        };
+        insert_group_message_ack(&ack).await.expect("插入失败");
+        assert_eq!(resolve_group_recall_target("local-g1").await, "server-g1");
+        assert_eq!(resolve_group_recall_target("server-g1").await, "server-g1");
     })
     .await;
 }

@@ -153,3 +153,12 @@ pub const MSG_TYPE_GROUP_READ: u16 = 2005;
 
 /// 群消息接收成功回执
 pub const GROUP_MSG_TYPE_RECALL_SUCCESS: u16 = 2201;
+
+// ==================== 消息撤回 ====================
+
+/// 单聊消息撤回（伪撤回）：发送一条携带目标消息 nano_id 的控制消息。
+///
+/// 服务端将除群聊/心跳外的任意类型按单聊流程透传，故新增此类型无需改服务端。
+/// 群聊撤回不新增类型（服务端仅识别 2001/2004 为群类型），改为以
+/// `MSG_TYPE_GROUP_TEXT(2001)` 承载撤回载荷，见 `service::recall`。
+pub const MSG_TYPE_RECALL: u16 = 3001;

@@ -11,19 +11,25 @@ use tokio::time::timeout;
 
 use crate::cmd::api_controller::get_request;
 use crate::dao::chat_record_ack::{
-    insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
+    insert_chat_record_ack, query_ack_record_from_db, query_chat_record_by_send_id,
+    update_chat_record_ack_prev_id,
 };
 use crate::dao::chat_record_db::{
-    query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
+    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
+    query_last_chat_record, recall_chat_record_db,
 };
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
     update_chat_record_send, update_chat_record_send_status,
 };
-use crate::dao::group_chat_record_db::query_group_chat_record_from_db;
+use crate::dao::group_chat_record_db::{
+    query_group_chat_record_by_id, query_group_chat_record_from_db, recall_group_chat_record_db,
+};
 use crate::dao::group_db::{query_group_by_id, upsert_group};
-use crate::dao::group_message_ack::insert_group_message_ack;
+use crate::dao::group_message_ack::{
+    insert_group_message_ack, query_group_message_ack_by_local_nano_id,
+};
 use crate::dao::group_message_read::update_group_message_read;
 use crate::dao::session_db::{
     hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
@@ -44,14 +50,15 @@ use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
 use crate::service::message_convert::normalize_for_target;
+use crate::service::recall::build_recall_raw;
 use crate::service::send_queue;
 use crate::service::user_service::{get_user_info, get_user_map};
 use crate::utils::global_static_str::{talk_api_base, PLATFORM, ZERO_UUID};
 use crate::utils::image_utils::compress_image_to_webp;
 use crate::utils::message_lifecycle::{CallControlLifecycle, MessageLifecycle};
 use crate::utils::message_types::{
-    MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
-    MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_TEXT,
+    MSG_TYPE_GROUP_TEXT, MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
+    MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_RECALL, MSG_TYPE_TEXT,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
@@ -1003,6 +1010,8 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
         }
         // 视频通话控制消息（邀请/接受/拒绝/结束），不参与 prev_id 链
         12..=15 => Ok(raw.to_string()),
+        // 消息撤回(伪撤回)控制消息不参与 prev_id 链
+        MSG_TYPE_RECALL => Ok(raw.to_string()),
         _ => Err(anyhow!("不支持的消息类型: {}", text_type)),
     }
 }
@@ -1370,4 +1379,99 @@ pub async fn forward_chat_messages_service(
         }
     }
     Ok(())
+}
+
+/// 解析单聊撤回目标为规范 nano_id。
+///
+/// 前端乐观消息持有本地 `nano_id`，ACK 后 `chat_record` 落库为服务端 `nano_id`；
+/// 映射存于 ack 表：`chat_record_ack.send_id(本地) -> msg_id(服务端)`，`ack_status=1`
+/// 表示已确认。历史/同步消息本就是服务端 id，查不到 ack 记录时原样返回。
+pub async fn resolve_single_recall_target(local_nano_id: &str) -> String {
+    if let Ok(ack) = query_ack_record_from_db(local_nano_id).await {
+        if ack.ack_status == 1 && !ack.msg_id.is_empty() {
+            return ack.msg_id;
+        }
+    }
+    local_nano_id.to_string()
+}
+
+/// 解析群聊撤回目标为规范 nano_id（映射来源：`group_message_ack.local_nano_id -> nano_id`）。
+pub async fn resolve_group_recall_target(local_nano_id: &str) -> String {
+    if let Ok(Some(ack)) = query_group_message_ack_by_local_nano_id(local_nano_id).await {
+        if ack.ack_status == 1 && !ack.nano_id.is_empty() {
+            return ack.nano_id;
+        }
+    }
+    local_nano_id.to_string()
+}
+
+/// 撤回单聊消息（伪撤回）。
+///
+/// 校验原消息为本人发送后，先发送一条携带目标 `nano_id` 的撤回控制消息
+/// （离线时入队），成功后再清除原消息内容并置 `deleted = 1`。返回构造出的
+/// 撤回消息(含本地 `nano_id`)，供前端乐观上屏；ACK 回执按 `nano_id` 归一。
+pub async fn recall_chat_message_service(
+    recv_user: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+
+    // 前端可能传本地 nano_id，先归一为服务端 nano_id（对端也以此 id 存储）
+    let target_nano_id = resolve_single_recall_target(&target_nano_id).await;
+
+    let original = query_chat_record_by_id_from_db(&target_nano_id, &me)
+        .await
+        .map_err(|_| anyhow!("撤回失败：原消息不存在或已撤回"))?;
+    if original.send_user != me {
+        return Err(anyhow!("撤回失败：只能撤回自己发送的消息"));
+    }
+
+    let recall_msg = TextQuicMsgVo {
+        nano_id: nanoid::nanoid!(),
+        text_type: MSG_TYPE_RECALL,
+        raw: build_recall_raw(&target_nano_id)?,
+        recv_user,
+        send_user: me,
+        timestamp: get_now_time_stamp_as_millis()?,
+    };
+    // 先发送撤回控制消息(离线时入队)，成功后再清除原消息，避免发送失败导致原消息丢失
+    send_text_msg_service(recall_msg.clone()).await?;
+    recall_chat_record_db(&target_nano_id, &recall_msg.send_user).await?;
+    Ok(recall_msg)
+}
+
+/// 撤回群聊消息（伪撤回）。
+///
+/// 群聊撤回以 `MSG_TYPE_GROUP_TEXT(2001)` 承载(服务端仅识别 2001/2004 为群类型)，
+/// 撤回载荷作为内层文本；先发送撤回控制消息(离线时入队)，成功后再清除原消息内容
+/// 并置 `deleted = 1`。
+pub async fn recall_group_chat_message_service(
+    group_id: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+
+    // 前端可能传本地 nano_id，先归一为服务端 nano_id（对端也以此 id 存储）
+    let target_nano_id = resolve_group_recall_target(&target_nano_id).await;
+
+    let original = query_group_chat_record_by_id(&target_nano_id, &group_id)
+        .await?
+        .ok_or_else(|| anyhow!("撤回失败：原消息不存在或已撤回"))?;
+    if original.send_user != me {
+        return Err(anyhow!("撤回失败：只能撤回自己发送的消息"));
+    }
+
+    let recall_msg = TextQuicMsgVo {
+        nano_id: nanoid::nanoid!(),
+        text_type: MSG_TYPE_GROUP_TEXT,
+        raw: build_recall_raw(&target_nano_id)?,
+        recv_user: group_id,
+        send_user: me,
+        timestamp: get_now_time_stamp_as_millis()?,
+    };
+    // 先发送撤回控制消息(离线时入队)，成功后再清除原消息，避免发送失败导致原消息丢失
+    send_group_text_msg_service(recall_msg.clone()).await?;
+    recall_group_chat_record_db(&target_nano_id, &recall_msg.recv_user, &recall_msg.send_user)
+        .await?;
+    Ok(recall_msg)
 }

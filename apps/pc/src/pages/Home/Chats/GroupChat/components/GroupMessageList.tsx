@@ -1,4 +1,5 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
+import { isRecallMessage } from '@/utils/recall';
 import { ChatMessage, MessageFrom, UserInfo } from '@workspace/types';
 import { useIntl } from '@umijs/max';
 import React from 'react';
@@ -71,6 +72,23 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
         const memberInfo = memberInfoMap.get(msg.sender_uuid || message.send_user || '');
         const senderName = memberInfo?.username || msg.sender_name || (isMine ? intl.formatMessage({ id: 'groupChat.me' }) : intl.formatMessage({ id: 'groupChat.groupMember' }));
         const senderIcon = memberInfo?.icon || msg.sender_icon || msg.img || '';
+
+        // 撤回提示：居中灰条
+        if (isRecallMessage(message.text_type, message.raw)) {
+          const name = isMine
+            ? intl.formatMessage({ id: 'chat.recall.you' })
+            : senderName;
+          return (
+            <React.Fragment key={message.nano_id}>
+              {shouldShowTimestamp && (
+                <MessageTimestamp timestamp={currentTimestamp} />
+              )}
+              <div className={styles.groupMessageSystem}>
+                {intl.formatMessage({ id: 'chat.recall.notice' }, { name })}
+              </div>
+            </React.Fragment>
+          );
+        }
 
         if (isSystem || message.text_type === MSG_TYPE_GROUP_NOTIFICATION) {
           let systemContent = message.raw;

@@ -148,6 +148,21 @@ pub async fn delete_chat_record_db(nano_ids: &[String], uuid: &str) -> Result<()
     Ok(())
 }
 
+/// 撤回单聊消息：清除内容并置 `deleted = 1`（仅限发送者本人）。
+///
+/// 返回是否命中(命中要求消息存在、未删除且 `send_user` 与撤回消息发送者一致)。
+pub async fn recall_chat_record_db(nano_id: &str, send_user: &str) -> Result<bool, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let res = sqlx::query(
+        r#"UPDATE chat_record SET raw = '', deleted = 1 WHERE nano_id = ?1 AND send_user = ?2 AND deleted = 0"#,
+    )
+    .bind(nano_id)
+    .bind(send_user)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(res.rows_affected() > 0)
+}
+
 /// 已读上报推进校验: 按 nano_id 查本地聊天记录表中该消息的时间戳。
 ///
 /// 推进是否合法以**聊天记录表的时间戳**为准(而非水位表记录), 跨端回填等场景下

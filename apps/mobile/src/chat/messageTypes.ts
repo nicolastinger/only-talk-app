@@ -24,6 +24,9 @@ export const MSG_TYPE_RECALL_FAILURE = 202; // 私聊发送失败 ack
 export const MSG_TYPE_P2P_USER_SERVER = 203;
 export const MSG_TYPE_P2P_USER_CLIENT = 204;
 
+// 消息撤回（伪撤回）
+export const MSG_TYPE_RECALL = 3001; // 单聊撤回控制消息；群聊撤回以 2001 承载
+
 // 群聊
 export const MSG_TYPE_GROUP_TEXT = 2001; // 群聊文本
 export const MSG_TYPE_GROUP_IMAGE = 2002; // 群聊图片

@@ -5,6 +5,7 @@ import {
   useMessageSelection,
 } from '@/hooks/useMessageSelection';
 import { useBearStore } from '@/store/store';
+import { isRecallChatMessage, isRecallMessage } from '@/utils/recall';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
 import {
@@ -157,6 +158,48 @@ const ChatPage: React.FC = () => {
     setForwardOpen(true);
   }, []);
 
+  const recallMessage = useCallback(
+    async (msg: ChatMessage) => {
+      let recalled: TextQuicMsgVo;
+      try {
+        recalled = (await invoke('recall_chat_message', {
+          recvUser: friendUuid,
+          targetNanoId: msg.text_msg_raw.nano_id,
+        })) as TextQuicMsgVo;
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.recall.failed' }));
+        return;
+      }
+      setMessageList((prev) => {
+        const filtered = prev.filter(
+          (m) => m.text_msg_raw.nano_id !== msg.text_msg_raw.nano_id,
+        );
+        const temp: ChatMessage = {
+          from: MessageFrom.Mine,
+          text_msg_raw: recalled,
+          ack: false,
+        };
+        return [...filtered, temp];
+      });
+      setTimeout(() => scrollToBottom(), 100);
+    },
+    [friendUuid, intl],
+  );
+
+  const confirmRecall = useCallback(
+    (msg: ChatMessage) => {
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        content: intl.formatMessage({ id: 'chat.recall.confirm' }),
+        okText: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => recallMessage(msg),
+      });
+    },
+    [intl, recallMessage],
+  );
+
   const handleForwardConfirm = useCallback(
     async (target: ForwardTarget) => {
       const list = forwardMessages.map((m) => m.text_msg_raw);
@@ -198,13 +241,15 @@ const ChatPage: React.FC = () => {
         enterSelect(msg);
       } else if (action === 'forward') {
         openForward([msg]);
+      } else if (action === 'recall') {
+        confirmRecall(msg);
       } else if (action === 'delete') {
         confirmDelete([msg.text_msg_raw.nano_id]);
       } else if (action === 'copy') {
         copyMessage(msg);
       }
     },
-    [actionMenu, enterSelect, openForward, confirmDelete, copyMessage],
+    [actionMenu, enterSelect, openForward, confirmRecall, confirmDelete, copyMessage],
   );
 
   const { textMessage } = useMessageApi(friendUuid, meUuid);
@@ -426,6 +471,14 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (textMessage) {
+      // 撤回消息：被撤回的原消息已在本地库删除，重拉聊天记录以移除原消息并显示撤回提示
+      if (isRecallMessage(textMessage.text_type, textMessage.raw)) {
+        setCurrentPage(1);
+        setHasMore(true);
+        setIsInitialLoad(true);
+        loadChatRecordFromStore(meUuid, friendUuid, 1, true);
+        return;
+      }
       // 实时消息：通话控制(12-15)/信令(100) 走独立事件 call_control/webrtc_signal，
       // 不会进入 text_message，此处仅处理文本/图片/文件等历史消息类型。
       let from = MessageFrom.Customer;
@@ -447,6 +500,11 @@ const ChatPage: React.FC = () => {
           );
           if (index !== -1) {
             prevState[index].ack = true;
+            // 用服务端返回的 nano_id 归一本地乐观消息的 nano_id，
+            // 否则后续撤回/删除/已读会因本地 id 在 chat_record 中不存在而失败
+            if (textMessage.nano_id) {
+              prevState[index].text_msg_raw.nano_id = textMessage.nano_id;
+            }
             // 检查被 ack 的消息是否是图片(text_type=2)或文件(text_type=3)
             const ackedMessage = prevState[index];
             const ackedMessageType = ackedMessage.text_msg_raw.text_type;
@@ -557,6 +615,7 @@ const ChatPage: React.FC = () => {
             messages={messageList}
             friendIcon={currentFriend?.friend_icon}
             friendUuid={friendUuid}
+            friendName={currentFriend?.friend_name}
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
             selectMode={selectMode}
@@ -604,6 +663,10 @@ const ChatPage: React.FC = () => {
           x={actionMenu.x}
           y={actionMenu.y}
           canCopy={actionMenu.msg.text_msg_raw.text_type === 1}
+          canRecall={
+            actionMenu.msg.from === MessageFrom.Mine &&
+            !isRecallChatMessage(actionMenu.msg)
+          }
           onSelect={handleActionMenuSelect}
           onClose={() => setActionMenu(null)}
         />

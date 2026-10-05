@@ -1,4 +1,6 @@
+import { isRecallMessage } from '@/utils/recall';
 import { ChatMessage, MessageFrom } from '@workspace/types';
+import { useIntl } from '@umijs/max';
 import React from 'react';
 import CustomerChatBox from './CustomerChatBox';
 import MessageTimestamp from './MessageTimestamp';
@@ -9,6 +11,7 @@ interface MessageListProps {
   messages: ChatMessage[];
   friendIcon?: string;
   friendUuid: string;
+  friendName?: string;
   groupMode?: boolean;
   newMessageIds?: Set<string>;
   loadedMessageIds?: Set<string>;
@@ -24,6 +27,7 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   friendIcon,
   friendUuid,
+  friendName,
   groupMode,
   newMessageIds,
   loadedMessageIds,
@@ -32,6 +36,7 @@ const MessageList: React.FC<MessageListProps> = ({
   onMessageContext,
   onToggleSelect,
 }) => {
+  const intl = useIntl();
   const getMessageAnimationClass = (nanoId: string): string => {
     if (newMessageIds?.has(nanoId)) {
       return styles.newMessageAnimation;
@@ -71,6 +76,23 @@ const MessageList: React.FC<MessageListProps> = ({
         const animationClass = getMessageAnimationClass(message.nano_id);
         const isMine = msg.from === MessageFrom.Mine;
         const selected = !!selectedIds?.has(message.nano_id);
+
+        // 撤回提示：居中灰条
+        if (isRecallMessage(message.text_type, message.raw)) {
+          const name = isMine
+            ? intl.formatMessage({ id: 'chat.recall.you' })
+            : friendName || intl.formatMessage({ id: 'chat.recall.peer' });
+          return (
+            <React.Fragment key={message.nano_id}>
+              {shouldShowTimestamp && (
+                <MessageTimestamp timestamp={currentTimestamp} />
+              )}
+              <div className={styles.recallNotice}>
+                {intl.formatMessage({ id: 'chat.recall.notice' }, { name })}
+              </div>
+            </React.Fragment>
+          );
+        }
 
         // For group mode, show sender icon/name from the message
         const displayIcon = groupMode
@@ -157,6 +179,7 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
   if (
     prevProps.selectMode !== nextProps.selectMode ||
     prevProps.selectedIds !== nextProps.selectedIds ||
+    prevProps.friendName !== nextProps.friendName ||
     prevProps.onMessageContext !== nextProps.onMessageContext ||
     prevProps.onToggleSelect !== nextProps.onToggleSelect
   ) {

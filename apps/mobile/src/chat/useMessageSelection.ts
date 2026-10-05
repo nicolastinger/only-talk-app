@@ -1,15 +1,16 @@
 import { computed, ref, type Ref } from "vue";
 import type { UiChatMessage } from "./types";
-import { isTransientMessageType } from "./messageParse";
+import { isRecallMessage, isTransientMessageType } from "./messageParse";
 import { SYSTEM_LIKE_TYPES } from "./messageTypes";
 
-/** 可参与多选的消息：排除系统行、瞬态消息、发送中/失败临时气泡 */
+/** 可参与多选的消息：排除系统行、撤回提示、瞬态消息、发送中/失败临时气泡 */
 export const isMessageSelectable = (msg: UiChatMessage): boolean =>
   msg.from !== "system" &&
   msg.textMsg.send_user !== "system" &&
   msg.ack !== false &&
   !msg.failed &&
   !isTransientMessageType(msg.textMsg.text_type) &&
+  !isRecallMessage(msg.textMsg.text_type, msg.textMsg.raw) &&
   !SYSTEM_LIKE_TYPES.includes(msg.textMsg.text_type);
 
 /** 移动端聊天记录多选状态（单聊/群聊页面共用） */

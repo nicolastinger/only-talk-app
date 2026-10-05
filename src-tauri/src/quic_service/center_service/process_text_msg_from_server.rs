@@ -7,10 +7,14 @@ use tauri::Emitter;
 use tokio::time::timeout;
 
 use crate::dao::chat_record_ack::update_chat_record_ack;
-use crate::dao::chat_record_db::insert_chat_record;
+use crate::dao::chat_record_db::{
+    insert_chat_record, query_chat_record_by_id_from_db, recall_chat_record_db,
+};
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
 use crate::dao::friend_db::is_blocked_db;
-use crate::dao::group_chat_record_db::insert_group_chat_record;
+use crate::dao::group_chat_record_db::{
+    insert_group_chat_record, query_group_chat_record_by_id, recall_group_chat_record_db,
+};
 use crate::dao::group_message_ack::{
     query_group_message_ack_by_local_nano_id, update_group_message_ack_status,
 };
@@ -25,6 +29,7 @@ use crate::service::chat_service::{
     clear_chat_session, create_group_chat_session_service, process_no_send_success_msg,
 };
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
+use crate::service::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
 use crate::service::{friend_service, group_service, message_alert};
 use crate::utils::global_static_str::SYSTEM;
@@ -33,8 +38,8 @@ use crate::utils::message_types::{
     MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE, MSG_TYPE_JSON,
     MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER,
     MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
-    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM,
-    MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
+    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL, MSG_TYPE_RECALL_SUCCESS,
+    MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
@@ -80,6 +85,10 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             // 单聊消息（文本/图片/文件）
             MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE => {
                 process_private_chat_message(msg).await?;
+            }
+            // 单聊消息撤回（伪撤回）：校验后清除目标消息，再按普通消息落库/上屏
+            MSG_TYPE_RECALL => {
+                process_recall_message(msg).await?;
             }
             // 视频通话控制消息（12-15）：只转发控制命令，不落库、不进会话列表
             MSG_TYPE_P2P_VIDEO_CALL_INVITE
@@ -385,10 +394,47 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
     Ok(())
 }
 
+/// 处理单聊撤回消息（伪撤回）。
+///
+/// 校验被撤回消息存在且与撤回消息发送者一致，命中则清除其内容并置 `deleted = 1`；
+/// 随后把撤回消息本身按普通单聊消息落库、上屏、更新会话（前端识别为撤回提示）。
+async fn process_recall_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let raw_str = String::from_utf8_lossy(&text_quic_msg.raw).to_string();
+    let target = match parse_recall_target(&raw_str) {
+        Some(target) => target,
+        None => {
+            warn!("单聊撤回消息载荷解析失败: {}", raw_str);
+            return Ok(());
+        }
+    };
+    let me = get_user_info("uuid").await?;
+    match query_chat_record_by_id_from_db(&target, &me).await {
+        Ok(original) if can_recall(&original.send_user, &text_quic_msg.send_user) => {
+            recall_chat_record_db(&target, &text_quic_msg.send_user).await?;
+        }
+        Ok(_) => info!("单聊撤回校验未通过(非同一发送者): target={}", target),
+        Err(_) => info!("单聊撤回目标不存在或已删除: target={}", target),
+    }
+    process_private_chat_message(text_quic_msg).await
+}
+
 /// 处理群聊消息
 async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let me = get_user_info("uuid").await?;
+
+    // 群聊撤回（伪撤回）：以 2001 承载，解析内层载荷，校验后清除目标消息；
+    // 撤回消息本身仍按普通群消息落库/上屏。
+    if let Some(target) = parse_group_recall_target(&msg.raw) {
+        let group_id = &msg.recv_user;
+        match query_group_chat_record_by_id(&target, group_id).await {
+            Ok(Some(original)) if can_recall(&original.send_user, &msg.send_user) => {
+                recall_group_chat_record_db(&target, group_id, &msg.send_user).await?;
+            }
+            Ok(_) => info!("群撤回校验未通过或目标不存在: target={}", target),
+            Err(e) => info!("群撤回目标查询失败: target={} err={}", target, e),
+        }
+    }
 
     let record = GroupChatRecord {
         id: 0,

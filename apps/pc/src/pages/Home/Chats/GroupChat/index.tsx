@@ -7,6 +7,7 @@ import {
   useMessageSelection,
 } from '@/hooks/useMessageSelection';
 import { useBearStore } from '@/store/store';
+import { isRecallChatMessage, isRecallMessage } from '@/utils/recall';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
 import {
@@ -166,6 +167,49 @@ const GroupChatPage: React.FC = () => {
     setForwardOpen(true);
   }, []);
 
+  const recallMessage = useCallback(
+    async (msg: ChatMessage) => {
+      let recalled: TextQuicMsgVo;
+      try {
+        recalled = (await invoke('recall_group_chat_message', {
+          groupId,
+          targetNanoId: msg.text_msg_raw.nano_id,
+        })) as TextQuicMsgVo;
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.recall.failed' }));
+        return;
+      }
+      setMessageList((prev) => {
+        const filtered = prev.filter(
+          (m) => m.text_msg_raw.nano_id !== msg.text_msg_raw.nano_id,
+        );
+        const temp: ChatMessage = {
+          from: MessageFrom.Mine,
+          text_msg_raw: recalled,
+          ack: false,
+          sender_uuid: meUuid,
+        };
+        return [...filtered, temp];
+      });
+      setTimeout(() => scrollToBottom(), 100);
+    },
+    [groupId, meUuid, intl],
+  );
+
+  const confirmRecall = useCallback(
+    (msg: ChatMessage) => {
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        content: intl.formatMessage({ id: 'chat.recall.confirm' }),
+        okText: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => recallMessage(msg),
+      });
+    },
+    [intl, recallMessage],
+  );
+
   const handleForwardConfirm = useCallback(
     async (target: ForwardTarget) => {
       const list = forwardMessages.map((m) => m.text_msg_raw);
@@ -207,13 +251,15 @@ const GroupChatPage: React.FC = () => {
         enterSelect(msg);
       } else if (action === 'forward') {
         openForward([msg]);
+      } else if (action === 'recall') {
+        confirmRecall(msg);
       } else if (action === 'delete') {
         confirmDelete([msg.text_msg_raw.nano_id]);
       } else if (action === 'copy') {
         copyMessage(msg);
       }
     },
-    [actionMenu, enterSelect, openForward, confirmDelete, copyMessage],
+    [actionMenu, enterSelect, openForward, confirmRecall, confirmDelete, copyMessage],
   );
 
   const uniqueSenderUuids = useMemo(
@@ -415,6 +461,14 @@ const GroupChatPage: React.FC = () => {
 
   useEffect(() => {
     if (textMessage) {
+      // 群内撤回消息：被撤回的原消息已在本地库删除，重拉聊天记录以移除原消息并显示撤回提示
+      if (isRecallMessage(textMessage.text_type, textMessage.raw)) {
+        setCurrentPage(1);
+        setHasMore(true);
+        setIsInitialLoad(true);
+        loadChatRecord(groupId, 1, true);
+        return;
+      }
       let from = MessageFrom.Customer;
       if (textMessage.send_user === SYSTEM_ACCOUNT) {
         from = MessageFrom.System;
@@ -470,6 +524,11 @@ const GroupChatPage: React.FC = () => {
         );
         if (index !== -1) {
           prevState[index].ack = true;
+          // 用服务端返回的 nano_id 归一本地乐观消息的 nano_id，
+          // 否则后续撤回/删除会因本地 id 在 group_chat_record 中不存在而失败
+          if (groupAckMessage.nano_id) {
+            prevState[index].text_msg_raw.nano_id = groupAckMessage.nano_id;
+          }
         }
         return [...prevState];
       });
@@ -576,6 +635,10 @@ const GroupChatPage: React.FC = () => {
           x={actionMenu.x}
           y={actionMenu.y}
           canCopy={actionMenu.msg.text_msg_raw.text_type === 2001}
+          canRecall={
+            actionMenu.msg.from === MessageFrom.Mine &&
+            !isRecallChatMessage(actionMenu.msg)
+          }
           onSelect={handleActionMenuSelect}
           onClose={() => setActionMenu(null)}
         />

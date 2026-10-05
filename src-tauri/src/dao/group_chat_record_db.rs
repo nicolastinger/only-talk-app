@@ -60,6 +60,42 @@ pub async fn set_group_server_id(nano_id: &str, server_id: i64) -> Result<(), an
     Ok(())
 }
 
+/// 根据 nano_id 查询未删除的群聊消息（撤回校验用）。
+pub async fn query_group_chat_record_by_id(
+    nano_id: &str,
+    group_id: &str,
+) -> Result<Option<GroupChatRecord>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let record = sqlx::query_as::<_, GroupChatRecord>(
+        r#"SELECT * FROM group_chat_record WHERE nano_id = ?1 AND group_id = ?2 AND deleted = 0"#,
+    )
+    .bind(nano_id)
+    .bind(group_id)
+    .fetch_optional(&pool_sqlite)
+    .await?;
+    Ok(record)
+}
+
+/// 撤回群聊消息：清除内容并置 `deleted = 1`（仅限发送者本人）。
+///
+/// 返回是否命中(命中要求消息存在、未删除且 `send_user` 与撤回消息发送者一致)。
+pub async fn recall_group_chat_record_db(
+    nano_id: &str,
+    group_id: &str,
+    send_user: &str,
+) -> Result<bool, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let res = sqlx::query(
+        r#"UPDATE group_chat_record SET raw = '', deleted = 1 WHERE nano_id = ?1 AND group_id = ?2 AND send_user = ?3 AND deleted = 0"#,
+    )
+    .bind(nano_id)
+    .bind(group_id)
+    .bind(send_user)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(res.rows_affected() > 0)
+}
+
 /// 已读上报推进校验: 按 nano_id 查本地聊天记录表中该消息的时间戳。
 ///
 /// 推进是否合法以**聊天记录表的时间戳**为准(而非水位表记录), 跨端回填等场景下

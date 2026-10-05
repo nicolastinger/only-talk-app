@@ -455,6 +455,7 @@ export default {
       copy: 'Copy',
       copied: 'Copied',
       cancel: 'Cancel',
+      recall: 'Recall',
     },
     selection: {
       selected: '{count} selected',
@@ -475,6 +476,14 @@ export default {
       title: 'Delete messages',
       content: 'Delete the selected {count} message(s)? This cannot be undone.',
       failed: 'Delete failed',
+    },
+    recall: {
+      confirm: 'Recall this message?',
+      notice: '{name} recalled a message',
+      you: 'You',
+      peer: 'The other party',
+      failed: 'Recall failed',
+      preview: 'Recalled a message',
     },
     selfChat: {
       me: 'Me',

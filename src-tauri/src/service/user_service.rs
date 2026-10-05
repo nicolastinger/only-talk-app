@@ -12,7 +12,8 @@ use uuid::Uuid;
 use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::app_log_db::log_quic_event;
 use crate::dao::chat_record_db::{
-    chat_record_timestamp_by_nano_id, insert_chat_record, local_max_server_id, query_read_peers,
+    chat_record_timestamp_by_nano_id, insert_chat_record, local_max_server_id,
+    query_chat_record_by_id_from_db, query_read_peers, recall_chat_record_db,
     set_chat_record_server_id,
 };
 use crate::dao::chat_record_read::{
@@ -20,7 +21,8 @@ use crate::dao::chat_record_read::{
     update_reported_position,
 };
 use crate::dao::group_chat_record_db::{
-    group_chat_record_timestamp_by_nano_id, local_max_group_server_id, set_group_server_id,
+    group_chat_record_timestamp_by_nano_id, local_max_group_server_id,
+    query_group_chat_record_by_id, recall_group_chat_record_db, set_group_server_id,
 };
 use crate::dao::group_message_read::{
     group_read_reported_position, group_read_watermark_nano_id, query_group_message_read,
@@ -42,6 +44,7 @@ use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STA
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
 use crate::service::group_service::{parse_http_result, sync_group_list};
+use crate::service::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
 use crate::utils::session_uuid::single_session_uuid;
@@ -839,6 +842,15 @@ async fn insert_single_sync_message(
         send_user: msg.send_user.clone(),
         timestamp: msg.timestamp,
     };
+    // 离线同步的撤回消息：同样需要清除目标消息内容并置 deleted = 1
+    if let Some(target) = parse_recall_target(&vo.raw) {
+        match query_chat_record_by_id_from_db(&target, me).await {
+            Ok(original) if can_recall(&original.send_user, &vo.send_user) => {
+                recall_chat_record_db(&target, &vo.send_user).await?;
+            }
+            _ => info!("同步单聊撤回校验未通过/目标缺失: target={}", target),
+        }
+    }
     let is_new = insert_chat_record(&vo).await?;
     set_chat_record_server_id(&msg.nano_id, msg.id).await?;
 
@@ -877,6 +889,15 @@ async fn insert_group_sync_message(
 ) -> Result<bool, anyhow::Error> {
     let group_id = msg.recv_user.clone();
     let raw = String::from_utf8_lossy(&msg.raw).to_string();
+    // 离线同步的群撤回消息：解析内层载荷并清除目标消息
+    if let Some(target) = parse_group_recall_target(&raw) {
+        match query_group_chat_record_by_id(&target, &group_id).await {
+            Ok(Some(original)) if can_recall(&original.send_user, &msg.send_user) => {
+                recall_group_chat_record_db(&target, &group_id, &msg.send_user).await?;
+            }
+            _ => info!("同步群撤回校验未通过/目标缺失: target={}", target),
+        }
+    }
     let record = GroupChatRecord {
         id: 0,
         nano_id: msg.nano_id.clone(),

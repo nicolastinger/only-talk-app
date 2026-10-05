@@ -1,5 +1,6 @@
 import UserTypeTag from '@/components/UserTypeTag';
 import { SearchOutlined } from '@ant-design/icons';
+import { isRecallMessage } from '@/utils/recall';
 import { useIntl } from '@umijs/max';
 import { invoke } from '@tauri-apps/api/core';
 import { ChatSessionVo } from '@workspace/types';
@@ -36,6 +37,9 @@ const HighlightText: React.FC<{ text: string; keyword: string }> = ({ text, keyw
 
 // 格式化消息内容
 const formatMessage = (message: string, textType: number): string => {
+  if (isRecallMessage(textType, message)) {
+    return '撤回了一条消息';
+  }
   if (textType === 2 || textType === 2002) {
     return '[图片]';
   }

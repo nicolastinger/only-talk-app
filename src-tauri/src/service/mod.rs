@@ -6,6 +6,7 @@ pub mod group_service;
 pub mod message_alert;
 pub mod message_convert;
 pub mod p2p_service;
+pub mod recall;
 pub mod send_queue;
 pub mod session_manager;
 pub mod update_service;

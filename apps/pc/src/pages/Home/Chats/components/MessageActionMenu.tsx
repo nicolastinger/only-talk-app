@@ -8,12 +8,13 @@ import React, {
 import { createPortal } from 'react-dom';
 import styles from './styles/MessageActionMenu.less';
 
-export type MessageAction = 'multi' | 'forward' | 'delete' | 'copy';
+export type MessageAction = 'multi' | 'forward' | 'recall' | 'delete' | 'copy';
 
 interface MessageActionMenuProps {
   x: number;
   y: number;
   canCopy?: boolean;
+  canRecall?: boolean;
   onSelect: (action: MessageAction) => void;
   onClose: () => void;
 }
@@ -24,6 +25,7 @@ const MessageActionMenu: React.FC<MessageActionMenuProps> = ({
   x,
   y,
   canCopy,
+  canRecall,
   onSelect,
   onClose,
 }) => {
@@ -81,11 +83,17 @@ const MessageActionMenu: React.FC<MessageActionMenuProps> = ({
       key: 'forward',
       label: intl.formatMessage({ id: 'chat.messageActions.forward' }),
     },
-    {
-      key: 'delete',
-      label: intl.formatMessage({ id: 'chat.messageActions.delete' }),
-    },
   ];
+  if (canRecall) {
+    items.push({
+      key: 'recall',
+      label: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+    });
+  }
+  items.push({
+    key: 'delete',
+    label: intl.formatMessage({ id: 'chat.messageActions.delete' }),
+  });
   if (canCopy) {
     items.push({
       key: 'copy',

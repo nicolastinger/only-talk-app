@@ -11,7 +11,7 @@ import {
   MSG_TYPE_P2P,
   MSG_TYPE_SYSTEM,
 } from "@/chat/messageTypes";
-import { getMessageDisplayText } from "@/chat/messageParse";
+import { getMessageDisplayText, isRecallMessage } from "@/chat/messageParse";
 import { isMessageSelectable } from "@/chat/useMessageSelection";
 import FileMsgItem from "./FileMsgItem.vue";
 import ImageMsg from "./ImageMsg.vue";
@@ -25,6 +25,8 @@ const props = defineProps<{
   myAvatar: string;
   /** 单聊=好友头像；群聊=群头像（成员头像缺省时的兜底） */
   peerAvatar: string;
+  /** 单聊=好友昵称（撤回提示用） */
+  peerName?: string;
   /** 群成员信息：uuid -> UserInfo */
   memberMap?: Record<string, UserInfo>;
   /** 群成员头像本地 url：uuid -> url|null */
@@ -144,6 +146,17 @@ const senderName = (msg: UiChatMessage): string => {
   return msg.textMsg.send_user ? msg.textMsg.send_user.slice(0, 8) : "群成员";
 };
 
+/** 撤回控制消息（居中提示，不渲染气泡） */
+const isRecallRow = (msg: UiChatMessage): boolean =>
+  isRecallMessage(msg.textMsg.text_type, msg.textMsg.raw);
+
+/** 撤回提示文案：我/群成员昵称/对方 + 撤回了一条消息 */
+const recallText = (msg: UiChatMessage): string => {
+  if (msg.from === "mine") return "你撤回了一条消息";
+  if (isGroup.value) return `${senderName(msg)}撤回了一条消息`;
+  return `${props.peerName || "对方"}撤回了一条消息`;
+};
+
 const senderUserType = (msg: UiChatMessage): number | undefined => {
   const info = props.memberMap?.[msg.senderUuid || msg.textMsg.send_user || ""];
   return info?.user_type ?? undefined;
@@ -162,8 +175,13 @@ const senderAvatar = (msg: UiChatMessage): string => {
     <template v-for="msg in messages" :key="msg.textMsg.nano_id">
       <MsgTimeDivider v-if="msg.showTime" :timestamp="msg.textMsg.timestamp" />
 
+      <!-- 撤回提示 居中灰条 -->
+      <div v-if="isRecallRow(msg)" class="row-recall">
+        <span class="recall-text">{{ recallText(msg) }}</span>
+      </div>
+
       <!-- 系统/群通知 居中灰条 -->
-      <div v-if="isSystemRow(msg)" class="row-system">
+      <div v-else-if="isSystemRow(msg)" class="row-system">
         <SystemMsg :raw="msg.textMsg.raw" />
       </div>
 
@@ -328,6 +346,17 @@ const senderAvatar = (msg: UiChatMessage): string => {
 .row-system {
   display: flex;
   justify-content: center;
+}
+.row-recall {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+  .recall-text {
+    font-size: 12px;
+    color: var(--text-placeholder);
+    text-align: center;
+    padding: 3px 10px;
+  }
 }
 .avatar {
   width: 34px;

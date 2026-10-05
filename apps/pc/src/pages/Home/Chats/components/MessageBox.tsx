@@ -1,6 +1,7 @@
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { formatMessageTime } from '@/utils/format';
+import { isRecallMessage } from '@/utils/recall';
 import { getFiles } from '@workspace/services';
 import { MessageQueueProps } from '@workspace/types';
 import { Badge } from 'antd';
@@ -38,6 +39,10 @@ const MessageBox = (
   const [loading, setLoading] = useState(false);
 
   const displayMessage = useMemo(() => {
+    if (isRecallMessage(text_type ?? -1, message)) {
+      return '撤回了一条消息';
+    }
+
     if (text_type === 2 || text_type === 2002) {
       return '[图片]';
     }

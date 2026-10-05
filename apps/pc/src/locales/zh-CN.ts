@@ -446,6 +446,7 @@ export default {
       copy: '复制',
       copied: '已复制',
       cancel: '取消',
+      recall: '撤回',
     },
     selection: {
       selected: '已选择 {count} 项',
@@ -466,6 +467,14 @@ export default {
       title: '删除聊天记录',
       content: '确定删除选中的 {count} 条消息吗？删除后不可恢复。',
       failed: '删除失败',
+    },
+    recall: {
+      confirm: '确定撤回这条消息吗？',
+      notice: '{name}撤回了一条消息',
+      you: '你',
+      peer: '对方',
+      failed: '撤回失败',
+      preview: '撤回了一条消息',
     },
     selfChat: {
       me: '我',

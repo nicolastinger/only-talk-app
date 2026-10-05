@@ -36,7 +36,12 @@ import {
   MSG_TYPE_RECALL_FAILURE,
   RELOAD_ON_ACK_TYPES,
 } from "@/chat/messageTypes";
-import { isTransientMessageType, needTimeDivider, parseGroupImageBizId } from "@/chat/messageParse";
+import {
+  isRecallMessage,
+  isTransientMessageType,
+  needTimeDivider,
+  parseGroupImageBizId,
+} from "@/chat/messageParse";
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
 import { useMessageSelection } from "@/chat/useMessageSelection";
@@ -137,11 +142,61 @@ const {
 
 const showActionSheet = ref(false);
 const actionTarget = ref<UiChatMessage | null>(null);
-const actionActions = [{ name: "多选" }, { name: "转发" }, { name: "删除" }];
+/** 长按操作项：自己的普通消息额外提供"撤回" */
+const actionActions = computed(() => {
+  const msg = actionTarget.value;
+  const actions: { name: string }[] = [{ name: "多选" }, { name: "转发" }];
+  if (
+    msg &&
+    msg.from === "mine" &&
+    !msg.failed &&
+    !isRecallMessage(msg.textMsg.text_type, msg.textMsg.raw)
+  ) {
+    actions.push({ name: "撤回" });
+  }
+  actions.push({ name: "删除" });
+  return actions;
+});
 
 const onLongPress = (msg: UiChatMessage) => {
   actionTarget.value = msg;
   showActionSheet.value = true;
+};
+
+/** 撤回群消息：确认后清除本机原消息并发送撤回控制消息 */
+const recallMessage = async (msg: UiChatMessage) => {
+  try {
+    await showConfirmDialog({ title: "撤回消息", message: "确定撤回这条消息吗？" });
+  } catch {
+    return;
+  }
+  let recalled: TextQuicMsgVo;
+  try {
+    recalled = (await invoke("recall_group_chat_message", {
+      groupId,
+      targetNanoId: msg.textMsg.nano_id,
+    })) as TextQuicMsgVo;
+  } catch (e) {
+    console.error("撤回群消息失败:", e);
+    showToast({ message: "撤回失败", icon: "fail" });
+    return;
+  }
+  // 本地移除原消息并乐观上屏撤回提示（群 ACK 按本地 nano_id 归一）
+  messages.value = messages.value.filter(
+    (m) => m.textMsg.nano_id !== msg.textMsg.nano_id
+  );
+  const prevTs = messages.value.length
+    ? messages.value[messages.value.length - 1].textMsg.timestamp
+    : 0;
+  messages.value.push({
+    from: "mine",
+    textMsg: recalled,
+    ack: false,
+    failed: false,
+    showTime: needTimeDivider(prevTs, recalled.timestamp),
+    senderUuid: meUuid.value,
+  });
+  nextTick(() => scrollToBottom(true));
 };
 
 const deleteSelected = async () => {
@@ -184,6 +239,8 @@ const onActionSelect = (action: { name: string }) => {
   } else if (action.name === "转发") {
     enterSelect(msg);
     openForward();
+  } else if (action.name === "撤回") {
+    recallMessage(msg);
   } else if (action.name === "删除") {
     enterSelect(msg);
     deleteSelected();
@@ -598,6 +655,13 @@ watch(textMessage, async (msg) => {
     if (idx !== -1) messages.value[idx].failed = true;
     return;
   }
+  // 群内撤回消息：被撤回的原消息已在本地库删除，重拉聊天记录以移除原消息并显示撤回提示
+  if (isRecallMessage(msg.text_type, msg.raw)) {
+    reloadFirstPage();
+    nextTick(() => scrollToBottom(true));
+    invoke("mark_read_chat_session", { friendUuid: groupId }).catch(() => {});
+    return;
+  }
   await pushMessage(msg);
   nextTick(() => scrollToBottom(true));
   invoke("mark_read_chat_session", { friendUuid: groupId }).catch(() => {});
@@ -611,6 +675,8 @@ watch(groupAckMessage, async (ack) => {
     clearAckTimer(ack.raw);
     messages.value[idx].ack = true;
     messages.value[idx].failed = false;
+    // 服务端返回的 nano_id 归一，避免后续撤回/删除用本地 id 查不到
+    if (ack.nano_id) messages.value[idx].textMsg.nano_id = ack.nano_id;
     if (RELOAD_ON_ACK_TYPES.includes(messages.value[idx].textMsg.text_type)) {
       reloadFirstPage();
     }

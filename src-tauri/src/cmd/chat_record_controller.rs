@@ -10,11 +10,11 @@ use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::Page;
 use crate::service::chat_service::{
     forward_chat_messages_service, get_chat_record_by_type_service, get_chat_record_service,
-    get_group_chat_record_service, ignore_send_msg_service, retry_send_msg_service,
-    send_call_control_msg_service, send_file_msg_service, send_group_file_msg_service,
-    send_group_image_msg_service, send_group_text_msg_service, send_image_msg_service,
-    send_text_msg_service, send_webrtc_signal_service, update_group_last_read_msg_service,
-    update_last_read_msg_from_db,
+    get_group_chat_record_service, ignore_send_msg_service, recall_chat_message_service,
+    recall_group_chat_message_service, retry_send_msg_service, send_call_control_msg_service,
+    send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
+    send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
+    send_webrtc_signal_service, update_group_last_read_msg_service, update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -248,4 +248,37 @@ pub async fn forward_chat_messages(
             Err("转发超时".to_string())
         }
     }
+}
+
+/// 撤回单聊消息（伪撤回）：清除本机原消息并发送撤回控制消息
+#[tauri::command]
+pub async fn recall_chat_message(
+    recv_user: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        recall_chat_message_service(recv_user, target_nano_id).await
+    })
+    .await;
+    match result {
+        Ok(Ok(msg)) => Ok(msg),
+        Ok(Err(e)) => {
+            error!("撤回单聊消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("撤回单聊消息超时：10秒内未完成 {}", elapsed);
+            Err("撤回超时".to_string())
+        }
+    }
+}
+
+/// 撤回群聊消息（伪撤回）：清除本机原消息并发送撤回控制消息
+#[tauri::command]
+pub async fn recall_group_chat_message(
+    group_id: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, String> {
+    recall_group_chat_message_service(group_id, target_nano_id).await.map_err(|e| e.to_string())
 }

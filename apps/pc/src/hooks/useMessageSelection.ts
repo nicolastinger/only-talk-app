@@ -1,3 +1,4 @@
+import { isRecallChatMessage } from '@/utils/recall';
 import { ChatMessage, MessageFrom } from '@workspace/types';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -11,6 +12,7 @@ export const isMessageSelectable = (msg: ChatMessage): boolean => {
   if (msg.from === MessageFrom.System) return false;
   if (msg.text_msg_raw.send_user === 'system') return false;
   if (msg.ack === false) return false;
+  if (isRecallChatMessage(msg)) return false;
   return !NON_SELECTABLE_TYPES.has(msg.text_msg_raw.text_type);
 };
 

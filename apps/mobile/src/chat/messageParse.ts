@@ -18,6 +18,7 @@ import {
   MSG_TYPE_P2P_VIDEO_CALL_END,
   MSG_TYPE_P2P_VIDEO_CALL_INVITE,
   MSG_TYPE_P2P_VIDEO_CALL_REJECT,
+  MSG_TYPE_RECALL,
   MSG_TYPE_TEXT,
   MSG_TYPE_WEBRTC_SIGNAL,
 } from "./messageTypes";
@@ -132,6 +133,49 @@ export const parseSystemContent = (raw: string): string => {
   return text || "[通知]";
 };
 
+/* ==================== 消息撤回（伪撤回） ==================== */
+
+/** 撤回载荷标记 key（与后端 service::recall 保持一致） */
+const RECALL_MARKER = "ot_recall";
+
+/** 解析撤回载荷 JSON，返回目标 nano_id；非撤回载荷返回 null */
+const parseRecallJson = (s: string): string | null => {
+  const parsed = tryParseJson<Record<string, unknown>>(s);
+  if (
+    parsed &&
+    parsed[RECALL_MARKER] === 1 &&
+    typeof parsed.target_nano_id === "string"
+  ) {
+    return parsed.target_nano_id;
+  }
+  return null;
+};
+
+/**
+ * 判断是否为撤回控制消息并返回目标 nano_id。
+ * - 单聊：type=3001，raw 即撤回载荷；
+ * - 群聊：type=2001，raw 为外层 GroupTextRecord，内层 text 为撤回载荷。
+ */
+export const parseRecallTarget = (
+  textType: number,
+  raw: string
+): string | null => {
+  if (textType === MSG_TYPE_RECALL) return parseRecallJson(raw);
+  if (textType === MSG_TYPE_GROUP_TEXT) {
+    // 乐观上屏时 raw 为内层载荷；落库/接收后为外层 GroupTextRecord
+    const direct = parseRecallJson(raw);
+    if (direct) return direct;
+    const outer = unwrapGroupOuter(raw);
+    if (!outer || !outer.text) return null;
+    return parseRecallJson(outer.text);
+  }
+  return null;
+};
+
+/** 是否为撤回控制消息 */
+export const isRecallMessage = (textType: number, raw: string): boolean =>
+  parseRecallTarget(textType, raw) !== null;
+
 /* ==================== 预览/兜底文案 ==================== */
 
 /** 会话列表 / 未知类型 的兜底文案（对齐 PC Search.formatMessage） */
@@ -139,6 +183,7 @@ export const getMessageDisplayText = (
   text_type: number,
   raw: string
 ): string => {
+  if (isRecallMessage(text_type, raw)) return "撤回了一条消息";
   switch (text_type) {
     case MSG_TYPE_TEXT:
       return parsePrivateText(raw);
