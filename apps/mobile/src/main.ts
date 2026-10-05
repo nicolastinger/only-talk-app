@@ -22,6 +22,24 @@ import {
   Switch,
 } from "vant";
 
+// 屏蔽 WebView 原生 contextmenu（长按图片/链接/文本弹出的系统菜单）与图片原生拖拽，
+// 长按交互统一由应用自定义（如消息多选）
+document.addEventListener("contextmenu", (event) => event.preventDefault());
+document.addEventListener("dragstart", (event) => event.preventDefault());
+// 兜底：部分 WebView 不遵守 user-select: none，直接拦截文本选择（输入框除外）
+document.addEventListener("selectstart", (event) => {
+  const target = event.target as HTMLElement | null;
+  if (
+    target &&
+    (target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable)
+  ) {
+    return;
+  }
+  event.preventDefault();
+});
+
 const app = createApp(App);
 
 // 注册统一 HTTP 错误中间层展示器(所有 http 接口的 604/500/401/403/404 等错误都在此统一展示)

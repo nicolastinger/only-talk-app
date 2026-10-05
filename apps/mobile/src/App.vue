@@ -206,6 +206,26 @@ onUnmounted(() => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* 移动端屏蔽 WebView 原生长按（文本选择/图片菜单/拖拽），长按交互由应用自定义 */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 输入框/文本域保留选择与编辑能力 */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 图片禁用原生拖拽与长按菜单 */
+img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 html,
