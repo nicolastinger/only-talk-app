@@ -1,5 +1,6 @@
 use crate::dao::get_private_db_client;
 use crate::entity::group_chat_record::GroupChatRecord;
+use crate::utils::message_types::MSG_TYPE_GROUP_TEXT;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 pub async fn insert_group_chat_record(record: &GroupChatRecord) -> Result<(), anyhow::Error> {
@@ -94,6 +95,23 @@ pub async fn recall_group_chat_record_db(
     .execute(&pool_sqlite)
     .await?;
     Ok(res.rows_affected() > 0)
+}
+
+/// 查询群内所有撤回控制消息 `(raw, send_user)`，用于本地撤回核对。
+///
+/// 群撤回以 `MSG_TYPE_GROUP_TEXT(2001)` 承载，故用 `raw LIKE '%ot_recall%'` 预筛。
+pub async fn query_group_recall_messages(
+    group_id: &str,
+) -> Result<Vec<(String, String)>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let rows = sqlx::query_as::<_, (String, String)>(
+        r#"SELECT raw, send_user FROM group_chat_record WHERE text_type = ?1 AND group_id = ?2 AND raw LIKE '%ot_recall%'"#,
+    )
+    .bind(MSG_TYPE_GROUP_TEXT)
+    .bind(group_id)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(rows)
 }
 
 /// 已读上报推进校验: 按 nano_id 查本地聊天记录表中该消息的时间戳。

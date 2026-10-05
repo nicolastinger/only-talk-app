@@ -16,7 +16,7 @@ use crate::dao::chat_record_ack::{
 };
 use crate::dao::chat_record_db::{
     query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
-    query_last_chat_record, recall_chat_record_db,
+    query_last_chat_record, query_single_recall_messages, recall_chat_record_db,
 };
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
@@ -24,7 +24,8 @@ use crate::dao::chat_record_send::{
     update_chat_record_send, update_chat_record_send_status,
 };
 use crate::dao::group_chat_record_db::{
-    query_group_chat_record_by_id, query_group_chat_record_from_db, recall_group_chat_record_db,
+    query_group_chat_record_by_id, query_group_chat_record_from_db, query_group_recall_messages,
+    recall_group_chat_record_db,
 };
 use crate::dao::group_db::{query_group_by_id, upsert_group};
 use crate::dao::group_message_ack::{
@@ -50,7 +51,7 @@ use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::upload_file;
 use crate::service::message_convert::normalize_for_target;
-use crate::service::recall::build_recall_raw;
+use crate::service::recall::{build_recall_raw, parse_group_recall_target, parse_recall_target};
 use crate::service::send_queue;
 use crate::service::user_service::{get_user_info, get_user_map};
 use crate::utils::global_static_str::{talk_api_base, PLATFORM, ZERO_UUID};
@@ -122,6 +123,14 @@ pub async fn get_chat_record_service(
     text_quic_msg: TextQuicMsgVo,
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    // 首页加载时先做一次本地撤回核对（幂等）：修正离线同步/跨端撤回因时序或补拉导致的遗漏
+    if page.current <= 1 {
+        if let Err(e) =
+            reconcile_single_recalls(&text_quic_msg.send_user, &text_quic_msg.recv_user).await
+        {
+            error!("单聊撤回核对失败: {}", e);
+        }
+    }
     let limit = page.size;
     let offset = (page.current - 1) * page.size;
     query_chat_record_from_db(&text_quic_msg.send_user, &text_quic_msg.recv_user, limit, offset)
@@ -484,6 +493,12 @@ pub async fn get_group_chat_record_service(
     group_id: String,
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    // 首页加载时先做一次本地撤回核对（幂等）：修正离线同步/跨端撤回因时序或补拉导致的遗漏
+    if page.current <= 1 {
+        if let Err(e) = reconcile_group_recalls(&group_id).await {
+            error!("群聊撤回核对失败: {}", e);
+        }
+    }
     let limit = page.size;
     let offset = (page.current - 1) * page.size;
     query_group_chat_record_from_db(&group_id, limit, offset).await
@@ -1379,6 +1394,38 @@ pub async fn forward_chat_messages_service(
         }
     }
     Ok(())
+}
+
+/// 本地撤回核对（单聊，幂等）。
+///
+/// 扫描会话内所有撤回控制消息并清除对应原消息，不依赖消息到达顺序，
+/// 用于离线同步/历史加载时兜底（如"撤回先于原消息到达"、跨端撤回）。
+/// 返回本次新命中并删除成功的条数。
+pub async fn reconcile_single_recalls(me: &str, peer: &str) -> Result<usize, anyhow::Error> {
+    let recalls = query_single_recall_messages(me, peer).await?;
+    let mut applied = 0usize;
+    for (raw, send_user) in recalls {
+        if let Some(target) = parse_recall_target(&raw) {
+            if recall_chat_record_db(&target, &send_user).await? {
+                applied += 1;
+            }
+        }
+    }
+    Ok(applied)
+}
+
+/// 本地撤回核对（群聊，幂等）。同 `reconcile_single_recalls`，用于群聊。
+pub async fn reconcile_group_recalls(group_id: &str) -> Result<usize, anyhow::Error> {
+    let recalls = query_group_recall_messages(group_id).await?;
+    let mut applied = 0usize;
+    for (raw, send_user) in recalls {
+        if let Some(target) = parse_group_recall_target(&raw) {
+            if recall_group_chat_record_db(&target, group_id, &send_user).await? {
+                applied += 1;
+            }
+        }
+    }
+    Ok(applied)
 }
 
 /// 解析单聊撤回目标为规范 nano_id。

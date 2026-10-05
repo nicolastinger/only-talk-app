@@ -658,6 +658,13 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
         }
 
         if pulled > 0 {
+            // 撤回核对：按会话全量核对一次（幂等），修正同步批次内"撤回先于原消息"等时序遗漏
+            if s.session_type == 2 {
+                let _ =
+                    crate::service::chat_service::reconcile_group_recalls(&s.session_uuid).await;
+            } else if let Some(peer) = s.peer_uuid.as_ref().filter(|p| !p.is_empty()) {
+                let _ = crate::service::chat_service::reconcile_single_recalls(&me, peer).await;
+            }
             // 跨端已读回填: 把服务端 last_read_id 映射到本地水位(只在本地水位更旧时推进)
             if let Err(e) = backfill_read_watermark(&me, s, server_last_read_id).await {
                 warn!("[session][sync] 已读水位回填失败: {}, err={:?}", s.session_uuid, e);

@@ -74,7 +74,8 @@ use app_lib::entity::user_info::UserInfo;
 use app_lib::entity::user_token::UserToken;
 use app_lib::service::user_service::insert_user_info;
 use app_lib::service::chat_service::{
-    resolve_group_recall_target, resolve_single_recall_target,
+    reconcile_group_recalls, reconcile_single_recalls, resolve_group_recall_target,
+    resolve_single_recall_target,
 };
 use app_lib::vo::text_quic_msg::TextQuicMsgVo;
 
@@ -1535,6 +1536,89 @@ async fn recall_target_resolves_local_to_server_id() {
         insert_group_message_ack(&ack).await.expect("插入失败");
         assert_eq!(resolve_group_recall_target("local-g1").await, "server-g1");
         assert_eq!(resolve_group_recall_target("server-g1").await, "server-g1");
+    })
+    .await;
+}
+
+/// 撤回核对：与到达顺序无关，按会话扫描撤回消息并清除原消息（幂等）。
+#[tokio::test]
+async fn recall_reconcile_is_order_independent() {
+    with_private_db(|_pool| async move {
+        // 单聊：模拟"撤回先于原消息到达"（撤回 id 时间戳更大但先插入）
+        let recall = TextQuicMsgVo {
+            nano_id: "recall-1".to_string(),
+            text_type: 3001,
+            raw: r#"{"ot_recall":1,"target_nano_id":"origin-1"}"#.to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+        };
+        insert_chat_record(&recall).await.expect("插入撤回失败");
+        let origin = TextQuicMsgVo {
+            nano_id: "origin-1".to_string(),
+            text_type: 1,
+            raw: r#"{"text":"hi","prev_id":"","platform":0}"#.to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+        };
+        insert_chat_record(&origin).await.expect("插入原消息失败");
+
+        assert_eq!(reconcile_single_recalls(ME, FRIEND).await.expect("核对失败"), 1);
+        assert_eq!(reconcile_single_recalls(ME, FRIEND).await.expect("核对失败"), 0, "幂等");
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert!(list.iter().all(|m| m.nano_id != "origin-1"), "原消息应被删除");
+        assert!(list.iter().any(|m| m.nano_id == "recall-1"), "撤回提示应保留");
+
+        // 发送者不一致不应删除
+        let other = TextQuicMsgVo {
+            nano_id: "solo-1".to_string(),
+            text_type: 1,
+            raw: r#"{"text":"mine","prev_id":"","platform":0}"#.to_string(),
+            recv_user: ME.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 90,
+        };
+        insert_chat_record(&other).await.expect("插入失败");
+        assert_eq!(reconcile_single_recalls(ME, FRIEND).await.expect("核对失败"), 0);
+
+        // 群聊：撤回以 2001 承载
+        let group = "reconcile-group";
+        let outer = serde_json::json!({
+            "text": r#"{"ot_recall":1,"target_nano_id":"gorigin-1"}"#,
+            "send_user": FRIEND,
+        })
+        .to_string();
+        GroupChatRecord::insert(&GroupChatRecord {
+            id: 0,
+            nano_id: "grecall-1".to_string(),
+            text_type: 2001,
+            raw: outer,
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+            server_id: None,
+        })
+        .await
+        .expect("插入群撤回失败");
+        GroupChatRecord::insert(&GroupChatRecord {
+            id: 0,
+            nano_id: "gorigin-1".to_string(),
+            text_type: 2001,
+            raw: r#"{"text":"hello","send_user":"x"}"#.to_string(),
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+            server_id: None,
+        })
+        .await
+        .expect("插入群原消息失败");
+
+        assert_eq!(reconcile_group_recalls(group).await.expect("群核对失败"), 1);
+        assert_eq!(reconcile_group_recalls(group).await.expect("群核对失败"), 0, "幂等");
+        assert!(
+            query_group_chat_record_by_id("gorigin-1", group).await.expect("查询失败").is_none()
+        );
     })
     .await;
 }

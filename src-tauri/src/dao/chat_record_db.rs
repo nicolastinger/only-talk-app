@@ -2,6 +2,7 @@
 
 use crate::dao::{get_db_client, get_private_db_client};
 use crate::entity::chat_record_read::ChatRecordRead;
+use crate::utils::message_types::MSG_TYPE_RECALL;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 分页获取聊天记录
@@ -161,6 +162,23 @@ pub async fn recall_chat_record_db(nano_id: &str, send_user: &str) -> Result<boo
     .execute(&pool_sqlite)
     .await?;
     Ok(res.rows_affected() > 0)
+}
+
+/// 查询会话内所有撤回控制消息 `(raw, send_user)`，用于本地撤回核对。
+pub async fn query_single_recall_messages(
+    send_user: &str,
+    recv_user: &str,
+) -> Result<Vec<(String, String)>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let rows = sqlx::query_as::<_, (String, String)>(
+        r#"SELECT raw, send_user FROM chat_record WHERE text_type = ?1 AND ((send_user = ?2 AND recv_user = ?3) OR (send_user = ?3 AND recv_user = ?2))"#,
+    )
+    .bind(MSG_TYPE_RECALL)
+    .bind(send_user)
+    .bind(recv_user)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(rows)
 }
 
 /// 已读上报推进校验: 按 nano_id 查本地聊天记录表中该消息的时间戳。
