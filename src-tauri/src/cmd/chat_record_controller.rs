@@ -3,16 +3,18 @@ use std::time::Duration;
 use log::error;
 use tokio::time::timeout;
 
-use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
+use crate::dao::chat_record_db::{delete_chat_record_db, query_chat_record_by_id_from_db};
 use crate::dao::chat_record_send::query_chat_record_send_by_user;
+use crate::dao::group_chat_record_db::delete_group_chat_record_db;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::Page;
 use crate::service::chat_service::{
-    get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
-    ignore_send_msg_service, retry_send_msg_service, send_call_control_msg_service,
-    send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
-    send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
-    send_webrtc_signal_service, update_group_last_read_msg_service, update_last_read_msg_from_db,
+    forward_chat_messages_service, get_chat_record_by_type_service, get_chat_record_service,
+    get_group_chat_record_service, ignore_send_msg_service, retry_send_msg_service,
+    send_call_control_msg_service, send_file_msg_service, send_group_file_msg_service,
+    send_group_image_msg_service, send_group_text_msg_service, send_image_msg_service,
+    send_text_msg_service, send_webrtc_signal_service, update_group_last_read_msg_service,
+    update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -203,6 +205,47 @@ pub async fn ignore_send_msg(send_id: String) -> Result<(), String> {
         Err(elapsed) => {
             error!("忽略消息超时：10秒内未能获取锁 {}", elapsed);
             Err("获取锁超时".to_string())
+        }
+    }
+}
+
+/// 本机软删除单聊聊天记录（deleted 置 1，不通知服务端）
+#[tauri::command]
+pub async fn delete_chat_record(nano_id_list: Vec<String>) -> Result<(), String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    delete_chat_record_db(&nano_id_list, &me).await.map_err(|e| e.to_string())
+}
+
+/// 本机软删除群聊聊天记录（deleted 置 1，不通知服务端）
+#[tauri::command]
+pub async fn delete_group_chat_record(
+    nano_id_list: Vec<String>,
+    group_id: String,
+) -> Result<(), String> {
+    delete_group_chat_record_db(&nano_id_list, &group_id).await.map_err(|e| e.to_string())
+}
+
+/// 逐条转发消息到目标（好友或群），复用原始 biz_id，不重新上传
+#[tauri::command]
+pub async fn forward_chat_messages(
+    messages: Vec<TextQuicMsgVo>,
+    target_recv: String,
+    target_group: bool,
+) -> Result<(), String> {
+    let result = timeout(Duration::from_secs(30), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        forward_chat_messages_service(messages, &target_recv, target_group).await
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            error!("转发消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("转发消息超时：30秒内未完成 {}", elapsed);
+            Err("转发超时".to_string())
         }
     }
 }

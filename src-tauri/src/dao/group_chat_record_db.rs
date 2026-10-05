@@ -13,7 +13,7 @@ pub async fn query_group_chat_record_from_db(
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let records = sqlx::query_as::<_, TextQuicMsgVo>(
-        r#"SELECT * from(SELECT nano_id, text_type, raw, group_id as recv_user, send_user, timestamp FROM group_chat_record WHERE group_id = ?1 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
+        r#"SELECT * from(SELECT nano_id, text_type, raw, group_id as recv_user, send_user, timestamp FROM group_chat_record WHERE group_id = ?1 AND deleted = 0 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
     )
     .bind(group_id)
     .bind(limit)
@@ -27,6 +27,26 @@ pub async fn query_last_group_chat_record(
     group_id: &str,
 ) -> Result<Option<GroupChatRecord>, anyhow::Error> {
     GroupChatRecord::query_last_record(group_id).await
+}
+
+/// 本机软删除群聊消息：deleted 置 1
+pub async fn delete_group_chat_record_db(
+    nano_ids: &[String],
+    group_id: &str,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let mut tx = pool_sqlite.begin().await?;
+    for nano_id in nano_ids {
+        sqlx::query(
+            r#"UPDATE group_chat_record SET deleted = 1 WHERE nano_id = ?1 AND group_id = ?2"#,
+        )
+        .bind(nano_id)
+        .bind(group_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
 }
 
 /// 任务07: 同步落库后回填服务端消息 id。

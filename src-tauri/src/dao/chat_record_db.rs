@@ -12,7 +12,7 @@ pub async fn query_chat_record_from_db(
     offset: i64,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by timestamp desc limit ?3 offset ?4) order by timestamp asc"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE ((send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)) AND deleted = 0 order by timestamp desc limit ?3 offset ?4) order by timestamp asc"#)
         .bind(send_user)
         .bind(recv_user)
         .bind(limit)
@@ -29,7 +29,7 @@ pub async fn query_chat_record_by_id_from_db(
 ) -> Result<TextQuicMsgVo, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let record = sqlx::query_as::<_, TextQuicMsgVo>(
-        r#"SELECT * FROM chat_record WHERE nano_id = ? and (send_user = ? OR recv_user = ?)"#,
+        r#"SELECT * FROM chat_record WHERE nano_id = ? and (send_user = ? OR recv_user = ?) AND deleted = 0"#,
     )
     .bind(id)
     .bind(uuid)
@@ -76,7 +76,7 @@ pub async fn query_last_chat_record(
     friend_id: &str,
 ) -> Result<Option<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"select * from chat_record where (send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1) order by timestamp desc limit 1"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"select * from chat_record where ((send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1)) and deleted = 0 order by timestamp desc limit 1"#)
         .bind(uuid)
         .bind(friend_id)
         .fetch_optional(&pool_sqlite)
@@ -91,7 +91,7 @@ pub async fn query_group_chat_record_from_db(
     offset: i64,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE recv_user = ?1 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE recv_user = ?1 AND deleted = 0 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#)
         .bind(group_id)
         .bind(limit)
         .bind(offset)
@@ -109,7 +109,7 @@ pub async fn query_chat_record_by_type_from_db(
     offset: i64,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE ((send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)) AND text_type = ?3 order by timestamp desc limit ?4 offset ?5) order by timestamp asc"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE ((send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)) AND text_type = ?3 AND deleted = 0 order by timestamp desc limit ?4 offset ?5) order by timestamp asc"#)
         .bind(send_user)
         .bind(recv_user)
         .bind(text_type)
@@ -128,6 +128,23 @@ pub async fn set_chat_record_server_id(nano_id: &str, server_id: i64) -> Result<
         .bind(nano_id)
         .execute(&pool_sqlite)
         .await?;
+    Ok(())
+}
+
+/// 本机软删除单聊消息（仅限当前用户参与的会话）：deleted 置 1
+pub async fn delete_chat_record_db(nano_ids: &[String], uuid: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let mut tx = pool_sqlite.begin().await?;
+    for nano_id in nano_ids {
+        sqlx::query(
+            r#"UPDATE chat_record SET deleted = 1 WHERE nano_id = ?1 AND (send_user = ?2 OR recv_user = ?2)"#,
+        )
+        .bind(nano_id)
+        .bind(uuid)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
     Ok(())
 }
 

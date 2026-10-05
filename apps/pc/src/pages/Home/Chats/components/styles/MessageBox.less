@@ -216,3 +216,39 @@
     transform: translateY(0);
   }
 }
+
+/* ===== 多选 ===== */
+.rowWrapper {
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.selectRow {
+  padding-left: 30px;
+}
+
+.selectedRow {
+  background: rgba(64, 150, 255, 0.08);
+  border-radius: 8px;
+}
+
+.selectMark {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  box-sizing: border-box;
+  z-index: 2;
+  pointer-events: none;
+
+  &.checked {
+    border-color: #4096ff;
+    background: #4096ff;
+    box-shadow: inset 0 0 0 3px #ffffff;
+  }
+}

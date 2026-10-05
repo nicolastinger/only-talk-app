@@ -5,6 +5,7 @@ import React from 'react';
 import GroupCustomerChatBox from './GroupCustomerChatBox';
 import GroupMineChatBox from './GroupMineChatBox';
 import MessageTimestamp from '../../components/MessageTimestamp';
+import boxStyles from '../../components/styles/MessageBox.less';
 import styles from './GroupMessageList.less';
 
 interface GroupMessageListProps {
@@ -13,6 +14,10 @@ interface GroupMessageListProps {
   newMessageIds?: Set<string>;
   loadedMessageIds?: Set<string>;
   memberInfoMap: Map<string, UserInfo>;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onMessageContext?: (msg: ChatMessage, e: React.MouseEvent) => void;
+  onToggleSelect?: (msg: ChatMessage) => void;
 }
 
 const MSG_TYPE_GROUP_TEXT = 2001;
@@ -28,6 +33,10 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
   newMessageIds,
   loadedMessageIds,
   memberInfoMap,
+  selectMode,
+  selectedIds,
+  onMessageContext,
+  onToggleSelect,
 }) => {
   const intl = useIntl();
   const getMessageAnimationClass = (nanoId: string): string => {
@@ -82,12 +91,32 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
           );
         }
 
+        const selected = !!selectedIds?.has(message.nano_id);
+
         return (
           <React.Fragment key={message.nano_id}>
             {shouldShowTimestamp && (
               <MessageTimestamp timestamp={currentTimestamp} />
             )}
-            <div className={animationClass}>
+            <div
+              className={`${animationClass} ${boxStyles.rowWrapper} ${
+                selectMode ? boxStyles.selectRow : ''
+              } ${selected ? boxStyles.selectedRow : ''}`}
+              onContextMenu={(e) => onMessageContext?.(msg, e)}
+              onClickCapture={(e) => {
+                if (!selectMode) return;
+                e.stopPropagation();
+                e.preventDefault();
+                onToggleSelect?.(msg);
+              }}
+            >
+              {selectMode && (
+                <span
+                  className={`${boxStyles.selectMark} ${
+                    selected ? boxStyles.checked : ''
+                  }`}
+                />
+              )}
               {isMine ? (
                 <GroupMineChatBox
                   msg={msg}
@@ -138,6 +167,15 @@ export default React.memo(GroupMessageList, (prevProps, nextProps) => {
   }
 
   if (prevProps.memberInfoMap.size !== nextProps.memberInfoMap.size) {
+    return false;
+  }
+
+  if (
+    prevProps.selectMode !== nextProps.selectMode ||
+    prevProps.selectedIds !== nextProps.selectedIds ||
+    prevProps.onMessageContext !== nextProps.onMessageContext ||
+    prevProps.onToggleSelect !== nextProps.onToggleSelect
+  ) {
     return false;
   }
 

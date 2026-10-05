@@ -29,7 +29,8 @@ impl SqliteStore for GroupChatRecord {
             send_user TEXT NOT NULL,
             group_id TEXT NOT NULL,
             text_type INTEGER NOT NULL DEFAULT 0,
-            server_id INTEGER DEFAULT NULL
+            server_id INTEGER DEFAULT NULL,
+            deleted INTEGER NOT NULL DEFAULT 0
         )"#,
         )
         .execute(pool_sqlite)
@@ -42,6 +43,11 @@ impl SqliteStore for GroupChatRecord {
             sqlx::query("ALTER TABLE group_chat_record ADD COLUMN server_id INTEGER DEFAULT NULL")
                 .execute(pool_sqlite)
                 .await; // Column already exists, ignore
+        let _ = sqlx::query(
+            "ALTER TABLE group_chat_record ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0",
+        )
+        .execute(pool_sqlite)
+        .await; // Column already exists, ignore
         Ok(())
     }
 
@@ -76,7 +82,7 @@ impl GroupChatRecord {
     ) -> Result<Vec<GroupChatRecord>, anyhow::Error> {
         let pool_sqlite = get_private_db_client().await?;
         let records = sqlx::query_as::<_, GroupChatRecord>(
-            r#"SELECT * from(SELECT * FROM group_chat_record WHERE group_id = ?1 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
+            r#"SELECT * from(SELECT * FROM group_chat_record WHERE group_id = ?1 AND deleted = 0 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
         )
         .bind(group_id)
         .bind(limit)
@@ -91,7 +97,7 @@ impl GroupChatRecord {
     ) -> Result<Option<GroupChatRecord>, anyhow::Error> {
         let pool_sqlite = get_private_db_client().await?;
         let record = sqlx::query_as::<_, GroupChatRecord>(
-            r#"select * from group_chat_record where group_id = ?1 order by timestamp desc limit 1"#
+            r#"select * from group_chat_record where group_id = ?1 and deleted = 0 order by timestamp desc limit 1"#
         )
         .bind(group_id)
         .fetch_optional(&pool_sqlite)

@@ -12,6 +12,7 @@ import {
   MSG_TYPE_SYSTEM,
 } from "@/chat/messageTypes";
 import { getMessageDisplayText } from "@/chat/messageParse";
+import { isMessageSelectable } from "@/chat/useMessageSelection";
 import FileMsgItem from "./FileMsgItem.vue";
 import ImageMsg from "./ImageMsg.vue";
 import MsgTimeDivider from "./MsgTimeDivider.vue";
@@ -32,13 +33,63 @@ const props = defineProps<{
   fallbackAvatar?: string;
   /** 当前登录用户 uuid（用于点击自己的头像跳转资料卡） */
   myUuid?: string;
+  /** 多选模式 */
+  selectMode?: boolean;
+  /** 多选模式已选中的 nano_id 列表 */
+  selectedIds?: string[];
 }>();
 
 const emit = defineEmits<{
   (e: "preview", msg: UiChatMessage): void;
   (e: "retry", msg: UiChatMessage): void;
   (e: "avatar-click", payload: { uuid: string; isMine: boolean }): void;
+  (e: "long-press", msg: UiChatMessage): void;
+  (e: "toggle-select", msg: UiChatMessage): void;
 }>();
+
+const selectedIds = computed(() => props.selectedIds || []);
+const selectMode = computed(() => !!props.selectMode);
+const isSelected = (msg: UiChatMessage): boolean =>
+  selectedIds.value.includes(msg.textMsg.nano_id);
+const selectable = (msg: UiChatMessage): boolean => isMessageSelectable(msg);
+
+/* ===== 长按进入多选 ===== */
+let pressTimer: ReturnType<typeof setTimeout> | null = null;
+let suppressClickUntil = 0;
+
+const clearPress = () => {
+  if (pressTimer) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+};
+
+const onTouchStart = (msg: UiChatMessage) => {
+  if (selectMode.value || !selectable(msg)) return;
+  clearPress();
+  pressTimer = setTimeout(() => {
+    pressTimer = null;
+    suppressClickUntil = Date.now() + 400;
+    if (navigator.vibrate) navigator.vibrate(15);
+    emit("long-press", msg);
+  }, 500);
+};
+
+const onTouchMove = () => clearPress();
+const onTouchEnd = () => clearPress();
+
+const onRowClick = (e: MouseEvent, msg: UiChatMessage) => {
+  if (selectMode.value) {
+    e.stopPropagation();
+    e.preventDefault();
+    emit("toggle-select", msg);
+    return;
+  }
+  if (Date.now() < suppressClickUntil) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+};
 
 /** 点击头像：自己的消息用当前用户 uuid，对方的用消息发送者 uuid */
 const onAvatarClick = (msg: UiChatMessage, isMine: boolean) => {
@@ -117,7 +168,21 @@ const senderAvatar = (msg: UiChatMessage): string => {
       </div>
 
       <!-- 我的消息 -->
-      <div v-else-if="msg.from === 'mine'" class="row row-mine">
+      <div
+        v-else-if="msg.from === 'mine'"
+        class="row row-mine"
+        :class="{ selected: selectMode && isSelected(msg) }"
+        @touchstart="onTouchStart(msg)"
+        @touchend="onTouchEnd"
+        @touchmove="onTouchMove"
+        @touchcancel="onTouchEnd"
+        @click.capture="onRowClick($event, msg)"
+      >
+        <span
+          v-if="selectMode && selectable(msg)"
+          class="select-mark"
+          :class="{ checked: isSelected(msg) }"
+        />
         <img
           :src="myAvatar || fallbackAvatar"
           class="avatar"
@@ -186,7 +251,21 @@ const senderAvatar = (msg: UiChatMessage): string => {
       </div>
 
       <!-- 对方消息 -->
-      <div v-else class="row row-friend">
+      <div
+        v-else
+        class="row row-friend"
+        :class="{ selected: selectMode && isSelected(msg) }"
+        @touchstart="onTouchStart(msg)"
+        @touchend="onTouchEnd"
+        @touchmove="onTouchMove"
+        @touchcancel="onTouchEnd"
+        @click.capture="onRowClick($event, msg)"
+      >
+        <span
+          v-if="selectMode && selectable(msg)"
+          class="select-mark"
+          :class="{ checked: isSelected(msg) }"
+        />
         <img
           :src="senderAvatar(msg)"
           class="avatar"
@@ -374,5 +453,26 @@ const senderAvatar = (msg: UiChatMessage): string => {
 }
 .ack-label.pending {
   color: var(--text-placeholder);
+}
+
+/* ===== 多选 ===== */
+.select-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-medium);
+  background: var(--surface);
+  flex-shrink: 0;
+  align-self: center;
+  box-sizing: border-box;
+  &.checked {
+    border-color: var(--brand-blue);
+    background: var(--brand-blue);
+    box-shadow: inset 0 0 0 3px var(--surface);
+  }
+}
+.row.selected {
+  background: var(--surface-hover);
+  border-radius: 10px;
 }
 </style>

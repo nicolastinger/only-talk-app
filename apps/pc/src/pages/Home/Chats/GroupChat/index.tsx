@@ -2,6 +2,10 @@ import { SYSTEM_ACCOUNT } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import { useGroupMessageAckApi } from '@/hooks/useGroupMessageAckApi';
+import {
+  isMessageSelectable,
+  useMessageSelection,
+} from '@/hooks/useMessageSelection';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
@@ -12,9 +16,15 @@ import {
   Page,
   TextQuicMsgVo,
 } from '@workspace/types';
+import { message, Modal } from 'antd';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GroupMessageList from './components/GroupMessageList';
 import GroupChatFooter from './components/GroupChatFooter';
+import ForwardModal, { ForwardTarget } from '../components/ForwardModal';
+import MessageActionMenu, {
+  MessageAction,
+} from '../components/MessageActionMenu';
+import MessageSelectionBar from '../components/MessageSelectionBar';
 import GroupTopBar from '../components/GroupTopBar';
 import styles from './index.less';
 
@@ -52,6 +62,159 @@ const GroupChatPage: React.FC = () => {
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(null, groupId);
   const { groupAckMessage } = useGroupMessageAckApi(groupId);
+
+  /* ===== 多选 / 删除 / 转发 ===== */
+  const {
+    selectMode,
+    selectedIds,
+    selectedMessages,
+    allSelected,
+    enterSelect,
+    exitSelect,
+    toggle,
+    toggleAll,
+  } = useMessageSelection(messageList);
+  const [actionMenu, setActionMenu] = useState<{
+    x: number;
+    y: number;
+    msg: ChatMessage;
+  } | null>(null);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardMessages, setForwardMessages] = useState<ChatMessage[]>([]);
+
+  const handleMessageContext = useCallback(
+    (msg: ChatMessage, e: React.MouseEvent) => {
+      if (!isMessageSelectable(msg)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setActionMenu({ x: e.clientX, y: e.clientY, msg });
+    },
+    [],
+  );
+
+  const handleToggleSelect = useCallback(
+    (msg: ChatMessage) => toggle(msg),
+    [toggle],
+  );
+
+  const copyMessage = useCallback(
+    async (msg: ChatMessage) => {
+      if (msg.text_msg_raw.text_type !== 2001) return;
+      try {
+        let text = msg.text_msg_raw.raw;
+        try {
+          const outer = JSON.parse(text);
+          if (outer && outer.text !== undefined) {
+            text = String(outer.text);
+            const nested = JSON.parse(text);
+            if (nested && typeof nested.text === 'string') text = nested.text;
+          }
+        } catch {
+          // 纯文本
+        }
+        if (!text) return;
+        await navigator.clipboard.writeText(text);
+        message.success(
+          intl.formatMessage({ id: 'chat.messageActions.copied' }),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [intl],
+  );
+
+  const deleteMessages = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await invoke('delete_group_chat_record', { nanoIdList: ids, groupId });
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.deleteConfirm.failed' }));
+        return;
+      }
+      setMessageList((prev) =>
+        prev.filter((m) => !ids.includes(m.text_msg_raw.nano_id)),
+      );
+      exitSelect();
+    },
+    [groupId, intl, exitSelect],
+  );
+
+  const confirmDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.deleteConfirm.title' }),
+        content: intl.formatMessage(
+          { id: 'chat.deleteConfirm.content' },
+          { count: ids.length },
+        ),
+        okText: intl.formatMessage({ id: 'chat.messageActions.delete' }),
+        okButtonProps: { danger: true },
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => deleteMessages(ids),
+      });
+    },
+    [deleteMessages, intl],
+  );
+
+  const openForward = useCallback((msgs: ChatMessage[]) => {
+    if (msgs.length === 0) return;
+    setForwardMessages(msgs);
+    setForwardOpen(true);
+  }, []);
+
+  const handleForwardConfirm = useCallback(
+    async (target: ForwardTarget) => {
+      const list = forwardMessages.map((m) => m.text_msg_raw);
+      setForwardOpen(false);
+      if (list.length === 0) return;
+      try {
+        await invoke('forward_chat_messages', {
+          messages: list,
+          targetRecv: target.recv,
+          targetGroup: target.isGroup,
+        });
+        message.success(
+          intl.formatMessage(
+            { id: 'chat.forward.success' },
+            { name: target.name },
+          ),
+        );
+        if (target.isGroup && target.recv === groupId) {
+          setCurrentPage(1);
+          setHasMore(true);
+          setIsInitialLoad(true);
+          loadChatRecord(groupId, 1, true);
+        }
+        exitSelect();
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.forward.failed' }));
+      }
+    },
+    [forwardMessages, groupId, intl, exitSelect],
+  );
+
+  const handleActionMenuSelect = useCallback(
+    (action: MessageAction) => {
+      const msg = actionMenu?.msg;
+      setActionMenu(null);
+      if (!msg) return;
+      if (action === 'multi') {
+        enterSelect(msg);
+      } else if (action === 'forward') {
+        openForward([msg]);
+      } else if (action === 'delete') {
+        confirmDelete([msg.text_msg_raw.nano_id]);
+      } else if (action === 'copy') {
+        copyMessage(msg);
+      }
+    },
+    [actionMenu, enterSelect, openForward, confirmDelete, copyMessage],
+  );
 
   const uniqueSenderUuids = useMemo(
     () =>
@@ -361,7 +524,11 @@ const GroupChatPage: React.FC = () => {
         <div
           ref={messageContainerRef}
           className={styles.messageContainer}
-          style={{ height: `calc(100% - ${realFootHeight}px)` }}
+          style={{
+            height: selectMode
+              ? 'calc(100% - 50px)'
+              : `calc(100% - ${realFootHeight}px)`,
+          }}
         >
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
@@ -378,17 +545,47 @@ const GroupChatPage: React.FC = () => {
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
             memberInfoMap={memberInfoMap}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+            onMessageContext={handleMessageContext}
+            onToggleSelect={handleToggleSelect}
           />
         </div>
-        <div style={{ height: `${footerHeight}px` }}>
-          <GroupChatFooter
-            groupUuid={groupId}
-            onMessageSent={handleMessageSent}
-            onUploadStart={handleUploadStart}
-            onUploadEnd={handleUploadEnd}
+        {selectMode ? (
+          <MessageSelectionBar
+            count={selectedIds.size}
+            allSelected={allSelected}
+            onToggleAll={toggleAll}
+            onCancel={exitSelect}
+            onForward={() => openForward(selectedMessages)}
+            onDelete={() => confirmDelete([...selectedIds])}
           />
-        </div>
+        ) : (
+          <div style={{ height: `${footerHeight}px` }}>
+            <GroupChatFooter
+              groupUuid={groupId}
+              onMessageSent={handleMessageSent}
+              onUploadStart={handleUploadStart}
+              onUploadEnd={handleUploadEnd}
+            />
+          </div>
+        )}
       </div>
+      {actionMenu && (
+        <MessageActionMenu
+          x={actionMenu.x}
+          y={actionMenu.y}
+          canCopy={actionMenu.msg.text_msg_raw.text_type === 2001}
+          onSelect={handleActionMenuSelect}
+          onClose={() => setActionMenu(null)}
+        />
+      )}
+      <ForwardModal
+        open={forwardOpen}
+        count={forwardMessages.length}
+        onCancel={() => setForwardOpen(false)}
+        onConfirm={handleForwardConfirm}
+      />
     </div>
   );
 };

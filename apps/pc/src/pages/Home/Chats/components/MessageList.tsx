@@ -12,6 +12,10 @@ interface MessageListProps {
   groupMode?: boolean;
   newMessageIds?: Set<string>;
   loadedMessageIds?: Set<string>;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onMessageContext?: (msg: ChatMessage, e: React.MouseEvent) => void;
+  onToggleSelect?: (msg: ChatMessage) => void;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -23,6 +27,10 @@ const MessageList: React.FC<MessageListProps> = ({
   groupMode,
   newMessageIds,
   loadedMessageIds,
+  selectMode,
+  selectedIds,
+  onMessageContext,
+  onToggleSelect,
 }) => {
   const getMessageAnimationClass = (nanoId: string): string => {
     if (newMessageIds?.has(nanoId)) {
@@ -61,6 +69,8 @@ const MessageList: React.FC<MessageListProps> = ({
         }
 
         const animationClass = getMessageAnimationClass(message.nano_id);
+        const isMine = msg.from === MessageFrom.Mine;
+        const selected = !!selectedIds?.has(message.nano_id);
 
         // For group mode, show sender icon/name from the message
         const displayIcon = groupMode
@@ -73,8 +83,26 @@ const MessageList: React.FC<MessageListProps> = ({
             {shouldShowTimestamp && (
               <MessageTimestamp timestamp={currentTimestamp} />
             )}
-            <div className={animationClass}>
-              {msg.from !== MessageFrom.Mine ? (
+            <div
+              className={`${animationClass} ${styles.rowWrapper} ${
+                selectMode ? styles.selectRow : ''
+              } ${selected ? styles.selectedRow : ''}`}
+              onContextMenu={(e) => onMessageContext?.(msg, e)}
+              onClickCapture={(e) => {
+                if (!selectMode) return;
+                e.stopPropagation();
+                e.preventDefault();
+                onToggleSelect?.(msg);
+              }}
+            >
+              {selectMode && (
+                <span
+                  className={`${styles.selectMark} ${
+                    selected ? styles.checked : ''
+                  }`}
+                />
+              )}
+              {!isMine ? (
                 <CustomerChatBox
                   from={MessageFrom.System}
                   ack={undefined}
@@ -122,6 +150,15 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
   if (
     prevProps.newMessageIds?.size !== nextProps.newMessageIds?.size ||
     prevProps.loadedMessageIds?.size !== nextProps.loadedMessageIds?.size
+  ) {
+    return false;
+  }
+
+  if (
+    prevProps.selectMode !== nextProps.selectMode ||
+    prevProps.selectedIds !== nextProps.selectedIds ||
+    prevProps.onMessageContext !== nextProps.onMessageContext ||
+    prevProps.onToggleSelect !== nextProps.onToggleSelect
   ) {
     return false;
   }

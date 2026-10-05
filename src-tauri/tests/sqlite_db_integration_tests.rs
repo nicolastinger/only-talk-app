@@ -16,16 +16,16 @@ use app_lib::dao::chat_record_ack::{
     update_chat_record_ack, update_chat_record_ack_prev_id,
 };
 use app_lib::dao::chat_record_db::{
-    insert_chat_record, local_max_server_id, query_chat_record_by_id_from_db,
-    query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
-    query_last_read_msg, set_chat_record_server_id,
+    delete_chat_record_db, insert_chat_record, local_max_server_id,
+    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
+    query_last_chat_record, query_last_read_msg, set_chat_record_server_id,
 };
 use app_lib::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
     update_chat_record_send, update_chat_record_send_status, update_chat_record_send_success,
 };
-use app_lib::dao::create_table::init_user_ddl;
 use app_lib::dao::client_config_db::{delete_config, get_all_configs, get_config, set_config};
+use app_lib::dao::create_table::{init_private_ddl, init_user_ddl};
 use app_lib::dao::file_record_db::{
     delete_file_record_by_id, increment_download_retry_count, insert_failed_file_record,
     insert_file_record, MAX_DOWNLOAD_RETRY_COUNT,
@@ -37,8 +37,8 @@ use app_lib::dao::friend_db::{
 };
 use app_lib::dao::get_db_client;
 use app_lib::dao::group_chat_record_db::{
-    insert_group_chat_record, local_max_group_server_id, query_group_chat_record_from_db,
-    query_last_group_chat_record, set_group_server_id,
+    delete_group_chat_record_db, insert_group_chat_record, local_max_group_server_id,
+    query_group_chat_record_from_db, query_last_group_chat_record, set_group_server_id,
 };
 use app_lib::dao::group_message_ack::{
     insert_group_message_ack, query_group_message_ack_by_local_nano_id,
@@ -52,7 +52,9 @@ use app_lib::dao::session_db::{
     hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
     search_chat_session_db, show_chat_session_db, update_chat_session_db,
 };
-use app_lib::dao::sync_task_db::{history, list_batch_tasks, prune_batches, record_forward_catchup};
+use app_lib::dao::sync_task_db::{
+    history, list_batch_tasks, prune_batches, record_forward_catchup,
+};
 use app_lib::entity::app_log::LOG_LEVEL_INFO;
 use app_lib::entity::chat_record::ChatRecord;
 use app_lib::entity::chat_record_ack::ChatRecordAck;
@@ -1130,7 +1132,10 @@ async fn forward_sync_group_frontier_self_heal() {
         assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2001));
 
         // 重拉同消息: 去重 + 回填幂等, 前沿不变
-        assert!(!GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"), "同 nano_id 应去重");
+        assert!(
+            !GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"),
+            "同 nano_id 应去重"
+        );
         set_group_server_id("fg-1", 2001).await.expect("回填 server_id 失败");
         assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2001));
 
@@ -1264,6 +1269,135 @@ async fn chat_session_synced_id_migration() {
 
         // 幂等: 再跑一次不报错
         init_user_ddl(&pool).await.expect("迁移应幂等");
+    })
+    .await;
+}
+
+/// 单聊聊天记录: deleted 列迁移 + 本机软删除后查询/统计/最新一条均过滤。
+#[tokio::test]
+async fn chat_record_soft_delete_filters() {
+    with_private_db(|pool| async move {
+        let cols =
+            sqlx::query("PRAGMA table_info(chat_record)").fetch_all(&pool).await.expect("读列失败");
+        let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
+        assert!(names.contains(&"deleted".to_string()), "chat_record 应有 deleted 列: {names:?}");
+
+        for (nano, ts) in [("m1", 100i64), ("m2", 200i64), ("m3", 300i64)] {
+            let msg = TextQuicMsgVo {
+                nano_id: nano.to_string(),
+                text_type: 0,
+                raw: format!("raw-{nano}"),
+                recv_user: FRIEND.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+            };
+            insert_chat_record(&msg).await.expect("插入失败");
+        }
+
+        delete_chat_record_db(&["m2".to_string()], ME).await.expect("删除失败");
+
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 2);
+        assert!(list.iter().all(|m| m.nano_id != "m2"), "已删消息不应出现在历史中");
+
+        let last = query_last_chat_record(ME, FRIEND).await.expect("查询最新失败");
+        assert_eq!(last.expect("应存在最新消息").nano_id, "m3");
+
+        assert_eq!(
+            ChatRecord::query_chat_record_count_by_friend(ME, FRIEND).await.expect("统计失败"),
+            2
+        );
+
+        // 非参与者删除不应生效
+        delete_chat_record_db(&["m1".to_string()], "00000000-0000-0000-0000-0000000000ff")
+            .await
+            .expect("删除失败");
+        let after = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(after.len(), 2, "非参与者删除不应生效");
+    })
+    .await;
+}
+
+/// 单聊聊天记录: 旧库(无 deleted 列)重跑迁移后自动补列且旧数据默认可查。
+#[tokio::test]
+async fn chat_record_deleted_column_migration() {
+    with_private_db(|pool| async move {
+        sqlx::query("DROP TABLE IF EXISTS chat_record").execute(&pool).await.expect("删表失败");
+        sqlx::query(
+            r#"CREATE TABLE chat_record (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, nano_id TEXT NOT NULL UNIQUE, raw TEXT NOT NULL,
+                timestamp INTEGER NOT NULL, send_user TEXT NOT NULL, recv_user TEXT NOT NULL,
+                text_type INTEGER NOT NULL DEFAULT 0, server_id INTEGER DEFAULT NULL)"#,
+        )
+        .execute(&pool)
+        .await
+        .expect("建旧表失败");
+        sqlx::query(
+            "INSERT INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES ('old', 'r', 1, ?1, ?2, 0)",
+        )
+        .bind(ME)
+        .bind(FRIEND)
+        .execute(&pool)
+        .await
+        .expect("插旧行失败");
+
+        init_private_ddl(&pool).await.expect("重跑迁移失败");
+
+        let cols = sqlx::query("PRAGMA table_info(chat_record)").fetch_all(&pool).await.expect("读列失败");
+        let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
+        assert!(names.contains(&"deleted".to_string()), "应新增 deleted 列: {names:?}");
+
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1, "旧数据 deleted 默认 0 应仍可见");
+
+        init_private_ddl(&pool).await.expect("迁移应幂等");
+    })
+    .await;
+}
+
+/// 群聊聊天记录: 本机软删除后历史/最新/按群查询均过滤。
+#[tokio::test]
+async fn group_chat_record_soft_delete_filters() {
+    with_private_db(|pool| async move {
+        let group = "00000000-0000-0000-0000-0000000000gg";
+        let cols = sqlx::query("PRAGMA table_info(group_chat_record)")
+            .fetch_all(&pool)
+            .await
+            .expect("读列失败");
+        let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
+        assert!(
+            names.contains(&"deleted".to_string()),
+            "group_chat_record 应有 deleted 列: {names:?}"
+        );
+
+        for (nano, ts) in [("g1", 100i64), ("g2", 200i64)] {
+            let rec = GroupChatRecord {
+                id: 0,
+                nano_id: nano.to_string(),
+                text_type: 0,
+                raw: format!("g-{nano}"),
+                group_id: group.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+                server_id: None,
+            };
+            GroupChatRecord::insert(&rec).await.expect("插入失败");
+        }
+
+        delete_group_chat_record_db(&["g1".to_string()], group).await.expect("删除失败");
+
+        let list = query_group_chat_record_from_db(group, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].nano_id, "g2");
+
+        let last = query_last_group_chat_record(group)
+            .await
+            .expect("查询最新失败")
+            .expect("应存在最新消息");
+        assert_eq!(last.nano_id, "g2");
+
+        let by_group = GroupChatRecord::query_by_group_id(group, 10, 0).await.expect("查询失败");
+        assert_eq!(by_group.len(), 1);
     })
     .await;
 }

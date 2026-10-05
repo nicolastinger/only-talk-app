@@ -10,7 +10,7 @@ import {
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { showToast } from "vant";
+import { showToast, showConfirmDialog } from "vant";
 import { useMessageApi } from "@/hooks/useMessageApi";
 import { useGroupMessageAck } from "@/hooks/useGroupMessageAck";
 import { useGroupMemberInfo } from "@/hooks/useGroupMemberInfo";
@@ -39,9 +39,12 @@ import {
 import { isTransientMessageType, needTimeDivider, parseGroupImageBizId } from "@/chat/messageParse";
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
+import { useMessageSelection } from "@/chat/useMessageSelection";
 import MessageList from "@/components/chat/MessageList.vue";
 import MessageInputBar from "@/components/chat/MessageInputBar.vue";
 import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
+import MessageSelectionBar from "@/components/chat/MessageSelectionBar.vue";
+import ForwardPicker from "@/components/chat/ForwardPicker.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -116,6 +119,96 @@ const markGroupDelivered = (nanoId: string) => {
     messages.value[idx].ack = true;
     messages.value[idx].failed = false;
     messages.value[idx].sendingImage = false;
+  }
+};
+
+/* ============ 多选 / 删除 / 转发 ============ */
+const {
+  selectMode,
+  selectedIds,
+  selectedMessages,
+  allSelected,
+  enterSelect,
+  exitSelect,
+  toggle,
+  toggleAll,
+  removeIds,
+} = useMessageSelection(messages);
+
+const showActionSheet = ref(false);
+const actionTarget = ref<UiChatMessage | null>(null);
+const actionActions = [{ name: "多选" }, { name: "转发" }, { name: "删除" }];
+
+const onLongPress = (msg: UiChatMessage) => {
+  actionTarget.value = msg;
+  showActionSheet.value = true;
+};
+
+const deleteSelected = async () => {
+  const ids = [...selectedIds.value];
+  if (ids.length === 0) return;
+  try {
+    await showConfirmDialog({
+      title: "删除聊天记录",
+      message: `确定删除选中的 ${ids.length} 条消息吗？删除后不可恢复。`,
+    });
+  } catch {
+    return;
+  }
+  try {
+    await invoke("delete_group_chat_record", { nanoIdList: ids, groupId });
+  } catch (e) {
+    console.error("删除群消息失败:", e);
+    showToast({ message: "删除失败", icon: "fail" });
+    return;
+  }
+  messages.value = messages.value.filter(
+    (m) => !ids.includes(m.textMsg.nano_id)
+  );
+  removeIds(ids);
+  exitSelect();
+};
+
+const showForward = ref(false);
+const openForward = () => {
+  if (selectedMessages.value.length === 0) return;
+  showForward.value = true;
+};
+
+const onActionSelect = (action: { name: string }) => {
+  const msg = actionTarget.value;
+  showActionSheet.value = false;
+  if (!msg) return;
+  if (action.name === "多选") {
+    enterSelect(msg);
+  } else if (action.name === "转发") {
+    enterSelect(msg);
+    openForward();
+  } else if (action.name === "删除") {
+    enterSelect(msg);
+    deleteSelected();
+  }
+};
+
+const onForwardConfirm = async (payload: {
+  recv: string;
+  isGroup: boolean;
+  name: string;
+}) => {
+  const list = selectedMessages.value.map((m) => m.textMsg);
+  if (list.length === 0) return;
+  try {
+    await invoke("forward_chat_messages", {
+      messages: list,
+      targetRecv: payload.recv,
+      targetGroup: payload.isGroup,
+    });
+    showToast({ message: `已转发到 ${payload.name}`, icon: "success" });
+    if (payload.isGroup && payload.recv === groupId) reloadFirstPage();
+    exitSelect();
+  } catch (e) {
+    console.error("转发消息失败:", e);
+    showToast({ message: "转发失败", icon: "fail" });
   }
 };
 
@@ -682,20 +775,47 @@ const handlePreview = async (msg: UiChatMessage) => {
         :member-map="memberMap"
         :avatar-url-map="avatarUrlMap"
         :my-uuid="meUuid"
+        :select-mode="selectMode"
+        :selected-ids="selectedIds"
         @preview="handlePreview"
         @retry="handleRetry"
         @avatar-click="handleAvatarClick"
+        @long-press="onLongPress"
+        @toggle-select="toggle"
       />
     </div>
 
+    <template v-if="selectMode">
+      <MessageSelectionBar
+        :count="selectedIds.length"
+        :all-selected="allSelected"
+        @cancel="exitSelect"
+        @toggle-all="toggleAll"
+        @forward="openForward"
+        @delete="deleteSelected"
+      />
+    </template>
     <MessageInputBar
-      v-if="!loading"
+      v-if="!loading && !selectMode"
       v-model="inputText"
       :tools="['emoji', 'image', 'file']"
       placeholder="输入消息..."
       @send="sendGroupText"
       @pick-image="sendGroupImage"
       @pick-file="sendGroupFile"
+    />
+
+    <van-action-sheet
+      v-model:show="showActionSheet"
+      :actions="actionActions"
+      cancel-text="取消"
+      @select="onActionSelect"
+    />
+
+    <ForwardPicker
+      v-model:show="showForward"
+      :count="selectedIds.length"
+      @confirm="onForwardConfirm"
     />
 
     <ImagePreviewer

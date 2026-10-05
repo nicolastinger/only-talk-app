@@ -1,4 +1,8 @@
 import { useBearStore } from '@/store/store';
+import {
+  isMessageSelectable,
+  useMessageSelection,
+} from '@/hooks/useMessageSelection';
 import { invoke } from '@tauri-apps/api/core';
 import { useLocation, useIntl } from '@umijs/max';
 import {
@@ -8,8 +12,14 @@ import {
   ResponseData,
   TextQuicMsgVo,
 } from '@workspace/types';
+import { message, Modal } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ForwardModal, { ForwardTarget } from '../components/ForwardModal';
+import MessageActionMenu, {
+  MessageAction,
+} from '../components/MessageActionMenu';
 import MessageList from '../components/MessageList';
+import MessageSelectionBar from '../components/MessageSelectionBar';
 import Splitter from '../components/Splitter';
 import SelfChatFooter from './components/SelfChatFooter';
 import styles from './index.less';
@@ -44,6 +54,150 @@ const SelfChatPage: React.FC = () => {
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const userInfo = useBearStore((state) => state.userInfo);
+
+  /* ===== 多选 / 删除 / 转发 ===== */
+  const {
+    selectMode,
+    selectedIds,
+    selectedMessages,
+    allSelected,
+    enterSelect,
+    exitSelect,
+    toggle,
+    toggleAll,
+  } = useMessageSelection(messageList);
+  const [actionMenu, setActionMenu] = useState<{
+    x: number;
+    y: number;
+    msg: ChatMessage;
+  } | null>(null);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardMessages, setForwardMessages] = useState<ChatMessage[]>([]);
+
+  const handleMessageContext = useCallback(
+    (msg: ChatMessage, e: React.MouseEvent) => {
+      if (!isMessageSelectable(msg)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setActionMenu({ x: e.clientX, y: e.clientY, msg });
+    },
+    [],
+  );
+
+  const handleToggleSelect = useCallback(
+    (msg: ChatMessage) => toggle(msg),
+    [toggle],
+  );
+
+  const copyMessage = useCallback(
+    async (msg: ChatMessage) => {
+      if (msg.text_msg_raw.text_type !== 1) return;
+      try {
+        const parsed = JSON.parse(msg.text_msg_raw.raw);
+        const text = parsed.text || parsed.content || '';
+        if (!text) return;
+        await navigator.clipboard.writeText(text);
+        message.success(
+          intl.formatMessage({ id: 'chat.messageActions.copied' }),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [intl],
+  );
+
+  const deleteMessages = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await invoke('delete_chat_record', { nanoIdList: ids });
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.deleteConfirm.failed' }));
+        return;
+      }
+      setMessageList((prev) =>
+        prev.filter((m) => !ids.includes(m.text_msg_raw.nano_id)),
+      );
+      exitSelect();
+    },
+    [intl, exitSelect],
+  );
+
+  const confirmDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.deleteConfirm.title' }),
+        content: intl.formatMessage(
+          { id: 'chat.deleteConfirm.content' },
+          { count: ids.length },
+        ),
+        okText: intl.formatMessage({ id: 'chat.messageActions.delete' }),
+        okButtonProps: { danger: true },
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => deleteMessages(ids),
+      });
+    },
+    [deleteMessages, intl],
+  );
+
+  const openForward = useCallback((msgs: ChatMessage[]) => {
+    if (msgs.length === 0) return;
+    setForwardMessages(msgs);
+    setForwardOpen(true);
+  }, []);
+
+  const handleForwardConfirm = useCallback(
+    async (target: ForwardTarget) => {
+      const list = forwardMessages.map((m) => m.text_msg_raw);
+      setForwardOpen(false);
+      if (list.length === 0) return;
+      try {
+        await invoke('forward_chat_messages', {
+          messages: list,
+          targetRecv: target.recv,
+          targetGroup: target.isGroup,
+        });
+        message.success(
+          intl.formatMessage(
+            { id: 'chat.forward.success' },
+            { name: target.name },
+          ),
+        );
+        if (!target.isGroup && target.recv === selfUuid) {
+          setCurrentPage(1);
+          setHasMore(true);
+          setIsInitialLoad(true);
+          loadChatRecordFromStore(meUuid, selfUuid, 1, true);
+        }
+        exitSelect();
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.forward.failed' }));
+      }
+    },
+    [forwardMessages, selfUuid, meUuid, intl, exitSelect],
+  );
+
+  const handleActionMenuSelect = useCallback(
+    (action: MessageAction) => {
+      const msg = actionMenu?.msg;
+      setActionMenu(null);
+      if (!msg) return;
+      if (action === 'multi') {
+        enterSelect(msg);
+      } else if (action === 'forward') {
+        openForward([msg]);
+      } else if (action === 'delete') {
+        confirmDelete([msg.text_msg_raw.nano_id]);
+      } else if (action === 'copy') {
+        copyMessage(msg);
+      }
+    },
+    [actionMenu, enterSelect, openForward, confirmDelete, copyMessage],
+  );
   // SelfChat 不需要监听 textMessage，因为所有消息都通过 handleMessageSent 添加
   // useMessageApi 监听的是 send_user === selfUuid 的消息，这会导致自己发的消息重复
   // const { textMessage } = useMessageApi(selfUuid, meUuid);
@@ -299,7 +453,11 @@ const SelfChatPage: React.FC = () => {
         <div
           ref={messageContainerRef}
           className={styles.messageContainer}
-          style={{ height: `calc(100% - ${realFootHeight}px)` }}
+          style={{
+            height: selectMode
+              ? 'calc(100% - 50px)'
+              : `calc(100% - ${realFootHeight}px)`,
+          }}
         >
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
@@ -316,21 +474,53 @@ const SelfChatPage: React.FC = () => {
             friendUuid={selfUuid}
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+            onMessageContext={handleMessageContext}
+            onToggleSelect={handleToggleSelect}
           />
           <div id="anchor"></div>
         </div>
-        <Splitter
-          onHeightChange={handleHeightChange}
-          minHeight={20}
-          maxHeight={80}
-        />
-        <div style={{ height: `${footerHeight}px` }}>
-          <SelfChatFooter
-            selfUuid={selfUuid}
-            onMessageSent={handleMessageSent}
+        {selectMode ? (
+          <MessageSelectionBar
+            count={selectedIds.size}
+            allSelected={allSelected}
+            onToggleAll={toggleAll}
+            onCancel={exitSelect}
+            onForward={() => openForward(selectedMessages)}
+            onDelete={() => confirmDelete([...selectedIds])}
           />
-        </div>
+        ) : (
+          <>
+            <Splitter
+              onHeightChange={handleHeightChange}
+              minHeight={20}
+              maxHeight={80}
+            />
+            <div style={{ height: `${footerHeight}px` }}>
+              <SelfChatFooter
+                selfUuid={selfUuid}
+                onMessageSent={handleMessageSent}
+              />
+            </div>
+          </>
+        )}
       </div>
+      {actionMenu && (
+        <MessageActionMenu
+          x={actionMenu.x}
+          y={actionMenu.y}
+          canCopy={actionMenu.msg.text_msg_raw.text_type === 1}
+          onSelect={handleActionMenuSelect}
+          onClose={() => setActionMenu(null)}
+        />
+      )}
+      <ForwardModal
+        open={forwardOpen}
+        count={forwardMessages.length}
+        onCancel={() => setForwardOpen(false)}
+        onConfirm={handleForwardConfirm}
+      />
     </div>
   );
 };

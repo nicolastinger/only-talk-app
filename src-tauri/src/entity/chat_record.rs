@@ -29,7 +29,8 @@ impl SqliteStore for ChatRecord {
             send_user TEXT NOT NULL,
             recv_user TEXT NOT NULL,
             text_type INTEGER NOT NULL DEFAULT 0,
-            server_id INTEGER DEFAULT NULL
+            server_id INTEGER DEFAULT NULL,
+            deleted INTEGER NOT NULL DEFAULT 0
         )"#,
         )
         .execute(pool_sqlite)
@@ -41,6 +42,10 @@ impl SqliteStore for ChatRecord {
         let _ = sqlx::query("ALTER TABLE chat_record ADD COLUMN server_id INTEGER DEFAULT NULL")
             .execute(pool_sqlite)
             .await; // Column already exists, ignore
+        let _ =
+            sqlx::query("ALTER TABLE chat_record ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
+                .execute(pool_sqlite)
+                .await; // Column already exists, ignore
         Ok(())
     }
 
@@ -56,7 +61,7 @@ impl ChatRecord {
         friend_id: &str,
     ) -> Result<i32, anyhow::Error> {
         let pool_sqlite = get_private_db_client().await?;
-        let record: (i32,) = sqlx::query_as(r#"select count(*) from chat_record where (send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1)"#)
+        let record: (i32,) = sqlx::query_as(r#"select count(*) from chat_record where ((send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1)) and deleted = 0"#)
             .bind(uuid)
             .bind(friend_id)
             .fetch_one(&pool_sqlite)
