@@ -15,6 +15,8 @@ const router = useRouter();
 const version = ref("1.0.0");
 const checking = ref(false);
 const downloading = ref(false);
+const installing = ref(false);
+const localPath = ref<string | null>(null);
 const updateInfo = ref<UpdateInfo | null>(null);
 
 onMounted(async () => {
@@ -33,7 +35,7 @@ const infoRows = [
 ];
 
 const onCheckUpdate = async () => {
-  if (checking.value || downloading.value) return;
+  if (checking.value || downloading.value || installing.value) return;
   checking.value = true;
   try {
     const result = await checkForUpdate();
@@ -42,13 +44,14 @@ const onCheckUpdate = async () => {
       return;
     }
     updateInfo.value = result.info;
+    localPath.value = null;
     const info = result.info;
     const sizeText = formatFileSize(info.size);
     await showDialog({
       title: `发现新版本 v${info.version}`,
       message: `更新包大小：${sizeText || "-"}\n\n${info.notes || "-"}`,
       showCancelButton: !info.force_update,
-      confirmButtonText: "立即更新",
+      confirmButtonText: "立即下载",
       cancelButtonText: "稍后再说",
       closeOnClickOverlay: !info.force_update,
       closeOnPopstate: !info.force_update,
@@ -65,18 +68,57 @@ const onDownload = async () => {
   const info = updateInfo.value;
   if (!info || downloading.value) return;
   downloading.value = true;
-  const toast = showToast({ type: "loading", message: "正在下载更新包...", duration: 0, forbidClick: true });
+  const toast = showToast({
+    type: "loading",
+    message: "正在下载更新包...",
+    duration: 0,
+    forbidClick: true,
+  });
   try {
-    const localPath = await downloadUpdatePackage(info);
+    const path = await downloadUpdatePackage(info);
     toast.close();
-    showToast({ message: "下载完成，正在安装...", icon: "success" });
-    await installUpdate(localPath);
+    localPath.value = path;
+    showToast({ message: "下载完成", icon: "success" });
+    await askInstall();
   } catch (e) {
-    console.error("下载/安装更新失败:", e);
+    console.error("下载更新失败:", e);
     toast.close();
     showToast({ message: "下载失败，请重试", icon: "fail" });
   } finally {
     downloading.value = false;
+  }
+};
+
+/** 下载完成后询问是否立即安装(强制更新时不可取消) */
+const askInstall = async () => {
+  const force = !!updateInfo.value?.force_update;
+  try {
+    await showDialog({
+      title: "下载完成",
+      message: "更新包已下载，是否立即安装？",
+      showCancelButton: !force,
+      confirmButtonText: "立即安装",
+      cancelButtonText: "稍后",
+      closeOnClickOverlay: !force,
+      closeOnPopstate: !force,
+    });
+  } catch {
+    return;
+  }
+  await onInstall();
+};
+
+const onInstall = async () => {
+  if (!localPath.value || installing.value) return;
+  installing.value = true;
+  try {
+    // Android 端调起系统安装器(用户确认安装)
+    await installUpdate(localPath.value);
+  } catch (e) {
+    console.error("安装更新失败:", e);
+    showToast({ message: "安装失败，请重试", icon: "fail" });
+  } finally {
+    installing.value = false;
   }
 };
 
@@ -106,10 +148,19 @@ const onComingSoon = (row: string) => {
     </div>
 
     <div class="menu-card">
-      <div class="menu-item" :class="{ disabled: checking || downloading }" @click="onCheckUpdate">
-        <span class="menu-name">{{ checking ? "正在检查..." : "检查更新" }}</span>
-        <span class="menu-update-status" v-if="checking || downloading">
-          {{ downloading ? "下载中..." : "" }}
+      <div
+        class="menu-item"
+        :class="{ disabled: checking || downloading || installing }"
+        @click="onCheckUpdate"
+      >
+        <span class="menu-name">{{
+          checking ? "正在检查..." : "检查更新"
+        }}</span>
+        <span
+          class="menu-update-status"
+          v-if="checking || downloading || installing"
+        >
+          {{ installing ? "安装中..." : downloading ? "下载中..." : "" }}
         </span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />

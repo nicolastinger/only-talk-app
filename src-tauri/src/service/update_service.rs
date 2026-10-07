@@ -171,12 +171,14 @@ pub async fn download_update_package<R: Runtime>(
     }
     let bytes = resp.bytes().await.with_context(|| "读取更新包内容失败")?;
 
-    // SHA-256 校验(GitHub digest, 小写 hex; 旧资产 digest 可能为空则跳过)
+    // SHA-256 校验(GitHub digest 形如 "sha256:<小写 hex>"; 旧资产 digest 可能为空则跳过)
     if let Some(expected) = sha256.as_deref().filter(|s| !s.trim().is_empty()) {
+        let expected = expected.trim();
+        let expected_hex = expected.split_once(':').map(|(_, hex)| hex).unwrap_or(expected);
         let mut hasher = Sha256::new();
         hasher.update(&bytes);
         let actual = hex_lower(&hasher.finalize());
-        if !actual.eq_ignore_ascii_case(expected.trim()) {
+        if !actual.eq_ignore_ascii_case(expected_hex) {
             return Err(anyhow!("更新包校验失败: SHA-256 不匹配"));
         }
     }

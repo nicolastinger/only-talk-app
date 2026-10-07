@@ -1,12 +1,18 @@
 import {
-  DownloadOutlined,
   InfoCircleOutlined,
   MessageOutlined,
   QuestionCircleOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
-import { useIntl } from '@umijs/max';
 import { getVersion } from '@tauri-apps/api/app';
+import { useIntl } from '@umijs/max';
+import {
+  checkForUpdate,
+  downloadUpdatePackage,
+  formatFileSize,
+  installUpdate,
+} from '@workspace/services';
+import { UpdateInfo } from '@workspace/types';
 import {
   Alert,
   Button,
@@ -18,13 +24,6 @@ import {
   message,
 } from 'antd';
 import { useEffect, useState } from 'react';
-import {
-  checkForUpdate,
-  downloadUpdatePackage,
-  formatFileSize,
-  installUpdate,
-} from '@workspace/services';
-import { UpdateInfo } from '@workspace/types';
 import styles from '../Settings.less';
 
 const { Title, Text, Paragraph } = Typography;
@@ -34,6 +33,8 @@ const AboutApp = () => {
   const [version, setVersion] = useState('1.0.0');
   const [checking, setChecking] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [localPath, setLocalPath] = useState<string | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -50,14 +51,19 @@ const AboutApp = () => {
     try {
       const result = await checkForUpdate();
       if (!result.hasUpdate || !result.info) {
-        message.success(intl.formatMessage({ id: 'settings.aboutApp.latestVersion' }));
+        message.success(
+          intl.formatMessage({ id: 'settings.aboutApp.latestVersion' }),
+        );
         return;
       }
       setUpdateInfo(result.info);
+      setLocalPath(null);
       setModalOpen(true);
     } catch (e) {
       console.error('检查更新失败:', e);
-      message.error(intl.formatMessage({ id: 'settings.aboutApp.checkFailed' }));
+      message.error(
+        intl.formatMessage({ id: 'settings.aboutApp.checkFailed' }),
+      );
     } finally {
       setChecking(false);
     }
@@ -67,16 +73,35 @@ const AboutApp = () => {
     if (!updateInfo) return;
     setDownloading(true);
     try {
-      const localPath = await downloadUpdatePackage(updateInfo);
-      message.success(intl.formatMessage({ id: 'settings.aboutApp.installReady' }));
+      const path = await downloadUpdatePackage(updateInfo);
+      setLocalPath(path);
+      message.success(
+        intl.formatMessage({ id: 'settings.aboutApp.downloadComplete' }),
+      );
+    } catch (e) {
+      console.error('下载更新失败:', e);
+      message.error(
+        intl.formatMessage({ id: 'settings.aboutApp.downloadFailed' }),
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const onInstall = async () => {
+    if (!localPath) return;
+    setInstalling(true);
+    try {
       // Windows 端 install_update 会静默安装并退出进程; Android 端调起系统安装器
       await installUpdate(localPath);
       setModalOpen(false);
     } catch (e) {
-      console.error('下载/安装更新失败:', e);
-      message.error(intl.formatMessage({ id: 'settings.aboutApp.downloadFailed' }));
+      console.error('安装更新失败:', e);
+      message.error(
+        intl.formatMessage({ id: 'settings.aboutApp.installFailed' }),
+      );
     } finally {
-      setDownloading(false);
+      setInstalling(false);
     }
   };
 
@@ -164,21 +189,27 @@ const AboutApp = () => {
       <Modal
         title={intl.formatMessage(
           { id: 'settings.aboutApp.newVersionAvailable' },
-          { version: updateInfo?.version ?? '' }
+          { version: updateInfo?.version ?? '' },
         )}
         open={modalOpen}
-        onOk={onDownload}
+        onOk={localPath ? onInstall : onDownload}
         onCancel={() => {
           if (!forceUpdate) setModalOpen(false);
         }}
         okText={
           downloading
             ? intl.formatMessage({ id: 'settings.aboutApp.downloading' })
+            : installing
+            ? intl.formatMessage({ id: 'settings.aboutApp.installing' })
+            : localPath
+            ? intl.formatMessage({ id: 'settings.aboutApp.installNow' })
             : intl.formatMessage({ id: 'settings.aboutApp.downloadNow' })
         }
         cancelText={intl.formatMessage({ id: 'settings.aboutApp.later' })}
-        cancelButtonProps={{ disabled: forceUpdate || downloading }}
-        okButtonProps={{ loading: downloading }}
+        cancelButtonProps={{
+          disabled: forceUpdate || downloading || installing,
+        }}
+        okButtonProps={{ loading: downloading || installing }}
         closable={!forceUpdate}
         maskClosable={!forceUpdate}
         keyboard={!forceUpdate}
@@ -190,7 +221,9 @@ const AboutApp = () => {
             type="warning"
             showIcon
             style={{ marginBottom: 12 }}
-            message={intl.formatMessage({ id: 'settings.aboutApp.forceUpdate' })}
+            message={intl.formatMessage({
+              id: 'settings.aboutApp.forceUpdate',
+            })}
           />
         )}
         <div className={styles.appInfo}>
@@ -221,6 +254,16 @@ const AboutApp = () => {
         </Paragraph>
         {downloading && (
           <Progress percent={100} status="active" showInfo={false} />
+        )}
+        {localPath && !downloading && (
+          <Alert
+            type="success"
+            showIcon
+            style={{ marginTop: 12 }}
+            message={intl.formatMessage({
+              id: 'settings.aboutApp.downloadComplete',
+            })}
+          />
         )}
       </Modal>
     </div>
