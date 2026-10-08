@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getVersion } from "@tauri-apps/api/app";
 import { UpdateInfo } from "@workspace/types";
 
@@ -45,15 +46,39 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
   return { hasUpdate, info: hasUpdate ? info : null, currentVersion };
 };
 
-/** 下载更新包(内部完成 SHA-256 校验), 返回本地绝对路径 */
+/** 下载进度(来自后端 `update_download_progress` 事件) */
+export interface UpdateDownloadProgress {
+  /** 安装包文件名 */
+  fileName: string;
+  /** 已下载字节数 */
+  downloaded: number;
+  /** 总字节数(total 为 0 表示大小未知) */
+  total: number;
+}
+
+/** 下载更新包(内部完成 SHA-256 校验), 返回本地绝对路径。
+ *  传入 onProgress 时, 通过 `update_download_progress` 事件实时上报下载进度。 */
 export const downloadUpdatePackage = async (
-  info: UpdateInfo
+  info: UpdateInfo,
+  onProgress?: (progress: UpdateDownloadProgress) => void
 ): Promise<string> => {
-  return invoke<string>("download_update_package", {
-    url: info.download_url,
-    fileName: info.file_name,
-    sha256: info.sha256 ?? null,
-  });
+  let unlisten: (() => void) | undefined;
+  if (onProgress) {
+    unlisten = await listen<UpdateDownloadProgress>(
+      "update_download_progress",
+      (event) => onProgress(event.payload)
+    );
+  }
+  try {
+    return await invoke<string>("download_update_package", {
+      url: info.download_url,
+      fileName: info.file_name,
+      sha256: info.sha256 ?? null,
+      size: info.size ?? null,
+    });
+  } finally {
+    unlisten?.();
+  }
 };
 
 /** 安装更新包(Windows 静默安装并重启 / Android 调起系统安装器) */

@@ -20,6 +20,7 @@ import {
   Overlay,
   Dialog,
   Switch,
+  Progress,
 } from "vant";
 
 // 屏蔽 WebView 原生 contextmenu（长按图片/链接/文本弹出的系统菜单）与图片原生拖拽，
@@ -69,6 +70,7 @@ app.use(Loading);
 app.use(Overlay);
 app.use(Dialog);
 app.use(Switch);
+app.use(Progress);
 
 async function bootstrap() {
   // 先加载客户端配置(公共库 client_config 表 → 内存), 设置 API base 后再挂载应用

@@ -20,8 +20,9 @@ pub async fn download_update_package<R: Runtime>(
     url: String,
     file_name: String,
     sha256: Option<String>,
+    size: Option<u64>,
 ) -> Result<String, String> {
-    update_service::download_update_package(app, url, file_name, sha256).await.map_err(|e| {
+    update_service::download_update_package(app, url, file_name, sha256, size).await.map_err(|e| {
         log::error!("下载更新包失败: {}", e);
         e.to_string()
     })

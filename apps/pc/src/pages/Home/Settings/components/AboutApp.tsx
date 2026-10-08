@@ -6,6 +6,7 @@ import {
 } from '@ant-design/icons';
 import { getVersion } from '@tauri-apps/api/app';
 import { useIntl } from '@umijs/max';
+import type { UpdateDownloadProgress } from '@workspace/services';
 import {
   checkForUpdate,
   downloadUpdatePackage,
@@ -34,6 +35,11 @@ const AboutApp = () => {
   const [checking, setChecking] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [progress, setProgress] = useState<UpdateDownloadProgress>({
+    fileName: '',
+    downloaded: 0,
+    total: 0,
+  });
   const [localPath, setLocalPath] = useState<string | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -72,8 +78,9 @@ const AboutApp = () => {
   const onDownload = async () => {
     if (!updateInfo) return;
     setDownloading(true);
+    setProgress({ fileName: updateInfo.file_name, downloaded: 0, total: 0 });
     try {
-      const path = await downloadUpdatePackage(updateInfo);
+      const path = await downloadUpdatePackage(updateInfo, setProgress);
       setLocalPath(path);
       message.success(
         intl.formatMessage({ id: 'settings.aboutApp.downloadComplete' }),
@@ -106,6 +113,10 @@ const AboutApp = () => {
   };
 
   const forceUpdate = !!updateInfo?.force_update;
+  const downloadPercent =
+    progress.total > 0
+      ? Math.min(100, Math.floor((progress.downloaded / progress.total) * 100))
+      : 0;
 
   return (
     <div className={styles.settingSection}>
@@ -253,7 +264,19 @@ const AboutApp = () => {
           {updateInfo?.notes || '-'}
         </Paragraph>
         {downloading && (
-          <Progress percent={100} status="active" showInfo={false} />
+          <div style={{ marginTop: 12 }}>
+            <Progress
+              percent={progress.total > 0 ? downloadPercent : 100}
+              status="active"
+              showInfo={progress.total > 0}
+            />
+            {progress.total > 0 && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {formatFileSize(progress.downloaded)} /{' '}
+                {formatFileSize(progress.total)}
+              </Text>
+            )}
+          </div>
         )}
         {localPath && !downloading && (
           <Alert

@@ -74,8 +74,9 @@ GitHub Actions (client-ci.yml)
 - 用 `http_client_600`(10 分钟超时)整包拉取, 本地算 SHA-256 与 GitHub `digest` 对账, 不匹配即报错
 
 **`install_update(path)`**:
-- Windows: `Command::new(path).arg("/S").spawn()` → 等 1s → `app.exit(0)`;
-  安装器侧由 `installer.nsi` 兜底(见 §4.3)
+- Windows: `Command::new(path).spawn()` → 以**可见向导**方式启动 NSIS 安装器(不传 `/S`),
+  用户可见完整安装流程; 运行中的本进程由安装器内置 `CheckIfAppIsRunning` 提示关闭,
+  完成页可勾选“运行 Only Talk”启动新版本
 - Android: `open_local_file(app, path)`(复用现有命令, 无需新原生代码)
 
 ### 4.2 前端侧
@@ -94,21 +95,22 @@ GitHub Actions (client-ci.yml)
 
 ```nsi
 !macro customInit
-  ; 自更新走静默安装(/S): 先结束运行中的进程, 避免 exe 被占用导致覆盖失败
+  ; 自更新走可见向导(非 /S): 提示关闭交给安装器内置 CheckIfAppIsRunning。
+  ; 仅手动静默安装(/S)时直接结束进程, 避免 exe 被占用。
   IfSilent 0 +3
   nsExec::ExecToStack 'taskkill /IM "Only Talk.exe" /F'
 !macroend
 
 !macro customInstall
   nsExec::ExecToStack 'netsh advfirewall firewall add rule ...'   ; 原有防火墙规则
-  ; 自更新静默安装完成后自动重启新版本
+  ; 手动静默安装(/S)完成后自动重启; 向导安装由完成页勾选启动
   IfSilent 0 +3
   Sleep 2000
   ExecShell "" "$INSTDIR\Only Talk.exe"
 !macroend
 ```
 
-> ⚠️ 已在 Windows 真机验证过 `/S` 静默升级链路; 若后续要换安装器形态(如 MSI)需重新验证这两段钩子。
+> ⚠️ 自动更新默认走**可见向导**安装(用户能看到安装动作); `/S` 静默分支仅保留给手动静默安装场景。
 
 ### 4.4 Android 安装权限
 

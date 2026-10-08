@@ -6,11 +6,12 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context};
 use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::utils::http_client::{http_client_30, http_client_600};
 use crate::vo::update_vo::UpdateInfo;
@@ -153,58 +154,87 @@ fn hex_lower(bytes: &[u8]) -> String {
     out
 }
 
+/// 下载进度事件负载(事件名 `update_download_progress`)。
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DownloadProgress {
+    file_name: String,
+    downloaded: u64,
+    total: u64,
+}
+
 /// 下载更新包到本地并校验 SHA-256(返回本地绝对路径)。
+/// 下载过程通过 `update_download_progress` 事件上报进度(总大小优先取 Content-Length, 回退 release 资产 size)。
 pub async fn download_update_package<R: Runtime>(
     app: AppHandle<R>,
     url: String,
     file_name: String,
     sha256: Option<String>,
+    size: Option<u64>,
 ) -> Result<String, anyhow::Error> {
     let dest_dir = update_download_dir(&app)?;
     std::fs::create_dir_all(&dest_dir).with_context(|| "创建更新下载目录失败")?;
     let target = dest_dir.join(&file_name);
 
     let client = http_client_600();
-    let resp = client.get(&url).send().await.with_context(|| "下载更新包失败")?;
+    let mut resp = client.get(&url).send().await.with_context(|| "下载更新包失败")?;
     if !resp.status().is_success() {
         return Err(anyhow!("下载更新包失败: HTTP {}", resp.status()));
     }
-    let bytes = resp.bytes().await.with_context(|| "读取更新包内容失败")?;
+    // 总大小: 优先响应头 Content-Length, 回退 GitHub Release 资产 size(未知则为 0)
+    let total = resp.content_length().or(size).unwrap_or(0);
+
+    let mut file = File::create(&target).with_context(|| "创建更新包文件失败")?;
+    let mut hasher = Sha256::new();
+    let mut downloaded: u64 = 0;
+    let mut last_emit = Instant::now();
+
+    while let Some(chunk) = resp.chunk().await.with_context(|| "读取更新包内容失败")? {
+        file.write_all(&chunk).with_context(|| "写入更新包失败")?;
+        hasher.update(&chunk);
+        downloaded += chunk.len() as u64;
+        // 节流: 最快每 100ms 上报一次, 避免高频事件
+        if last_emit.elapsed() >= Duration::from_millis(100) {
+            let _ = app.emit(
+                "update_download_progress",
+                DownloadProgress { file_name: file_name.clone(), downloaded, total },
+            );
+            last_emit = Instant::now();
+        }
+    }
+    file.flush().with_context(|| "写入更新包失败")?;
+    // 完成时补发一次最终进度
+    let _ = app.emit(
+        "update_download_progress",
+        DownloadProgress { file_name: file_name.clone(), downloaded, total },
+    );
 
     // SHA-256 校验(GitHub digest 形如 "sha256:<小写 hex>"; 旧资产 digest 可能为空则跳过)
     if let Some(expected) = sha256.as_deref().filter(|s| !s.trim().is_empty()) {
         let expected = expected.trim();
         let expected_hex = expected.split_once(':').map(|(_, hex)| hex).unwrap_or(expected);
-        let mut hasher = Sha256::new();
-        hasher.update(&bytes);
         let actual = hex_lower(&hasher.finalize());
         if !actual.eq_ignore_ascii_case(expected_hex) {
+            let _ = std::fs::remove_file(&target);
             return Err(anyhow!("更新包校验失败: SHA-256 不匹配"));
         }
     }
-
-    let mut file = File::create(&target).with_context(|| "创建更新包文件失败")?;
-    file.write_all(&bytes).with_context(|| "写入更新包失败")?;
 
     Ok(target.to_string_lossy().into_owned())
 }
 
 /// 安装更新包:
-/// - Windows: 以 `/S` 静默运行 NSIS 安装器, 短暂等待后退出本进程
-///   (安装器 customInit 会在静默模式下 taskkill 本进程, 避免 exe 占用)
+/// - Windows: 以可见向导方式(非 `/S`)启动 NSIS 安装器, 展示完整安装向导让用户看到更新动作;
+///   运行中的本进程由安装器内置的 CheckIfAppIsRunning 检测并提示关闭, 完成页可勾选“运行 Only Talk”启动新版本
 /// - Android: 复用 open_local_file, 经 FileProvider + ACTION_VIEW 调起系统安装器
 #[cfg(windows)]
-pub async fn install_update<R: Runtime>(app: AppHandle<R>, path: String) -> Result<(), String> {
+pub async fn install_update<R: Runtime>(_app: AppHandle<R>, path: String) -> Result<(), String> {
     use std::process::Command;
 
-    let child = Command::new(&path).arg("/S").spawn().map_err(|e| {
+    Command::new(&path).spawn().map_err(|e| {
         log::error!("启动安装器失败: {}", e);
         e.to_string()
     })?;
-    drop(child);
-    // 等待安装器拉起后退出本进程, 释放 exe 文件占用
-    std::thread::sleep(std::time::Duration::from_millis(1000));
-    app.exit(0);
     Ok(())
 }
 

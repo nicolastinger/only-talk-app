@@ -17,6 +17,8 @@ const checking = ref(false);
 const downloading = ref(false);
 const installing = ref(false);
 const localPath = ref<string | null>(null);
+const progressPercent = ref(0);
+const progressTotal = ref(0);
 const updateInfo = ref<UpdateInfo | null>(null);
 
 onMounted(async () => {
@@ -68,6 +70,8 @@ const onDownload = async () => {
   const info = updateInfo.value;
   if (!info || downloading.value) return;
   downloading.value = true;
+  progressPercent.value = 0;
+  progressTotal.value = 0;
   const toast = showToast({
     type: "loading",
     message: "正在下载更新包...",
@@ -75,7 +79,13 @@ const onDownload = async () => {
     forbidClick: true,
   });
   try {
-    const path = await downloadUpdatePackage(info);
+    const path = await downloadUpdatePackage(info, (p) => {
+      progressTotal.value = p.total;
+      progressPercent.value =
+        p.total > 0
+          ? Math.min(100, Math.floor((p.downloaded / p.total) * 100))
+          : 0;
+    });
     toast.close();
     localPath.value = path;
     showToast({ message: "下载完成", icon: "success" });
@@ -145,6 +155,16 @@ const onComingSoon = (row: string) => {
         <span class="info-name">{{ row.name }}</span>
         <span class="info-value">{{ row.value }}</span>
       </div>
+    </div>
+
+    <div class="download-progress" v-if="downloading">
+      <van-progress
+        :percentage="progressTotal > 0 ? progressPercent : 0"
+        :show-pivot="progressTotal > 0"
+        :pivot-text="progressPercent + '%'"
+        stroke-width="6"
+        color="var(--brand-blue)"
+      />
     </div>
 
     <div class="menu-card">
@@ -252,6 +272,15 @@ const onComingSoon = (row: string) => {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.download-progress {
+  margin: 0 16px 16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
 }
 
