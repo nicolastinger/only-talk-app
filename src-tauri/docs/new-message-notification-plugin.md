@@ -1,7 +1,8 @@
 # 新消息系统通知(tauri-plugin-notification)接入说明
 
 > 本文档面向**后续接手的人**,重点说明一个最容易踩的坑:
-> **通知插件含 Android 原生模块,`src-tauri/gen/android` 是 git 忽略的本地生成产物,换机器/重新拉代码后必须先跑一次安卓构建把插件模块生成出来**,否则手机端既弹不了通知、也收不到"点击跳会话"事件。
+> **通知插件含 Android 原生模块,插件 Kotlin 模块由 Tauri CLI 在安卓构建时按 `src-tauri/Cargo.toml` 自动同步生成;换机器/重新拉代码后必须先跑一次安卓构建把插件模块生成出来**,否则手机端既弹不了通知、也收不到"点击跳会话"事件。
+> (`src-tauri/gen/android` 工程本身已入库,自定义原生代码如 `MainActivity.kt`/`KeepAliveService.kt` 随版本管理保留。)
 
 ## 1. 功能与触发规则
 
@@ -36,10 +37,10 @@
 - 通知能力分两层:
   - 桌面端/服务端逻辑:纯 Rust,打包即可用(`notify-rust`)。
   - **安卓端**:依赖 `tauri-plugin-notification` 自带的 Kotlin 代码(`app.tauri.notification.*`,负责真正弹通知、把点击事件回传给前端)。
-- 安卓端插件代码**不是**直接 commit 的源码,而是 Tauri CLI 在 `tauri android dev/build` 时,根据 `src-tauri/Cargo.toml` 里的依赖自动同步生成到 `src-tauri/gen/android/` 下(`gen/android/.../tauri-plugin-notification/` 等插件模块)。
-- `src-tauri/gen/` 在 `.gitignore` 中(`git check-ignore -v src-tauri/gen/` 可确认),**没有入库**。
-  - 因此:新机器 clone 后、或有人手动删过 `gen/android`、或 `tauri android init` 重建过工程时,**必须重新生成**。
-  - `MainActivity.kt`、本通知的保活服务等自定义安卓代码同样在 `gen/android` 内、同样是本地产物,重跑 `tauri android init` 会被覆盖——如果需要长期保留,请把这些改动纳入版本控制或用模板维护。
+- 安卓端插件代码**不是**手工维护的源码,而是 Tauri CLI 在 `tauri android dev/build` 时,根据 `src-tauri/Cargo.toml` 里的依赖自动同步插件工程(`gradle` 模块经 `tauri.settings.gradle` 指向 cargo registry 中的插件目录)。
+- `src-tauri/gen/android` 工程现已**纳入版本管理**(仅排除 `.gradle/`、`**/build/`、`local.properties`、`tauri.settings.gradle`、`jniLibs/**/*.so`、`app/src/main/java/.../generated/`、`assets/tauri.conf.json` 及签名密钥等)。
+  - `MainActivity.kt`、`KeepAliveService.kt` 等自定义安卓代码**已入库**,新机器 clone 后无需再手动补;但插件 Kotlin 模块仍依赖 CLI 在安卓构建时同步。
+  - 若有人手动删过 `gen/android` 或跑过 `tauri android init` 重建工程,**必须重新生成**,并注意比对 `git status` 把自定义改动提交回来。
 
 ### 关键命令(在仓库根目录,即 `only-talk-app/` 下执行)
 

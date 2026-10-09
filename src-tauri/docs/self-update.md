@@ -120,8 +120,11 @@ GitHub Actions (client-ci.yml)
 <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 ```
 
-**⚠️ `gen/android` 是 git 忽略的本地生成产物**: 换机器或执行 `tauri android init` 重建后,
-这段权限会被覆盖丢失, 需重跑 `pnpm tauri android dev/build` 后补上(或在 CI Android 打包上线前把它纳入模板)。
+**✅ 该权限随 `gen/android` 工程入库**: `src-tauri/gen/android` 现已纳入版本管理(仅排除构建产物、
+gradle 缓存、机器相关文件与签名密钥), 因此新克隆/换机器都不会再丢失该权限。仍需注意:
+- `pnpm tauri android dev/build` 会重新生成并 sync 插件 android 模块; 若模板覆盖了自定义内容(如
+  `AndroidManifest.xml`、`MainActivity.kt`、`KeepAliveService.kt`), 请比对 `git status` 并把改动提交回来。
+- 签名密钥不入库: `.jks` 放本机 `~/.only-talk/android/upload-keystore.jks`, 密码只走环境变量(见 §7.2)。
 
 ## 5. CI/CD 流水线
 
@@ -205,12 +208,33 @@ git push origin develop && git push origin v1.0.2
 
 ### 7.2 Android(暂手动)
 
-```bash
-# 1. 本机打 universal APK(仓库根目录)
+> 完整的签名配置说明(生成密钥 / 环境变量 / CI)见 [`android-signing.md`](./android-signing.md)。
+
+**签名密钥(不入库)**: release 必须签名。密钥文件默认位于本机
+`~/.only-talk/android/upload-keystore.jks`(Windows: `%USERPROFILE%\.only-talk\android\`),
+密码/别名**只通过环境变量**提供, 仓库不保存任何密钥与密码:
+
+| 环境变量 | 说明 |
+| --- | --- |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore 库密码(必填) |
+| `ANDROID_KEY_PASSWORD` | key 密码(必填) |
+| `ANDROID_KEY_ALIAS` | key 别名(可选, 默认 `upload`) |
+| `ANDROID_KEYSTORE_PATH` | keystore 绝对路径(可选, 默认 `~/.only-talk/android/upload-keystore.jks`) |
+
+`app/build.gradle.kts` 读取上述变量; 缺失时 release 产出**未签名** APK 并打警告(不会再像旧实现
+那样因 `keystore.properties` 缺失而直接构建失败)。CI 走 GitHub Secrets 注入同名环境变量即可。
+
+```powershell
+# 1. 设置签名环境变量(仅当前会话; 值为你自己的密钥密码)
+$env:ANDROID_KEY_ALIAS         = "upload"
+$env:ANDROID_KEYSTORE_PASSWORD = "<你的库密码>"
+$env:ANDROID_KEY_PASSWORD      = "<你的 key 密码>"
+
+# 2. 本机打 universal APK(仓库根目录)
 pnpm tauri android build
 # 产物: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
 
-# 2. 附到同名 tag 的 Release(Windows 的 CI 已建好 vX.Y.Z)
+# 3. 附到同名 tag 的 Release(Windows 的 CI 已建好 vX.Y.Z)
 gh release upload v1.0.2 src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
 ```
 
@@ -233,10 +257,12 @@ gh release upload v1.0.2 src-tauri/gen/android/app/build/outputs/apk/universal/r
 
 ## 9. 已知限制与后续
 
-- **Android 未接入 CI**: 需本机打包手动上传; 后续可加 Android job(注意 `.cargo/config.toml` 与
-  `openssl-android/` 均为本机生成物, CI 需自行生成/编译, 另需 keystore 走 GitHub Secrets)。
-- **代码签名**: 安装包未签名, Windows SmartScreen 与 Android 安装器会有未知来源提示; 需要时可引入
-  Windows 代码签名证书 + Android keystore 配置。
-- **下载无断点续传**: 目前整包拉取进内存后写盘, 大文件(universal APK ~100MB)建议后续改流式 + 进度上报。
+- **Android 未接入 CI**: 需本机打包手动上传; 后续可加 Android job。`src-tauri/gen/android` 已入库,
+  CI 无需 `android init` 即可直接构建, 但仍需注意 `.cargo/config.toml` 与 `openssl-android/` 均为本机生成物
+  (CI 需自行生成/编译), 另需通过 GitHub Secrets 注入 `ANDROID_KEYSTORE_PASSWORD` 等环境变量并把密钥文件
+  放到 CI 的 `~/.only-talk/android/`(或用 `ANDROID_KEYSTORE_PATH` 指定)。
+- **代码签名**: Android 的 release 包已支持签名(密钥+密码均不入库, 见 §7.2); Windows 安装包仍未签名,
+  SmartScreen 会有未知来源提示; 需要时可引入 Windows 代码签名证书。
+- **下载无断点续传**: 已改为流式写盘并上报进度(见 §4.1 `download_update_package`), 但暂不支持断点续传。
 - **自动检查更新**: 目前仅「关于页」手动检查; 如需启动自动检查, 建议用 `client_config` 记录 `update.last_check`
   节流(≥6h 一次), 避免 GitHub 未认证 API 60 次/时限流。

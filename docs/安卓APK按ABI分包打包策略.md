@@ -83,7 +83,7 @@ src-tauri/gen/android/app/build/outputs/apk/arm/release/app-arm-release.apk
 
 ## 5. 原生工程注意事项
 
-- `src-tauri/gen/android/` 已被 `.gitignore` 忽略（**不入库**）。重新执行 `tauri android init`、或换机器重新拉代码后需要重新生成工程。
+- `src-tauri/gen/android/` 工程现已**纳入版本管理**（仅排除构建产物、gradle 缓存、机器相关文件与签名密钥），`buildSrc/.../RustPlugin.kt`、`app/build.gradle.kts` 等会随仓库保留；仅当手动删除过工程或重新执行 `tauri android init` 时才需要重新生成。
 - **关键前提**：`src-tauri/gen/android/app/build.gradle.kts` 的 `defaultConfig` **不要写死 `ndk.abiFilters`**。否则 AGP 会把 defaultConfig 与 product flavor 的 `abiFilters` 合并（取并集），导致 `arm` 包混入 `arm64-v8a` 的 `.so`，破坏分包效果。该文件内已留有说明注释，`tauri android init` 重新生成后需按注释重新核对。
 
 ## 6. 版本号（可选）
