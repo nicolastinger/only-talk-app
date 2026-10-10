@@ -3,12 +3,15 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { showToast } from "vant";
 import type { ChatRecordSend } from "@workspace/types";
+import { useI18n } from "@/i18n";
 
 const props = defineProps<{
   friendUuid: string;
   /** 父页面自增信号，变化时重新拉取（发送新消息 / 201/202 ACK 后触发） */
   refreshSignal: number;
 }>();
+
+const { t } = useI18n();
 
 const pendingList = ref<ChatRecordSend[]>([]);
 const actingId = ref("");
@@ -25,15 +28,15 @@ const formatRaw = (record: ChatRecordSend): string => {
         return parsed.text ?? record.raw;
       }
       case 2:
-        return "[图片]";
+        return t("chat.typeImage");
       case 3: {
         // 移动端发送文件时 raw 是本地路径；落库后可能为 JSON
         try {
           const parsed = JSON.parse(record.raw);
-          return parsed.file_name ?? "[文件]";
+          return parsed.file_name ?? t("chat.typeFile");
         } catch {
           const name = record.raw.split(/[/\\]/).pop();
-          return name || "[文件]";
+          return name || t("chat.typeFile");
         }
       }
       default:
@@ -115,11 +118,11 @@ const handleRetry = (sendId: string) =>
         (r) => r.send_id === sendId && r.send_status === 2
       );
       if (stillFailed) {
-        showToast({ message: "重发失败", icon: "fail" });
+        showToast({ message: t("chat.resendFailed"), icon: "fail" });
       }
     } catch (e) {
       console.error("重发失败:", e);
-      showToast({ message: "重发失败", icon: "fail" });
+      showToast({ message: t("chat.resendFailed"), icon: "fail" });
       await fetchList();
     }
   });
@@ -131,7 +134,7 @@ const handleIgnore = (sendId: string) =>
       await fetchList();
     } catch (e) {
       console.error("忽略失败:", e);
-      showToast({ message: "忽略失败", icon: "fail" });
+      showToast({ message: t("chat.ignoreFailed"), icon: "fail" });
     }
   });
 
@@ -151,7 +154,7 @@ onUnmounted(() => {
     <div v-if="collapsed" class="collapsed-bar" @click="collapsed = false">
       <span class="collapsed-info">
         <span class="collapsed-dot" />
-        <span>待发送记录</span>
+        <span>{{ t("chat.pending.title") }}</span>
         <span v-if="failedList.length > 0" class="collapsed-badge">
           {{ failedList.length }}
         </span>
@@ -164,7 +167,7 @@ onUnmounted(() => {
     <!-- 展开态 -->
     <div v-else class="expanded-bar">
       <div class="pane-title bar-header" @click="collapsed = true">
-        <span class="header-text">发送状态</span>
+        <span class="header-text">{{ t("chat.pending.sendStatus") }}</span>
         <svg class="collapse-arrow down" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 16l-6-6-1.4 1.4L12 18.8l7.4-7.4L18 10z" />
         </svg>
@@ -172,14 +175,14 @@ onUnmounted(() => {
 
       <!-- 发送中 / 排队中 -->
       <div v-if="sendingList.length > 0" class="pane">
-        <div class="pane-title">发送中</div>
+        <div class="pane-title">{{ t("chat.pending.sending") }}</div>
         <div
           v-for="record in sendingList"
           :key="record.send_id"
           class="item sending-item"
         >
           <span v-if="record.send_status === 1" class="loading-spinner" />
-          <span v-else class="queued-label">排队中</span>
+          <span v-else class="queued-label">{{ t("chat.pending.queued") }}</span>
           <span class="item-text" :title="formatRaw(record)">
             {{ formatRaw(record) }}
           </span>
@@ -188,7 +191,7 @@ onUnmounted(() => {
 
       <!-- 发送失败 -->
       <div v-if="failedList.length > 0" class="pane pane-failed">
-        <div class="pane-title">发送失败</div>
+        <div class="pane-title">{{ t("chat.pending.failed") }}</div>
         <div
           v-for="record in failedList"
           :key="record.send_id"

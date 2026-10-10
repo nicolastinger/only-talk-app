@@ -4,6 +4,7 @@ import { get_group_list, get_friend_list } from "@workspace/services";
 import type { FriendVo, GroupListItemVo } from "@workspace/types";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 
 const props = defineProps<{ show: boolean; count: number }>();
 const emit = defineEmits<{
@@ -12,6 +13,7 @@ const emit = defineEmits<{
 }>();
 
 const { getAvatarUrl } = useAvatar();
+const { t } = useI18n();
 
 const activeTab = ref<"friend" | "group">("friend");
 const friends = ref<FriendVo[]>([]);
@@ -103,10 +105,10 @@ const confirm = () => {
     @update:show="emit('update:show', $event)"
   >
     <div class="fp-head">
-      <button class="fp-cancel" @click="close">取消</button>
-      <span class="fp-title">转发到</span>
+      <button class="fp-cancel" @click="close">{{ t("common.cancel") }}</button>
+      <span class="fp-title">{{ t("chat.forward.title") }}</span>
       <button class="fp-confirm" :disabled="!selectedKey" @click="confirm">
-        发送<i v-if="count"> {{ count }}</i>
+        {{ t("chat.forward.send") }}<i v-if="count"> {{ count }}</i>
       </button>
     </div>
 
@@ -116,19 +118,19 @@ const confirm = () => {
         :class="{ active: activeTab === 'friend' }"
         @click="activeTab = 'friend'"
       >
-        好友
+        {{ t("chat.forward.friends") }}
       </button>
       <button
         class="fp-tab"
         :class="{ active: activeTab === 'group' }"
         @click="activeTab = 'group'"
       >
-        群聊
+        {{ t("chat.forward.groups") }}
       </button>
     </div>
 
     <div class="fp-body">
-      <div v-if="loading" class="fp-empty">加载中...</div>
+      <div v-if="loading" class="fp-empty">{{ t("common.loadingDots") }}</div>
 
       <template v-else-if="activeTab === 'friend'">
         <div
@@ -149,7 +151,9 @@ const confirm = () => {
             :class="{ on: selectedKey === `f:${f.friend_id}` }"
           />
         </div>
-        <div v-if="friends.length === 0" class="fp-empty">暂无好友</div>
+        <div v-if="friends.length === 0" class="fp-empty">
+          {{ t("friends.emptyFriends") }}
+        </div>
       </template>
 
       <template v-else>
@@ -171,7 +175,9 @@ const confirm = () => {
             :class="{ on: selectedKey === `g:${g.group_uuid}` }"
           />
         </div>
-        <div v-if="groups.length === 0" class="fp-empty">暂无群聊</div>
+        <div v-if="groups.length === 0" class="fp-empty">
+          {{ t("friends.emptyGroups") }}
+        </div>
       </template>
     </div>
   </van-popup>

@@ -10,8 +10,10 @@ import {
   parsePrivateFileRecord,
 } from "@/chat/messageParse";
 import FileMsg from "./FileMsg.vue";
+import { useI18n } from "@/i18n";
 
 const props = defineProps<{ msg: UiChatMessage }>();
+const { t } = useI18n();
 
 const display = computed(() => {
   const { raw, text_type, nano_id } = props.msg.textMsg;
@@ -28,7 +30,7 @@ const display = computed(() => {
     const record = parsePrivateFileRecord(raw);
     if (!record) return null;
     return {
-      fileName: record.file_name || "文件",
+      fileName: record.file_name || t("chat.tools.file"),
       fileSize: record.file_size || 0,
       fileType: record.file_type || extensionOf(record.file_name),
       bizId: record.biz_id,
@@ -39,7 +41,7 @@ const display = computed(() => {
     const record = parseGroupFileRecord(raw);
     if (!record) return null;
     return {
-      fileName: record.file_name || "文件",
+      fileName: record.file_name || t("chat.tools.file"),
       fileSize: record.file_size || 0,
       fileType: record.file_type || extensionOf(record.file_name),
       bizId: record.biz_id,
@@ -63,7 +65,7 @@ const display = computed(() => {
       !!props.msg.sendingFile && props.msg.ack === false && !props.msg.failed
     "
   />
-  <div v-else class="file-fallback">[文件]</div>
+  <div v-else class="file-fallback">{{ t("chat.typeFile") }}</div>
 </template>
 
 <style scoped lang="less">

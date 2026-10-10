@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useI18n } from "@/i18n";
 
 const props = defineProps<{
   urls: string[];
@@ -9,6 +10,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "close"): void;
 }>();
+
+const { t } = useI18n();
 
 const index = ref(props.initialIndex || 0);
 const touchStartX = ref(0);
@@ -53,14 +56,18 @@ const onTouchEnd = (e: TouchEvent) => {
       <button class="nav-btn" :disabled="index <= 0" @click="prev">‹</button>
     </div>
     <div class="previewer-center" @click.stop>
-      <img v-if="currentUrl" :src="currentUrl" alt="图片预览" class="previewer-img" />
-      <div v-else class="previewer-empty">图片不存在</div>
+      <img v-if="currentUrl" :src="currentUrl" :alt="t('chat.imagePreview')" class="previewer-img" />
+      <div v-else class="previewer-empty">{{ t("chat.imageNotExist") }}</div>
     </div>
     <div class="previewer-nav" @click.stop>
       <button class="nav-btn" :disabled="index >= urls.length - 1" @click="next">›</button>
     </div>
     <span class="previewer-count">{{ positionText }}</span>
-    <button class="previewer-close" aria-label="关闭预览" @click.stop="emit('close')">
+    <button
+      class="previewer-close"
+      :aria-label="t('chat.closePreview')"
+      @click.stop="emit('close')"
+    >
       <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
         <path
           d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"

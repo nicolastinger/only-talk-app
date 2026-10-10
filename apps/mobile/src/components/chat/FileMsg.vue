@@ -5,6 +5,7 @@ import { formatFileSize, getFileTypeColor } from "@/chat/format";
 import { checkLocalChatFile, loadChatFile, toLocalPath } from "@/chat/media";
 import { isLocalFilePath } from "@/chat/messageParse";
 import { openLocalFile } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 const props = defineProps<{
   fileName: string;
@@ -18,6 +19,8 @@ const props = defineProps<{
   /** 是否上传中(展示上传动画) */
   sending?: boolean;
 }>();
+
+const { t } = useI18n();
 
 const busy = ref(false);
 const downloaded = ref(false);
@@ -46,7 +49,7 @@ const openFile = async (path: string) => {
     await openLocalFile(path);
   } catch (e) {
     console.error("打开文件失败:", path, e);
-    showToast({ message: "打开文件失败", icon: "fail" });
+    showToast({ message: t("chat.openFileFailed"), icon: "fail" });
   }
 };
 
@@ -80,7 +83,7 @@ const handleClick = async () => {
     }
 
     if (!props.bizId) {
-      showToast("无法获取文件路径");
+      showToast(t("chat.noFilePath"));
       return;
     }
 
@@ -94,7 +97,12 @@ const handleClick = async () => {
       progress.value = { downloaded: p.downloaded, total: p.total };
     });
     if (!file?.tauri_file_path) {
-      showToast({ message: downloaded.value ? "打开文件失败" : "下载失败", icon: "fail" });
+      showToast({
+        message: downloaded.value
+          ? t("chat.openFileFailed")
+          : t("chat.downloadFailed"),
+        icon: "fail",
+      });
       return;
     }
     downloaded.value = true;
@@ -103,7 +111,7 @@ const handleClick = async () => {
     await openFile(toLocalPath(file.tauri_file_path));
   } catch (e) {
     console.error("文件下载/打开失败:", e);
-    showToast({ message: "操作失败", icon: "fail" });
+    showToast({ message: t("common.operationFailed"), icon: "fail" });
   } finally {
     downloading.value = false;
     busy.value = false;
@@ -127,12 +135,18 @@ watch(() => props.bizId, refreshDownloaded);
       <div class="file-name">{{ fileName }}</div>
       <div class="file-meta">
         <span class="file-ext">.{{ fileType || "file" }}</span>
-        <span v-if="sending" class="file-size sending-text">上传中…</span>
-        <span v-else-if="downloading" class="file-size sending-text"
-          >下载中… {{ progressPercent }}%</span
-        >
-        <span v-else-if="checking" class="file-size sending-text">检测中…</span>
-        <span v-else-if="downloaded" class="file-size saved-text">已下载</span>
+        <span v-if="sending" class="file-size sending-text">{{
+          t("chat.uploading")
+        }}</span>
+        <span v-else-if="downloading" class="file-size sending-text">{{
+          t("chat.downloadingPercent", { percent: progressPercent })
+        }}</span>
+        <span v-else-if="checking" class="file-size sending-text">{{
+          t("chat.checking")
+        }}</span>
+        <span v-else-if="downloaded" class="file-size saved-text">{{
+          t("chat.downloaded")
+        }}</span>
         <span v-else class="file-size">{{
           formatFileSize(fileSize || 0)
         }}</span>
@@ -147,7 +161,11 @@ watch(() => props.bizId, refreshDownloaded);
         track-color="var(--border-light)"
       />
     </div>
-    <div class="file-action" :class="{ sending }" :aria-label="downloaded ? '打开文件' : '下载文件'">
+    <div
+      class="file-action"
+      :class="{ sending }"
+      :aria-label="downloaded ? t('chat.openFile') : t('chat.downloadFile')"
+    >
       <span v-if="sending || downloading" class="spinner"></span>
       <svg v-else-if="downloaded" viewBox="0 0 24 24" fill="currentColor">
         <path d="M14 3v4a1 1 0 0 0 1 1h4v13H5V3h9zm1-2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-6-6h-1zM12 8h2v3h3v2h-5V8zm0 5H7v-1h5v1z" />

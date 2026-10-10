@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from "@/i18n";
+
 defineProps<{
   isMine: boolean;
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -11,7 +15,9 @@ defineProps<{
         d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 15.5l-3.54-3.54 1.41-1.41L11 13.67l5.13-5.13 1.41 1.41L11 16.5z"
       />
     </svg>
-    <span>{{ isMine ? "我开启了隐私聊天" : "对方开启了隐私聊天" }}</span>
+    <span>{{
+      isMine ? t("chat.privacyMine") : t("chat.privacyPeer")
+    }}</span>
   </div>
 </template>
 

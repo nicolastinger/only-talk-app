@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "@/i18n";
 
 const props = defineProps<{
   src?: string | null;
@@ -10,6 +11,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "preview"): void;
 }>();
+
+const { t } = useI18n();
 
 const error = ref(false);
 
@@ -27,16 +30,16 @@ const onClick = () => {
     <img
       v-if="src && !error"
       :src="src"
-      :alt="alt || '图片消息'"
+      :alt="alt || t('chat.imageMessage')"
       class="img"
       @click="onClick"
       @error="onImgError"
     />
     <div v-else-if="loading" class="image-placeholder">
-      <span>加载中...</span>
+      <span>{{ t("common.loadingDots") }}</span>
     </div>
     <div v-else class="image-placeholder">
-      <span>图片加载失败</span>
+      <span>{{ t("chat.imageLoadFailed") }}</span>
     </div>
   </div>
 </template>

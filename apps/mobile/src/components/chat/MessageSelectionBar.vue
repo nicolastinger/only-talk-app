@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from "@/i18n";
+
 const props = defineProps<{ count: number; allSelected: boolean }>();
 const emit = defineEmits<{
   (e: "cancel"): void;
@@ -6,29 +8,33 @@ const emit = defineEmits<{
   (e: "forward"): void;
   (e: "delete"): void;
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
   <div class="selection-bar">
     <button class="sel-text" @click="emit('toggle-all')">
       <span class="sel-check" :class="{ on: props.allSelected }" />
-      全选
+      {{ t("chat.selection.selectAll") }}
     </button>
-    <button class="sel-text" @click="emit('cancel')">取消</button>
+    <button class="sel-text" @click="emit('cancel')">
+      {{ t("common.cancel") }}
+    </button>
     <div class="sel-spacer" />
     <button
       class="sel-action"
       :disabled="count === 0"
       @click="emit('forward')"
     >
-      转发<i v-if="count">({{ count }})</i>
+      {{ t("chat.actions.forward") }}<i v-if="count">({{ count }})</i>
     </button>
     <button
       class="sel-action danger"
       :disabled="count === 0"
       @click="emit('delete')"
     >
-      删除<i v-if="count">({{ count }})</i>
+      {{ t("chat.actions.delete") }}<i v-if="count">({{ count }})</i>
     </button>
   </div>
 </template>
