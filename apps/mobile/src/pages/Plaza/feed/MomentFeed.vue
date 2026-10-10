@@ -5,8 +5,10 @@ import { PullRefresh, Loading, Empty } from "vant";
 import { get_moment_list } from "@workspace/services";
 import type { MomentVo } from "@workspace/types";
 import MomentCard from "./MomentCard.vue";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 
 const props = defineProps<{ feed: "plaza" | "following" | "mine" }>();
 
@@ -18,10 +20,10 @@ const loading = ref(false);
 const finished = ref(false);
 const refreshing = ref(false);
 
-const emptyTextMap: Record<string, string> = {
-  plaza: "广场还没有人发布动态",
-  following: "还没有关注的动态，去关注感兴趣的人吧",
-  mine: "你还没有发布过动态",
+const emptyKeyMap: Record<string, string> = {
+  plaza: "plaza.feed.emptyPlaza",
+  following: "plaza.feed.emptyFollowing",
+  mine: "plaza.feed.emptyMine",
 };
 
 const loadMore = async () => {
@@ -68,23 +70,23 @@ onMounted(refresh);
   <PullRefresh
     v-model="refreshing"
     :head-height="60"
-    pulling-text="下拉刷新"
-    loosing-text="释放刷新"
-    loading-text="加载中..."
+    :pulling-text="t('common.pullDown')"
+    :loosing-text="t('common.pullRelease')"
+    :loading-text="t('common.loadingDots')"
     @refresh="onRefresh"
   >
     <div class="feed">
       <div v-if="loading && list.length === 0" class="state-box">
-        <Loading size="28">加载中...</Loading>
+        <Loading size="28">{{ t("common.loadingDots") }}</Loading>
       </div>
 
       <div v-else-if="list.length === 0" class="state-box">
-        <Empty :description="emptyTextMap[feed]">
+        <Empty :description="t(emptyKeyMap[feed])">
           <template #image>
             <img
               src="@/assets/empty-state.svg"
               class="empty-state-img"
-              alt="暂无内容"
+              :alt="t('common.noContent')"
             />
           </template>
         </Empty>
@@ -101,7 +103,7 @@ onMounted(refresh);
         </div>
         <div v-if="!finished" class="load-more">
           <button class="more-btn" :disabled="loading" @click="loadMore">
-            {{ loading ? "加载中..." : "加载更多" }}
+            {{ loading ? t("common.loadingDots") : t("common.loadMore") }}
           </button>
         </div>
       </template>
@@ -110,7 +112,7 @@ onMounted(refresh);
     <button
       v-if="feed === 'mine'"
       class="fab"
-      aria-label="发动态"
+      :aria-label="t('plaza.feed.compose')"
       @click="router.push('/plaza/moment/create')"
     >
       <svg viewBox="0 0 24 24" fill="currentColor">

@@ -12,8 +12,10 @@ import {
 } from "@workspace/services";
 import { getApiBase } from "@workspace/services";
 import { resolveContentToTempFile } from "@/utils/tempImage";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 
 const PAGE_MAX_IMAGES = 9;
 
@@ -37,7 +39,7 @@ const back = () => {
     uploadCancelled = true;
     closeToast();
     uploading.value = false;
-    showToast({ message: "已取消上传", icon: "none" });
+    showToast({ message: t("plaza.compose.cancelUpload"), icon: "none" });
     return;
   }
   router.back();
@@ -55,7 +57,10 @@ const pickImages = async () => {
   if (uploading.value) return;
   const remain = PAGE_MAX_IMAGES - previews.value.length;
   if (remain <= 0) {
-    showToast({ message: `最多上传 ${PAGE_MAX_IMAGES} 张图片`, icon: "none" });
+    showToast({
+      message: t("plaza.compose.maxImages", { count: PAGE_MAX_IMAGES }),
+      icon: "none",
+    });
     return;
   }
 
@@ -68,7 +73,7 @@ const pickImages = async () => {
 
     uploading.value = true;
     showLoadingToast({
-      message: "处理图片中...",
+      message: t("plaza.compose.processing"),
       forbidClick: true,
       duration: 0,
     });
@@ -86,7 +91,7 @@ const pickImages = async () => {
       if (preview) previews.value.push(preview);
 
       showLoadingToast({
-        message: "上传图片中...",
+        message: t("plaza.compose.uploadingImages"),
         forbidClick: true,
         duration: 0,
       });
@@ -105,17 +110,19 @@ const pickImages = async () => {
         if (json && isBackendSuccess(json.code) && json.data) {
           fileIds.value.push(json.data);
         } else {
-          showToast(json?.message || "上传图片失败");
+          showToast(json?.message || t("plaza.compose.uploadImageFailed"));
           if (preview) previews.value.pop();
         }
       } else {
-        showToast(`上传失败(${res.status})`);
+        showToast(
+          t("plaza.compose.uploadFailedStatus", { status: res.status })
+        );
         if (preview) previews.value.pop();
       }
     }
   } catch (e) {
     console.error("上传动态图片失败:", e);
-    showToast("上传动态图片失败");
+    showToast(t("plaza.compose.uploadFailed"));
   } finally {
     closeToast();
     uploading.value = false;
@@ -132,7 +139,7 @@ const publish = async () => {
   const trimmed = content.value.trim();
   if (publishing.value) return;
   if (!trimmed) {
-    showToast({ message: "请输入内容", icon: "none" });
+    showToast({ message: t("plaza.compose.emptyContent"), icon: "none" });
     return;
   }
   publishing.value = true;
@@ -142,11 +149,11 @@ const publish = async () => {
       visibility: visibility.value,
       file_ids: fileIds.value,
     });
-    showToast({ message: "发布成功", icon: "success" });
+    showToast({ message: t("plaza.compose.publishSuccess"), icon: "success" });
     setTimeout(() => router.back(), 500);
   } catch (e) {
     console.error("发布动态失败:", e);
-    showToast((e as Error).message || "发布动态失败");
+    showToast((e as Error).message || t("plaza.compose.publishFailed"));
   } finally {
     publishing.value = false;
   }
@@ -167,13 +174,15 @@ const setVisibility = (v: number) => {
           />
         </svg>
       </button>
-      <h1 class="title">发布动态</h1>
+      <h1 class="title">{{ t("plaza.compose.title") }}</h1>
       <button
         class="publish-btn"
         :disabled="publishing || uploading || !canPublish"
         @click="publish"
       >
-        {{ publishing ? "发布中..." : "发布" }}
+        {{
+          publishing ? t("plaza.compose.publishing") : t("plaza.compose.publish")
+        }}
       </button>
     </div>
 
@@ -181,7 +190,7 @@ const setVisibility = (v: number) => {
       <textarea
         v-model="content"
         class="content-input"
-        placeholder="分享你的新鲜事..."
+        :placeholder="t('plaza.compose.placeholder')"
         maxlength="2000"
         rows="6"
         @input="onContentInput"
@@ -189,21 +198,21 @@ const setVisibility = (v: number) => {
       <div class="count">{{ content.length }}/2000</div>
 
       <div class="visibility-row">
-        <span class="vis-label">谁可以看</span>
+        <span class="vis-label">{{ t("plaza.compose.visibility") }}</span>
         <div class="seg">
           <button
             class="seg-item"
             :class="{ on: visibility === 0 }"
             @click="setVisibility(0)"
           >
-            公开
+            {{ t("plaza.compose.public") }}
           </button>
           <button
             class="seg-item"
             :class="{ on: visibility === 1 }"
             @click="setVisibility(1)"
           >
-            仅自己
+            {{ t("plaza.compose.private") }}
           </button>
         </div>
       </div>
@@ -221,7 +230,9 @@ const setVisibility = (v: number) => {
             :disabled="uploading"
             @click="pickImages"
           >
-            <span v-if="uploading" class="uploading-hint">上传中...</span>
+            <span v-if="uploading" class="uploading-hint">{{
+              t("plaza.compose.uploading")
+            }}</span>
             <template v-else>
               <svg class="add-icon" viewBox="0 0 24 24" fill="none">
                 <path
@@ -231,7 +242,7 @@ const setVisibility = (v: number) => {
                   stroke-linecap="round"
                 />
               </svg>
-              <span class="add-text">图片</span>
+              <span class="add-text">{{ t("chat.tools.image") }}</span>
             </template>
           </button>
         </div>

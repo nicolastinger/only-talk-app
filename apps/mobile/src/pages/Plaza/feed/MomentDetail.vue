@@ -23,9 +23,11 @@ import { formatMomentTime } from "@/utils/time";
 import ReportSheet from "@/components/ReportSheet.vue";
 import MomentMedia from "./MomentMedia.vue";
 import MomentAvatar from "./MomentAvatar.vue";
+import { useI18n } from "@/i18n";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const momentId = route.params.id as string;
 
 const moment = ref<MomentVo | null>(null);
@@ -154,7 +156,7 @@ const sendComment = async () => {
     commentText.value = "";
     commentTotal.value += 1;
   } catch (e) {
-    showToast("评论失败，请重试");
+    showToast(t("plaza.detail.commentFailed"));
   } finally {
     sending.value = false;
   }
@@ -173,7 +175,7 @@ const onToggleLike = async () => {
   } catch {
     m.liked_by_me = liked;
     m.like_count = prev;
-    showToast("操作失败，请重试");
+    showToast(t("plaza.moment.opFailed"));
   } finally {
     busy.value = false;
   }
@@ -187,10 +189,14 @@ const onToggleFollow = async () => {
   m.followed_by_me = !prev;
   try {
     await switch_user_follow({ target_user_uuid: m.author_uuid });
-    showToast(m.followed_by_me ? "已关注" : "已取消关注");
+    showToast(
+      m.followed_by_me
+        ? t("plaza.moment.followed")
+        : t("plaza.moment.followedCancel")
+    );
   } catch {
     m.followed_by_me = prev;
-    showToast("操作失败，请重试");
+    showToast(t("plaza.moment.opFailed"));
   } finally {
     busy.value = false;
   }
@@ -200,17 +206,17 @@ const onDelete = async () => {
   if (!moment.value) return;
   try {
     await showConfirmDialog({
-      title: "删除动态",
-      message: "确定删除这条动态吗？",
-      confirmButtonText: "删除",
+      title: t("plaza.moment.deleteTitle"),
+      message: t("plaza.moment.deleteConfirm"),
+      confirmButtonText: t("common.delete"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
     await delete_moment({ moment_uuid: moment.value.uuid });
-    showToast({ message: "已删除", icon: "success" });
+    showToast({ message: t("plaza.moment.deleted"), icon: "success" });
     router.back();
   } catch (e) {
-    if (e !== "cancel") showToast("删除失败，请重试");
+    if (e !== "cancel") showToast(t("plaza.moment.deleteFailed"));
   }
 };
 
@@ -224,7 +230,7 @@ onMounted(async () => {
     loadComments(true);
   } catch (e) {
     console.error("加载动态详情失败", e);
-    showToast("动态不存在或已删除");
+    showToast(t("plaza.detail.notExist"));
   } finally {
     loading.value = false;
   }
@@ -246,11 +252,11 @@ onMounted(async () => {
           />
         </svg>
       </button>
-      <h1 class="title">动态详情</h1>
+      <h1 class="title">{{ t("plaza.detail.title") }}</h1>
     </div>
 
     <div v-if="loading" class="loading-box">
-      <Loading size="28">加载中...</Loading>
+      <Loading size="28">{{ t("common.loadingDots") }}</Loading>
     </div>
 
     <template v-else-if="moment">
@@ -263,8 +269,10 @@ onMounted(async () => {
               </span>
               <span class="d-author-main">
                 <span class="d-username">
-                  {{ moment.username || "未知用户" }}
-                  <em v-if="isSelf" class="mine-badge">我的</em>
+                  {{ moment.username || t("plaza.moment.unknownUser") }}
+                  <em v-if="isSelf" class="mine-badge">{{
+                    t("plaza.moment.mineBadge")
+                  }}</em>
                   <UserTypeTag :type="moment.user_type" />
                 </span>
                 <span class="d-time">
@@ -279,9 +287,11 @@ onMounted(async () => {
                 :class="{ on: moment.followed_by_me }"
                 @click="onToggleFollow"
               >
-                {{ moment.followed_by_me ? "已关注" : "关注" }}
+                {{ moment.followed_by_me ? t("plaza.moment.followed") : t("plaza.moment.follow") }}
               </button>
-              <button v-else class="del-btn" @click="onDelete">删除</button>
+              <button v-else class="del-btn" @click="onDelete">
+                {{ t("common.delete") }}
+              </button>
             </div>
           </div>
 
@@ -311,7 +321,9 @@ onMounted(async () => {
                 d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
               />
             </svg>
-            <span>{{ moment.like_count || 0 }} 赞</span>
+            <span>{{
+              t("plaza.detail.likes", { count: moment.like_count || 0 })
+            }}</span>
           </div>
           <div class="d-act" @click="openLikers">
             <svg
@@ -324,24 +336,32 @@ onMounted(async () => {
                 d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
               />
             </svg>
-            <span>点赞的人</span>
+            <span>{{ t("plaza.detail.likers") }}</span>
           </div>
         </div>
 
         <div class="comments">
-          <div class="comments-title">评论 {{ moment.comment_count || 0 }}</div>
+          <div class="comments-title">
+            {{
+              t("plaza.detail.comments", {
+                count: moment.comment_count || 0,
+              })
+            }}
+          </div>
 
           <div
             v-if="commentList.length === 0 && !commentLoading"
             class="comments-empty"
           >
-            还没有评论，来说两句吧
+            {{ t("plaza.detail.noComments") }}
           </div>
 
           <div v-for="c in commentList" :key="c.id" class="comment-item">
             <MomentAvatar :icon="c.icon" :size="36" />
             <div class="comment-main">
-              <span class="comment-name">{{ c.username || "未知用户" }}</span>
+              <span class="comment-name">{{
+                c.username || t("plaza.moment.unknownUser")
+              }}</span>
               <UserTypeTag :type="c.user_type" />
               <p class="comment-text">{{ c.content }}</p>
               <span class="comment-time">{{ fmtTime(c.created_at) }}</span>
@@ -349,7 +369,7 @@ onMounted(async () => {
             <button
               v-if="c.author_uuid !== myUuid"
               class="comment-report"
-              title="举报"
+              :title="t('plaza.moment.report')"
               @click="openReport(c)"
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
@@ -367,7 +387,11 @@ onMounted(async () => {
               :disabled="commentLoading"
               @click="loadComments(false)"
             >
-              {{ commentLoading ? "加载中..." : "加载更多评论" }}
+              {{
+                commentLoading
+                  ? t("common.loadingDots")
+                  : t("plaza.detail.loadMoreComments")
+              }}
             </button>
           </div>
         </div>
@@ -378,7 +402,7 @@ onMounted(async () => {
           v-model="commentText"
           class="composer-input"
           type="text"
-          placeholder="说点什么..."
+          :placeholder="t('plaza.detail.commentPlaceholder')"
           @keyup.enter="sendComment"
         />
         <button
@@ -386,7 +410,7 @@ onMounted(async () => {
           :disabled="sending || !commentText.trim()"
           @click="sendComment"
         >
-          发送
+          {{ t("chat.forward.send") }}
         </button>
       </div>
     </template>
@@ -399,7 +423,7 @@ onMounted(async () => {
       class="likers-popup"
     >
       <div class="likers-head">
-        <span class="likers-title">点赞的人</span>
+        <span class="likers-title">{{ t("plaza.detail.likers") }}</span>
         <button class="likers-close" @click="showLikers = false">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -411,12 +435,14 @@ onMounted(async () => {
       <div class="likers-body">
         <div v-for="l in likerList" :key="l.uuid" class="liker-item">
           <MomentAvatar :icon="l.icon" :size="40" />
-          <span class="liker-name">{{ l.username || "未知用户" }}</span>
+          <span class="liker-name">{{
+            l.username || t("plaza.moment.unknownUser")
+          }}</span>
           <UserTypeTag :type="l.user_type" />
           <span class="liker-time">{{ fmtTime(l.created_at) }}</span>
         </div>
         <div v-if="likerList.length === 0" class="comments-empty">
-          还没有人点赞
+          {{ t("plaza.detail.noLikes") }}
         </div>
         <div
           v-if="!likerFinished && likerList.length > 0"
@@ -427,7 +453,9 @@ onMounted(async () => {
             :disabled="likerLoading"
             @click="loadMoreLikers"
           >
-            {{ likerLoading ? "加载中..." : "加载更多" }}
+            {{
+              likerLoading ? t("common.loadingDots") : t("common.loadMore")
+            }}
           </button>
         </div>
       </div>

@@ -17,12 +17,14 @@ import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import ReportSheet from "@/components/ReportSheet.vue";
 import MomentMedia from "./MomentMedia.vue";
+import { useI18n } from "@/i18n";
 
 const props = defineProps<{ moment: MomentVo }>();
 const emit = defineEmits<{ (e: "removed", uuid: string): void }>();
 
 const router = useRouter();
 const { getAvatarUrl } = useAvatar();
+const { t } = useI18n();
 
 const avatarUrl = ref("");
 const images = ref<string[]>([]);
@@ -91,7 +93,7 @@ const onToggleLike = async () => {
   } catch {
     props.moment.liked_by_me = liked;
     props.moment.like_count = prev;
-    showToast("操作失败，请重试");
+    showToast(t("plaza.moment.opFailed"));
   } finally {
     busy.value = false;
   }
@@ -104,10 +106,14 @@ const onToggleFollow = async () => {
   props.moment.followed_by_me = !prev;
   try {
     await switch_user_follow({ target_user_uuid: props.moment.author_uuid });
-    showToast(props.moment.followed_by_me ? "已关注" : "已取消关注");
+    showToast(
+      props.moment.followed_by_me
+        ? t("plaza.moment.followed")
+        : t("plaza.moment.followedCancel")
+    );
   } catch {
     props.moment.followed_by_me = prev;
-    showToast("操作失败，请重试");
+    showToast(t("plaza.moment.opFailed"));
   } finally {
     busy.value = false;
   }
@@ -116,17 +122,17 @@ const onToggleFollow = async () => {
 const onDelete = async () => {
   try {
     await showConfirmDialog({
-      title: "删除动态",
-      message: "确定删除这条动态吗？",
-      confirmButtonText: "删除",
+      title: t("plaza.moment.deleteTitle"),
+      message: t("plaza.moment.deleteConfirm"),
+      confirmButtonText: t("common.delete"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
     await delete_moment({ moment_uuid: props.moment.uuid });
-    showToast({ message: "已删除", icon: "success" });
+    showToast({ message: t("plaza.moment.deleted"), icon: "success" });
     emit("removed", props.moment.uuid);
   } catch (e) {
-    if (e !== "cancel") showToast("删除失败，请重试");
+    if (e !== "cancel") showToast(t("plaza.moment.deleteFailed"));
   }
 };
 </script>
@@ -146,8 +152,10 @@ const onDelete = async () => {
         </span>
         <span class="m-author-main">
           <span class="m-username">
-            {{ moment.username || "未知用户" }}
-            <em v-if="isSelf" class="mine-badge">我的</em>
+            {{ moment.username || t("plaza.moment.unknownUser") }}
+            <em v-if="isSelf" class="mine-badge">{{
+              t("plaza.moment.mineBadge")
+            }}</em>
             <UserTypeTag :type="moment.user_type" />
           </span>
           <span class="m-time">{{ formatMomentTime(moment.created_at) }}</span>
@@ -161,12 +169,12 @@ const onDelete = async () => {
           :class="{ on: moment.followed_by_me }"
           @click.stop="onToggleFollow"
         >
-          {{ moment.followed_by_me ? "已关注" : "关注" }}
+          {{ moment.followed_by_me ? t("plaza.moment.followed") : t("plaza.moment.follow") }}
         </button>
         <button
           v-if="!isSelf"
           class="report-btn"
-          title="举报"
+          :title="t('plaza.moment.report')"
           @click.stop="showReport = true"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
