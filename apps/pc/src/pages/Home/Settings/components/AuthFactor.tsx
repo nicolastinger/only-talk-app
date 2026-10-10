@@ -34,6 +34,12 @@ const AuthFactor = () => {
   const [binding, setBinding] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [unbindOpen, setUnbindOpen] = useState(false);
+  const [unbindCode, setUnbindCode] = useState('');
+  const [unbindSending, setUnbindSending] = useState(false);
+  const [unbindConfirming, setUnbindConfirming] = useState(false);
+  const [unbindCountdown, setUnbindCountdown] = useState(0);
+  const unbindTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const t = (id: string, values?: Record<string, string | number>) =>
     intl.formatMessage({ id: `settings.authFactor.${id}` }, values);
@@ -53,6 +59,7 @@ const AuthFactor = () => {
     loadFactors();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (unbindTimerRef.current) clearInterval(unbindTimerRef.current);
     };
   }, []);
 
@@ -63,6 +70,20 @@ const AuthFactor = () => {
         if (prev <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
           timerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const startUnbindCountdown = () => {
+    setUnbindCountdown(60);
+    unbindTimerRef.current = setInterval(() => {
+      setUnbindCountdown((prev) => {
+        if (prev <= 1) {
+          if (unbindTimerRef.current) clearInterval(unbindTimerRef.current);
+          unbindTimerRef.current = null;
           return 0;
         }
         return prev - 1;
@@ -119,23 +140,49 @@ const AuthFactor = () => {
 
   const onUnbind = () => {
     if (!emailFactor) return;
-    const current = emailFactor;
-    Modal.confirm({
-      title: t('unbindConfirmTitle'),
-      content: t('unbindConfirmMsg', { email: current.factor_value }),
-      okText: t('unbind'),
-      cancelText: intl.formatMessage({ id: 'settings.blacklist.cancel' }),
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await delete_auth_factor(current.id);
-          messageApi.success(t('unbindSuccess'));
-          await loadFactors();
-        } catch (e) {
-          messageApi.error((e as Error).message || t('unbindFailed'));
-        }
-      },
-    });
+    setUnbindCode('');
+    setUnbindCountdown(0);
+    setUnbindOpen(true);
+  };
+
+  const onSendUnbindCode = async () => {
+    if (!emailFactor) return;
+    setUnbindSending(true);
+    try {
+      await send_auth_factor_code({
+        factor_type: AuthFactorType.EMAIL,
+        scene: 'unbind',
+      });
+      messageApi.success(t('codeSent'));
+      startUnbindCountdown();
+    } catch (e) {
+      messageApi.error((e as Error).message || t('bindFailed'));
+    } finally {
+      setUnbindSending(false);
+    }
+  };
+
+  const onUnbindConfirm = async () => {
+    if (!emailFactor) return;
+    if (!unbindCode.trim()) {
+      messageApi.warning(t('emptyCode'));
+      return;
+    }
+    setUnbindConfirming(true);
+    try {
+      await delete_auth_factor({
+        id: emailFactor.id,
+        factor_type: AuthFactorType.EMAIL,
+        verification_code: unbindCode.trim(),
+      });
+      messageApi.success(t('unbindSuccess'));
+      setUnbindOpen(false);
+      await loadFactors();
+    } catch (e) {
+      messageApi.error((e as Error).message || t('unbindFailed'));
+    } finally {
+      setUnbindConfirming(false);
+    }
   };
 
   return (
@@ -227,6 +274,42 @@ const AuthFactor = () => {
       <Text type="secondary" className={styles.description}>
         {t('tip')}
       </Text>
+
+      <Modal
+        title={t('unbindConfirmTitle')}
+        open={unbindOpen}
+        onOk={onUnbindConfirm}
+        confirmLoading={unbindConfirming}
+        onCancel={() => setUnbindOpen(false)}
+        okText={t('unbind')}
+        cancelText={intl.formatMessage({ id: 'settings.blacklist.cancel' })}
+        okButtonProps={{ danger: true }}
+        width={420}
+        centered
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text>
+            {t('unbindConfirmMsg', { email: emailFactor?.factor_value ?? '' })}
+          </Text>
+        </div>
+        <Space.Compact style={{ width: '100%' }}>
+          <Input
+            value={unbindCode}
+            onChange={(e) => setUnbindCode(e.target.value)}
+            placeholder={t('codePlaceholder')}
+            maxLength={6}
+          />
+          <Button
+            onClick={onSendUnbindCode}
+            loading={unbindSending}
+            disabled={unbindCountdown > 0}
+          >
+            {unbindCountdown > 0
+              ? t('resend', { seconds: unbindCountdown })
+              : t('sendCode')}
+          </Button>
+        </Space.Compact>
+      </Modal>
     </div>
   );
 };

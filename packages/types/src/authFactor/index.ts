@@ -44,11 +44,14 @@ export interface AuthFactorListVO {
   list: AuthFactorVO[];
 }
 
-/** 发送二次认证因素绑定验证码 (当前仅 email) */
+/** 发送二次认证因素验证码 (当前仅 email) */
 export interface SendAuthFactorCodeDTO {
   /** 因素类型: 0=email 1=phone 2=other */
   factor_type: number;
-  factor_value: string;
+  /** 场景: bind(缺省)=绑定发码; unbind=解绑发码(发往当前已绑定邮箱, 无需 factor_value) */
+  scene?: "bind" | "unbind";
+  /** 因素值(邮箱/手机号/其他标识); scene=bind 时必填 */
+  factor_value?: string;
 }
 
 /** 新增二次认证因素 (email 需邮箱验证码) */
@@ -58,9 +61,13 @@ export interface CreateAuthFactorDTO {
   verification_code?: string;
 }
 
-/** 删除 (解绑) 二次认证因素 */
+/** 删除 (解绑) 二次认证因素 (email 需解绑验证码) */
 export interface DeleteAuthFactorDTO {
   id: number;
+  /** 因素类型: 0=email 1=phone 2=other */
+  factor_type: number;
+  /** 解绑验证码(email 类型必填) */
+  verification_code: string;
 }
 
 /** 修改密码: 发送验证码请求 (由客户端决定渠道 factor_type) */

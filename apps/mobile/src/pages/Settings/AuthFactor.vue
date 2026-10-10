@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { showConfirmDialog, showToast } from "vant";
+import { showToast } from "vant";
 import { AuthFactorType, type AuthFactorVO } from "@workspace/types";
 import {
   create_auth_factor,
@@ -22,6 +22,13 @@ const binding = ref(false);
 const countdown = ref(0);
 let timer: ReturnType<typeof setInterval> | null = null;
 
+const unbindVisible = ref(false);
+const unbindCode = ref("");
+const unbindSending = ref(false);
+const unbindConfirming = ref(false);
+const unbindCountdown = ref(0);
+let unbindTimer: ReturnType<typeof setInterval> | null = null;
+
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 const startCountdown = () => {
@@ -31,6 +38,17 @@ const startCountdown = () => {
     if (countdown.value <= 0 && timer) {
       clearInterval(timer);
       timer = null;
+    }
+  }, 1000);
+};
+
+const startUnbindCountdown = () => {
+  unbindCountdown.value = 60;
+  unbindTimer = setInterval(() => {
+    unbindCountdown.value -= 1;
+    if (unbindCountdown.value <= 0 && unbindTimer) {
+      clearInterval(unbindTimer);
+      unbindTimer = null;
     }
   }, 1000);
 };
@@ -95,26 +113,50 @@ const onBind = async () => {
   }
 };
 
-const onUnbind = async () => {
+const onUnbind = () => {
   if (!emailFactor.value) return;
-  const current = emailFactor.value;
+  unbindCode.value = "";
+  unbindCountdown.value = 0;
+  unbindVisible.value = true;
+};
+
+const onSendUnbindCode = async () => {
+  if (!emailFactor.value) return;
+  unbindSending.value = true;
   try {
-    await showConfirmDialog({
-      title: "解绑二次认证",
-      message: `确定解绑邮箱 ${current.factor_value} 吗？`,
-      confirmButtonText: "解绑",
-      cancelButtonText: "取消",
-      confirmButtonColor: "#ef4444",
+    await send_auth_factor_code({
+      factor_type: AuthFactorType.EMAIL,
+      scene: "unbind",
     });
-  } catch {
+    showToast({ message: "验证码已发送", icon: "success" });
+    startUnbindCountdown();
+  } catch (e) {
+    showToast({ message: (e as Error).message || "发送失败", icon: "fail" });
+  } finally {
+    unbindSending.value = false;
+  }
+};
+
+const onUnbindConfirm = async () => {
+  if (!emailFactor.value) return;
+  if (!unbindCode.value.trim()) {
+    showToast("请输入验证码");
     return;
   }
+  unbindConfirming.value = true;
   try {
-    await delete_auth_factor(current.id);
+    await delete_auth_factor({
+      id: emailFactor.value.id,
+      factor_type: AuthFactorType.EMAIL,
+      verification_code: unbindCode.value.trim(),
+    });
     showToast({ message: "已解绑", icon: "success" });
+    unbindVisible.value = false;
     await loadFactors();
   } catch (e) {
     showToast({ message: (e as Error).message || "解绑失败", icon: "fail" });
+  } finally {
+    unbindConfirming.value = false;
   }
 };
 
@@ -123,6 +165,7 @@ const goBack = () => router.back();
 onMounted(loadFactors);
 onUnmounted(() => {
   if (timer) clearInterval(timer);
+  if (unbindTimer) clearInterval(unbindTimer);
 });
 </script>
 
@@ -186,6 +229,42 @@ onUnmounted(() => {
     <p class="page-tip">
       绑定二次认证后，可用于账号安全校验。当前仅开放邮箱渠道。
     </p>
+
+    <van-popup v-model:show="unbindVisible" position="bottom" round>
+      <div class="unbind-sheet">
+        <div class="unbind-sheet-title">解绑二次认证</div>
+        <div class="unbind-sheet-desc">
+          向 {{ emailFactor?.factor_value }} 发送验证码以确认解绑
+        </div>
+        <div class="unbind-code-row">
+          <van-field
+            v-model="unbindCode"
+            type="digit"
+            placeholder="请输入验证码"
+            maxlength="6"
+          />
+          <button
+            class="code-btn"
+            :disabled="unbindSending || unbindCountdown > 0"
+            @click="onSendUnbindCode"
+          >
+            {{ unbindCountdown > 0 ? `${unbindCountdown}s` : "获取验证码" }}
+          </button>
+        </div>
+        <div class="unbind-actions">
+          <button class="unbind-cancel" @click="unbindVisible = false">
+            取消
+          </button>
+          <button
+            class="unbind-confirm"
+            :disabled="unbindConfirming"
+            @click="onUnbindConfirm"
+          >
+            确认解绑
+          </button>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -346,5 +425,69 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--text-placeholder);
   line-height: 1.6;
+}
+
+.unbind-sheet {
+  padding: 20px 16px 24px;
+}
+
+.unbind-sheet-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.unbind-sheet-desc {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.unbind-code-row {
+  display: flex;
+  align-items: center;
+  margin-top: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+
+  :deep(.van-field) {
+    flex: 1;
+    padding-left: 12px;
+  }
+}
+
+.unbind-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.unbind-cancel,
+.unbind-confirm {
+  flex: 1;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.unbind-cancel {
+  background: var(--surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+}
+
+.unbind-confirm {
+  background: var(--color-error);
+  border: none;
+  color: #fff;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 </style>

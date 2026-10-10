@@ -15,7 +15,7 @@ function parseData<T>(res: RustResponse): T {
   return parseBackendResponse<T>(res);
 }
 
-/** 发送二次认证因素绑定验证码 (当前仅 email) */
+/** 发送二次认证因素验证码 (当前仅 email; scene=unbind 时发往已绑定邮箱) */
 export const send_auth_factor_code = async (
   dto: SendAuthFactorCodeDTO
 ): Promise<boolean> => {
@@ -49,9 +49,10 @@ export const list_auth_factors = async (): Promise<AuthFactorListVO> => {
   return parseData<AuthFactorListVO>(res);
 };
 
-/** 删除 (解绑) 二次认证因素 */
-export const delete_auth_factor = async (id: number): Promise<boolean> => {
-  const dto: DeleteAuthFactorDTO = { id };
+/** 删除 (解绑) 二次认证因素 (email 需解绑验证码) */
+export const delete_auth_factor = async (
+  dto: DeleteAuthFactorDTO
+): Promise<boolean> => {
   const res = await invoke_rust(
     HTTP_METHOD.POST,
     getApiBase() + "/auth_factor/delete",
