@@ -6,7 +6,8 @@ import {
 } from '@ant-design/icons';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { getChatFileByBizId } from '@workspace/services';
-import { Dropdown, message } from 'antd';
+import type { ChatFileDownloadProgress } from '@workspace/services';
+import { Dropdown, message, Progress } from 'antd';
 import React, { useState } from 'react';
 import styles from './styles/ChatFile.less';
 
@@ -73,6 +74,18 @@ const ChatFile: React.FC<ChatFileProps> = ({
   loading = false,
 }) => {
   const [downloading, setDownloading] = useState(false);
+  // 下载进度(字节): total 优先取后端 Content-Length, 为 0 时用消息元数据 fileSize 兜底
+  const [progress, setProgress] = useState<{
+    downloaded: number;
+    total: number;
+  }>({ downloaded: 0, total: 0 });
+  const total = progress.total || fileSize;
+  const percent =
+    total > 0 ? Math.min(100, Math.floor((progress.downloaded / total) * 100)) : 0;
+
+  const onProgress = (p: ChatFileDownloadProgress) => {
+    setProgress({ downloaded: p.downloaded, total: p.total });
+  };
 
   // 获取本地文件路径
   const getLocalPath = (tauriFilePath: string): string => {
@@ -95,8 +108,9 @@ const ChatFile: React.FC<ChatFileProps> = ({
     if (downloading) return;
 
     setDownloading(true);
+    setProgress({ downloaded: 0, total: 0 });
     try {
-      const files = await getChatFileByBizId(bizId, nanoId);
+      const files = await getChatFileByBizId(bizId, nanoId, onProgress);
       if (files && files.length > 0) {
         const tauriFilePath = files[0].tauri_file_path;
         if (tauriFilePath) {
@@ -122,8 +136,9 @@ const ChatFile: React.FC<ChatFileProps> = ({
     if (downloading) return;
 
     setDownloading(true);
+    setProgress({ downloaded: 0, total: 0 });
     try {
-      const files = await getChatFileByBizId(bizId, nanoId);
+      const files = await getChatFileByBizId(bizId, nanoId, onProgress);
       if (files && files.length > 0) {
         const tauriFilePath = files[0].tauri_file_path;
         if (tauriFilePath) {
@@ -178,13 +193,23 @@ const ChatFile: React.FC<ChatFileProps> = ({
           <span className={styles.fileType}>.{fileType || 'file'}</span>
           <span className={styles.fileSize}>{formatFileSize(fileSize)}</span>
         </div>
+        {downloading && (
+          <div className={styles.progressBar}>
+            <Progress
+              percent={percent}
+              size="small"
+              status="active"
+              showInfo={false}
+            />
+          </div>
+        )}
       </div>
       <Dropdown menu={menuItems} trigger={['click']}>
         <div
           className={`${styles.downloadBtn} ${
             downloading ? styles.downloading : ''
           }`}
-          title={downloading ? '下载中...' : '点击选择操作'}
+          title={downloading ? `下载中 ${percent}%` : '点击选择操作'}
         >
           {downloading ? (
             <div className={styles.loadingIcon}>

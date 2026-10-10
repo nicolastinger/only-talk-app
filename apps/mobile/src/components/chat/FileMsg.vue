@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { showToast } from "vant";
 import { formatFileSize, getFileTypeColor } from "@/chat/format";
 import { checkLocalChatFile, loadChatFile, toLocalPath } from "@/chat/media";
@@ -23,6 +23,16 @@ const busy = ref(false);
 const downloaded = ref(false);
 const checking = ref(false);
 const downloading = ref(false);
+/** 下载进度(字节): total 优先取后端 Content-Length, 为 0 时用消息元数据 fileSize 兜底 */
+const progress = ref<{ downloaded: number; total: number }>({
+  downloaded: 0,
+  total: 0,
+});
+const progressPercent = computed(() => {
+  const total = progress.value.total || props.fileSize || 0;
+  if (total <= 0) return 0;
+  return Math.min(100, Math.floor((progress.value.downloaded / total) * 100));
+});
 
 const resolveLocalPath = (): string | null => {
   if (props.localPath || isLocalFilePath(props.fileName)) {
@@ -77,9 +87,12 @@ const handleClick = async () => {
     // 未下载 → 先下载到本地（内联下载中提示，不阻塞点击）
     if (!downloaded.value) {
       downloading.value = true;
+      progress.value = { downloaded: 0, total: 0 };
     }
     // 下载(loadChatFile 内部会下载并落库)或取本地路径
-    const file = await loadChatFile(props.bizId, props.nanoId);
+    const file = await loadChatFile(props.bizId, props.nanoId, (p) => {
+      progress.value = { downloaded: p.downloaded, total: p.total };
+    });
     if (!file?.tauri_file_path) {
       showToast({ message: downloaded.value ? "打开文件失败" : "下载失败", icon: "fail" });
       return;
@@ -115,13 +128,24 @@ watch(() => props.bizId, refreshDownloaded);
       <div class="file-meta">
         <span class="file-ext">.{{ fileType || "file" }}</span>
         <span v-if="sending" class="file-size sending-text">上传中…</span>
-        <span v-else-if="downloading" class="file-size sending-text">下载中…</span>
+        <span v-else-if="downloading" class="file-size sending-text"
+          >下载中… {{ progressPercent }}%</span
+        >
         <span v-else-if="checking" class="file-size sending-text">检测中…</span>
         <span v-else-if="downloaded" class="file-size saved-text">已下载</span>
         <span v-else class="file-size">{{
           formatFileSize(fileSize || 0)
         }}</span>
       </div>
+      <van-progress
+        v-if="downloading"
+        class="file-progress"
+        :percentage="progressPercent"
+        :show-pivot="false"
+        :stroke-width="3"
+        color="var(--brand-blue)"
+        track-color="var(--border-light)"
+      />
     </div>
     <div class="file-action" :class="{ sending }" :aria-label="downloaded ? '打开文件' : '下载文件'">
       <span v-if="sending || downloading" class="spinner"></span>
@@ -190,6 +214,9 @@ watch(() => props.bizId, refreshDownloaded);
 }
 .file-ext {
   color: var(--text-secondary);
+}
+.file-progress {
+  margin-top: 6px;
 }
 .sending-text {
   color: var(--brand-blue);

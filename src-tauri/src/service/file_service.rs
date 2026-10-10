@@ -2,11 +2,13 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 use anyhow::anyhow;
 use log::{error, info};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use tauri::Emitter;
 
 use crate::config::get_config;
 use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
@@ -189,6 +191,31 @@ pub async fn has_local_chat_file_service(biz_id: &str) -> Result<bool, anyhow::E
     Ok(false)
 }
 
+/// 聊天文件下载进度事件负载(事件名 `chat_file_download_progress`)。
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChatFileDownloadProgress {
+    biz_id: String,
+    file_name: String,
+    downloaded: u64,
+    total: u64,
+}
+
+/// 上报聊天文件下载进度(前端按 bizId 匹配对应消息; 无 AppHandle 时忽略)。
+fn emit_chat_file_progress(biz_id: &str, file_name: &str, downloaded: u64, total: u64) {
+    if let Some(handle) = crate::APP_HANDLE.get() {
+        let _ = handle.emit(
+            "chat_file_download_progress",
+            ChatFileDownloadProgress {
+                biz_id: biz_id.to_string(),
+                file_name: file_name.to_string(),
+                downloaded,
+                total,
+            },
+        );
+    }
+}
+
 /**
  * 通过业务id下载文件
  * @param biz_id 业务ID
@@ -230,7 +257,10 @@ pub async fn download_file_by_biz_service(
                     return Err(anyhow!("文件下载失败: HTTP {}", response.status()));
                 }
 
-                // 首先提取必要的header值，因为一旦使用bytes()方法后就无法再访问headers
+                // 总大小: 优先响应头 Content-Length(预签名 URL 通常带), 未知则为 0
+                let total = response.content_length().unwrap_or(0);
+
+                // 首先提取必要的header值，因为一旦开始流式读取后就无法再访问headers
                 let content_type = response
                     .headers()
                     .get("content-type")
@@ -245,16 +275,6 @@ pub async fn download_file_by_biz_service(
                     .and_then(|cd| cd.to_str().ok())
                     .unwrap_or("")
                     .to_string();
-
-                // 处理二进制响应
-                let binary_data = response.bytes().await?;
-                info!("获取到二进制数据，大小: {} bytes", binary_data.len());
-
-                // 计算文件哈希值
-                let mut hasher = Sha256::new();
-                hasher.update(&binary_data);
-                let hash_result = hasher.finalize();
-                let file_hash = format!("{:x}", hash_result);
 
                 // 获取原始文件名（优先级：1.raw中的文件名 2.Content-Disposition头）
                 let original_file_name = original_file_name_from_raw
@@ -283,10 +303,30 @@ pub async fn download_file_by_biz_service(
                 let file_path = format!("{}/{}", resource_path, file_name);
                 info!("文件保存路径: {}", file_path);
 
-                // 保存文件到本地
+                // 流式下载: 边写盘边增量计算 SHA-256, 并按需上报进度
                 let mut file = fs::File::create(&file_path)?;
-                file.write_all(&binary_data)?;
-                info!("文件已保存到: {}", file_path);
+                let mut hasher = Sha256::new();
+                let mut downloaded: u64 = 0;
+                let mut last_emit = Instant::now();
+                let mut response = response;
+
+                while let Some(chunk) = response.chunk().await? {
+                    file.write_all(&chunk)?;
+                    hasher.update(&chunk);
+                    downloaded += chunk.len() as u64;
+                    // 节流: 最快每 100ms 上报一次, 避免高频事件
+                    if last_emit.elapsed() >= Duration::from_millis(100) {
+                        emit_chat_file_progress(biz_id, &original_file_name, downloaded, total);
+                        last_emit = Instant::now();
+                    }
+                }
+                file.flush()?;
+                // 完成时补发最终进度
+                emit_chat_file_progress(biz_id, &original_file_name, downloaded, total);
+
+                // 计算文件哈希值
+                let file_hash = format!("{:x}", hasher.finalize());
+                info!("文件已保存到: {}, 大小: {} bytes", file_path, downloaded);
 
                 // 插入文件记录到数据库
                 insert_file_record(
@@ -294,7 +334,7 @@ pub async fn download_file_by_biz_service(
                     &uuid,
                     &file_name,
                     &file_path,
-                    binary_data.len() as i64,
+                    downloaded as i64,
                     &content_type,
                     &file_hash,
                 )

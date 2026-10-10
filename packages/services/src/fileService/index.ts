@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { FileVo, Page, TextQuicMsgVo } from "@workspace/types";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 /**
  * 本地文件记录 + 前端运行时追加的 tauri 路径。
@@ -9,6 +10,18 @@ import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 interface FileVoLocal extends FileVo {
   tauri_file_path?: string;
   blob_url?: string;
+}
+
+/** 聊天文件下载进度(来自后端 `chat_file_download_progress` 事件) */
+export interface ChatFileDownloadProgress {
+  /** 业务ID(前端按此匹配对应消息) */
+  bizId: string;
+  /** 文件名 */
+  fileName: string;
+  /** 已下载字节数 */
+  downloaded: number;
+  /** 总字节数(total 为 0 表示大小未知, 前端可用消息元数据 file_size 兜底) */
+  total: number;
 }
 
 /**
@@ -109,15 +122,26 @@ export const getFiles = async (
 };
 
 /**
- * 获取聊天文件
+ * 获取聊天文件(本地无记录时后端会下载并落库)
  * @param bizId 业务ID
  * @param nanoId 可选的消息nano_id，如果提供且raw中有文件名，则优先使用raw中的文件名
+ * @param onProgress 可选下载进度回调(经 `chat_file_download_progress` 事件, 按 bizId 过滤)
  * @returns 文件列表
  */
 export const getChatFileByBizId = async (
   bizId: string,
-  nanoId?: string
+  nanoId?: string,
+  onProgress?: (progress: ChatFileDownloadProgress) => void
 ): Promise<FileVoLocal[] | null> => {
+  let unlisten: (() => void) | undefined;
+  if (onProgress) {
+    unlisten = await listen<ChatFileDownloadProgress>(
+      "chat_file_download_progress",
+      (event) => {
+        if (event.payload.bizId === bizId) onProgress(event.payload);
+      }
+    );
+  }
   try {
     let files = [] as FileVoLocal[];
     const FileVos: FileVoLocal[] = (await invoke("get_chat_file_by_biz_id", {
@@ -150,6 +174,8 @@ export const getChatFileByBizId = async (
   } catch (error) {
     console.error("Get chat file failed:", error);
     return null;
+  } finally {
+    unlisten?.();
   }
 };
 
