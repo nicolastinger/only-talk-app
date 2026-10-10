@@ -1,14 +1,44 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { useTheme, type ThemeMode } from "@/stores/theme";
+import { kv_get, kv_set } from "@workspace/services";
+import { useTheme, type ChatsFontSize, type ThemeMode } from "@/stores/theme";
+import { useI18n, type Locale } from "@/i18n";
 
 const router = useRouter();
-const { mode, setMode } = useTheme();
+const { t, locale, setLocale } = useI18n();
+const { mode, fontSize, setMode, setFontSize } = useTheme();
 
-const themeOptions: { value: ThemeMode; label: string }[] = [
-  { value: "light", label: "亮色" },
-  { value: "dark", label: "暗色" },
-  { value: "system", label: "跟随系统" },
+const AUTO_DOWNLOAD_KEY = "ui_auto_download_wifi";
+const autoDownload = ref(true);
+kv_get(AUTO_DOWNLOAD_KEY)
+  .then((value) => {
+    if (value === "0") autoDownload.value = false;
+    else if (value === "1") autoDownload.value = true;
+  })
+  .catch(() => {});
+
+const setAutoDownload = (value: boolean) => {
+  autoDownload.value = value;
+  kv_set(AUTO_DOWNLOAD_KEY, value ? "1" : "0").catch(() => {});
+};
+
+const themeOptions: { value: ThemeMode; key: string }[] = [
+  { value: "light", key: "settings.generalSettings.themeModes.light" },
+  { value: "dark", key: "settings.generalSettings.themeModes.dark" },
+  { value: "system", key: "settings.generalSettings.themeModes.system" },
+];
+
+const languageOptions: { value: Locale; key: string }[] = [
+  { value: "zh-CN", key: "settings.generalSettings.languageOptions.zhCN" },
+  { value: "zh-TW", key: "settings.generalSettings.languageOptions.zhTW" },
+  { value: "en-US", key: "settings.generalSettings.languageOptions.enUS" },
+];
+
+const fontOptions: { value: ChatsFontSize; key: string }[] = [
+  { value: "small", key: "settings.generalSettings.fontSizes.small" },
+  { value: "medium", key: "settings.generalSettings.fontSizes.medium" },
+  { value: "large", key: "settings.generalSettings.fontSizes.large" },
 ];
 
 const goBack = () => router.back();
@@ -16,28 +46,75 @@ const goBack = () => router.back();
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="通用设置" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.generalSettings.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="section-card">
-      <div class="section-title">
-        <svg viewBox="0 0 24 24" fill="currentColor" class="title-icon">
-          <path
-            d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
-          />
-        </svg>
-        <span>主题</span>
-      </div>
-      <p class="desc">选择 Only Talk 的显示外观</p>
-      <div class="theme-options">
+      <div class="section-title">{{ t("settings.generalSettings.theme") }}</div>
+      <p class="desc">{{ t("settings.generalSettings.themeDesc") }}</p>
+      <div class="option-group">
         <button
           v-for="item in themeOptions"
           :key="item.value"
-          class="theme-option"
+          class="option"
           :class="{ active: mode === item.value }"
           @click="setMode(item.value, { x: $event.clientX, y: $event.clientY })"
         >
-          {{ item.label }}
+          {{ t(item.key) }}
         </button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">{{ t("settings.generalSettings.language") }}</div>
+      <p class="desc">{{ t("settings.generalSettings.languageDesc") }}</p>
+      <div class="option-group">
+        <button
+          v-for="item in languageOptions"
+          :key="item.value"
+          class="option"
+          :class="{ active: locale === item.value }"
+          @click="setLocale(item.value)"
+        >
+          {{ t(item.key) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">{{ t("settings.generalSettings.fontSize") }}</div>
+      <p class="desc">{{ t("settings.generalSettings.fontSizeDesc") }}</p>
+      <div class="option-group">
+        <button
+          v-for="item in fontOptions"
+          :key="item.value"
+          class="option"
+          :class="{ active: fontSize === item.value }"
+          @click="setFontSize(item.value)"
+        >
+          {{ t(item.key) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="switch-row">
+        <div class="switch-text">
+          <span class="section-title inline">
+            {{ t("settings.generalSettings.autoDownload") }}
+          </span>
+          <p class="desc inline">
+            {{ t("settings.generalSettings.autoDownloadWifi") }}
+          </p>
+        </div>
+        <van-switch
+          :model-value="autoDownload"
+          size="22px"
+          @update:model-value="setAutoDownload"
+        />
       </div>
     </div>
   </div>
@@ -66,33 +143,35 @@ const goBack = () => router.back();
 }
 
 .section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: block;
   margin-bottom: 8px;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
-}
 
-.title-icon {
-  width: 20px;
-  height: 20px;
-  color: var(--brand-blue);
+  &.inline {
+    margin-bottom: 0;
+    font-size: 15px;
+  }
 }
 
 .desc {
   margin: 0 0 16px;
   font-size: 13px;
   color: var(--text-tertiary);
+
+  &.inline {
+    margin: 4px 0 0;
+    font-size: 12px;
+  }
 }
 
-.theme-options {
+.option-group {
   display: flex;
   gap: 8px;
 }
 
-.theme-option {
+.option {
   flex: 1;
   min-height: 40px;
   padding: 0 8px;
@@ -109,5 +188,16 @@ const goBack = () => router.back();
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.switch-text {
+  min-width: 0;
 }
 </style>

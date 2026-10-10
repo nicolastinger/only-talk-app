@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { showDialog, showToast } from "vant";
 import { getVersion } from "@tauri-apps/api/app";
@@ -10,8 +10,10 @@ import {
   installUpdate,
 } from "@workspace/services";
 import type { UpdateInfo } from "@workspace/types";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 const version = ref("1.0.0");
 const checking = ref(false);
 const downloading = ref(false);
@@ -31,10 +33,10 @@ onMounted(async () => {
 
 const goBack = () => router.back();
 
-const infoRows = [
-  { name: "应用名称", value: "Only Talk" },
-  { name: "当前版本", value: version },
-];
+const infoRows = computed(() => [
+  { name: t("settings.aboutApp.appName"), value: "Only Talk" },
+  { name: t("settings.aboutApp.currentVersion"), value: version.value },
+]);
 
 const onCheckUpdate = async () => {
   if (checking.value || downloading.value || installing.value) return;
@@ -42,7 +44,10 @@ const onCheckUpdate = async () => {
   try {
     const result = await checkForUpdate();
     if (!result.hasUpdate || !result.info) {
-      showToast({ message: "当前已是最新版本", icon: "success" });
+      showToast({
+        message: t("settings.aboutApp.latestVersion"),
+        icon: "success",
+      });
       return;
     }
     updateInfo.value = result.info;
@@ -50,17 +55,21 @@ const onCheckUpdate = async () => {
     const info = result.info;
     const sizeText = formatFileSize(info.size);
     await showDialog({
-      title: `发现新版本 v${info.version}`,
-      message: `更新包大小：${sizeText || "-"}\n\n${info.notes || "-"}`,
+      title: t("settings.aboutApp.newVersionAvailable", {
+        version: info.version,
+      }),
+      message: `${t("settings.aboutApp.updateSize", {
+        size: sizeText || "-",
+      })}\n\n${info.notes || "-"}`,
       showCancelButton: !info.force_update,
-      confirmButtonText: "立即下载",
-      cancelButtonText: "稍后再说",
+      confirmButtonText: t("settings.aboutApp.downloadNow"),
+      cancelButtonText: t("settings.aboutApp.later"),
       closeOnClickOverlay: !info.force_update,
       closeOnPopstate: !info.force_update,
     });
     await onDownload();
   } catch {
-    showToast({ message: "检查更新失败，请稍后重试", icon: "fail" });
+    showToast({ message: t("settings.aboutApp.checkFailed"), icon: "fail" });
   } finally {
     checking.value = false;
   }
@@ -74,7 +83,7 @@ const onDownload = async () => {
   progressTotal.value = 0;
   const toast = showToast({
     type: "loading",
-    message: "正在下载更新包...",
+    message: t("settings.aboutApp.downloadingPackage"),
     duration: 0,
     forbidClick: true,
   });
@@ -88,12 +97,12 @@ const onDownload = async () => {
     });
     toast.close();
     localPath.value = path;
-    showToast({ message: "下载完成", icon: "success" });
+    showToast({ message: t("settings.aboutApp.downloadDone"), icon: "success" });
     await askInstall();
   } catch (e) {
     console.error("下载更新失败:", e);
     toast.close();
-    showToast({ message: "下载失败，请重试", icon: "fail" });
+    showToast({ message: t("settings.aboutApp.downloadFailed"), icon: "fail" });
   } finally {
     downloading.value = false;
   }
@@ -104,11 +113,11 @@ const askInstall = async () => {
   const force = !!updateInfo.value?.force_update;
   try {
     await showDialog({
-      title: "下载完成",
-      message: "更新包已下载，是否立即安装？",
+      title: t("settings.aboutApp.downloadDone"),
+      message: t("settings.aboutApp.installPrompt"),
       showCancelButton: !force,
-      confirmButtonText: "立即安装",
-      cancelButtonText: "稍后",
+      confirmButtonText: t("settings.aboutApp.installNow"),
+      cancelButtonText: t("settings.aboutApp.laterShort"),
       closeOnClickOverlay: !force,
       closeOnPopstate: !force,
     });
@@ -126,27 +135,34 @@ const onInstall = async () => {
     await installUpdate(localPath.value);
   } catch (e) {
     console.error("安装更新失败:", e);
-    showToast({ message: "安装失败，请重试", icon: "fail" });
+    showToast({ message: t("settings.aboutApp.installFailed"), icon: "fail" });
   } finally {
     installing.value = false;
   }
 };
 
 const onComingSoon = (row: string) => {
-  showToast({ message: `${row}功能开发中`, icon: "none" });
+  showToast({
+    message: t("settings.aboutApp.comingSoonFeature", { feature: row }),
+    icon: "none",
+  });
 };
 </script>
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="关于 Only Talk" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.menu.about.name')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="about-header">
       <div class="logo">
         <img src="/images/app-icon.png" alt="Only Talk" class="logo-img" />
       </div>
       <div class="app-name">Only Talk</div>
-      <div class="app-slogan">极速 · 安全 · 畅聊无限</div>
+      <div class="app-slogan">{{ t("settings.aboutApp.slogan") }}</div>
       <div class="app-version">Version {{ version }}</div>
     </div>
 
@@ -174,32 +190,51 @@ const onComingSoon = (row: string) => {
         @click="onCheckUpdate"
       >
         <span class="menu-name">{{
-          checking ? "正在检查..." : "检查更新"
+          checking
+            ? t("settings.aboutApp.checking")
+            : t("settings.aboutApp.checkUpdate")
         }}</span>
         <span
           class="menu-update-status"
           v-if="checking || downloading || installing"
         >
-          {{ installing ? "安装中..." : downloading ? "下载中..." : "" }}
+          {{
+            installing
+              ? t("settings.aboutApp.installing")
+              : downloading
+                ? t("settings.aboutApp.downloading")
+                : ""
+          }}
         </span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <div class="menu-item" @click="onComingSoon('用户协议')">
-        <span class="menu-name">用户协议</span>
+      <div
+        class="menu-item"
+        @click="onComingSoon(t('settings.aboutApp.userAgreement'))"
+      >
+        <span class="menu-name">{{ t("settings.aboutApp.userAgreement") }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <div class="menu-item" @click="onComingSoon('隐私政策')">
-        <span class="menu-name">隐私政策</span>
+      <div
+        class="menu-item"
+        @click="onComingSoon(t('settings.aboutApp.privacyPolicy'))"
+      >
+        <span class="menu-name">{{ t("settings.aboutApp.privacyPolicy") }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <div class="menu-item" @click="onComingSoon('开源许可')">
-        <span class="menu-name">开源许可</span>
+      <div
+        class="menu-item"
+        @click="onComingSoon(t('settings.aboutApp.openSourceLicenses'))"
+      >
+        <span class="menu-name">{{
+          t("settings.aboutApp.openSourceLicenses")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>

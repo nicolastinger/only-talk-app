@@ -397,7 +397,7 @@ const senderAvatar = (msg: UiChatMessage): string => {
   padding: 10px 14px;
   border-radius: 18px;
   word-break: break-word;
-  font-size: 15px;
+  font-size: calc(15px * var(--chat-font-scale, 1));
   position: relative;
   max-width: 100%;
 }

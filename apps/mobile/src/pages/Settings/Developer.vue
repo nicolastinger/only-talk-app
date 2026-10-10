@@ -24,11 +24,13 @@ import {
   LOG_LEVEL_INFO,
   LOG_LEVEL_WARN,
 } from "@workspace/types";
+import { useI18n } from "@/i18n";
 
 const STATUS_SUCCESS = 2;
 const STATUS_FAILED = 3;
 
 const router = useRouter();
+const { t } = useI18n();
 const goBack = () => router.back();
 
 // ===================== 同步任务 =====================
@@ -44,10 +46,10 @@ const formatTime = (ms: number) => {
 
 const statusText = (task: SyncTaskItem) =>
   task.status === STATUS_SUCCESS
-    ? "成功"
+    ? t("settings.developerPanel.successStatus")
     : task.status === STATUS_FAILED
-    ? "失败"
-    : `状态${task.status}`;
+    ? t("settings.developerPanel.failedStatus")
+    : t("settings.developerPanel.statusLabel", { status: task.status });
 
 const load = async () => {
   loading.value = true;
@@ -58,7 +60,10 @@ const load = async () => {
     }
   } catch (error) {
     console.error("获取同步任务记录失败:", error);
-    showToast({ message: "加载同步记录失败", icon: "fail" });
+    showToast({
+      message: t("settings.developerPanel.syncLoadFailed"),
+      icon: "fail",
+    });
   } finally {
     loading.value = false;
   }
@@ -74,12 +79,15 @@ const logLoading = ref(false);
 const logHasMore = ref(true);
 const logLevel = ref<number | undefined>(undefined);
 
-const levelOptions = [
-  { label: "全部", value: undefined },
-  { label: "INFO", value: LOG_LEVEL_INFO },
-  { label: "WARN", value: LOG_LEVEL_WARN },
-  { label: "ERROR", value: LOG_LEVEL_ERROR },
-];
+const levelOptions = computed(() => [
+  {
+    label: t("settings.developerPanel.logLevelAll"),
+    value: undefined as number | undefined,
+  },
+  { label: "INFO", value: LOG_LEVEL_INFO as number | undefined },
+  { label: "WARN", value: LOG_LEVEL_WARN as number | undefined },
+  { label: "ERROR", value: LOG_LEVEL_ERROR as number | undefined },
+]);
 
 const levelText = (l: number) =>
   l === 0
@@ -127,7 +135,10 @@ const loadLogs = async (reset: boolean) => {
     logHasMore.value = logs.value.length < data.total;
   } catch (error) {
     console.error("获取日志失败:", error);
-    showToast({ message: "获取日志失败", icon: "fail" });
+    showToast({
+      message: t("settings.developerPanel.logLoadFailed"),
+      icon: "fail",
+    });
   } finally {
     logLoading.value = false;
   }
@@ -144,8 +155,8 @@ const onLevelChange = (v: number | undefined) => {
 const clearLogs = async () => {
   try {
     await showConfirmDialog({
-      title: "清空日志",
-      message: "确定清空全部 app_log 日志吗？此操作不可恢复。",
+      title: t("settings.developerPanel.logClearTitle"),
+      message: t("settings.developerPanel.logClearConfirm"),
       confirmButtonColor: "#ee0a24",
     });
   } catch {
@@ -154,10 +165,16 @@ const clearLogs = async () => {
   try {
     const n = await invoke<number>("clear_app_logs");
     resetLogs();
-    showToast({ message: `已清空 ${n} 条日志`, icon: "success" });
+    showToast({
+      message: t("settings.developerPanel.logClearSuccess", { count: n }),
+      icon: "success",
+    });
   } catch (error) {
     console.error("清空日志失败:", error);
-    showToast({ message: "清空日志失败", icon: "fail" });
+    showToast({
+      message: t("settings.developerPanel.logClearFailed"),
+      icon: "fail",
+    });
   }
 };
 
@@ -209,7 +226,10 @@ const loadLogFiles = async () => {
     await readClientLog(target);
   } catch (error) {
     console.error("获取客户端日志文件失败:", error);
-    showToast({ message: "获取日志文件失败", icon: "fail" });
+    showToast({
+      message: t("settings.developerPanel.clientLogLoadFailed"),
+      icon: "fail",
+    });
   } finally {
     fileLoading.value = false;
   }
@@ -234,7 +254,10 @@ const readClientLog = async (name: string) => {
     fileTotalLines.value = data.total_lines;
   } catch (error) {
     console.error("读取客户端日志失败:", error);
-    showToast({ message: "读取日志文件失败", icon: "fail" });
+    showToast({
+      message: t("settings.developerPanel.clientLogReadFailed"),
+      icon: "fail",
+    });
   } finally {
     fileLoading.value = false;
   }
@@ -243,14 +266,22 @@ const readClientLog = async (name: string) => {
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="开发者" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.menu.developer.name')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <Tabs sticky class="dev-tabs">
       <!-- ============ 同步任务 ============ -->
-      <Tab title="同步任务">
+      <Tab :title="t('settings.developerPanel.syncTab')">
         <div class="toolbar">
           <button class="refresh-btn" :disabled="loading" @click="load">
-            {{ loading ? "加载中" : "刷新" }}
+            {{
+              loading
+                ? t("settings.developerPanel.loading")
+                : t("settings.developerPanel.refresh")
+            }}
           </button>
         </div>
 
@@ -261,13 +292,13 @@ const readClientLog = async (name: string) => {
           size="24"
           vertical
         >
-          加载中...
+          {{ t("settings.developerPanel.loadingDots") }}
         </Loading>
 
         <Empty
           v-else-if="batches.length === 0"
           image="search"
-          description="暂无同步记录"
+          :description="t('settings.developerPanel.syncEmpty')"
         />
 
         <div v-else class="section-card">
@@ -276,7 +307,11 @@ const readClientLog = async (name: string) => {
               v-for="batch in batches"
               :key="batch.batch_id"
               :name="String(batch.batch_id)"
-              :title="`批次 ${formatTime(batch.batch_id)}`"
+              :title="
+                t('settings.developerPanel.batchTitle', {
+                  time: formatTime(batch.batch_id),
+                })
+              "
             >
               <template #icon>
                 <span
@@ -286,7 +321,11 @@ const readClientLog = async (name: string) => {
               </template>
               <template #value>
                 <div class="batch-stats">
-                  <span class="stat stat-total">共 {{ batch.total }}</span>
+                  <span class="stat stat-total">{{
+                    t("settings.developerPanel.totalStat", {
+                      total: batch.total,
+                    })
+                  }}</span>
                   <span class="stat stat-ok">✓ {{ batch.success }}</span>
                   <span v-if="batch.failed > 0" class="stat stat-bad"
                     >✕ {{ batch.failed }}</span
@@ -295,7 +334,7 @@ const readClientLog = async (name: string) => {
               </template>
 
               <div v-if="batch.tasks.length === 0" class="no-task">
-                该批次无任务明细
+                {{ t("settings.developerPanel.noTask") }}
               </div>
               <div v-else>
                 <div
@@ -321,9 +360,21 @@ const readClientLog = async (name: string) => {
                     </Tag>
                   </div>
                   <div class="task-meta">
-                    <span>新增 {{ task.new_count }}</span>
-                    <span>批次数 {{ task.batches }}</span>
-                    <span v-if="task.attempt > 1">尝试 {{ task.attempt }}</span>
+                    <span>{{
+                      t("settings.developerPanel.newCount", {
+                        count: task.new_count,
+                      })
+                    }}</span>
+                    <span>{{
+                      t("settings.developerPanel.batches", {
+                        count: task.batches,
+                      })
+                    }}</span>
+                    <span v-if="task.attempt > 1">{{
+                      t("settings.developerPanel.attempt", {
+                        count: task.attempt,
+                      })
+                    }}</span>
                   </div>
                   <div
                     v-if="task.status === STATUS_FAILED && task.last_error"
@@ -339,17 +390,21 @@ const readClientLog = async (name: string) => {
       </Tab>
 
       <!-- ============ 系统日志(app_log 表) ============ -->
-      <Tab title="系统日志">
+      <Tab :title="t('settings.developerPanel.logTab')">
         <div class="toolbar log-toolbar">
           <button
             class="refresh-btn"
             :disabled="logLoading"
             @click="loadLogs(true)"
           >
-            {{ logLoading ? "加载中" : "刷新" }}
+            {{
+              logLoading
+                ? t("settings.developerPanel.loading")
+                : t("settings.developerPanel.refresh")
+            }}
           </button>
           <button class="clear-btn" :disabled="logLoading" @click="clearLogs">
-            清空
+            {{ t("settings.developerPanel.logClear") }}
           </button>
         </div>
 
@@ -368,7 +423,7 @@ const readClientLog = async (name: string) => {
         <Empty
           v-if="!logLoading && logs.length === 0"
           image="search"
-          description="暂无日志"
+          :description="t('settings.developerPanel.logEmpty')"
         />
 
         <div v-else class="log-list">
@@ -390,29 +445,41 @@ const readClientLog = async (name: string) => {
           </div>
 
           <div v-if="logs.length > 0" class="log-footer">
-            <span class="log-count">共 {{ logTotal }} 条</span>
+            <span class="log-count">{{
+              t("settings.developerPanel.logTotal", { total: logTotal })
+            }}</span>
             <button
               v-if="logHasMore"
               class="load-more-btn"
               :disabled="logLoading"
               @click="onLoadMore"
             >
-              {{ logLoading ? "加载中..." : "加载更多" }}
+              {{
+                logLoading
+                  ? t("settings.developerPanel.loadingDots")
+                  : t("settings.developerPanel.loadMore")
+              }}
             </button>
-            <span v-else class="log-end">已全部加载</span>
+            <span v-else class="log-end">{{
+              t("settings.developerPanel.logEnd")
+            }}</span>
           </div>
         </div>
       </Tab>
 
       <!-- ============ 客户端日志(fast_log 文件) ============ -->
-      <Tab title="客户端日志">
+      <Tab :title="t('settings.developerPanel.clientLogTab')">
         <div class="toolbar log-toolbar">
           <button
             class="refresh-btn"
             :disabled="fileLoading"
             @click="loadLogFiles"
           >
-            {{ fileLoading ? "加载中" : "刷新" }}
+            {{
+              fileLoading
+                ? t("settings.developerPanel.loading")
+                : t("settings.developerPanel.refresh")
+            }}
           </button>
         </div>
 
@@ -427,7 +494,9 @@ const readClientLog = async (name: string) => {
             <span class="file-name">{{ f.name }}</span>
             <span class="file-size">{{ formatSize(f.size) }}</span>
           </button>
-          <div v-if="logFiles.length === 0" class="no-file">暂无日志文件</div>
+          <div v-if="logFiles.length === 0" class="no-file">
+            {{ t("settings.developerPanel.noLogFile") }}
+          </div>
         </div>
 
         <div class="level-filter">
@@ -446,21 +515,24 @@ const readClientLog = async (name: string) => {
           <input
             v-model="keyword"
             type="text"
-            placeholder="过滤关键字..."
+            :placeholder="t('settings.developerPanel.filterKeyword')"
             class="search-input"
           />
         </div>
 
         <div v-if="fileLines.length === 0 && !fileLoading" class="no-file">
-          暂无内容
+          {{ t("settings.developerPanel.noContent") }}
         </div>
         <div v-else class="log-console-wrap">
           <pre class="log-console">{{ filteredFileLines.join("\n") }}</pre>
           <div class="log-footer">
-            <span class="log-count"
-              >{{ activeLogFile }} · 共 {{ fileTotalLines }} 行，当前显示
-              {{ filteredFileLines.length }} 行</span
-            >
+            <span class="log-count">{{
+              t("settings.developerPanel.lineCount", {
+                name: activeLogFile,
+                total: fileTotalLines,
+                shown: filteredFileLines.length,
+              })
+            }}</span>
           </div>
         </div>
       </Tab>

@@ -7,11 +7,13 @@ import {
   update_plaza_profile,
   update_plaza_tags,
 } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 const MAX_TAGS = 100;
 const MAX_TAG_LEN = 32;
 
 const router = useRouter();
+const { t } = useI18n();
 const allowDiscover = ref(false);
 const motto = ref("");
 const tags = ref<string[]>([]);
@@ -28,7 +30,7 @@ const loadProfile = async () => {
     tags.value = profile.tags || [];
   } catch (error) {
     console.error("获取广场设置失败", error);
-    showToast({ message: "获取广场设置失败", icon: "fail" });
+    showToast({ message: t("settings.plazaSettings.loadFailed"), icon: "fail" });
   }
 };
 
@@ -44,11 +46,14 @@ const onAllowDiscoverChange = async (checked: boolean) => {
   switchLoading.value = true;
   try {
     await update_plaza_profile({ allow_discover: checked });
-    showToast({ message: "已保存", icon: "success" });
+    showToast({ message: t("settings.plazaSettings.saved"), icon: "success" });
   } catch (error) {
     console.error("更新被发现开关失败", error);
     allowDiscover.value = prev;
-    showToast({ message: "保存失败", icon: "fail" });
+    showToast({
+      message: t("settings.plazaSettings.updateFailed"),
+      icon: "fail",
+    });
   } finally {
     switchLoading.value = false;
   }
@@ -58,10 +63,16 @@ const onSaveMotto = async () => {
   mottoLoading.value = true;
   try {
     await update_plaza_profile({ motto: motto.value });
-    showToast({ message: "宣言已保存", icon: "success" });
+    showToast({
+      message: t("settings.plazaSettings.mottoSaved"),
+      icon: "success",
+    });
   } catch (error) {
     console.error("保存交友宣言失败", error);
-    showToast({ message: "保存失败", icon: "fail" });
+    showToast({
+      message: t("settings.plazaSettings.updateFailed"),
+      icon: "fail",
+    });
   } finally {
     mottoLoading.value = false;
   }
@@ -75,7 +86,7 @@ const addTag = () => {
     return;
   }
   if (tags.value.length >= MAX_TAGS) {
-    showToast({ message: "最多添加 100 个标签", icon: "none" });
+    showToast({ message: t("settings.plazaSettings.tagLimit"), icon: "none" });
     return;
   }
   tags.value = [...tags.value, tag];
@@ -83,17 +94,23 @@ const addTag = () => {
 };
 
 const removeTag = (tag: string) => {
-  tags.value = tags.value.filter((t) => t !== tag);
+  tags.value = tags.value.filter((item) => item !== tag);
 };
 
 const onSaveTags = async () => {
   tagsLoading.value = true;
   try {
     await update_plaza_tags({ tags: tags.value });
-    showToast({ message: "标签已保存", icon: "success" });
+    showToast({
+      message: t("settings.plazaSettings.tagsSaved"),
+      icon: "success",
+    });
   } catch (error) {
     console.error("保存标签失败", error);
-    showToast({ message: "保存失败", icon: "fail" });
+    showToast({
+      message: t("settings.plazaSettings.updateFailed"),
+      icon: "fail",
+    });
   } finally {
     tagsLoading.value = false;
   }
@@ -102,13 +119,21 @@ const onSaveTags = async () => {
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="广场设置" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.plazaSettings.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="section-card">
       <div class="pref-row">
         <div class="pref-text">
-          <span class="pref-name">允许在广场被发现</span>
-          <span class="pref-desc">开启后你的交友卡片会展示在广场中</span>
+          <span class="pref-name">{{
+            t("settings.plazaSettings.allowDiscover")
+          }}</span>
+          <span class="pref-desc">{{
+            t("settings.plazaSettings.allowDiscoverDesc")
+          }}</span>
         </div>
         <van-switch
           :model-value="allowDiscover"
@@ -120,12 +145,12 @@ const onSaveTags = async () => {
     </div>
 
     <div class="section-card">
-      <div class="section-title">交友宣言</div>
-      <p class="section-desc">一句话介绍自己，会展示在你的广场卡片上</p>
+      <div class="section-title">{{ t("settings.plazaSettings.motto") }}</div>
+      <p class="section-desc">{{ t("settings.plazaSettings.mottoDesc") }}</p>
       <textarea
         v-model="motto"
         class="motto-input"
-        placeholder="介绍一下自己吧，例如：爱旅行、爱摄影，想认识有趣的你"
+        :placeholder="t('settings.plazaSettings.mottoPlaceholder')"
         maxlength="255"
         rows="4"
       ></textarea>
@@ -137,15 +162,24 @@ const onSaveTags = async () => {
         :loading="mottoLoading"
         @click="onSaveMotto"
       >
-        保存宣言
+        {{ t("settings.plazaSettings.mottoSave") }}
       </van-button>
     </div>
 
     <div class="section-card">
-      <div class="section-title">我的标签</div>
-      <p class="section-desc">最多 {{ MAX_TAGS }} 个，每个不超过 {{ MAX_TAG_LEN }} 个字</p>
+      <div class="section-title">{{ t("settings.plazaSettings.tags") }}</div>
+      <p class="section-desc">
+        {{
+          t("settings.plazaSettings.tagsDesc", {
+            max: MAX_TAGS,
+            len: MAX_TAG_LEN,
+          })
+        }}
+      </p>
       <div class="tag-editor">
-        <span v-if="tags.length === 0" class="tag-empty">还没有标签，添加一个吧</span>
+        <span v-if="tags.length === 0" class="tag-empty">{{
+          t("settings.plazaSettings.tagEmpty")
+        }}</span>
         <span
           v-for="tag in tags"
           :key="tag"
@@ -162,12 +196,18 @@ const onSaveTags = async () => {
           type="text"
           class="tag-input"
           :maxlength="MAX_TAG_LEN"
-          placeholder="输入标签，回车添加"
+          :placeholder="t('settings.plazaSettings.tagAddPlaceholder')"
           @keyup.enter="addTag"
         />
-        <button class="add-btn" @click="addTag">添加</button>
+        <button class="add-btn" @click="addTag">
+          {{ t("settings.plazaSettings.tagAdd") }}
+        </button>
         <button class="save-btn" :disabled="tagsLoading" @click="onSaveTags">
-          {{ tagsLoading ? "保存中" : "保存" }}
+          {{
+            tagsLoading
+              ? t("settings.plazaSettings.tagSaving")
+              : t("settings.plazaSettings.tagSave")
+          }}
         </button>
       </div>
     </div>

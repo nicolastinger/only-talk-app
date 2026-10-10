@@ -2,15 +2,16 @@
 import { reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { kv_get, kv_set } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 interface NotifyItem {
   key: string;
-  name: string;
-  desc?: string;
+  nameKey: string;
   default: boolean;
 }
 
 const router = useRouter();
+const { t } = useI18n();
 
 const STORAGE_KEY = "ui_notify_prefs";
 
@@ -59,17 +60,37 @@ const toggle = (key: keyof NotifyPrefs, checked: boolean) => {
 };
 
 const messageItems = ref<NotifyItem[]>([
-  { key: "receive", name: "接收新消息通知", default: true },
-  { key: "sound", name: "声音提醒", default: true },
-  { key: "vibration", name: "震动提醒", default: false },
+  {
+    key: "receive",
+    nameKey: "settings.notificationSettings.receiveNewMessage",
+    default: true,
+  },
+  {
+    key: "sound",
+    nameKey: "settings.notificationSettings.soundReminder",
+    default: true,
+  },
+  {
+    key: "vibration",
+    nameKey: "settings.notificationSettings.vibrationReminder",
+    default: false,
+  },
 ]);
 
 const detailItems = ref<NotifyItem[]>([
-  { key: "preview", name: "通知栏显示消息详情", default: true },
+  {
+    key: "preview",
+    nameKey: "settings.notificationSettings.showMessageDetails",
+    default: true,
+  },
 ]);
 
 const dndItems = ref<NotifyItem[]>([
-  { key: "nightDnd", name: "夜间免打扰", default: false },
+  {
+    key: "nightDnd",
+    nameKey: "settings.notificationSettings.nightDoNotDisturb",
+    default: false,
+  },
 ]);
 
 const goBack = () => router.back();
@@ -77,13 +98,19 @@ const goBack = () => router.back();
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="通知" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.menu.notification.name')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="section-card">
-      <div class="section-title">新消息通知</div>
+      <div class="section-title">
+        {{ t("settings.notificationSettings.newMessage") }}
+      </div>
       <div class="notify-list">
         <div v-for="item in messageItems" :key="item.key" class="notify-row">
-          <span class="notify-name">{{ item.name }}</span>
+          <span class="notify-name">{{ t(item.nameKey) }}</span>
           <van-switch
             :model-value="prefs[item.key as keyof NotifyPrefs]"
             size="22px"
@@ -94,14 +121,16 @@ const goBack = () => router.back();
     </div>
 
     <div class="section-card">
-      <div class="section-title">通知详情</div>
+      <div class="section-title">
+        {{ t("settings.notificationSettings.notificationDetails") }}
+      </div>
       <div class="notify-list">
         <div v-for="item in detailItems" :key="item.key" class="notify-row">
           <div class="notify-text">
-            <span class="notify-name">{{ item.name }}</span>
-            <span class="notify-desc"
-              >关闭后通知将不展示消息内容，保护隐私</span
-            >
+            <span class="notify-name">{{ t(item.nameKey) }}</span>
+            <span class="notify-desc">{{
+              t("settings.notificationSettings.showMessageDetailsDesc")
+            }}</span>
           </div>
           <van-switch
             :model-value="prefs[item.key as keyof NotifyPrefs]"
@@ -113,14 +142,16 @@ const goBack = () => router.back();
     </div>
 
     <div class="section-card">
-      <div class="section-title">免打扰</div>
+      <div class="section-title">
+        {{ t("settings.notificationSettings.doNotDisturb") }}
+      </div>
       <div class="notify-list">
         <div v-for="item in dndItems" :key="item.key" class="notify-row">
           <div class="notify-text">
-            <span class="notify-name">{{ item.name }}</span>
-            <span class="notify-desc"
-              >夜间（23:00 - 次日 08:00）不推送提醒</span
-            >
+            <span class="notify-name">{{ t(item.nameKey) }}</span>
+            <span class="notify-desc">{{
+              t("settings.notificationSettings.nightDoNotDisturbDesc")
+            }}</span>
           </div>
           <van-switch
             :model-value="prefs[item.key as keyof NotifyPrefs]"
@@ -131,7 +162,9 @@ const goBack = () => router.back();
       </div>
     </div>
 
-    <p class="page-tip">提醒设置仅保存在本机，重新安装后需重新设置。</p>
+    <p class="page-tip">
+      {{ t("settings.notificationSettings.localTip") }}
+    </p>
   </div>
 </template>
 

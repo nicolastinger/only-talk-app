@@ -3,6 +3,7 @@ import { showToast } from "vant";
 import { initAppConfig, setHttpErrorHandler } from "@workspace/services";
 import App from "./App.vue";
 import router from "./router";
+import { initLocale } from "@/i18n";
 import UserTypeTag from "@/components/UserTypeTag.vue";
 import "vant/lib/index.css";
 import "@/styles/theme.css";
@@ -73,8 +74,9 @@ app.use(Switch);
 app.use(Progress);
 
 async function bootstrap() {
-  // 先加载客户端配置(公共库 client_config 表 → 内存), 设置 API base 后再挂载应用
+  // 先加载客户端配置(公共库 client_config 表 → 内存), 设置 API base 与默认语言后再挂载应用
   await initAppConfig().catch(() => {});
+  await initLocale();
   app.mount("#app");
 }
 

@@ -8,8 +8,10 @@ import {
   change_password_send_code,
   list_auth_factors,
 } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 
 const loading = ref(false);
 const emailFactor = ref<AuthFactorVO | null>(null);
@@ -66,10 +68,13 @@ const onSendCode = async () => {
   sending.value = true;
   try {
     await change_password_send_code({ factor_type: AuthFactorType.EMAIL });
-    showToast({ message: "验证码已发送", icon: "success" });
+    showToast({ message: t("settings.changePassword.codeSent"), icon: "success" });
     startCountdown();
   } catch (e) {
-    showToast({ message: (e as Error).message || "发送失败", icon: "fail" });
+    showToast({
+      message: (e as Error).message || t("settings.changePassword.sendFailed"),
+      icon: "fail",
+    });
   } finally {
     sending.value = false;
   }
@@ -77,15 +82,15 @@ const onSendCode = async () => {
 
 const onSubmit = async () => {
   if (!form.verificationCode.trim()) {
-    showToast("请输入验证码");
+    showToast(t("settings.changePassword.emptyCode"));
     return;
   }
   if (!PASSWORD_REGEX.test(form.newPassword)) {
-    showToast("密码必须为14位以上的字母或数字");
+    showToast(t("settings.changePassword.invalidPassword"));
     return;
   }
   if (form.newPassword !== form.confirmPassword) {
-    showToast("两次输入的密码不一致");
+    showToast(t("settings.changePassword.passwordMismatch"));
     return;
   }
   submitting.value = true;
@@ -95,13 +100,16 @@ const onSubmit = async () => {
       verification_code: form.verificationCode.trim(),
       new_password: form.newPassword,
     });
-    showToast({ message: "密码修改成功", icon: "success" });
+    showToast({ message: t("settings.changePassword.success"), icon: "success" });
     form.verificationCode = "";
     form.newPassword = "";
     form.confirmPassword = "";
     router.back();
   } catch (e) {
-    showToast({ message: (e as Error).message || "修改失败", icon: "fail" });
+    showToast({
+      message: (e as Error).message || t("settings.changePassword.failed"),
+      icon: "fail",
+    });
   } finally {
     submitting.value = false;
   }
@@ -117,17 +125,27 @@ onUnmounted(() => {
 
 <template>
   <div class="change-password-page">
-    <van-nav-bar title="修改密码" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.changePassword.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div v-if="!loading && !emailFactor" class="section-card empty-card">
-      <p class="empty-text">修改密码需要先绑定邮箱二次认证。</p>
-      <button class="primary-btn" @click="goBind">去绑定邮箱二次认证</button>
+      <p class="empty-text">{{ t("settings.changePassword.needBind") }}</p>
+      <button class="primary-btn" @click="goBind">
+        {{ t("settings.changePassword.goBind") }}
+      </button>
     </div>
 
     <div v-else-if="emailFactor" class="section-card">
-      <div class="section-title">邮箱验证</div>
+      <div class="section-title">
+        {{ t("settings.changePassword.emailSection") }}
+      </div>
       <div class="bound-row">
-        <span class="bound-label">验证方式</span>
+        <span class="bound-label">{{
+          t("settings.changePassword.verifyBy")
+        }}</span>
         <span class="bound-value">{{ maskedEmail }}</span>
       </div>
 
@@ -136,8 +154,8 @@ onUnmounted(() => {
           <van-field
             v-model="form.verificationCode"
             type="digit"
-            label="验证码"
-            placeholder="请输入验证码"
+            :label="t('settings.changePassword.codeLabel')"
+            :placeholder="t('settings.changePassword.codePlaceholder')"
             maxlength="6"
           />
           <button
@@ -145,30 +163,34 @@ onUnmounted(() => {
             :disabled="sending || countdown > 0"
             @click="onSendCode"
           >
-            {{ countdown > 0 ? `${countdown}s` : "获取验证码" }}
+            {{
+              countdown > 0
+                ? `${countdown}s`
+                : t("settings.changePassword.sendCode")
+            }}
           </button>
         </div>
         <van-field
           v-model="form.newPassword"
           type="password"
-          label="新密码"
-          placeholder="14位以上的字母或数字"
+          :label="t('settings.changePassword.newPasswordLabel')"
+          :placeholder="t('settings.changePassword.newPasswordPlaceholder')"
           clearable
         />
         <van-field
           v-model="form.confirmPassword"
           type="password"
-          label="确认密码"
-          placeholder="请再次输入新密码"
+          :label="t('settings.changePassword.confirmPasswordLabel')"
+          :placeholder="t('settings.changePassword.confirmPasswordPlaceholder')"
           clearable
         />
         <button class="primary-btn" :disabled="submitting" @click="onSubmit">
-          确认修改
+          {{ t("settings.changePassword.submit") }}
         </button>
       </div>
     </div>
 
-    <p class="page-tip">验证码将发送至已绑定的邮箱，5 分钟内有效。</p>
+    <p class="page-tip">{{ t("settings.changePassword.localTip") }}</p>
   </div>
 </template>
 

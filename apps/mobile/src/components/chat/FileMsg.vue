@@ -193,7 +193,7 @@ watch(() => props.bizId, refreshDownloaded);
   min-width: 0;
 }
 .file-name {
-  font-size: 13px;
+  font-size: calc(13px * var(--chat-font-scale, 1));
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;

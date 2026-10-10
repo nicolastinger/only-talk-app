@@ -3,9 +3,19 @@ import { kv_get, kv_set } from "@workspace/services";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type EffectiveTheme = "light" | "dark";
+export type ChatsFontSize = "small" | "medium" | "large";
 
 const THEME_KEY = "ui_theme";
+const FONT_KEY = "ui_chat_font_size";
 const validModes: ThemeMode[] = ["light", "dark", "system"];
+const validFontSizes: ChatsFontSize[] = ["small", "medium", "large"];
+
+/** 与 PC apps/pc/src/store/theme.ts 保持一致: 仅缩放聊天消息字体 */
+const FONT_SCALE: Record<ChatsFontSize, string> = {
+  small: "0.875",
+  medium: "1",
+  large: "1.125",
+};
 
 /** 与 theme.css 的 --page-bg 保持一致，用于无 View Transitions 时的遮罩兜底 */
 const PAGE_BG: Record<EffectiveTheme, string> = {
@@ -25,6 +35,13 @@ const effectiveTheme = computed<EffectiveTheme>(() =>
 function applyTheme(theme: EffectiveTheme) {
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
+}
+
+const fontSize = ref<ChatsFontSize>("medium");
+
+/** 应用聊天字体缩放(仅影响聊天消息字体) */
+function applyFontVars(size: ChatsFontSize) {
+  document.documentElement.style.setProperty("--chat-font-scale", FONT_SCALE[size]);
 }
 
 /** 点击点到最远角的距离，作为圆形遮罩的半径 */
@@ -111,6 +128,14 @@ kv_get(THEME_KEY)
   })
   .catch(() => {});
 
+kv_get(FONT_KEY)
+  .then((value) => {
+    if (value && validFontSizes.includes(value as ChatsFontSize)) {
+      fontSize.value = value as ChatsFontSize;
+    }
+  })
+  .catch(() => {});
+
 let initialized = false;
 
 export function useTheme() {
@@ -143,5 +168,13 @@ export function useTheme() {
 
   watch(effectiveTheme, applyTheme, { immediate: true });
 
-  return { mode, effectiveTheme, setMode };
+  watch(fontSize, applyFontVars, { immediate: true });
+
+  const setFontSize = (value: ChatsFontSize) => {
+    if (value === fontSize.value) return;
+    fontSize.value = value;
+    kv_set(FONT_KEY, value).catch(() => {});
+  };
+
+  return { mode, fontSize, effectiveTheme, setMode, setFontSize };
 }

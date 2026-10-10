@@ -12,12 +12,14 @@ import {
   isBackendSuccess,
 } from "@workspace/services";
 import type { BlackListVo, RustResponse, UserInfo } from "@workspace/types";
+import { useI18n } from "@/i18n";
 
 interface BlackItem extends BlackListVo {
   avatarUrl: string;
 }
 
 const router = useRouter();
+const { t } = useI18n();
 const { getAvatarUrl } = useAvatar();
 
 const list = ref<BlackItem[]>([]);
@@ -53,7 +55,7 @@ const loadList = async () => {
     list.value = items;
   } catch (error) {
     console.error("获取黑名单失败:", error);
-    showToast({ message: "获取黑名单失败", icon: "fail" });
+    showToast({ message: t("settings.blacklist.loadFailed"), icon: "fail" });
   } finally {
     loading.value = false;
   }
@@ -68,7 +70,7 @@ const goBack = () => router.back();
 const onSearch = async () => {
   const key = searchKey.value.trim();
   if (!key) {
-    showToast({ message: "请输入要拉黑的人的账号", icon: "none" });
+    showToast({ message: t("settings.blacklist.enterAccount"), icon: "none" });
     return;
   }
   searching.value = true;
@@ -81,11 +83,11 @@ const onSearch = async () => {
       searchResult.value = user;
       searchAvatar.value = user.icon ? ((await getAvatarUrl(user.icon)) || "") : "";
     } else {
-      showToast({ message: "未找到该用户", icon: "none" });
+      showToast({ message: t("settings.blacklist.notFound"), icon: "none" });
     }
   } catch (error) {
     console.error("搜索用户失败:", error);
-    showToast({ message: "未找到该用户", icon: "none" });
+    showToast({ message: t("settings.blacklist.notFound"), icon: "none" });
   } finally {
     searching.value = false;
   }
@@ -95,24 +97,32 @@ const confirmBlock = () => {
   const user = searchResult.value;
   if (!user?.uuid) return;
   showDialog({
-    title: "拉黑用户",
-    message: `确定要拉黑 ${user.username || user.account || "该用户"} 吗？拉黑后将不再接收其消息。`,
-    confirmButtonText: "拉黑",
+    title: t("settings.blacklist.blockConfirmTitle"),
+    message: t("settings.blacklist.blockConfirmMsg", {
+      name: user.username || user.account || user.uuid,
+    }),
+    confirmButtonText: t("settings.blacklist.block"),
     confirmButtonColor: "#ef4444",
-    cancelButtonText: "取消",
+    cancelButtonText: t("common.cancel"),
   })
     .then(async () => {
       blockLoading.value = true;
       try {
         await block_friend(user.uuid);
-        showToast({ message: "已拉黑", icon: "success" });
+        showToast({
+          message: t("settings.blacklist.blockSuccess"),
+          icon: "success",
+        });
         searchKey.value = "";
         searchResult.value = null;
         searchAvatar.value = "";
         loadList();
       } catch (error) {
         console.error("拉黑失败:", error);
-        showToast({ message: "拉黑失败", icon: "fail" });
+        showToast({
+          message: t("settings.blacklist.blockFailed"),
+          icon: "fail",
+        });
       } finally {
         blockLoading.value = false;
       }
@@ -122,19 +132,27 @@ const confirmBlock = () => {
 
 const confirmUnblock = (item: BlackItem) => {
   showDialog({
-    title: "移出黑名单",
-    message: `确定将 ${item.username || item.account || "该用户"} 移出黑名单吗？`,
-    confirmButtonText: "移出",
-    cancelButtonText: "取消",
+    title: t("settings.blacklist.unblockConfirmTitle"),
+    message: t("settings.blacklist.unblockConfirmMsg", {
+      name: item.username || item.account || item.uuid,
+    }),
+    confirmButtonText: t("settings.blacklist.unblockConfirmBtn"),
+    cancelButtonText: t("common.cancel"),
   })
     .then(async () => {
       try {
         await unblock_friend(item.uuid);
-        showToast({ message: "已移出", icon: "success" });
+        showToast({
+          message: t("settings.blacklist.unblockSuccess"),
+          icon: "success",
+        });
         loadList();
       } catch (error) {
         console.error("移出黑名单失败:", error);
-        showToast({ message: "移出失败", icon: "fail" });
+        showToast({
+          message: t("settings.blacklist.unblockFailed"),
+          icon: "fail",
+        });
       }
     })
     .catch(() => {});
@@ -143,18 +161,26 @@ const confirmUnblock = (item: BlackItem) => {
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="黑名单" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.blacklist.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="search-box">
       <input
         v-model="searchKey"
         type="text"
-        placeholder="输入对方账号，拉黑后无法收到其消息"
+        :placeholder="t('settings.blacklist.searchPlaceholder')"
         class="search-input"
         @keyup.enter="onSearch"
       />
       <button class="search-btn" :disabled="searching" @click="onSearch">
-        {{ searching ? "搜索中" : "搜索" }}
+        {{
+          searching
+            ? t("settings.blacklist.searching")
+            : t("settings.blacklist.search")
+        }}
       </button>
     </div>
 
@@ -174,18 +200,26 @@ const confirmUnblock = (item: BlackItem) => {
           <div class="black-account">{{ searchResult.account || "-" }}</div>
         </div>
         <button class="btn-danger" :disabled="blockLoading" @click="confirmBlock">
-          {{ blockLoading ? "拉黑中" : "拉黑" }}
+          {{
+            blockLoading
+              ? t("settings.blacklist.blocking")
+              : t("settings.blacklist.block")
+          }}
         </button>
       </div>
     </div>
 
     <div class="section-card">
       <div class="card-header">
-        <span class="header-title">已拉黑（{{ list.length }}）</span>
+        <span class="header-title">{{
+          t("settings.blacklist.blockedCount", { count: list.length })
+        }}</span>
       </div>
-      <div v-if="loading" class="list-state">加载中...</div>
+      <div v-if="loading" class="list-state">
+        {{ t("settings.blacklist.loading") }}
+      </div>
       <div v-else-if="list.length === 0" class="list-state empty-state">
-        黑名单为空，被拉黑的人将无法再向你发送消息
+        {{ t("settings.blacklist.empty") }}
       </div>
       <div v-else>
         <div v-for="item in list" :key="item.uuid" class="black-item">
@@ -202,7 +236,9 @@ const confirmUnblock = (item: BlackItem) => {
             </div>
             <div class="black-account">{{ item.account || "-" }}</div>
           </div>
-          <button class="btn-plain" @click="confirmUnblock(item)">移出</button>
+          <button class="btn-plain" @click="confirmUnblock(item)">
+            {{ t("settings.blacklist.unblock") }}
+          </button>
         </div>
       </div>
     </div>

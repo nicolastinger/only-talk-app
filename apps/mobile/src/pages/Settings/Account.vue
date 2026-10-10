@@ -6,6 +6,7 @@ import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { getMyAccount } from "@/utils/api";
 import { calcAgeFromBirthday } from "@/utils/time";
 import { kv_get, kv_set } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 interface PrivacyPrefs {
   searchByPhone: boolean;
@@ -30,6 +31,7 @@ const loadPrefs = async (): Promise<PrivacyPrefs> => {
 };
 
 const router = useRouter();
+const { t } = useI18n();
 const { userInfo, loadUserInfo } = useUserStore();
 const { getAvatarUrl } = useAvatar();
 const prefs = reactive<PrivacyPrefs>(defaultPrefs());
@@ -41,11 +43,11 @@ watch(prefs, (value) => {
 });
 
 const genderLabel = (gender?: number) => {
-  if (gender === 2) return "男";
-  if (gender === 3) return "女";
-  if (gender === 1) return "保密";
-  if (gender === 4) return "机器人";
-  if (gender === 5) return "其他";
+  if (gender === 2) return t("settings.accountPrivacy.genderLabels.male");
+  if (gender === 3) return t("settings.accountPrivacy.genderLabels.female");
+  if (gender === 1) return t("settings.accountPrivacy.genderLabels.secret");
+  if (gender === 4) return t("settings.accountPrivacy.genderLabels.robot");
+  if (gender === 5) return t("settings.accountPrivacy.genderLabels.other");
   return "-";
 };
 
@@ -82,7 +84,11 @@ const onChangePassword = () => {
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="账号与隐私" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.accountPrivacy.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="user-card">
       <div class="user-content">
@@ -94,16 +100,20 @@ const onChangePassword = () => {
         />
         <div class="user-info">
           <div class="user-name">
-            {{ userInfo?.username || account || "用户" }}
+            {{ userInfo?.username || account || t("settings.accountPrivacy.user") }}
             <UserTypeTag :type="userInfo?.user_type" />
           </div>
           <div class="user-account">
-            账号：{{ userInfo?.account || account || "-" }}
+            {{ t("settings.accountPrivacy.accountLabel") }}：{{
+              userInfo?.account || account || "-"
+            }}
           </div>
         </div>
       </div>
       <div class="account-info">
-        <span class="account-label">手机号</span>
+        <span class="account-label">{{
+          t("settings.accountPrivacy.phoneNumber")
+        }}</span>
         <span class="account-value">
           {{
             userInfo?.phone
@@ -113,52 +123,62 @@ const onChangePassword = () => {
         </span>
       </div>
       <div class="account-info">
-        <span class="account-label">邮箱</span>
+        <span class="account-label">{{ t("settings.accountPrivacy.email") }}</span>
         <span class="account-value">{{ userInfo?.email || "-" }}</span>
       </div>
       <div class="account-info">
-        <span class="account-label">性别</span>
+        <span class="account-label">{{ t("settings.accountPrivacy.gender") }}</span>
         <span class="account-value">{{ genderLabel(userInfo?.gender) }}</span>
       </div>
       <div class="account-info">
-        <span class="account-label">年龄</span>
+        <span class="account-label">{{ t("settings.accountPrivacy.age") }}</span>
         <span class="account-value">{{
           calcAgeFromBirthday(userInfo?.birthday) ?? "-"
         }}</span>
       </div>
       <div class="account-info">
-        <span class="account-label">生日</span>
+        <span class="account-label">{{
+          t("settings.accountPrivacy.birthday")
+        }}</span>
         <span class="account-value">{{
           formatBirthday(userInfo?.birthday)
         }}</span>
       </div>
       <div class="account-info">
-        <span class="account-label">个人简介</span>
+        <span class="account-label">{{ t("settings.accountPrivacy.bio") }}</span>
         <span class="account-value">{{ userInfo?.info || "-" }}</span>
       </div>
     </div>
 
     <div class="section-card">
       <div class="link-row" @click="goEditProfile">
-        <span class="link-name">编辑资料</span>
+        <span class="link-name">{{
+          t("settings.accountPrivacy.editProfile")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
       <div class="link-row" @click="goBlacklist">
-        <span class="link-name">黑名单管理</span>
+        <span class="link-name">{{
+          t("settings.accountPrivacy.manageBlacklist")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
       <div class="link-row" @click="goAuthFactor">
-        <span class="link-name">二次认证</span>
+        <span class="link-name">{{
+          t("settings.accountPrivacy.authFactor")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
       <div class="link-row" @click="onChangePassword">
-        <span class="link-name">修改密码</span>
+        <span class="link-name">{{
+          t("settings.accountPrivacy.changePassword")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
@@ -166,18 +186,24 @@ const onChangePassword = () => {
     </div>
 
     <div class="section-card">
-      <div class="section-title">隐私设置</div>
+      <div class="section-title">
+        {{ t("settings.accountPrivacy.privacySettings") }}
+      </div>
       <div class="pref-row">
-        <span class="pref-name">允许通过手机号找到我</span>
+        <span class="pref-name">{{
+          t("settings.accountPrivacy.allowSearchByPhone")
+        }}</span>
         <van-switch v-model="prefs.searchByPhone" size="22px" />
       </div>
       <div class="pref-row">
-        <span class="pref-name">允许被推荐给可能认识的人</span>
+        <span class="pref-name">{{
+          t("settings.accountPrivacy.allowRecommend")
+        }}</span>
         <van-switch v-model="prefs.recommend" size="22px" />
       </div>
     </div>
 
-    <p class="page-tip">隐私开关设置仅保存在本机。</p>
+    <p class="page-tip">{{ t("settings.accountPrivacy.localTip") }}</p>
   </div>
 </template>
 

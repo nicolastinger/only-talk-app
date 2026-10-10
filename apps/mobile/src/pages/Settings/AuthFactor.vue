@@ -9,8 +9,10 @@ import {
   list_auth_factors,
   send_auth_factor_code,
 } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 
 const loading = ref(false);
 const emailFactor = ref<AuthFactorVO | null>(null);
@@ -68,7 +70,7 @@ const loadFactors = async () => {
 
 const onSendCode = async () => {
   if (!EMAIL_REGEX.test(email.value.trim())) {
-    showToast("请输入正确的邮箱");
+    showToast(t("settings.authFactor.invalidEmail"));
     return;
   }
   sending.value = true;
@@ -77,10 +79,13 @@ const onSendCode = async () => {
       factor_type: AuthFactorType.EMAIL,
       factor_value: email.value.trim(),
     });
-    showToast({ message: "验证码已发送", icon: "success" });
+    showToast({ message: t("settings.authFactor.codeSent"), icon: "success" });
     startCountdown();
   } catch (e) {
-    showToast({ message: (e as Error).message || "发送失败", icon: "fail" });
+    showToast({
+      message: (e as Error).message || t("settings.authFactor.sendFailed"),
+      icon: "fail",
+    });
   } finally {
     sending.value = false;
   }
@@ -88,11 +93,11 @@ const onSendCode = async () => {
 
 const onBind = async () => {
   if (!EMAIL_REGEX.test(email.value.trim())) {
-    showToast("请输入正确的邮箱");
+    showToast(t("settings.authFactor.invalidEmail"));
     return;
   }
   if (!code.value.trim()) {
-    showToast("请输入验证码");
+    showToast(t("settings.authFactor.emptyCode"));
     return;
   }
   binding.value = true;
@@ -102,12 +107,15 @@ const onBind = async () => {
       factor_value: email.value.trim(),
       verification_code: code.value.trim(),
     });
-    showToast({ message: "绑定成功", icon: "success" });
+    showToast({ message: t("settings.authFactor.bindSuccess"), icon: "success" });
     email.value = "";
     code.value = "";
     await loadFactors();
   } catch (e) {
-    showToast({ message: (e as Error).message || "绑定失败", icon: "fail" });
+    showToast({
+      message: (e as Error).message || t("settings.authFactor.bindFailed"),
+      icon: "fail",
+    });
   } finally {
     binding.value = false;
   }
@@ -128,10 +136,13 @@ const onSendUnbindCode = async () => {
       factor_type: AuthFactorType.EMAIL,
       scene: "unbind",
     });
-    showToast({ message: "验证码已发送", icon: "success" });
+    showToast({ message: t("settings.authFactor.codeSent"), icon: "success" });
     startUnbindCountdown();
   } catch (e) {
-    showToast({ message: (e as Error).message || "发送失败", icon: "fail" });
+    showToast({
+      message: (e as Error).message || t("settings.authFactor.sendFailed"),
+      icon: "fail",
+    });
   } finally {
     unbindSending.value = false;
   }
@@ -140,7 +151,7 @@ const onSendUnbindCode = async () => {
 const onUnbindConfirm = async () => {
   if (!emailFactor.value) return;
   if (!unbindCode.value.trim()) {
-    showToast("请输入验证码");
+    showToast(t("settings.authFactor.emptyCode"));
     return;
   }
   unbindConfirming.value = true;
@@ -150,11 +161,17 @@ const onUnbindConfirm = async () => {
       factor_type: AuthFactorType.EMAIL,
       verification_code: unbindCode.value.trim(),
     });
-    showToast({ message: "已解绑", icon: "success" });
+    showToast({
+      message: t("settings.authFactor.unbindSuccess"),
+      icon: "success",
+    });
     unbindVisible.value = false;
     await loadFactors();
   } catch (e) {
-    showToast({ message: (e as Error).message || "解绑失败", icon: "fail" });
+    showToast({
+      message: (e as Error).message || t("settings.authFactor.unbindFailed"),
+      icon: "fail",
+    });
   } finally {
     unbindConfirming.value = false;
   }
@@ -171,33 +188,39 @@ onUnmounted(() => {
 
 <template>
   <div class="auth-factor-page">
-    <van-nav-bar title="二次认证" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.authFactor.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="section-card">
-      <div class="section-title">邮箱认证</div>
+      <div class="section-title">{{ t("settings.authFactor.emailSection") }}</div>
 
       <div v-if="emailFactor" class="bound-card">
         <div class="bound-info">
           <span class="bound-value">{{ emailFactor.factor_value }}</span>
-          <span class="bound-tag">已绑定</span>
+          <span class="bound-tag">{{ t("settings.authFactor.bound") }}</span>
         </div>
-        <button class="unbind-btn" @click="onUnbind">解绑</button>
+        <button class="unbind-btn" @click="onUnbind">
+          {{ t("settings.authFactor.unbind") }}
+        </button>
       </div>
 
       <div v-else class="bind-form">
         <van-field
           v-model="email"
           type="email"
-          label="邮箱"
-          placeholder="请输入邮箱"
+          :label="t('settings.authFactor.emailLabel')"
+          :placeholder="t('settings.authFactor.emailPlaceholder')"
           clearable
         />
         <div class="code-row">
           <van-field
             v-model="code"
             type="digit"
-            label="验证码"
-            placeholder="请输入验证码"
+            :label="t('settings.authFactor.codeLabel')"
+            :placeholder="t('settings.authFactor.codePlaceholder')"
             maxlength="6"
           />
           <button
@@ -205,42 +228,54 @@ onUnmounted(() => {
             :disabled="sending || countdown > 0"
             @click="onSendCode"
           >
-            {{ countdown > 0 ? `${countdown}s` : "获取验证码" }}
+            {{
+              countdown > 0
+                ? `${countdown}s`
+                : t("settings.authFactor.sendCode")
+            }}
           </button>
         </div>
         <button class="bind-btn" :disabled="binding" @click="onBind">
-          绑定
+          {{ t("settings.authFactor.bind") }}
         </button>
       </div>
     </div>
 
     <div class="section-card">
-      <div class="section-title">其他渠道</div>
+      <div class="section-title">{{ t("settings.authFactor.otherSection") }}</div>
       <div class="disabled-row">
-        <span class="disabled-name">手机号认证</span>
-        <span class="disabled-tag">敬请期待</span>
+        <span class="disabled-name">{{ t("settings.authFactor.phone") }}</span>
+        <span class="disabled-tag">{{
+          t("settings.authFactor.comingSoon")
+        }}</span>
       </div>
       <div class="disabled-row">
-        <span class="disabled-name">其他认证</span>
-        <span class="disabled-tag">敬请期待</span>
+        <span class="disabled-name">{{ t("settings.authFactor.other") }}</span>
+        <span class="disabled-tag">{{
+          t("settings.authFactor.comingSoon")
+        }}</span>
       </div>
     </div>
 
-    <p class="page-tip">
-      绑定二次认证后，可用于账号安全校验。当前仅开放邮箱渠道。
-    </p>
+    <p class="page-tip">{{ t("settings.authFactor.tip") }}</p>
 
     <van-popup v-model:show="unbindVisible" position="bottom" round>
       <div class="unbind-sheet">
-        <div class="unbind-sheet-title">解绑二次认证</div>
+        <div class="unbind-sheet-title">
+          {{ t("settings.authFactor.unbindConfirmTitle") }}
+        </div>
         <div class="unbind-sheet-desc">
-          向 {{ emailFactor?.factor_value }} 发送验证码以确认解绑
+          {{
+            t("settings.authFactor.unbindCodeDesc", {
+              email: emailFactor?.factor_value,
+            })
+          }}
         </div>
         <div class="unbind-code-row">
           <van-field
             v-model="unbindCode"
             type="digit"
-            placeholder="请输入验证码"
+            :placeholder="t('settings.authFactor.codePlaceholder')"
             maxlength="6"
           />
           <button
@@ -248,19 +283,23 @@ onUnmounted(() => {
             :disabled="unbindSending || unbindCountdown > 0"
             @click="onSendUnbindCode"
           >
-            {{ unbindCountdown > 0 ? `${unbindCountdown}s` : "获取验证码" }}
+            {{
+              unbindCountdown > 0
+                ? `${unbindCountdown}s`
+                : t("settings.authFactor.sendCode")
+            }}
           </button>
         </div>
         <div class="unbind-actions">
           <button class="unbind-cancel" @click="unbindVisible = false">
-            取消
+            {{ t("common.cancel") }}
           </button>
           <button
             class="unbind-confirm"
             :disabled="unbindConfirming"
             @click="onUnbindConfirm"
           >
-            确认解绑
+            {{ t("settings.authFactor.confirmUnbind") }}
           </button>
         </div>
       </div>

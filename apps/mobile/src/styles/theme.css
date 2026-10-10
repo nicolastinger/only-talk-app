@@ -9,6 +9,9 @@
   --brand-blue-bg: rgb(236, 242, 254);
   --color-primary: rgb(64, 150, 255);
 
+  /* ===== 聊天消息字体缩放(对齐 PC --chat-font-scale, 仅作用于聊天消息) ===== */
+  --chat-font-scale: 1;
+
   /* ===== Primary Blue Scale ===== */
   --blue-50: #eff6ff;
   --blue-100: #dbeafe;

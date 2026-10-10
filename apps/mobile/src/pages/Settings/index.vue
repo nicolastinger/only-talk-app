@@ -2,90 +2,97 @@
 import { useRouter } from "vue-router";
 import { showDialog, showToast } from "vant";
 import { useAuthStore } from "@/stores/auth";
+import { useI18n } from "@/i18n";
 
 interface SettingsEntry {
   key: string;
-  name: string;
-  desc?: string;
+  nameKey: string;
+  descKey?: string;
   icon: string;
   path: string;
 }
 
+interface SettingsGroup {
+  titleKey: string;
+  items: SettingsEntry[];
+}
+
 const router = useRouter();
+const { t } = useI18n();
 const { clearAuth } = useAuthStore();
 
-const groups: { title: string; items: SettingsEntry[] }[] = [
+const groups: SettingsGroup[] = [
   {
-    title: "偏好设置",
+    titleKey: "settings.groups.preferences",
     items: [
       {
         key: "general",
-        name: "通用设置",
-        desc: "主题等",
+        nameKey: "settings.menu.general.name",
+        descKey: "settings.menu.general.desc",
         icon: "general",
         path: "/settings/general",
       },
     ],
   },
   {
-    title: "通知",
+    titleKey: "settings.groups.notification",
     items: [
       {
         key: "notification",
-        name: "通知",
-        desc: "管理所有通知功能",
+        nameKey: "settings.menu.notification.name",
+        descKey: "settings.menu.notification.desc",
         icon: "notification",
         path: "/settings/notification",
       },
     ],
   },
   {
-    title: "账号与广场",
+    titleKey: "settings.groups.accountPlaza",
     items: [
       {
         key: "account",
-        name: "账号与隐私",
-        desc: "我的资料",
+        nameKey: "settings.menu.account.name",
+        descKey: "settings.menu.account.desc",
         icon: "account",
         path: "/settings/account",
       },
       {
         key: "auth-factor",
-        name: "二次认证",
-        desc: "绑定邮箱二次认证",
+        nameKey: "settings.menu.authFactor.name",
+        descKey: "settings.menu.authFactor.desc",
         icon: "authFactor",
         path: "/settings/auth-factor",
       },
       {
         key: "blacklist",
-        name: "黑名单",
-        desc: "管理已拉黑的人",
+        nameKey: "settings.menu.blacklist.name",
+        descKey: "settings.menu.blacklist.desc",
         icon: "blacklist",
         path: "/settings/blacklist",
       },
       {
         key: "plaza",
-        name: "广场设置",
-        desc: "交友宣言与标签",
+        nameKey: "settings.menu.plaza.name",
+        descKey: "settings.menu.plaza.desc",
         icon: "plaza",
         path: "/settings/plaza",
       },
     ],
   },
   {
-    title: "其他",
+    titleKey: "settings.groups.other",
     items: [
       {
         key: "about",
-        name: "关于 Only Talk",
-        desc: "版本信息",
+        nameKey: "settings.menu.about.name",
+        descKey: "settings.menu.about.desc",
         icon: "about",
         path: "/settings/about",
       },
       {
         key: "developer",
-        name: "开发者",
-        desc: "同步任务等调试信息",
+        nameKey: "settings.menu.developer.name",
+        descKey: "settings.menu.developer.desc",
         icon: "developer",
         path: "/settings/developer",
       },
@@ -107,15 +114,15 @@ const goEntry = (entry: SettingsEntry) => {
 
 const onLogout = () => {
   showDialog({
-    title: "退出登录",
-    message: "确定要退出登录吗？",
-    confirmButtonText: "退出",
+    title: t("settings.logoutTitle"),
+    message: t("settings.logoutConfirm"),
+    confirmButtonText: t("settings.logoutConfirmBtn"),
     confirmButtonColor: "#ef4444",
-    cancelButtonText: "取消",
+    cancelButtonText: t("common.cancel"),
   })
     .then(() => {
       clearAuth();
-      showToast({ message: "已退出登录", icon: "success" });
+      showToast({ message: t("settings.logoutDone"), icon: "success" });
       router.replace("/login");
     })
     .catch(() => {});
@@ -124,10 +131,14 @@ const onLogout = () => {
 
 <template>
   <div class="settings-page">
-    <van-nav-bar title="设置" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
-    <div v-for="group in groups" :key="group.title" class="settings-section">
-      <div class="section-title">{{ group.title }}</div>
+    <div v-for="group in groups" :key="group.titleKey" class="settings-section">
+      <div class="section-title">{{ t(group.titleKey) }}</div>
       <div class="menu-card">
         <div
           v-for="item in group.items"
@@ -217,8 +228,10 @@ const onLogout = () => {
               />
             </svg>
             <div class="menu-text">
-              <span class="menu-name">{{ item.name }}</span>
-              <span v-if="item.desc" class="menu-desc">{{ item.desc }}</span>
+              <span class="menu-name">{{ t(item.nameKey) }}</span>
+              <span v-if="item.descKey" class="menu-desc">{{
+                t(item.descKey)
+              }}</span>
             </div>
           </div>
           <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
@@ -229,7 +242,9 @@ const onLogout = () => {
     </div>
 
     <div class="logout-section">
-      <button class="logout-btn" @click="onLogout">退出登录</button>
+      <button class="logout-btn" @click="onLogout">
+        {{ t("settings.logout") }}
+      </button>
     </div>
   </div>
 </template>
