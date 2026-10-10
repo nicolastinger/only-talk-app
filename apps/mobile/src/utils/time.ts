@@ -1,4 +1,5 @@
 import { getMessageDisplayText } from "@/chat/messageParse";
+import { t } from "@/i18n";
 
 export function formatMessageTime(timestamp: number): string {
   const now = new Date();
@@ -28,7 +29,7 @@ export function formatMessageTime(timestamp: number): string {
 
   if (isToday) return timeStr;
 
-  if (isYesterday) return "昨天";
+  if (isYesterday) return t("time.yesterday");
 
   if (nowYear === msgYear) {
     return `${String(msgMonth + 1).padStart(2, "0")}/${String(msgDay).padStart(
@@ -68,14 +69,14 @@ export function formatMomentTime(timestampSeconds?: number): string {
   const dayDiff = Math.floor((startToday - startDate) / (24 * 60 * 60 * 1000));
   const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
 
-  if (diffMin < 1) return "刚刚";
-  if (diffMin < 60) return `${diffMin} 分钟前`;
+  if (diffMin < 1) return t("time.justNow");
+  if (diffMin < 60) return t("time.minutesAgo", { minutes: diffMin });
   if (dayDiff === 0) {
     const diffHour = Math.floor(diffMin / 60);
-    return `${diffHour} 小时前`;
+    return t("time.hoursAgo", { hours: diffHour });
   }
-  if (dayDiff === 1) return "昨天";
-  if (dayDiff > 1 && dayDiff < 7) return `${dayDiff} 天前`;
+  if (dayDiff === 1) return t("time.yesterday");
+  if (dayDiff > 1 && dayDiff < 7) return t("time.daysAgo", { days: dayDiff });
 
   const sameYear = now.getFullYear() === date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");

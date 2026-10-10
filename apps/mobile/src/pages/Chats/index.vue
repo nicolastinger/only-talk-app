@@ -18,8 +18,10 @@ import { getMyUuid } from "@/utils/api";
 import { formatMessageTime, getMessagePreview } from "@/utils/time";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type { ChatSessionVo, FriendVo, GroupListItemVo } from "@workspace/types";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 const { sessions, refresh } = useChatSessions();
 const { hideSession } = useUnreadStore();
 const { unreadCount: annUnread, fetchList: fetchAnnouncements, openList: openAnnouncements } =
@@ -99,23 +101,23 @@ const loadFriends = async () => {
 };
 
 const getDisplayName = (item: ChatSessionVo) => {
-  if (isSelfChat(item)) return "我的笔记";
+  if (isSelfChat(item)) return t("chats.selfChatName");
   if (isGroupChat(item)) {
     if (item.friend_name) return item.friend_name;
     const group = groupInfoOf(item);
     if (group?.group_name) return group.group_name;
-    return "群聊";
+    return t("chats.groupChat");
   }
   if (item.friend_name) return item.friend_name;
   const peer = peerIdOf(item);
   const friend = friendMap.value[peer];
   if (friend?.friend_name) return friend.friend_name;
   if (peer) return shortId(peer);
-  return "未知";
+  return t("chats.unknown");
 };
 
 const shortId = (id: string): string =>
-  id.length > 12 ? `用户${id.slice(-6)}` : id;
+  id.length > 12 ? t("chats.userId", { id: id.slice(-6) }) : id;
 
 const getDisplayMessage = (item: ChatSessionVo) =>
   getMessagePreview(item.text_type, item.last_message);
@@ -124,7 +126,7 @@ const isPinned = (item: ChatSessionVo) => !!(item.is_top && item.is_top > 0);
 
 const getGroupInitial = (item: ChatSessionVo) => {
   const name = getDisplayName(item).trim();
-  return name ? name.slice(0, 1).toUpperCase() : "群";
+  return name ? name.slice(0, 1).toUpperCase() : t("chats.groupInitial");
 };
 
 const iconUrlOf = (item: ChatSessionVo): string | null => {
@@ -226,8 +228,8 @@ const searchList = computed(() => {
 });
 
 const emptyText = computed(() => {
-  if (debouncedSearch.value) return "未找到相关会话";
-  return "暂无会话";
+  if (debouncedSearch.value) return t("chats.noSearchResult");
+  return t("chats.empty");
 });
 
 const onRefresh = async () => {
@@ -240,17 +242,17 @@ const onRefresh = async () => {
 const onClearAllUnread = async () => {
   try {
     await showConfirmDialog({
-      title: "全部已读",
-      message: "确定将所有会话标记为已读吗？",
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
+      title: t("chats.markAllRead"),
+      message: t("chats.markAllReadConfirm"),
+      confirmButtonText: t("common.confirm"),
+      cancelButtonText: t("common.cancel"),
     });
   } catch {
     return;
   }
   await clearAllUnreadSessions();
   await refresh();
-  showToast({ message: "已全部标记为已读", icon: "success" });
+  showToast({ message: t("chats.markAllReadDone"), icon: "success" });
 };
 
 const openChat = async (item: ChatSessionVo) => {
@@ -277,14 +279,14 @@ const openChat = async (item: ChatSessionVo) => {
 const deleteSession = async (item: ChatSessionVo) => {
   try {
     await showConfirmDialog({
-      title: "删除会话",
-      message: "确定删除此会话吗？",
-      confirmButtonText: "删除",
+      title: t("chats.deleteTitle"),
+      message: t("chats.deleteConfirm"),
+      confirmButtonText: t("common.delete"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
     await hideSession(item);
-    showToast({ message: "已隐藏，新消息将重新显示", icon: "success" });
+    showToast({ message: t("chats.deleteDone"), icon: "success" });
   } catch (e) {
     if (e !== "cancel") console.error("删除会话失败:", e);
   }
@@ -311,12 +313,12 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
             d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
           />
         </svg>
-        <span class="page-title">会话</span>
+        <span class="page-title">{{ t("chats.title") }}</span>
         <div class="header-actions">
           <button
             class="hdr-btn"
-            aria-label="系统公告"
-            title="系统公告"
+            :aria-label="t('chats.announcements')"
+            :title="t('chats.announcements')"
             @click="openAnnouncementCenter"
           >
             <span class="bell-wrap">
@@ -332,8 +334,8 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
           </button>
           <button
             class="hdr-btn"
-            aria-label="全部已读"
-            title="全部已读"
+            :aria-label="t('chats.markAllRead')"
+            :title="t('chats.markAllRead')"
             @click="onClearAllUnread"
           >
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -361,7 +363,7 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
           <input
             v-model="searchText"
             type="text"
-            placeholder="搜索"
+            :placeholder="t('common.search')"
             class="search-input"
           />
           <button v-if="searchText" class="clear-btn" @click="searchText = ''">
@@ -378,9 +380,9 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
     <PullRefresh
       v-model="refreshing"
       :head-height="80"
-      pulling-text="下拉刷新"
-      loosing-text="释放刷新"
-      loading-text="加载中..."
+      :pulling-text="t('common.pullDown')"
+      :loosing-text="t('common.pullRelease')"
+      :loading-text="t('common.loadingDots')"
       @refresh="onRefresh"
     >
       <div v-if="searchList.length > 0" class="session-list">
@@ -430,7 +432,9 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
                     class="session-name"
                     v-html="highlightText(getDisplayName(item))"
                   ></span>
-                  <span v-if="isGroupChat(item)" class="group-badge">群</span>
+                  <span v-if="isGroupChat(item)" class="group-badge">{{
+                    t("chats.groupBadge")
+                  }}</span>
                   <UserTypeTag
                     v-if="item.session_type !== 2"
                     :type="item.friend_user_type"
@@ -460,7 +464,7 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
                   d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
                 />
               </svg>
-              <span>删除</span>
+              <span>{{ t("common.delete") }}</span>
             </div>
           </template>
         </SwipeCell>
@@ -470,7 +474,7 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
           <img
             src="@/assets/empty-state.svg"
             class="empty-state-img"
-            alt="暂无内容"
+            :alt="t('common.noContent')"
           />
         </template>
       </Empty>

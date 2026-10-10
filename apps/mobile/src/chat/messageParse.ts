@@ -22,6 +22,7 @@ import {
   MSG_TYPE_TEXT,
   MSG_TYPE_WEBRTC_SIGNAL,
 } from "./messageTypes";
+import { t } from "@/i18n";
 
 /**
  * 聊天消息 raw 解析层。
@@ -66,7 +67,7 @@ export const extensionOf = (fileName: string): string => {
 export const parsePrivateText = (raw: string): string => {
   const parsed = tryParseJson<{ text?: string; content?: string }>(raw);
   const text = parsed?.text || parsed?.content || raw;
-  return text || "[空消息]";
+  return text || t("chat.typeEmpty");
 };
 
 /** 单聊图片 biz_id：raw = ImageRecord JSON */
@@ -98,9 +99,10 @@ export const parseGroupText = (raw: string): string => {
   if (isLocalFilePath(raw)) return raw;
   const outer = unwrapGroupOuter(raw);
   const inner = outer ? outer.text : raw;
-  if (!inner) return raw || "[空消息]";
+  if (!inner) return raw || t("chat.typeEmpty");
   const nested = tryParseJson<{ text?: string }>(inner);
-  if (nested && typeof nested.text === "string") return nested.text || "[空消息]";
+  if (nested && typeof nested.text === "string")
+    return nested.text || t("chat.typeEmpty");
   return inner;
 };
 
@@ -130,7 +132,7 @@ export const parseGroupFileRecord = (raw: string): GroupFileRecord | null => {
 export const parseSystemContent = (raw: string): string => {
   const parsed = tryParseJson<{ text?: string; content?: string }>(raw);
   const text = parsed?.text || parsed?.content || raw;
-  return text || "[通知]";
+  return text || t("chat.typeNotice");
 };
 
 /* ==================== 消息撤回（伪撤回） ==================== */
@@ -183,7 +185,7 @@ export const getMessageDisplayText = (
   text_type: number,
   raw: string
 ): string => {
-  if (isRecallMessage(text_type, raw)) return "撤回了一条消息";
+  if (isRecallMessage(text_type, raw)) return t("chat.recalled");
   switch (text_type) {
     case MSG_TYPE_TEXT:
       return parsePrivateText(raw);
@@ -191,18 +193,18 @@ export const getMessageDisplayText = (
       return parseGroupText(raw);
     case MSG_TYPE_IMAGE:
     case MSG_TYPE_GROUP_IMAGE:
-      return "[图片]";
+      return t("chat.typeImage");
     case MSG_TYPE_FILE:
     case MSG_TYPE_GROUP_FILE:
-      return "[文件]";
+      return t("chat.typeFile");
     case MSG_TYPE_P2P:
-      return "[隐私消息]";
+      return t("chat.typePrivate");
     case MSG_TYPE_P2P_VIDEO_CALL:
-      return "[视频通话邀请]";
+      return t("chat.typeVideoCall");
     case MSG_TYPE_GROUP_NOTIFICATION:
       return parseSystemContent(raw);
     default:
-      return raw || "[未知消息]";
+      return raw || t("chat.typeUnknown");
   }
 };
 
