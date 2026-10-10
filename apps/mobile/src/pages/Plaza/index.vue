@@ -7,16 +7,19 @@ import NotificationBell from "@/components/NotificationBell/index.vue";
 import FeedSquare from "./feed/FeedSquare.vue";
 import FeedFollowing from "./feed/FeedFollowing.vue";
 import FeedMine from "./feed/FeedMine.vue";
+import { useI18n } from "@/i18n";
 
 interface RailItem {
   key: string;
-  label: string;
+  labelKey: string;
 }
 
+const { t } = useI18n();
+
 const railMenus: RailItem[] = [
-  { key: "square", label: "广场" },
-  { key: "following", label: "关注" },
-  { key: "mine", label: "我的" },
+  { key: "square", labelKey: "plaza.square" },
+  { key: "following", labelKey: "plaza.following" },
+  { key: "mine", labelKey: "plaza.mine" },
 ];
 
 const activeKey = ref("square");
@@ -46,7 +49,7 @@ const goNotifications = () => router.push("/notifications?type=moments");
           d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
         />
       </svg>
-      <span class="page-title">动态</span>
+      <span class="page-title">{{ t("plaza.feedTitle") }}</span>
       <NotificationBell :count="momentUnread" @click="goNotifications" />
       <button class="header-link" @click="router.push('/plaza/friend')">
         <svg class="header-link-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -54,7 +57,7 @@ const goNotifications = () => router.push("/notifications?type=moments");
             d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
           />
         </svg>
-        <span>交友</span>
+        <span>{{ t("plaza.friendEntry") }}</span>
       </button>
     </div>
 
@@ -67,7 +70,7 @@ const goNotifications = () => router.push("/notifications?type=moments");
           :class="{ active: activeKey === item.key }"
           @click="onSubTab(item.key)"
         >
-          {{ item.label }}
+          {{ t(item.labelKey) }}
         </button>
       </div>
 

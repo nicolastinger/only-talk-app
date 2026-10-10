@@ -25,8 +25,10 @@ import type {
   FriendRequestInfo,
   FriendRequestInfoDTO,
 } from "@workspace/types";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 const { getAvatarUrl } = useAvatar();
 
 const friends = ref<FriendVo[]>([]);
@@ -121,17 +123,18 @@ const onRefresh = async () => {
 const handleDelete = async (friend: FriendVo) => {
   try {
     await showConfirmDialog({
-      title: "删除好友",
-      message: `确定删除「${friend.friend_name}」吗？`,
-      confirmButtonText: "删除",
+      title: t("friends.deleteTitle"),
+      message: t("friends.deleteConfirm", { name: friend.friend_name }),
+      confirmButtonText: t("common.delete"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
     await delete_friend(friend.friend_id);
-    showToast({ message: "已删除", icon: "success" });
+    showToast({ message: t("friends.deleted"), icon: "success" });
     await loadFriendList();
   } catch (e) {
-    if (e !== "cancel") showToast({ message: "操作失败", icon: "fail" });
+    if (e !== "cancel")
+      showToast({ message: t("common.operationFailed"), icon: "fail" });
   }
 };
 
@@ -158,7 +161,7 @@ const goGroupChat = async (group: GroupListItemVo) => {
     /* 会话可能已存在 */
   }
   const qp = new URLSearchParams();
-  qp.set("name", group.group_name || "群聊");
+  qp.set("name", group.group_name || t("chats.groupChat"));
   if (group.member_count > 0) qp.set("mc", String(group.member_count));
   router.push(
     `/chats/group-chat/${group.group_uuid}${qp.size ? `?${qp.toString()}` : ""}`
@@ -215,7 +218,7 @@ onUnmounted(() => {
           d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
         />
       </svg>
-      <span class="page-title">好友</span>
+      <span class="page-title">{{ t("friends.title") }}</span>
     </div>
 
     <div class="search-section" @click="goSearch">
@@ -225,7 +228,9 @@ onUnmounted(() => {
             d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
           />
         </svg>
-        <span class="search-placeholder">搜索好友</span>
+        <span class="search-placeholder">{{
+          t("friends.searchPlaceholder")
+        }}</span>
       </div>
     </div>
 
@@ -239,8 +244,8 @@ onUnmounted(() => {
           </svg>
         </div>
         <div class="entry-info">
-          <span class="entry-title">好友请求</span>
-          <span class="entry-desc">查看新的好友申请</span>
+          <span class="entry-title">{{ t("friends.requests") }}</span>
+          <span class="entry-desc">{{ t("friends.requestsDesc") }}</span>
         </div>
         <span v-if="pendingRequestCount > 0" class="entry-badge">{{
           pendingRequestCount > 99 ? "99+" : pendingRequestCount
@@ -259,8 +264,8 @@ onUnmounted(() => {
           </svg>
         </div>
         <div class="entry-info">
-          <span class="entry-title">群组通知</span>
-          <span class="entry-desc">查看群组邀请</span>
+          <span class="entry-title">{{ t("friends.groupRequests") }}</span>
+          <span class="entry-desc">{{ t("friends.groupRequestsDesc") }}</span>
         </div>
         <span v-if="pendingGroupCount > 0" class="entry-badge">{{
           pendingGroupCount > 99 ? "99+" : pendingGroupCount
@@ -277,14 +282,14 @@ onUnmounted(() => {
         :class="{ active: sectionTab === 0 }"
         @click="sectionTab = 0"
       >
-        好友
+        {{ t("friends.tabFriends") }}
       </button>
       <button
         class="seg-tab"
         :class="{ active: sectionTab === 1 }"
         @click="sectionTab = 1"
       >
-        群组
+        {{ t("friends.tabGroups") }}
       </button>
     </div>
 
@@ -292,9 +297,9 @@ onUnmounted(() => {
       <PullRefresh
         v-model="refreshing"
         :head-height="80"
-        pulling-text="下拉刷新"
-        loosing-text="释放刷新"
-        loading-text="加载中..."
+        :pulling-text="t('common.pullDown')"
+        :loosing-text="t('common.pullRelease')"
+        :loading-text="t('common.loadingDots')"
         @refresh="onRefresh"
       >
         <div v-if="friends.length > 0" class="friend-list">
@@ -327,7 +332,7 @@ onUnmounted(() => {
                     d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
                   />
                 </svg>
-                <span>发消息</span>
+                <span>{{ t("friends.sendMessage") }}</span>
               </div>
               <div class="swipe-delete" @click="handleDelete(friend)">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -335,12 +340,12 @@ onUnmounted(() => {
                     d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
                   />
                 </svg>
-                <span>删除</span>
+                <span>{{ t("common.delete") }}</span>
               </div>
             </template>
           </SwipeCell>
         </div>
-        <Empty v-else description="暂无好友" />
+        <Empty v-else :description="t('friends.emptyFriends')" />
       </PullRefresh>
     </div>
 
@@ -348,9 +353,9 @@ onUnmounted(() => {
       <PullRefresh
         v-model="refreshing"
         :head-height="80"
-        pulling-text="下拉刷新"
-        loosing-text="释放刷新"
-        loading-text="加载中..."
+        :pulling-text="t('common.pullDown')"
+        :loosing-text="t('common.pullRelease')"
+        :loading-text="t('common.loadingDots')"
         @refresh="onRefresh"
       >
         <div v-if="groups.length > 0" class="friend-list">
@@ -381,7 +386,7 @@ onUnmounted(() => {
             <div class="friend-info">
               <span class="friend-name">{{ group.group_name }}</span>
               <span class="friend-account"
-                >{{ group.member_count }} 位成员</span
+                >{{ t("friends.memberCount", { count: group.member_count }) }}</span
               >
             </div>
             <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
@@ -391,7 +396,7 @@ onUnmounted(() => {
             </svg>
           </div>
         </div>
-        <Empty v-else description="暂无群聊" />
+        <Empty v-else :description="t('friends.emptyGroups')" />
       </PullRefresh>
     </div>
 

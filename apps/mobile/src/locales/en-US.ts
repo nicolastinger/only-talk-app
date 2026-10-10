@@ -380,4 +380,28 @@ export default {
   "profile.title": "Me",
   "profile.notifications": "Notifications",
   "profile.files": "Files",
+
+  "common.operationFailed": "Operation failed",
+
+  "friends.title": "Friends",
+  "friends.searchPlaceholder": "Search friends",
+  "friends.requests": "Friend Requests",
+  "friends.requestsDesc": "View new friend requests",
+  "friends.groupRequests": "Group Notifications",
+  "friends.groupRequestsDesc": "View group invitations",
+  "friends.tabFriends": "Friends",
+  "friends.tabGroups": "Groups",
+  "friends.sendMessage": "Message",
+  "friends.emptyFriends": "No friends yet",
+  "friends.emptyGroups": "No groups yet",
+  "friends.memberCount": "{count} members",
+  "friends.deleteTitle": "Delete Friend",
+  "friends.deleteConfirm": "Delete \"{name}\"?",
+  "friends.deleted": "Deleted",
+
+  "plaza.feedTitle": "Moments",
+  "plaza.friendEntry": "Friends",
+  "plaza.square": "Plaza",
+  "plaza.following": "Following",
+  "plaza.mine": "Mine",
 };

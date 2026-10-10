@@ -375,4 +375,28 @@ export default {
   "profile.title": "我的",
   "profile.notifications": "通知中心",
   "profile.files": "檔案管理",
+
+  "common.operationFailed": "操作失敗",
+
+  "friends.title": "好友",
+  "friends.searchPlaceholder": "搜索好友",
+  "friends.requests": "好友請求",
+  "friends.requestsDesc": "查看新的好友請求",
+  "friends.groupRequests": "群組通知",
+  "friends.groupRequestsDesc": "查看群組邀請",
+  "friends.tabFriends": "好友",
+  "friends.tabGroups": "群組",
+  "friends.sendMessage": "發訊息",
+  "friends.emptyFriends": "暫無好友",
+  "friends.emptyGroups": "暫無群聊",
+  "friends.memberCount": "{count} 位成員",
+  "friends.deleteTitle": "刪除好友",
+  "friends.deleteConfirm": "確定刪除「{name}」嗎？",
+  "friends.deleted": "已刪除",
+
+  "plaza.feedTitle": "動態",
+  "plaza.friendEntry": "交友",
+  "plaza.square": "廣場",
+  "plaza.following": "關注",
+  "plaza.mine": "我的",
 };
