@@ -50,9 +50,11 @@ import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 import PendingSendBar from "@/components/chat/PendingSendBar.vue";
 import MessageSelectionBar from "@/components/chat/MessageSelectionBar.vue";
 import ForwardPicker from "@/components/chat/ForwardPicker.vue";
+import { useI18n } from "@/i18n";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const friendId = route.params.friendId as string;
 
 const messages = ref<UiChatMessage[]>([]);
@@ -105,16 +107,19 @@ const actionTarget = ref<UiChatMessage | null>(null);
 /** 长按操作项：自己的普通消息额外提供"撤回" */
 const actionActions = computed(() => {
   const msg = actionTarget.value;
-  const actions: { name: string }[] = [{ name: "多选" }, { name: "转发" }];
+  const actions: { key: string; name: string }[] = [
+    { key: "multiSelect", name: t("chat.actions.multiSelect") },
+    { key: "forward", name: t("chat.actions.forward") },
+  ];
   if (
     msg &&
     msg.from === "mine" &&
     !msg.failed &&
     !isRecallMessage(msg.textMsg.text_type, msg.textMsg.raw)
   ) {
-    actions.push({ name: "撤回" });
+    actions.push({ key: "recall", name: t("chat.actions.recall") });
   }
-  actions.push({ name: "删除" });
+  actions.push({ key: "delete", name: t("chat.actions.delete") });
   return actions;
 });
 
@@ -126,7 +131,12 @@ const onLongPress = (msg: UiChatMessage) => {
 /** 撤回消息：确认后清除本机原消息并发送撤回控制消息 */
 const recallMessage = async (msg: UiChatMessage) => {
   try {
-    await showConfirmDialog({ title: "撤回消息", message: "确定撤回这条消息吗？" });
+    await showConfirmDialog({
+      title: t("chat.recallTitle"),
+      message: t("chat.recallConfirm"),
+      confirmButtonText: t("common.confirm"),
+      cancelButtonText: t("common.cancel"),
+    });
   } catch {
     return;
   }
@@ -138,7 +148,7 @@ const recallMessage = async (msg: UiChatMessage) => {
     })) as TextQuicMsgVo;
   } catch (e) {
     console.error("撤回消息失败:", e);
-    showToast({ message: "撤回失败", icon: "fail" });
+    showToast({ message: t("chat.recallFailed"), icon: "fail" });
     return;
   }
   // 本地移除原消息并乐观上屏撤回提示（ACK 按本地 nano_id 归一）
@@ -164,8 +174,10 @@ const deleteSelected = async () => {
   if (ids.length === 0) return;
   try {
     await showConfirmDialog({
-      title: "删除聊天记录",
-      message: `确定删除选中的 ${ids.length} 条消息吗？删除后不可恢复。`,
+      title: t("chat.deleteTitle"),
+      message: t("chat.deleteConfirm", { count: ids.length }),
+      confirmButtonText: t("common.confirm"),
+      cancelButtonText: t("common.cancel"),
     });
   } catch {
     return;
@@ -174,7 +186,7 @@ const deleteSelected = async () => {
     await invoke("delete_chat_record", { nanoIdList: ids });
   } catch (e) {
     console.error("删除消息失败:", e);
-    showToast({ message: "删除失败", icon: "fail" });
+    showToast({ message: t("chat.deleteFailed"), icon: "fail" });
     return;
   }
   messages.value = messages.value.filter(
@@ -190,18 +202,18 @@ const openForward = () => {
   showForward.value = true;
 };
 
-const onActionSelect = (action: { name: string }) => {
+const onActionSelect = (action: { key?: string; name: string }) => {
   const msg = actionTarget.value;
   showActionSheet.value = false;
   if (!msg) return;
-  if (action.name === "多选") {
+  if (action.key === "multiSelect") {
     enterSelect(msg);
-  } else if (action.name === "转发") {
+  } else if (action.key === "forward") {
     enterSelect(msg);
     openForward();
-  } else if (action.name === "撤回") {
+  } else if (action.key === "recall") {
     recallMessage(msg);
-  } else if (action.name === "删除") {
+  } else if (action.key === "delete") {
     enterSelect(msg);
     deleteSelected();
   }
@@ -220,12 +232,15 @@ const onForwardConfirm = async (payload: {
       targetRecv: payload.recv,
       targetGroup: payload.isGroup,
     });
-    showToast({ message: `已转发到 ${payload.name}`, icon: "success" });
+    showToast({
+      message: t("chat.forwardSuccess", { name: payload.name }),
+      icon: "success",
+    });
     if (!payload.isGroup && payload.recv === friendId) reloadFirstPage();
     exitSelect();
   } catch (e) {
     console.error("转发消息失败:", e);
-    showToast({ message: "转发失败", icon: "fail" });
+    showToast({ message: t("chat.forwardFailed"), icon: "fail" });
   }
 };
 
@@ -468,7 +483,7 @@ const sendText = async () => {
       (m) => m.textMsg.nano_id === textMsg.nano_id
     );
     if (idx !== -1) messages.value[idx].failed = true;
-    showToast({ message: "发送失败，点击消息重试", icon: "fail" });
+    showToast({ message: t("chat.sendFailed"), icon: "fail" });
   } finally {
     bumpPendingRefresh();
   }
@@ -501,7 +516,7 @@ const selectAndSend = async (
         localPreview = preview;
       } catch (e) {
         console.error("读取文件失败:", e);
-        showToast({ message: "读取文件失败", icon: "fail" });
+        showToast({ message: t("chat.readFileFailed"), icon: "fail" });
         return;
       }
     }
@@ -550,7 +565,10 @@ const selectAndSend = async (
         messages.value[idx].sendingFile = false;
       }
       showToast({
-        message: media === "image" ? "图片发送失败" : "文件发送失败",
+        message:
+          media === "image"
+            ? t("chat.sendImageFailed")
+            : t("chat.sendFileFailed"),
         icon: "fail",
       });
     } finally {
@@ -600,7 +618,7 @@ const handleRetry = async (msg: UiChatMessage) => {
   } catch (e) {
     console.error("重发失败:", e);
     update(true, undefined);
-    showToast({ message: "重发失败", icon: "fail" });
+    showToast({ message: t("chat.resendFailed"), icon: "fail" });
   } finally {
     bumpPendingRefresh();
   }
@@ -766,12 +784,12 @@ const handleAvatarClick = ({
       <img
         :src="chatAvatar || DEFAULT_AVATAR"
         class="header-avatar"
-        alt="头像"
+        :alt="t('chat.avatar')"
         @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
       />
       <div class="header-info">
         <span class="header-name">{{
-          isSelf ? "我的笔记" : friendInfo.name || friendId
+          isSelf ? t("chats.selfChatName") : friendInfo.name || friendId
         }}</span>
         <UserTypeTag v-if="!isSelf" :type="friendInfo.user_type" />
       </div>
@@ -779,7 +797,7 @@ const handleAvatarClick = ({
         <button
           v-if="!isSelf"
           class="header-more"
-          aria-label="好友设置"
+          :aria-label="t('chat.friendSettings')"
           @click="router.push(`/friends/detail/${friendId}`)"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -793,7 +811,7 @@ const handleAvatarClick = ({
 
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>加载中...</p>
+      <p>{{ t("common.loadingDots") }}</p>
     </div>
 
     <div v-else ref="containerRef" class="message-container" @scroll="onScroll">
@@ -801,14 +819,14 @@ const handleAvatarClick = ({
         <div class="loading-spinner small"></div>
       </div>
       <div v-if="!hasMore && messages.length > 0" class="no-more">
-        没有更多消息了
+        {{ t("chat.noMoreMessages") }}
       </div>
       <MessageList
         mode="single"
         :messages="messages"
         :my-avatar="myAvatar || DEFAULT_AVATAR"
         :peer-avatar="chatAvatar || DEFAULT_AVATAR"
-        :peer-name="isSelf ? '我的笔记' : friendInfo.name || friendId"
+        :peer-name="isSelf ? t('chats.selfChatName') : friendInfo.name || friendId"
         :fallback-avatar="DEFAULT_AVATAR"
         :my-uuid="meUuid"
         :select-mode="selectMode"
@@ -842,7 +860,7 @@ const handleAvatarClick = ({
         v-if="!loading"
         v-model="inputText"
         :tools="isSelf ? selfTools : friendTools"
-        placeholder="输入消息..."
+        :placeholder="t('chat.inputPlaceholder')"
         @send="sendText"
         @pick-image="sendImage"
         @pick-file="sendFile"
@@ -853,7 +871,7 @@ const handleAvatarClick = ({
     <van-action-sheet
       v-model:show="showActionSheet"
       :actions="actionActions"
-      cancel-text="取消"
+      :cancel-text="t('common.cancel')"
       @select="onActionSelect"
     />
 
