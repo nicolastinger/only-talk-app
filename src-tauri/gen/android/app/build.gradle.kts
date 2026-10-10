@@ -8,16 +8,26 @@ plugins {
 }
 
 // ---- Android release 签名(密钥与密码均不入库) ----
-// 密钥默认位于 ~/.only-talk/android/upload-keystore.jks, 可用 ANDROID_KEYSTORE_PATH 覆盖;
-// 别名/密码一律从环境变量读取: ANDROID_KEY_ALIAS / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_PASSWORD。
-// 详见 src-tauri/docs/self-update.md §7.2。
-val androidKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
-val androidKeystoreFile = File(
-    androidKeystorePath ?: "${System.getProperty("user.home")}/.only-talk/android/upload-keystore.jks"
-)
-val androidKeystoreAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "upload"
-val androidStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-val androidKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+// 只从本机固定目录读取: ~/.only-talk/android/keystore.properties
+// (Windows: %USERPROFILE%\.only-talk\android\keystore.properties), 不读取任何环境变量。
+// 密钥与密码均在仓库外, 不会被提交。properties 示例:
+//   storeFile=upload-keystore.jks   # 相对该目录, 也可写绝对路径
+//   storePassword=xxxx
+//   keyAlias=upload
+//   keyPassword=xxxx
+// 详见 src-tauri/docs/android-signing.md。
+val androidKeystoreDir = File(System.getProperty("user.home"), ".only-talk/android")
+val androidKeystoreProps = Properties().apply {
+    val f = File(androidKeystoreDir, "keystore.properties")
+    if (f.isFile) f.inputStream().use { load(it) }
+}
+val androidKeystoreFile: File = androidKeystoreProps.getProperty("storeFile")?.let {
+    val f = File(it)
+    if (f.isAbsolute) f else File(androidKeystoreDir, it)
+} ?: File(androidKeystoreDir, "upload-keystore.jks")
+val androidKeystoreAlias = androidKeystoreProps.getProperty("keyAlias", "upload")
+val androidStorePassword = androidKeystoreProps.getProperty("storePassword")
+val androidKeyPassword = androidKeystoreProps.getProperty("keyPassword")
 val hasAndroidReleaseSigning = androidKeystoreFile.isFile &&
     !androidKeystoreAlias.isNullOrBlank() &&
     !androidStorePassword.isNullOrBlank() &&
@@ -77,9 +87,10 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             } else {
                 logger.warn(
-                    "[signing] 未检测到 Android 签名密钥/环境变量, release 将产出未签名 APK。" +
+                    "[signing] 未检测到 Android 签名配置, release 将产出未签名 APK。" +
                         " 预期密钥: $androidKeystoreFile;" +
-                        " 需设置 ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_PASSWORD (可选 ANDROID_KEY_ALIAS、ANDROID_KEYSTORE_PATH)。"
+                        " 请在本机 ~/.only-talk/android/keystore.properties 配置 storeFile/storePassword/keyAlias/keyPassword" +
+                        " (见 src-tauri/docs/android-signing.md)。"
                 )
             }
             isMinifyEnabled = true

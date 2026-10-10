@@ -124,7 +124,7 @@ GitHub Actions (client-ci.yml)
 gradle 缓存、机器相关文件与签名密钥), 因此新克隆/换机器都不会再丢失该权限。仍需注意:
 - `pnpm tauri android dev/build` 会重新生成并 sync 插件 android 模块; 若模板覆盖了自定义内容(如
   `AndroidManifest.xml`、`MainActivity.kt`、`KeepAliveService.kt`), 请比对 `git status` 并把改动提交回来。
-- 签名密钥不入库: `.jks` 放本机 `~/.only-talk/android/upload-keystore.jks`, 密码只走环境变量(见 §7.2)。
+- 签名密钥不入库: `.jks` 与 `keystore.properties` 均放本机 `~/.only-talk/android/`, 构建时由 `app/build.gradle.kts` 直接读取(见 §7.2)。
 
 ## 5. CI/CD 流水线
 
@@ -208,33 +208,26 @@ git push origin develop && git push origin v1.0.2
 
 ### 7.2 Android(暂手动)
 
-> 完整的签名配置说明(生成密钥 / 环境变量 / CI)见 [`android-signing.md`](./android-signing.md)。
+> 完整的签名配置说明(生成密钥 / 目录约定 / 校验)见 [`android-signing.md`](./android-signing.md)。
 
-**签名密钥(不入库)**: release 必须签名。密钥文件默认位于本机
-`~/.only-talk/android/upload-keystore.jks`(Windows: `%USERPROFILE%\.only-talk\android\`),
-密码/别名**只通过环境变量**提供, 仓库不保存任何密钥与密码:
+**签名密钥(不入库)**: release 必须签名。密钥与配置**只放本机固定目录**
+`~/.only-talk/android/`(Windows: `%USERPROFILE%\.only-talk\android\`), 仓库不保存任何密钥与密码,
+也**不读取环境变量**:
 
-| 环境变量 | 说明 |
+| 文件 | 说明 |
 | --- | --- |
-| `ANDROID_KEYSTORE_PASSWORD` | keystore 库密码(必填) |
-| `ANDROID_KEY_PASSWORD` | key 密码(必填) |
-| `ANDROID_KEY_ALIAS` | key 别名(可选, 默认 `upload`) |
-| `ANDROID_KEYSTORE_PATH` | keystore 绝对路径(可选, 默认 `~/.only-talk/android/upload-keystore.jks`) |
+| `upload-keystore.jks` | 签名密钥 |
+| `keystore.properties` | `storeFile` / `storePassword` / `keyAlias` / `keyPassword` |
 
-`app/build.gradle.kts` 读取上述变量; 缺失时 release 产出**未签名** APK 并打警告(不会再像旧实现
-那样因 `keystore.properties` 缺失而直接构建失败)。CI 走 GitHub Secrets 注入同名环境变量即可。
+`app/build.gradle.kts` 直接读取该目录下的 `keystore.properties`; 缺失时 release 产出**未签名** APK 并打
+警告(不会再像旧实现那样因文件缺失而直接构建失败)。
 
 ```powershell
-# 1. 设置签名环境变量(仅当前会话; 值为你自己的密钥密码)
-$env:ANDROID_KEY_ALIAS         = "upload"
-$env:ANDROID_KEYSTORE_PASSWORD = "<你的库密码>"
-$env:ANDROID_KEY_PASSWORD      = "<你的 key 密码>"
-
-# 2. 本机打 universal APK(仓库根目录)
+# 1. 本机打 universal APK(仓库根目录; 两个文件就位即自动签名)
 pnpm tauri android build
 # 产物: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
 
-# 3. 附到同名 tag 的 Release(Windows 的 CI 已建好 vX.Y.Z)
+# 2. 附到同名 tag 的 Release(Windows 的 CI 已建好 vX.Y.Z)
 gh release upload v1.0.2 src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
 ```
 
