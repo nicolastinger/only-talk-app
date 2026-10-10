@@ -9,12 +9,14 @@ import {
   complete_profile,
   isHttpSuccess,
 } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 // 与后端 PASSWORD_REGEX 保持一致:14 位以上字母或数字
 const PASSWORD_REGEX = /^[a-zA-Z\d]{14,}$/;
 
 const router = useRouter();
+const { t } = useI18n();
 
 const step = ref<1 | 2>(1);
 const loading = ref(false);
@@ -38,11 +40,11 @@ const passwordError = ref("");
 
 const validateEmail = (): boolean => {
   if (!email.value) {
-    emailError.value = "请输入邮箱";
+    emailError.value = t("signup.emailRequired");
     return false;
   }
   if (!EMAIL_REGEX.test(email.value)) {
-    emailError.value = "邮箱格式不正确";
+    emailError.value = t("signup.emailInvalid");
     return false;
   }
   emailError.value = "";
@@ -51,11 +53,11 @@ const validateEmail = (): boolean => {
 
 const validateCode = (): boolean => {
   if (!verificationCode.value) {
-    codeError.value = "请输入验证码";
+    codeError.value = t("signup.codeRequired");
     return false;
   }
   if (!/^\d{6}$/.test(verificationCode.value)) {
-    codeError.value = "验证码必须为6位数字";
+    codeError.value = t("signup.codeInvalid");
     return false;
   }
   codeError.value = "";
@@ -64,11 +66,11 @@ const validateCode = (): boolean => {
 
 const validateAccount = (): boolean => {
   if (!account.value) {
-    accountError.value = "请输入账号";
+    accountError.value = t("signup.accountRequired");
     return false;
   }
   if (account.value.length < 5) {
-    accountError.value = "账号长度至少5位";
+    accountError.value = t("signup.accountTooShort");
     return false;
   }
   accountError.value = "";
@@ -77,7 +79,7 @@ const validateAccount = (): boolean => {
 
 const validateUsername = (): boolean => {
   if (!username.value) {
-    usernameError.value = "请输入昵称";
+    usernameError.value = t("signup.usernameRequired");
     return false;
   }
   usernameError.value = "";
@@ -86,11 +88,11 @@ const validateUsername = (): boolean => {
 
 const validatePassword = (): boolean => {
   if (!password.value) {
-    passwordError.value = "请输入密码";
+    passwordError.value = t("signup.passwordRequired");
     return false;
   }
   if (!PASSWORD_REGEX.test(password.value)) {
-    passwordError.value = "密码必须为14位以上的字母或数字";
+    passwordError.value = t("signup.passwordInvalid");
     return false;
   }
   passwordError.value = "";
@@ -132,12 +134,12 @@ const handleSendCode = async () => {
   try {
     const res = await send_verify_code({ email: email.value });
     if (res.netSuccess && isHttpSuccess(res.res.status)) {
-      showToast({ message: "验证码已发送，请注意查收", icon: "success" });
+      showToast({ message: t("signup.codeSent"), icon: "success" });
       startCountdown(60);
     }
     // 失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
   } catch {
-    showToast("验证码发送失败，请稍后重试");
+    showToast(t("signup.codeSendFailed"));
   } finally {
     sendingCode.value = false;
   }
@@ -162,7 +164,7 @@ const handleNext = async () => {
         /* 响应非预期 JSON 时按失败处理 */
       }
       if (!token) {
-        showToast("注册失败");
+        showToast(t("signup.registerFailed"));
         return;
       }
       regToken.value = token;
@@ -170,7 +172,7 @@ const handleNext = async () => {
     }
     // 失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
   } catch {
-    showToast("注册失败");
+    showToast(t("signup.registerFailed"));
   } finally {
     loading.value = false;
   }
@@ -197,7 +199,7 @@ const onFinish = async () => {
     });
     if (res.netSuccess && isHttpSuccess(res.res.status)) {
       showToast({
-        message: `注册成功，欢迎 ${username.value}!`,
+        message: t("signup.success", { name: username.value }),
         icon: "success",
       });
       router.replace("/login");
@@ -207,7 +209,7 @@ const onFinish = async () => {
     }
     // 其余失败由 httpService 中间层统一展示(604 逐条/500 业务信息)
   } catch {
-    showToast("注册失败");
+    showToast(t("signup.registerFailed"));
   } finally {
     loading.value = false;
   }
@@ -235,12 +237,12 @@ const goLogin = () => {
     </div>
 
     <div class="signup-header">
-      <button class="back-btn" aria-label="返回" @click="goBack">
+      <button class="back-btn" :aria-label="t('common.back')" @click="goBack">
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
         </svg>
       </button>
-      <h1 class="header-title">快速注册</h1>
+      <h1 class="header-title">{{ t("signup.title") }}</h1>
       <span class="header-spacer"></span>
     </div>
 
@@ -249,12 +251,12 @@ const goLogin = () => {
         <span
           class="step-pill"
           :class="{ active: step === 1, done: step === 2 }"
-          >1 验证邮箱</span
+          >{{ t("signup.stepEmail") }}</span
         >
         <span class="step-line" :class="{ active: step === 2 }"></span>
-        <span class="step-pill" :class="{ active: step === 2 }"
-          >2 完善资料</span
-        >
+        <span class="step-pill" :class="{ active: step === 2 }">{{
+          t("signup.stepProfile")
+        }}</span>
       </div>
 
       <form v-if="step === 1" class="signup-form" @submit.prevent>
@@ -269,15 +271,13 @@ const goLogin = () => {
               v-model="email"
               type="email"
               class="form-input"
-              placeholder="请输入邮箱"
+              :placeholder="t('signup.emailPlaceholder')"
               @input="emailError && validateEmail()"
               @blur="validateEmail"
             />
           </div>
           <p v-if="emailError" class="error-text">{{ emailError }}</p>
-          <p v-else class="hint-text">
-            用于接收注册验证码，且每个邮箱只能注册一个账号
-          </p>
+          <p v-else class="hint-text">{{ t("signup.emailHint") }}</p>
         </div>
 
         <div class="field">
@@ -292,7 +292,7 @@ const goLogin = () => {
               type="text"
               maxlength="6"
               class="form-input"
-              placeholder="请输入6位验证码"
+              :placeholder="t('signup.codePlaceholder')"
               @input="codeError && validateCode()"
               @blur="validateCode"
             />
@@ -301,11 +301,15 @@ const goLogin = () => {
               :disabled="sendingCode || countdown > 0"
               @click.prevent="handleSendCode"
             >
-              {{ countdown > 0 ? `${countdown}s后重发` : "获取验证码" }}
+              {{
+                countdown > 0
+                  ? t("signup.resend", { seconds: countdown })
+                  : t("signup.sendCode")
+              }}
             </button>
           </div>
           <p v-if="codeError" class="error-text">{{ codeError }}</p>
-          <p v-else class="hint-text">验证码10分钟内有效，请及时填写</p>
+          <p v-else class="hint-text">{{ t("signup.codeHint") }}</p>
         </div>
 
         <button class="primary-btn" :disabled="loading" @click="handleNext">
@@ -313,13 +317,13 @@ const goLogin = () => {
             ><span class="dot"></span><span class="dot"></span
             ><span class="dot"></span
           ></span>
-          <span v-else>下一步</span>
+          <span v-else>{{ t("signup.next") }}</span>
         </button>
       </form>
 
       <form v-else class="signup-form" @submit.prevent>
         <div class="reg-email-card">
-          <span class="reg-email-label">注册邮箱</span>
+          <span class="reg-email-label">{{ t("signup.regEmail") }}</span>
           <span class="reg-email">{{ email }}</span>
         </div>
 
@@ -334,13 +338,13 @@ const goLogin = () => {
               v-model="account"
               type="text"
               class="form-input"
-              placeholder="请输入账号"
+              :placeholder="t('signup.accountPlaceholder')"
               @input="accountError && validateAccount()"
               @blur="validateAccount"
             />
           </div>
           <p v-if="accountError" class="error-text">{{ accountError }}</p>
-          <p v-else class="hint-text">登录账号，长度至少5位</p>
+          <p v-else class="hint-text">{{ t("signup.accountHint") }}</p>
         </div>
 
         <div class="field">
@@ -354,13 +358,13 @@ const goLogin = () => {
               v-model="username"
               type="text"
               class="form-input"
-              placeholder="请输入昵称"
+              :placeholder="t('signup.usernamePlaceholder')"
               @input="usernameError && validateUsername()"
               @blur="validateUsername"
             />
           </div>
           <p v-if="usernameError" class="error-text">{{ usernameError }}</p>
-          <p v-else class="hint-text">昵称不能为空，展示给好友看的名字</p>
+          <p v-else class="hint-text">{{ t("signup.usernameHint") }}</p>
         </div>
 
         <div class="field">
@@ -374,13 +378,13 @@ const goLogin = () => {
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
               class="form-input"
-              placeholder="请输入密码"
+              :placeholder="t('signup.passwordPlaceholder')"
               @input="passwordError && validatePassword()"
               @blur="validatePassword"
             />
             <button
               class="eye-btn"
-              aria-label="切换密码可见"
+              :aria-label="t('signup.togglePassword')"
               @click.prevent="showPassword = !showPassword"
             >
               <svg v-if="showPassword" viewBox="0 0 24 24" fill="currentColor">
@@ -396,12 +400,12 @@ const goLogin = () => {
             </button>
           </div>
           <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
-          <p v-else class="hint-text">密码必须为14位以上的字母或数字</p>
+          <p v-else class="hint-text">{{ t("signup.passwordHint") }}</p>
         </div>
 
         <div class="btn-row">
           <button class="ghost-btn" :disabled="loading" @click="handlePrev">
-            上一步
+            {{ t("signup.prev") }}
           </button>
           <button
             class="primary-btn grow"
@@ -412,14 +416,16 @@ const goLogin = () => {
               ><span class="dot"></span><span class="dot"></span
               ><span class="dot"></span
             ></span>
-            <span v-else>完成注册</span>
+            <span v-else>{{ t("signup.finish") }}</span>
           </button>
         </div>
       </form>
 
       <div class="footer-links">
-        <span class="footer-text">已有账号？</span>
-        <a class="footer-link" @click="goLogin">返回登录</a>
+        <span class="footer-text">{{ t("signup.haveAccount") }}</span>
+        <a class="footer-link" @click="goLogin">{{
+          t("signup.backToLogin")
+        }}</a>
       </div>
     </div>
   </div>

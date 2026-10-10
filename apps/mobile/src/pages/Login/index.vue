@@ -26,8 +26,10 @@ import {
 } from "@workspace/services";
 import { useAuthStore } from "@/stores/auth";
 import { parseResponse } from "@/utils/api";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 const { setLoggedIn, clearAuth } = useAuthStore();
 
 const form = reactive({ account: "", password: "" });
@@ -54,9 +56,9 @@ const onSelectApi = async (action: { value?: string }) => {
   try {
     await setConfig(CLIENT_CONFIG_KEYS.serverApiBase, value);
     currentApi.value = value;
-    showToast({ message: "API 地址已切换", icon: "success" });
+    showToast({ message: t("login.apiSwitched"), icon: "success" });
   } catch {
-    showToast({ message: "切换失败", icon: "fail" });
+    showToast({ message: t("login.switchFailed"), icon: "fail" });
   }
 };
 
@@ -86,7 +88,7 @@ const currentUserName = computed(
   () =>
     currentQuickUser.value?.username ||
     currentQuickUser.value?.account ||
-    "用户"
+    t("common.user")
 );
 
 const resolveAvatarFromIcon = async (
@@ -142,10 +144,12 @@ const handleDeleteUser = async () => {
   if (!user?.user_id) return;
   try {
     await showConfirmDialog({
-      title: "删除账号",
-      message: `确定删除「${user.username || user.account}」的免登录记录吗？`,
-      confirmButtonText: "删除",
-      cancelButtonText: "取消",
+      title: t("login.deleteTitle"),
+      message: t("login.deleteConfirm", {
+        name: user.username || user.account,
+      }),
+      confirmButtonText: t("common.delete"),
+      cancelButtonText: t("common.cancel"),
       confirmButtonColor: "#ef4444",
     });
   } catch {
@@ -164,9 +168,9 @@ const handleDeleteUser = async () => {
       currentUserIndex.value >= next.length ? 0 : currentUserIndex.value;
     currentUserIndex.value = idx;
     currentAvatar.value = await resolveAvatarFromIcon(next[idx].icon);
-    showToast({ message: "已删除", icon: "success" });
+    showToast({ message: t("login.deleted"), icon: "success" });
   } catch {
-    showToast({ message: "删除失败", icon: "fail" });
+    showToast({ message: t("login.deleteFailed"), icon: "fail" });
   }
 };
 
@@ -176,7 +180,7 @@ const handleQuickLogin = async () => {
   quickLoginLoading.value = true;
   const failQuickLogin = () => {
     showQuickLogin.value = false;
-    showToast({ message: "免登录失败，请手动登录", icon: "fail" });
+    showToast({ message: t("login.quickLoginFailed"), icon: "fail" });
   };
   try {
     const response: HttpResponse = await invoke("quick_login", {
@@ -216,11 +220,11 @@ const toRegister = () => {
 
 const validateAccount = (value: string): boolean => {
   if (!value) {
-    accountError.value = "请输入账号";
+    accountError.value = t("login.accountRequired");
     return false;
   }
   if (value.length < 5) {
-    accountError.value = "账号至少5个字符";
+    accountError.value = t("login.accountTooShort");
     return false;
   }
   accountError.value = "";
@@ -228,11 +232,11 @@ const validateAccount = (value: string): boolean => {
 };
 const validatePassword = (value: string): boolean => {
   if (!value) {
-    passwordError.value = "请输入密码";
+    passwordError.value = t("login.passwordRequired");
     return false;
   }
   if (value.length < 8) {
-    passwordError.value = "密码至少8个字符";
+    passwordError.value = t("login.passwordTooShort");
     return false;
   }
   passwordError.value = "";
@@ -308,7 +312,7 @@ const enterApp = async () => {
   }
 
   closeToast();
-  showToast({ message: "登录成功", icon: "success" });
+  showToast({ message: t("login.success"), icon: "success" });
   router.replace("/chats");
   // 登录后检查是否已绑定二次认证因素, 未绑定则引导绑定邮箱(可跳过)
   checkAuthFactorBound();
@@ -324,10 +328,10 @@ const checkAuthFactorBound = async () => {
     if (hasEmail) return;
     try {
       await showConfirmDialog({
-        title: "二次认证",
-        message: "为了账号安全，建议绑定邮箱二次认证。是否现在绑定？",
-        confirmButtonText: "去绑定",
-        cancelButtonText: "稍后",
+        title: t("settings.authFactor.title"),
+        message: t("settings.authFactor.loginPrompt"),
+        confirmButtonText: t("settings.authFactor.goBind"),
+        cancelButtonText: t("settings.authFactor.later"),
       });
       router.push("/settings/auth-factor");
     } catch {
@@ -342,11 +346,15 @@ const onLogin = async () => {
   if (!validateAccount(form.account) || !validatePassword(form.password))
     return;
   if (!agreed.value) {
-    showToast("请先阅读并同意隐私政策");
+    showToast(t("login.pleaseAgree"));
     return;
   }
   loading.value = true;
-  showLoadingToast({ message: "登录中...", forbidClick: true, duration: 0 });
+  showLoadingToast({
+    message: t("login.loggingIn"),
+    forbidClick: true,
+    duration: 0,
+  });
 
   try {
     const response: HttpResponse = await invoke("sign_in", {
@@ -363,19 +371,19 @@ const onLogin = async () => {
       await enterApp();
     } else {
       closeToast();
-      showToast({ message: "账号或密码错误", icon: "fail" });
+      showToast({ message: t("login.invalidCredentials"), icon: "fail" });
     }
   } catch (error: unknown) {
     closeToast();
     if (error != null && typeof error === "string") {
       try {
         if (JSON.parse(error).code === 500) {
-          showToast({ message: "账号或密码错误", icon: "fail" });
+          showToast({ message: t("login.invalidCredentials"), icon: "fail" });
           return;
         }
       } catch {}
     }
-    showToast({ message: "网络请求失败，请检查网络", icon: "fail" });
+    showToast({ message: t("login.networkError"), icon: "fail" });
   } finally {
     loading.value = false;
   }
@@ -385,7 +393,7 @@ const loadPrivacyMd = async () => {
   try {
     privacyContent.value = await (await fetch("/markdown/privacy.md")).text();
   } catch {
-    privacyContent.value = "隐私政策加载失败";
+    privacyContent.value = t("login.privacyLoadFailed");
   }
 };
 const onOpenPrivacy = async () => {
@@ -407,7 +415,11 @@ onMounted(() => {
       <div class="bg-blob bg-blob-3"></div>
     </div>
     <div class="login-container">
-      <button class="api-gear" @click="switchApi" aria-label="服务器设置">
+      <button
+        class="api-gear"
+        @click="switchApi"
+        :aria-label="t('login.serverSettings')"
+      >
         <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
           <path
             d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.05 7.05 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.72 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.33.61.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.21.11.48.01.61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"
@@ -420,7 +432,7 @@ onMounted(() => {
             <button
               v-if="quickUsers.length > 1"
               class="switch-btn"
-              aria-label="上一个账号"
+              :aria-label="t('login.prevAccount')"
               @click="handlePrevUser"
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
@@ -433,19 +445,19 @@ onMounted(() => {
                   v-if="currentAvatar"
                   :src="currentAvatar"
                   class="user-avatar-img"
-                  alt="用户头像"
+                  :alt="t('login.userAvatar')"
                   @error="currentAvatar = null"
                 />
                 <img
                   v-else
                   src="/images/default.jpg"
                   class="user-avatar-img"
-                  alt="默认头像"
+                  :alt="t('login.defaultAvatar')"
                 />
               </div>
               <button
                 class="delete-badge"
-                aria-label="删除免登录账号"
+                :aria-label="t('login.deleteQuickAccount')"
                 @click="handleDeleteUser"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -458,7 +470,7 @@ onMounted(() => {
             <button
               v-if="quickUsers.length > 1"
               class="switch-btn"
-              aria-label="下一个账号"
+              :aria-label="t('login.nextAccount')"
               @click="handleNextUser"
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
@@ -485,9 +497,11 @@ onMounted(() => {
               ><span class="dot"></span><span class="dot"></span
               ><span class="dot"></span
             ></span>
-            <span v-else>一键登录</span>
+            <span v-else>{{ t("login.oneClick") }}</span>
           </button>
-          <a class="switch-link" @click="toPasswordLogin">使用密码登录</a>
+          <a class="switch-link" @click="toPasswordLogin">{{
+            t("login.usePassword")
+          }}</a>
         </div>
       </template>
       <template v-else>
@@ -503,11 +517,11 @@ onMounted(() => {
               v-else
               src="/images/default.jpg"
               class="user-avatar-img"
-              alt="默认头像"
+              :alt="t('login.defaultAvatar')"
             />
           </div>
           <h1 class="app-name">Only Talk</h1>
-          <p class="app-slogan">随时随地，畅快交流</p>
+          <p class="app-slogan">{{ t("login.slogan") }}</p>
         </div>
         <div class="form-section">
           <div class="input-group">
@@ -521,7 +535,7 @@ onMounted(() => {
                 type="text"
                 v-model="form.account"
                 class="form-input"
-                placeholder="请输入账号"
+                :placeholder="t('login.accountPlaceholder')"
                 @input="onAccountInput"
                 @blur="onAccountBlur"
               />
@@ -556,7 +570,7 @@ onMounted(() => {
                 type="password"
                 v-model="form.password"
                 class="form-input"
-                placeholder="请输入密码"
+                :placeholder="t('login.passwordPlaceholder')"
                 @input="onPasswordInput"
                 @blur="validatePassword(form.password)"
               />
@@ -573,10 +587,9 @@ onMounted(() => {
                 class="agreement-checkbox" /><span class="checkmark"></span
             ></label>
             <span class="agreement-text"
-              >已阅读并同意<a
-                class="privacy-link"
-                @click.prevent="onOpenPrivacy"
-                >《隐私政策》</a
+              >{{ t("login.agreePrefix")
+              }}<a class="privacy-link" @click.prevent="onOpenPrivacy"
+                >{{ t("login.privacyPolicyLink") }}</a
               ></span
             >
           </div>
@@ -585,14 +598,18 @@ onMounted(() => {
               ><span class="dot"></span><span class="dot"></span
               ><span class="dot"></span
             ></span>
-            <span v-else>登 录</span>
+            <span v-else>{{ t("login.submit") }}</span>
           </button>
           <div class="form-footer">
             <template v-if="quickUsers.length">
-              <a class="switch-link" @click="toQuickLogin">免登录</a>
+              <a class="switch-link" @click="toQuickLogin">{{
+                t("login.quickLoginLink")
+              }}</a>
               <span class="divider">|</span>
             </template>
-            <a class="switch-link" @click="toRegister">注册账号</a>
+            <a class="switch-link" @click="toRegister">{{
+              t("login.register")
+            }}</a>
           </div>
         </div>
       </template>
@@ -600,7 +617,7 @@ onMounted(() => {
     <Overlay :show="showPrivacy" @click="showPrivacy = false">
       <div class="privacy-modal" @click.stop>
         <div class="privacy-header">
-          <h2>隐私政策</h2>
+          <h2>{{ t("login.privacyTitle") }}</h2>
           <button class="privacy-close" @click="showPrivacy = false">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -612,7 +629,7 @@ onMounted(() => {
         <div class="privacy-body" v-html="privacyContent"></div>
         <div class="privacy-footer">
           <button class="privacy-confirm" @click="showPrivacy = false">
-            我知道了
+            {{ t("login.gotIt") }}
           </button>
         </div>
       </div>
@@ -620,8 +637,8 @@ onMounted(() => {
     <ActionSheet
       v-model:show="showApiSheet"
       :actions="apiActions"
-      :description="`当前服务器: ${currentApi}`"
-      cancel-text="取消"
+      :description="t('login.currentServer', { url: currentApi })"
+      :cancel-text="t('common.cancel')"
       @select="onSelectApi"
     />
   </div>
