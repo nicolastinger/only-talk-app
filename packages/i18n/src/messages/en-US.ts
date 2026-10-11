@@ -250,6 +250,8 @@ const messages: LocaleMessages = {
       "delete": "Delete",
       "cancel": "Cancel",
       "deleteConfirm": "Delete this file? This cannot be undone.",
+      "deleteTitle": "Delete File",
+      "deleteConfirmNamed": "Delete \"{name}\"? This cannot be undone.",
       "empty": "No files yet",
       "total": "{total} files in total",
       "loadFailed": "Failed to load file list",

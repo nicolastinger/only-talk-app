@@ -250,6 +250,8 @@ const messages: LocaleMessages = {
       "delete": "刪除",
       "cancel": "取消",
       "deleteConfirm": "確定刪除該檔案？刪除後不可恢復。",
+      "deleteTitle": "刪除檔案",
+      "deleteConfirmNamed": "確定刪除「{name}」嗎？刪除後不可恢復。",
       "empty": "暫無檔案",
       "total": "共 {total} 個檔案",
       "loadFailed": "獲取檔案列表失敗",

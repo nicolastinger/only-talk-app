@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { Empty, showConfirmDialog, showToast } from "vant";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type { FileType, LocalFileVo } from "@workspace/types";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 const goBack = () => router.back();
 
 const files = ref<LocalFileVo[]>([]);
@@ -14,15 +16,15 @@ const fileType = ref<FileType | "">("");
 const sortBy = ref<"name" | "date">("date");
 const sortOrder = ref<"desc" | "asc">("desc");
 
-const typeOptions: { label: string; value: FileType | "" }[] = [
-  { label: "全部", value: "" },
-  { label: "图片", value: "image" },
-  { label: "视频", value: "video" },
-  { label: "音频", value: "audio" },
-  { label: "文档", value: "document" },
-  { label: "压缩包", value: "archive" },
-  { label: "其他", value: "other" },
-];
+const typeOptions = computed<{ label: string; value: FileType | "" }[]>(() => [
+  { label: t("settings.fileManager.all"), value: "" },
+  { label: t("settings.fileManager.image"), value: "image" },
+  { label: t("settings.fileManager.video"), value: "video" },
+  { label: t("settings.fileManager.audio"), value: "audio" },
+  { label: t("settings.fileManager.document"), value: "document" },
+  { label: t("settings.fileManager.archive"), value: "archive" },
+  { label: t("settings.fileManager.other"), value: "other" },
+]);
 
 const formatSize = (size: number) => {
   if (size < 1024) return `${size}B`;
@@ -51,7 +53,7 @@ const load = async (
       })) || [];
   } catch (error) {
     console.error("获取文件列表失败:", error);
-    showToast({ message: "获取文件列表失败", icon: "fail" });
+    showToast({ message: t("settings.fileManager.loadFailed"), icon: "fail" });
   } finally {
     loading.value = false;
   }
@@ -75,20 +77,24 @@ const onSortOrderChange = (v: "desc" | "asc") => {
 const onDelete = async (file: LocalFileVo) => {
   try {
     await showConfirmDialog({
-      title: "删除文件",
-      message: `确定删除「${file.file_name}」吗？删除后不可恢复。`,
+      title: t("settings.fileManager.deleteTitle"),
+      message: t("settings.fileManager.deleteConfirmNamed", {
+        name: file.file_name,
+      }),
+      confirmButtonText: t("common.delete"),
       confirmButtonColor: "#ee0a24",
+      cancelButtonText: t("common.cancel"),
     });
   } catch {
     return;
   }
   try {
     await invoke("delete_local_file", { id: file.id });
-    showToast({ message: "删除成功", icon: "success" });
+    showToast({ message: t("settings.fileManager.deleteSuccess"), icon: "success" });
     load();
   } catch (error) {
     console.error("删除文件失败:", error);
-    showToast({ message: "删除失败", icon: "fail" });
+    showToast({ message: t("settings.fileManager.deleteFailed"), icon: "fail" });
   }
 };
 
@@ -97,7 +103,7 @@ const onOpen = async (file: LocalFileVo) => {
     await invoke("open_local_file", { path: file.file_path });
   } catch (e) {
     console.error("打开文件失败:", file.file_path, e);
-    showToast({ message: "打开文件失败", icon: "fail" });
+    showToast({ message: t("chat.openFileFailed"), icon: "fail" });
   }
 };
 
@@ -111,7 +117,11 @@ onMounted(() => {
 
 <template>
   <div class="files-page">
-    <van-nav-bar title="文件管理" left-arrow @click-left="goBack" />
+    <van-nav-bar
+      :title="t('settings.fileManager.title')"
+      left-arrow
+      @click-left="goBack"
+    />
 
     <div class="type-filter">
       <button
@@ -132,14 +142,14 @@ onMounted(() => {
           :class="{ active: sortBy === 'date' }"
           @click="onSortByChange('date')"
         >
-          按日期
+          {{ t("settings.fileManager.sortByDate") }}
         </button>
         <button
           class="sort-chip"
           :class="{ active: sortBy === 'name' }"
           @click="onSortByChange('name')"
         >
-          按名称
+          {{ t("settings.fileManager.sortByName") }}
         </button>
       </div>
       <div class="sort-group">
@@ -148,14 +158,14 @@ onMounted(() => {
           :class="{ active: sortOrder === 'desc' }"
           @click="onSortOrderChange('desc')"
         >
-          降序
+          {{ t("settings.fileManager.desc") }}
         </button>
         <button
           class="sort-chip"
           :class="{ active: sortOrder === 'asc' }"
           @click="onSortOrderChange('asc')"
         >
-          升序
+          {{ t("settings.fileManager.asc") }}
         </button>
       </div>
     </div>
@@ -167,13 +177,13 @@ onMounted(() => {
       size="24"
       vertical
     >
-      加载中...
+      {{ t("common.loadingDots") }}
     </van-loading>
 
     <Empty
       v-else-if="files.length === 0"
       image="search"
-      description="暂无文件"
+      :description="t('settings.fileManager.empty')"
     />
 
     <div v-else class="file-list">
@@ -199,7 +209,9 @@ onMounted(() => {
             <span>{{ formatTime(file.created_at) }}</span>
           </div>
         </div>
-        <button class="delete-btn" @click.stop="onDelete(file)">删除</button>
+        <button class="delete-btn" @click.stop="onDelete(file)">
+          {{ t("settings.fileManager.delete") }}
+        </button>
       </div>
     </div>
   </div>
