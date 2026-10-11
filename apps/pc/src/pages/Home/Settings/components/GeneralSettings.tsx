@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import {
   DownloadOutlined,
   FontSizeOutlined,
@@ -6,6 +7,10 @@ import {
 } from '@ant-design/icons';
 import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { getLocale, setLocale, useIntl } from '@umijs/max';
+import {
+  getAutoDownloadOnWifi,
+  setAutoDownloadOnWifi,
+} from '@workspace/services';
 import {
   Card,
   Checkbox,
@@ -16,7 +21,6 @@ import {
   message,
 } from 'antd';
 import { useEffect, useState } from 'react';
-import { useTheme } from '@/hooks/useTheme';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
@@ -28,6 +32,7 @@ const GeneralSettings = () => {
   const { mode, fontSize, setMode, setFontSize } = useTheme();
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
   const [autoStartLoading, setAutoStartLoading] = useState(false);
+  const [autoDownloadWifi, setAutoDownloadWifi] = useState(true);
 
   // 读取当前系统注册的开机自启状态，默认不启用
   useEffect(() => {
@@ -38,6 +43,18 @@ const GeneralSettings = () => {
         setAutoStartEnabled(false);
       });
   }, []);
+
+  // 读取「WiFi 下自动下载图片和视频」开关，默认开启
+  useEffect(() => {
+    getAutoDownloadOnWifi()
+      .then(setAutoDownloadWifi)
+      .catch(() => {});
+  }, []);
+
+  const handleAutoDownloadChange = (checked: boolean) => {
+    setAutoDownloadWifi(checked);
+    setAutoDownloadOnWifi(checked).catch(() => {});
+  };
 
   const handleAutoStartChange = async (checked: boolean) => {
     setAutoStartLoading(true);
@@ -121,7 +138,11 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Select value={mode} onChange={(value) => setMode(value)} className={styles.select}>
+        <Select
+          value={mode}
+          onChange={(value) => setMode(value)}
+          className={styles.select}
+        >
           <Option value="light">
             {intl.formatMessage({
               id: 'settings.generalSettings.themeModes.light',
@@ -151,7 +172,11 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Select value={fontSize} onChange={setFontSize} className={styles.select}>
+        <Select
+          value={fontSize}
+          onChange={setFontSize}
+          className={styles.select}
+        >
           <Option value="small">
             {intl.formatMessage({
               id: 'settings.generalSettings.fontSizes.small',
@@ -183,7 +208,11 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Checkbox defaultChecked className={styles.settingCheckbox}>
+        <Checkbox
+          checked={autoDownloadWifi}
+          onChange={(e) => handleAutoDownloadChange(e.target.checked)}
+          className={styles.settingCheckbox}
+        >
           {intl.formatMessage({
             id: 'settings.generalSettings.autoDownloadWifi',
           })}

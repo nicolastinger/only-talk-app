@@ -1,0 +1,35 @@
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 140px;
+  height: 105px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: var(--surface-alt, #f5f5f5);
+  border: 1px dashed var(--border-medium, #d9d9d9);
+  color: var(--text-tertiary, #999);
+  font-size: 12px;
+  user-select: none;
+}
+
+.tappable {
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--surface-hover, #ececec);
+  }
+}
+
+.download-icon {
+  font-size: 22px;
+  color: var(--brand-blue, #4096ff);
+}
+
+.download-text {
+  font-size: 12px;
+  color: var(--text-tertiary, #999);
+}

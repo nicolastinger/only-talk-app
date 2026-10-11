@@ -745,6 +745,7 @@ const messages: LocaleMessages = {
     "privacyPeer": "The other party enabled private chat",
     "imageMessage": "Image message",
     "imageLoadFailed": "Failed to load image",
+    "tapToDownloadImage": "Tap to download image",
     "openFileFailed": "Failed to open file",
     "noFilePath": "Cannot get file path",
     "downloadFailed": "Download failed",

@@ -7,6 +7,7 @@ export * from "./groupService";
 export * from "./httpService";
 export * from "./imagePreviewService";
 export * from "./momentService";
+export * from "./networkService";
 export * from "./notificationService";
 export * from "./plazaService";
 export * from "./reportService";

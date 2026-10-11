@@ -16,6 +16,8 @@ export interface UiChatMessage {
   showTime: boolean;
   /** 媒体消息已解析出的本地预览/真实 URL */
   imageUrl?: string | null;
+  /** 图片消息的业务 ID（用于手动点击下载/预览） */
+  imageBizId?: string;
   /** 图片发送中占位 */
   sendingImage?: boolean;
   /** 文件上传中(展示上传动画) */

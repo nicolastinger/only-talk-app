@@ -235,6 +235,43 @@ pub async fn crop_image_to_webp_command(
     Ok(output_path.to_string_lossy().to_string())
 }
 
+/// 依据文件头魔数识别图片真实格式，返回扩展名（非图片/未知返回 None）。
+/// content:// URI 无法直接拿到文件名/扩展名，必须靠内容嗅探，避免把 GIF/PNG
+/// 等统统当成 jpg 导致后续解码/压缩失败。
+#[allow(dead_code)]
+fn sniff_image_extension(path: &std::path::Path) -> Option<&'static str> {
+    use std::io::Read;
+
+    let mut header = [0u8; 16];
+    let mut file = std::fs::File::open(path).ok()?;
+    let len = file.read(&mut header).ok()?;
+    let bytes = &header[..len];
+
+    if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        return Some("gif");
+    }
+    if bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+        return Some("png");
+    }
+    if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        return Some("jpg");
+    }
+    if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        return Some("webp");
+    }
+    if bytes.starts_with(b"BM") {
+        return Some("bmp");
+    }
+    if bytes.starts_with(b"II*\0") || bytes.starts_with(b"MM\0*") {
+        return Some("tiff");
+    }
+    // HEIF/HEIC 等: ftyp box 位于偏移 4
+    if bytes.len() >= 12 && &bytes[4..8] == b"ftyp" {
+        return Some("heic");
+    }
+    None
+}
+
 /// Android：通过 tauri-plugin-fs(ContentResolver) 读取 content:// URI，
 /// 复制到应用数据目录 umi_gitee_temp，返回 Rust 可读的真实路径
 #[cfg(target_os = "android")]
@@ -261,16 +298,23 @@ fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String,
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    let temp_file = temp_dir.join(format!("img_{}.jpg", timestamp));
+    let temp_file = temp_dir.join(format!("img_{}.tmp", timestamp));
 
     // 流式拷贝, 避免整图一次性读入内存(Vec)导致大图阻塞/内存峰值
     let mut out =
         std::fs::File::create(&temp_file).map_err(|e| format!("创建临时文件失败: {}", e))?;
     copy(&mut file, &mut out).map_err(|e| format!("复制 content URI 失败: {}", e))?;
     out.flush().map_err(|e| format!("刷新临时文件失败: {}", e))?;
+    drop(out);
 
-    info!("Content URI copied to: {}", temp_file.display());
-    Ok(temp_file.to_string_lossy().to_string())
+    // 按真实格式修正扩展名(GIF/PNG/WebP 等), 供后续解码/压缩/预览正确识别
+    let ext = sniff_image_extension(&temp_file).unwrap_or("jpg");
+    let final_file = temp_dir.join(format!("img_{}.{}", timestamp, ext));
+    std::fs::rename(&temp_file, &final_file)
+        .map_err(|e| format!("重命名临时文件失败: {}", e))?;
+
+    info!("Content URI copied to: {}", final_file.display());
+    Ok(final_file.to_string_lossy().to_string())
 }
 
 /// 将文件（包括 Android content:// URI）复制到临时目录并返回真实路径

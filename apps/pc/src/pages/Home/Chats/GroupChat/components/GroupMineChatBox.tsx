@@ -238,6 +238,8 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           loading={loading}
           friendUuid={groupUuid}
           currentBizId={imageBizId || currentBizId || ''}
+          bizId={imageBizId || currentBizId || ''}
+          autoDownload={true}
           meUuid={userInfo?.uuid || ''}
           isGroup={true}
           nanoId={nano_id}

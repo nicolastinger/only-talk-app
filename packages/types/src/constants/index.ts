@@ -11,6 +11,7 @@ export const CLIENT_CONFIG_KEYS = {
   serverDomain: "server.domain",
   appTheme: "app.theme",
   appLanguage: "app.language",
+  autoDownloadWifi: "app.auto_download_wifi",
 } as const;
 
 /** 客户端配置项 */

@@ -42,6 +42,8 @@ const props = defineProps<{
   selectMode?: boolean;
   /** 多选模式已选中的 nano_id 列表 */
   selectedIds?: string[];
+  /** 当前是否允许自动下载聊天图片（非计量网络且开关开启） */
+  autoDownload?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -159,8 +161,7 @@ const isRecallRow = (msg: UiChatMessage): boolean =>
 const recallText = (msg: UiChatMessage): string => {
   if (msg.from === "mine")
     return t("chat.recall.notice", { name: t("chat.recall.you") });
-  if (isGroup.value)
-    return t("chat.recall.notice", { name: senderName(msg) });
+  if (isGroup.value) return t("chat.recall.notice", { name: senderName(msg) });
   return t("chat.recall.notice", {
     name: props.peerName || t("chat.recall.peer"),
   });
@@ -177,6 +178,12 @@ const senderAvatar = (msg: UiChatMessage): string => {
   if (url) return url;
   return props.peerAvatar;
 };
+
+/** 发送方图片恒自动展示（本地已有），对方图片受「网络 + 开关」控制 */
+const imageAutoDownload = (msg: UiChatMessage): boolean =>
+  msg.from === "mine" || !!props.autoDownload;
+const imageLoading = (msg: UiChatMessage): boolean =>
+  !msg.imageUrl && imageAutoDownload(msg);
 </script>
 
 <template>
@@ -225,7 +232,10 @@ const senderAvatar = (msg: UiChatMessage): string => {
             <div class="media-box">
               <ImageMsg
                 :src="msg.imageUrl"
-                :loading="!msg.imageUrl"
+                :loading="imageLoading(msg)"
+                :biz-id="msg.imageBizId"
+                :nano-id="msg.textMsg.nano_id"
+                :allow-auto-download="imageAutoDownload(msg)"
                 @preview="emit('preview', msg)"
               />
               <span v-if="showSentDot(msg)" class="sent-dot" />
@@ -308,7 +318,10 @@ const senderAvatar = (msg: UiChatMessage): string => {
           <template v-if="contentKind(msg.textMsg.text_type) === 'image'">
             <ImageMsg
               :src="msg.imageUrl"
-              :loading="!msg.imageUrl"
+              :loading="imageLoading(msg)"
+              :biz-id="msg.imageBizId"
+              :nano-id="msg.textMsg.nano_id"
+              :allow-auto-download="imageAutoDownload(msg)"
               @preview="emit('preview', msg)"
             />
           </template>

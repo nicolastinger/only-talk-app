@@ -745,6 +745,7 @@ const messages: LocaleMessages = {
     "privacyPeer": "对方开启了隐私聊天",
     "imageMessage": "图片消息",
     "imageLoadFailed": "图片加载失败",
+    "tapToDownloadImage": "点击下载图片",
     "openFileFailed": "打开文件失败",
     "noFilePath": "无法获取文件路径",
     "downloadFailed": "下载失败",

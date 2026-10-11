@@ -49,6 +49,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageBizId, setImageBizId] = useState<string>('');
   const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
 
   const userInfo = useBearStore((state) => state.userInfo);
@@ -127,6 +128,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           return;
         }
 
+        setImageBizId(bizId);
+
         if (imageCache.has(bizId)) {
           setImageUrl(imageCache.get(bizId)!);
           return;
@@ -182,14 +185,16 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       return TextBox(raw);
     }
     if (text_type === MSG_TYPE_IMAGE) {
-      const bizId = fileRecord?.biz_id || '';
       return (
         <ChatImage
           src={imageUrl}
           loading={loading}
           friendUuid={friendUuid}
-          currentBizId={bizId}
+          currentBizId={imageBizId}
+          bizId={imageBizId}
+          autoDownload={true}
           meUuid={userInfo?.uuid || ''}
+          nanoId={nano_id}
         />
       );
     }

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { kv_get, kv_set } from "@workspace/services";
+import {
+  getAutoDownloadOnWifi,
+  setAutoDownloadOnWifi,
+} from "@workspace/services";
 import { useTheme, type ChatsFontSize, type ThemeMode } from "@/stores/theme";
 import { useI18n, type Locale } from "@/i18n";
 
@@ -9,18 +12,16 @@ const router = useRouter();
 const { t, locale, setLocale } = useI18n();
 const { mode, fontSize, setMode, setFontSize } = useTheme();
 
-const AUTO_DOWNLOAD_KEY = "ui_auto_download_wifi";
 const autoDownload = ref(true);
-kv_get(AUTO_DOWNLOAD_KEY)
+getAutoDownloadOnWifi()
   .then((value) => {
-    if (value === "0") autoDownload.value = false;
-    else if (value === "1") autoDownload.value = true;
+    autoDownload.value = value;
   })
   .catch(() => {});
 
 const setAutoDownload = (value: boolean) => {
   autoDownload.value = value;
-  kv_set(AUTO_DOWNLOAD_KEY, value ? "1" : "0").catch(() => {});
+  setAutoDownloadOnWifi(value).catch(() => {});
 };
 
 const themeOptions: { value: ThemeMode; key: string }[] = [
@@ -69,7 +70,9 @@ const goBack = () => router.back();
     </div>
 
     <div class="section-card">
-      <div class="section-title">{{ t("settings.generalSettings.language") }}</div>
+      <div class="section-title">
+        {{ t("settings.generalSettings.language") }}
+      </div>
       <p class="desc">{{ t("settings.generalSettings.languageDesc") }}</p>
       <div class="option-group">
         <button
@@ -85,7 +88,9 @@ const goBack = () => router.back();
     </div>
 
     <div class="section-card">
-      <div class="section-title">{{ t("settings.generalSettings.fontSize") }}</div>
+      <div class="section-title">
+        {{ t("settings.generalSettings.fontSize") }}
+      </div>
       <p class="desc">{{ t("settings.generalSettings.fontSizeDesc") }}</p>
       <div class="option-group">
         <button

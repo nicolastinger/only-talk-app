@@ -69,6 +69,7 @@ use crate::cmd::group_controller::{
 use crate::cmd::log_controller::{
     clear_app_logs, get_app_logs, get_client_log_files, read_client_log_file,
 };
+use crate::cmd::network_controller::get_network_type;
 use crate::cmd::notification_controller::{
     batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level,
     get_system_notification, get_unread_notification_counts,
@@ -238,6 +239,7 @@ pub fn run() {
             crop_image_to_webp_command,
             copy_file_to_temp,
             get_device_info,
+            get_network_type,
             sign_in,
             refresh_token_command,
             github_login,

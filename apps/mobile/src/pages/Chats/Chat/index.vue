@@ -23,6 +23,7 @@ import {
   getAllFileExtensions,
   getImageExtensions,
   selectFile,
+  shouldAutoDownloadImage,
 } from "@workspace/services";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type { TextQuicMsgVo, ChatSessionVo, FriendVo } from "@workspace/types";
@@ -81,6 +82,8 @@ const { myAvatar, ensureMyAvatar } = useMyAvatar(() => meUuid.value);
 
 const chatAvatar = ref<string | null>(null);
 const isSelf = computed(() => !!meUuid.value && friendId === meUuid.value);
+/** 当前是否允许自动下载对方发来的图片（开关开启且处于非计量网络） */
+const allowImageAutoDownload = ref(false);
 
 const ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let viewportCleanup: (() => void) | null = null;
@@ -303,11 +306,19 @@ const loadFriendInfo = async () => {
   }
 };
 
-const resolveImageUrl = async (msg: TextQuicMsgVo): Promise<string | null> => {
+/** 解析图片 bizId，并按需自动下载（发送方本地图片恒解析；对方图片受网络/开关控制） */
+const resolveImageUrl = async (
+  msg: TextQuicMsgVo,
+  isMine: boolean
+): Promise<string | null> => {
   const bizId = parsePrivateImageBizId(msg.raw);
   if (!bizId) return null;
+  if (!isMine && !allowImageAutoDownload.value) return null;
   return loadImageUrl(bizId, msg.nano_id);
 };
+
+const imageBizIdOf = (msg: TextQuicMsgVo): string | undefined =>
+  parsePrivateImageBizId(msg.raw) || undefined;
 
 const makeUiMessage = (
   msg: TextQuicMsgVo,
@@ -356,7 +367,8 @@ const loadMessages = async (page = 1, prepend = false) => {
       list.map(async (item, index, arr) => {
         const msg = makeUiMessage(item, index, arr);
         if (isImageType(item.text_type)) {
-          msg.imageUrl = await resolveImageUrl(item);
+          msg.imageBizId = imageBizIdOf(item);
+          msg.imageUrl = await resolveImageUrl(item, msg.from === "mine");
         }
         return msg;
       })
@@ -439,7 +451,8 @@ const pushMessage = async (msg: TextQuicMsgVo) => {
     senderUuid: msg.send_user,
   };
   if (isImageType(msg.text_type)) {
-    ui.imageUrl = await resolveImageUrl(msg);
+    ui.imageBizId = imageBizIdOf(msg);
+    ui.imageUrl = await resolveImageUrl(msg, ui.from === "mine");
   }
   messages.value.push(ui);
 };
@@ -702,6 +715,7 @@ onMounted(async () => {
   }
   await loadFriendInfo();
   await loadAvatars();
+  allowImageAutoDownload.value = await shouldAutoDownloadImage();
   await loadMessages(1);
   markReadSession();
   invoke("add_user_map", {
@@ -826,11 +840,14 @@ const handleAvatarClick = ({
         :messages="messages"
         :my-avatar="myAvatar || DEFAULT_AVATAR"
         :peer-avatar="chatAvatar || DEFAULT_AVATAR"
-        :peer-name="isSelf ? t('chats.selfChatName') : friendInfo.name || friendId"
+        :peer-name="
+          isSelf ? t('chats.selfChatName') : friendInfo.name || friendId
+        "
         :fallback-avatar="DEFAULT_AVATAR"
         :my-uuid="meUuid"
         :select-mode="selectMode"
         :selected-ids="selectedIds"
+        :auto-download="allowImageAutoDownload"
         @preview="handlePreview"
         @retry="handleRetry"
         @avatar-click="handleAvatarClick"

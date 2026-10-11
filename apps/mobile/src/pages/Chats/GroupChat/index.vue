@@ -23,6 +23,7 @@ import {
   getAllFileExtensions,
   getImageExtensions,
   selectFile,
+  shouldAutoDownloadImage,
 } from "@workspace/services";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import { useMyAvatar } from "@/hooks/useMyAvatar";
@@ -81,6 +82,8 @@ const { getAvatarUrl } = useAvatar();
 const { myAvatar, ensureMyAvatar } = useMyAvatar(() => meUuid.value);
 
 const groupAvatar = ref<string | null>(null);
+/** 当前是否允许自动下载群成员发来的图片（开关开启且处于非计量网络） */
+const allowImageAutoDownload = ref(false);
 const ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let viewportCleanup: (() => void) | null = null;
 
@@ -315,13 +318,19 @@ const loadGroupInfo = async () => {
   }
 };
 
+/** 解析群图片 bizId，并按需自动下载（发送方本地图片恒解析；他人图片受网络/开关控制） */
 const resolveGroupImageUrl = async (
-  msg: TextQuicMsgVo
+  msg: TextQuicMsgVo,
+  isMine: boolean
 ): Promise<string | null> => {
   const bizId = parseGroupImageBizId(msg.raw);
   if (!bizId) return null;
+  if (!isMine && !allowImageAutoDownload.value) return null;
   return loadImageUrl(bizId, msg.nano_id);
 };
+
+const groupImageBizIdOf = (msg: TextQuicMsgVo): string | undefined =>
+  parseGroupImageBizId(msg.raw) || undefined;
 
 const makeUiMessage = (
   msg: TextQuicMsgVo,
@@ -362,7 +371,8 @@ const loadMessages = async (page = 1, prepend = false) => {
     for (let i = 0; i < list.length; i++) {
       const ui = makeUiMessage(list[i], i, list);
       if (isGroupImage(list[i].text_type)) {
-        ui.imageUrl = await resolveGroupImageUrl(list[i]);
+        ui.imageBizId = groupImageBizIdOf(list[i]);
+        ui.imageUrl = await resolveGroupImageUrl(list[i], ui.from === "mine");
       }
       chatMessages.push(ui);
     }
@@ -444,7 +454,8 @@ const pushMessage = async (msg: TextQuicMsgVo) => {
     senderUuid: msg.send_user,
   };
   if (isGroupImage(msg.text_type)) {
-    ui.imageUrl = await resolveGroupImageUrl(msg);
+    ui.imageBizId = groupImageBizIdOf(msg);
+    ui.imageUrl = await resolveGroupImageUrl(msg, ui.from === "mine");
   }
   messages.value.push(ui);
 };
@@ -760,6 +771,7 @@ onMounted(async () => {
   if (typeof qIcon === "string" && qIcon) groupAvatar.value = qIcon;
   await loadGroupInfo();
   await loadAvatars();
+  allowImageAutoDownload.value = await shouldAutoDownloadImage();
   await loadMessages(1);
   markReadSession();
   invoke("add_user_map", {
@@ -867,6 +879,7 @@ const handlePreview = async (msg: UiChatMessage) => {
         :my-uuid="meUuid"
         :select-mode="selectMode"
         :selected-ids="selectedIds"
+        :auto-download="allowImageAutoDownload"
         @preview="handlePreview"
         @retry="handleRetry"
         @avatar-click="handleAvatarClick"
