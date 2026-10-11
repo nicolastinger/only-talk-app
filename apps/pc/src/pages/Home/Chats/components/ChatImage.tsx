@@ -1,5 +1,6 @@
 import AppImage from '@/components/AppImage';
 import { DownloadOutlined } from '@ant-design/icons';
+import { useIntl } from '@umijs/max';
 import type { ChatFileDownloadProgress } from '@workspace/services';
 import {
   getChatFileByBizId,
@@ -34,6 +35,8 @@ interface ChatImageProps {
   sending?: boolean;
   /** 上传进度百分比 0-100 */
   uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: string;
 }
 
 const ChatImage: React.FC<ChatImageProps> = ({
@@ -54,7 +57,9 @@ const ChatImage: React.FC<ChatImageProps> = ({
   autoDownload = true,
   sending = false,
   uploadProgress = 0,
+  sendPhase,
 }) => {
+  const intl = useIntl();
   const [isOpening, setIsOpening] = React.useState(false);
   const [downloading, setDownloading] = React.useState(false);
   const [localSrc, setLocalSrc] = React.useState<string | null>(null);
@@ -71,6 +76,7 @@ const ChatImage: React.FC<ChatImageProps> = ({
       ? Math.min(100, Math.floor((progress.downloaded / progress.total) * 100))
       : 0;
   const uploadPercent = Math.max(0, Math.min(100, Math.round(uploadProgress)));
+  const uploadIndeterminate = sending && sendPhase !== 'uploading';
   // 禁止自动下载但本地已有文件时直接展示；仅「本地无文件」才展示点击下载
   const needsDownload =
     !resolvedSrc &&
@@ -210,20 +216,35 @@ const ChatImage: React.FC<ChatImageProps> = ({
         borderRadius={borderRadius}
         onClick={sending ? undefined : handlePreview}
       />
-      {sending && (
-        <div className={styles.uploadOverlay} style={{ borderRadius }}>
-          <Progress
-            type="circle"
-            percent={uploadPercent}
-            size={44}
-            strokeColor="#ffffff"
-            trailColor="rgba(255, 255, 255, 0.3)"
-            format={(p) => (
-              <span style={{ color: '#fff', fontSize: 12 }}>{p}%</span>
-            )}
-          />
-        </div>
-      )}
+      {sending &&
+        (uploadIndeterminate ? (
+          <div className={styles.uploadOverlay} style={{ borderRadius }}>
+            <div className={styles.uploadIndeterminateWrap}>
+              <span className={styles.uploadPhaseText}>
+                {intl.formatMessage({
+                  id:
+                    sendPhase === 'compressing'
+                      ? 'chat.compressing'
+                      : 'chat.reading',
+                })}
+              </span>
+              <div className={styles.uploadIndeterminate} />
+            </div>
+          </div>
+        ) : (
+          <div className={styles.uploadOverlay} style={{ borderRadius }}>
+            <Progress
+              type="circle"
+              percent={uploadPercent}
+              size={44}
+              strokeColor="#ffffff"
+              trailColor="rgba(255, 255, 255, 0.3)"
+              format={(p) => (
+                <span style={{ color: '#fff', fontSize: 12 }}>{p}%</span>
+              )}
+            />
+          </div>
+        ))}
     </div>
   );
 };

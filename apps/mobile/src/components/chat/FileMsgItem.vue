@@ -65,6 +65,7 @@ const display = computed(() => {
       !!props.msg.sendingFile && props.msg.ack === false && !props.msg.failed
     "
     :upload-progress="props.msg.uploadProgress"
+    :send-phase="props.msg.sendPhase"
   />
   <div v-else class="file-fallback">{{ t("chat.typeFile") }}</div>
 </template>

@@ -196,10 +196,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
           ack: false,
         };
 
+        // 先上屏(展示气泡与上传进度)，再执行发送
+        onMessageSent(JSON.stringify(temp));
         onUploadStart?.();
         try {
           await invoke('send_group_image_msg', { textQuicMsg: text_msg_raw });
-          onMessageSent(JSON.stringify(temp));
         } finally {
           onUploadEnd?.();
         }
@@ -244,10 +245,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
           ack: false,
         };
 
+        // 先上屏(展示气泡与上传进度)，再执行发送
+        onMessageSent(JSON.stringify(temp));
         onUploadStart?.();
         try {
           await invoke('send_group_file_msg', { textQuicMsg: text_msg_raw });
-          onMessageSent(JSON.stringify(temp));
         } finally {
           onUploadEnd?.();
         }

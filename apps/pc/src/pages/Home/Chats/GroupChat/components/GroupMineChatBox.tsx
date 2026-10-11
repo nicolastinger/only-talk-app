@@ -24,6 +24,8 @@ type GroupMineChatBoxProps = {
   currentBizId?: string;
   /** 上传进度百分比 0-100（发送中展示） */
   uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: string;
 };
 
 // 群聊消息类型
@@ -245,6 +247,7 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           autoDownload={true}
           sending={sending}
           uploadProgress={props.uploadProgress}
+          sendPhase={props.sendPhase}
           meUuid={userInfo?.uuid || ''}
           isGroup={true}
           nanoId={nano_id}
@@ -263,6 +266,7 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
             loading={loading}
             sending={sending}
             uploadProgress={props.uploadProgress}
+            sendPhase={props.sendPhase}
           />
         );
       }

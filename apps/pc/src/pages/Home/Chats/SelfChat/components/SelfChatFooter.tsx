@@ -190,8 +190,9 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
           ack: false,
         };
 
-        await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
+        // 先上屏(展示气泡与上传进度)，再执行发送
         onMessageSent?.(JSON.stringify(temp));
+        await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
       }
     } catch (e) {
       console.log('发送图片失败', e);

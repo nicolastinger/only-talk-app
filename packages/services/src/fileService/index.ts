@@ -24,15 +24,20 @@ export interface ChatFileDownloadProgress {
   total: number;
 }
 
-/** 聊天文件上传进度(来自后端 `chat_file_upload_progress` 事件) */
+/** 发送阶段: reading(读取/准备) / compressing(压缩) / uploading(上传) */
+export type ChatSendPhase = "reading" | "compressing" | "uploading";
+
+/** 聊天文件发送进度(来自后端 `chat_file_upload_progress` 事件) */
 export interface ChatFileUploadProgress {
   /** 消息 nano_id(前端按此匹配对应消息) */
   nanoId: string;
   /** 文件名 */
   fileName: string;
-  /** 已上传字节数 */
+  /** 当前阶段 */
+  phase: ChatSendPhase;
+  /** 已上传字节数(phase=uploading 时有效) */
   uploaded: number;
-  /** 总字节数 */
+  /** 总字节数(phase=uploading 时有效) */
   total: number;
 }
 

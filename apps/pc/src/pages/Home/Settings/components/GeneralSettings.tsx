@@ -9,6 +9,7 @@ import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { getLocale, setLocale, useIntl } from '@umijs/max';
 import {
   getAutoDownloadOnWifi,
+  setAppLanguage,
   setAutoDownloadOnWifi,
 } from '@workspace/services';
 import {
@@ -77,6 +78,7 @@ const GeneralSettings = () => {
 
   const handleLanguageChange = (value: string) => {
     setLocale(value, false);
+    setAppLanguage(value).catch(() => {});
   };
 
   return (

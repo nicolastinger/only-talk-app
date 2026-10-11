@@ -58,7 +58,7 @@ const ChatPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState(0);
   const [uploadProgressMap, setUploadProgressMap] = useState<
-    Record<string, number>
+    Record<string, { percent: number; phase: string }>
   >({});
   const [pendingBarVisible, setPendingBarVisible] = useState(false);
   const [pendingRefreshSignal, setPendingRefreshSignal] = useState(0);
@@ -320,7 +320,10 @@ const ChatPage: React.FC = () => {
           ? Math.min(99, Math.floor((p.uploaded / p.total) * 100))
           : 0;
       setUploadPercent(pct);
-      setUploadProgressMap((prev) => ({ ...prev, [p.nanoId]: pct }));
+      setUploadProgressMap((prev) => ({
+        ...prev,
+        [p.nanoId]: { percent: pct, phase: p.phase },
+      }));
     })
       .then((fn) => {
         if (disposed) fn();
@@ -624,10 +627,14 @@ const ChatPage: React.FC = () => {
         />
         {isUploading && (
           <div className={styles.uploadLoadingBar}>
-            <div
-              className={styles.uploadLoadingProgress}
-              style={{ width: `${uploadPercent}%` }}
-            />
+            {uploadPercent === 0 ? (
+              <div className={styles.uploadLoadingIndeterminate} />
+            ) : (
+              <div
+                className={styles.uploadLoadingProgress}
+                style={{ width: `${uploadPercent}%` }}
+              />
+            )}
           </div>
         )}
       </div>

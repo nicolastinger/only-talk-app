@@ -103,13 +103,24 @@ const globalUploadPercent = computed(() => {
   }
   return max;
 });
+/** 读取/压缩阶段(无字节进度)时顶栏展示不确定动画 */
+const globalUploadIndeterminate = computed(() =>
+  messages.value.some(
+    (m) =>
+      (m.sendingImage || m.sendingFile) &&
+      m.ack === false &&
+      !m.failed &&
+      m.sendPhase !== "uploading"
+  )
+);
 const ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let viewportCleanup: (() => void) | null = null;
 let uploadUnlisten: (() => void) | null = null;
 
-/** 上传进度事件：按 nano_id 更新对应消息的进度 */
+/** 发送进度事件：按 nano_id 更新对应消息的阶段与上传进度 */
 const applyUploadProgress = (payload: {
   nanoId: string;
+  phase: UiChatMessage["sendPhase"];
   uploaded: number;
   total: number;
 }) => {
@@ -117,6 +128,7 @@ const applyUploadProgress = (payload: {
     (m) => m.textMsg.nano_id === payload.nanoId
   );
   if (idx === -1) return;
+  messages.value[idx].sendPhase = payload.phase;
   const percent =
     payload.total > 0
       ? Math.min(100, Math.floor((payload.uploaded / payload.total) * 100))
@@ -560,33 +572,8 @@ const selectAndSendGroup = async (
     if (!filePaths || filePaths.length === 0) return;
 
     let filePath = filePaths[0];
-    let localPreview: string | null = null;
-    if (filePath.startsWith("content://")) {
-      try {
-        const { tempPath, preview } = await resolveContentToTempFile(filePath);
-        filePath = tempPath;
-        localPreview = preview;
-      } catch (e) {
-        console.error("读取文件失败:", e);
-        showToast({ message: t("chat.readFileFailed"), icon: "fail" });
-        return;
-      }
-    }
 
-    // 大小预校验：超限直接提示并中止
-    const limit = media === "image" ? UPLOAD_LIMITS.image : UPLOAD_LIMITS.file;
-    const size = await getLocalFileSize(filePath);
-    if (size > limit) {
-      showToast({
-        message: t(
-          media === "image" ? "chat.imageTooLarge" : "chat.fileTooLarge",
-          { limit: Math.floor(limit / (1024 * 1024)) }
-        ),
-        icon: "fail",
-      });
-      return;
-    }
-
+    // 先上屏：选择后立即展示气泡与进度(读取/压缩/上传阶段均有反馈)
     const textMsg: TextQuicMsgVo = {
       nano_id: genNanoId(),
       text_type: type,
@@ -607,32 +594,80 @@ const selectAndSendGroup = async (
           Date.now()
         ),
       senderUuid: meUuid.value,
+      uploadProgress: 0,
+      sendPhase: "reading",
     };
     if (media === "image") {
-      ui.imageUrl = localPreview || convertPathToTauriUrl(filePath);
       ui.sendingImage = true;
-    } else if (media === "file") {
+      if (!filePath.startsWith("content://")) {
+        ui.imageUrl = convertPathToTauriUrl(filePath);
+      }
+    } else {
       ui.sendingFile = true;
     }
-    ui.uploadProgress = 0;
     messages.value.push(ui);
     await nextTick();
     scrollToBottom(true);
     startAckTimer(textMsg.nano_id);
+
+    const patch = (p: Partial<UiChatMessage>) => {
+      const i = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
+      if (i !== -1) Object.assign(messages.value[i], p);
+    };
+
+    // 读取 content:// → 临时文件(此阶段气泡/顶栏展示 reading 动画)
+    if (filePath.startsWith("content://")) {
+      try {
+        const { tempPath, preview } = await resolveContentToTempFile(filePath);
+        filePath = tempPath;
+        textMsg.raw = tempPath;
+        if (media === "image" && preview) patch({ imageUrl: preview });
+      } catch (e) {
+        console.error("读取文件失败:", e);
+        patch({
+          failed: true,
+          sendingImage: false,
+          sendingFile: false,
+          sendPhase: undefined,
+          uploadProgress: undefined,
+        });
+        showToast({ message: t("chat.readFileFailed"), icon: "fail" });
+        return;
+      }
+    }
+
+    // 大小预校验：超限移除气泡并提示
+    const limit = media === "image" ? UPLOAD_LIMITS.image : UPLOAD_LIMITS.file;
+    const size = await getLocalFileSize(filePath);
+    if (size > limit) {
+      const i = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
+      if (i !== -1) messages.value.splice(i, 1);
+      showToast({
+        message: t(
+          media === "image" ? "chat.imageTooLarge" : "chat.fileTooLarge",
+          { limit: Math.floor(limit / (1024 * 1024)) }
+        ),
+        icon: "fail",
+      });
+      return;
+    }
+
     try {
       await invoke(command, { textQuicMsg: textMsg });
       markGroupDelivered(textMsg.nano_id);
     } catch (e) {
       console.error("群媒体发送失败:", e);
-      const idx = messages.value.findIndex(
-        (m) => m.textMsg.nano_id === textMsg.nano_id
-      );
-      if (idx !== -1) {
-        messages.value[idx].failed = true;
-        messages.value[idx].sendingImage = false;
-        messages.value[idx].sendingFile = false;
-        messages.value[idx].uploadProgress = undefined;
-      }
+      patch({
+        failed: true,
+        sendingImage: false,
+        sendingFile: false,
+        sendPhase: undefined,
+        uploadProgress: undefined,
+      });
       const errText = typeof e === "string" ? e : (e as Error)?.message;
       showToast({
         message:
@@ -920,6 +955,11 @@ const handlePreview = async (msg: UiChatMessage) => {
 
     <div v-if="globalUploading" class="global-upload-bar">
       <div
+        v-if="globalUploadIndeterminate"
+        class="global-upload-indeterminate"
+      ></div>
+      <div
+        v-else
         class="global-upload-progress"
         :style="{ width: globalUploadPercent + '%' }"
       ></div>
@@ -1148,6 +1188,21 @@ const handlePreview = async (msg: UiChatMessage) => {
   background-size: 200% 100%;
   transition: width 0.25s ease;
   animation: global-upload-shimmer 1.2s linear infinite;
+}
+.global-upload-indeterminate {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #4096ff, #69b1ff, #4096ff);
+  border-radius: 2px;
+  animation: global-upload-slide 1.1s ease-in-out infinite;
+}
+@keyframes global-upload-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
 }
 @keyframes global-upload-shimmer {
   0% {

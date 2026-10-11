@@ -12,10 +12,12 @@ const props = defineProps<{
   nanoId?: string;
   /** 是否允许在非计量网络下自动下载（发送方的本地图片恒为 true） */
   allowAutoDownload?: boolean;
-  /** 是否正在上传（发送中展示进度遮罩） */
+  /** 是否正在发送（发送中展示进度遮罩） */
   sending?: boolean;
   /** 上传进度百分比 0-100 */
   uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: "reading" | "compressing" | "uploading";
 }>();
 
 const emit = defineEmits<{
@@ -56,6 +58,14 @@ const needsDownload = computed(
 const uploadPercent = computed(() =>
   Math.max(0, Math.min(100, Math.round(props.uploadProgress ?? 0)))
 );
+/** 读取/压缩阶段无字节进度，展示不确定动画 */
+const uploadIndeterminate = computed(() => props.sendPhase !== "uploading");
+const uploadStatusText = computed(() => {
+  if (!uploadIndeterminate.value) return `${uploadPercent.value}%`;
+  return props.sendPhase === "compressing"
+    ? t("chat.compressing")
+    : t("chat.reading");
+});
 
 const onImgError = () => {
   error.value = true;
@@ -133,8 +143,10 @@ watch(
       />
       <div v-if="sending" class="upload-overlay">
         <span class="upload-spinner"></span>
-        <span class="upload-percent">{{ uploadPercent }}%</span>
+        <span class="upload-percent">{{ uploadStatusText }}</span>
+        <div v-if="uploadIndeterminate" class="upload-indeterminate"></div>
         <van-progress
+          v-else
           class="upload-bar"
           :percentage="uploadPercent"
           :show-pivot="false"
@@ -143,6 +155,23 @@ watch(
           track-color="rgba(255, 255, 255, 0.35)"
         />
       </div>
+    </div>
+
+    <div v-else-if="sending" class="image-sending">
+      <span class="sending-spinner"></span>
+      <span class="sending-text">{{ uploadStatusText }}</span>
+      <div v-if="uploadIndeterminate" class="sending-indeterminate">
+        <div class="sending-indeterminate-inner"></div>
+      </div>
+      <van-progress
+        v-else
+        class="progress"
+        :percentage="uploadPercent"
+        :show-pivot="false"
+        :stroke-width="4"
+        color="var(--brand-blue)"
+        track-color="var(--border-light)"
+      />
     </div>
 
     <div v-else-if="downloading" class="image-downloading">
@@ -226,9 +255,38 @@ watch(
   width: 100%;
   margin-top: 2px;
 }
+.upload-indeterminate {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  margin-top: 2px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.35);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 40%;
+    border-radius: 2px;
+    background: #fff;
+    animation: upload-slide 1.1s ease-in-out infinite;
+  }
+}
 @keyframes upload-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+@keyframes upload-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
   }
 }
 .image-placeholder {
@@ -272,6 +330,55 @@ watch(
   .download-text {
     font-size: 12px;
     color: var(--brand-blue);
+  }
+}
+.image-sending {
+  width: 140px;
+  height: 105px;
+  border-radius: 10px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+
+  .progress {
+    width: 100%;
+  }
+}
+.sending-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-medium);
+  border-top-color: var(--brand-blue);
+  border-radius: 50%;
+  animation: upload-spin 0.8s linear infinite;
+}
+.sending-text {
+  font-size: 12px;
+  color: var(--brand-blue);
+}
+.sending-indeterminate {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--border-light);
+
+  .sending-indeterminate-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 40%;
+    border-radius: 2px;
+    background: var(--brand-blue);
+    animation: upload-slide 1.1s ease-in-out infinite;
   }
 }
 .download-icon {

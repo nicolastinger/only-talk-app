@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import { CLIENT_CONFIG_KEYS, ClientConfigItem, TALK_API } from "@workspace/types";
+import {
+  CLIENT_CONFIG_KEYS,
+  ClientConfigItem,
+  TALK_API,
+} from "@workspace/types";
 import { fetchFileTypeConfig } from "../fileTypeConfigService";
 import { setApiBase } from "../httpService";
 
@@ -27,7 +31,8 @@ export const initAppConfig = async (): Promise<void> => {
 };
 
 /** 读取配置项(内存) */
-export const getConfig = (key: string): string | undefined => configMap.get(key);
+export const getConfig = (key: string): string | undefined =>
+  configMap.get(key);
 
 /** 持久化写入配置项(表 + 内存), 若为 api_base 立即切换 */
 export const setConfig = async (key: string, value: string): Promise<void> => {
@@ -40,7 +45,9 @@ export const setConfig = async (key: string, value: string): Promise<void> => {
 };
 
 /** 直接读表(不经内存), 一般无需使用 */
-export const getConfigFromStore = async (key: string): Promise<string | undefined> => {
+export const getConfigFromStore = async (
+  key: string
+): Promise<string | undefined> => {
   const value = await invoke<string | null>("get_client_config", { key });
   return value ?? undefined;
 };
@@ -63,3 +70,8 @@ export const getAppTheme = (): string =>
 /** 应用默认语言(app.language, 兜底 zh-CN) */
 export const getAppLanguage = (): string =>
   configMap.get(CLIENT_CONFIG_KEYS.appLanguage) || "zh-CN";
+
+/** 持久化应用语言(app.language): 表 + 内存, 供各端语言切换统一调用 */
+export const setAppLanguage = async (language: string): Promise<void> => {
+  await setConfig(CLIENT_CONFIG_KEYS.appLanguage, language);
+};

@@ -19,8 +19,8 @@ interface GroupMessageListProps {
   selectedIds?: Set<string>;
   onMessageContext?: (msg: ChatMessage, e: React.MouseEvent) => void;
   onToggleSelect?: (msg: ChatMessage) => void;
-  /** 上传进度：nano_id -> 百分比 */
-  uploadProgressMap?: Record<string, number>;
+  /** 发送进度：nano_id -> { percent, phase } */
+  uploadProgressMap?: Record<string, { percent: number; phase: string }>;
 }
 
 const MSG_TYPE_GROUP_TEXT = 2001;
@@ -152,7 +152,8 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
                   isAck={msg.ack}
                   icon={senderIcon}
                   groupUuid={groupUuid}
-                  uploadProgress={uploadProgressMap?.[message.nano_id]}
+                  uploadProgress={uploadProgressMap?.[message.nano_id]?.percent}
+                  sendPhase={uploadProgressMap?.[message.nano_id]?.phase}
                 />
               ) : (
                 <GroupCustomerChatBox

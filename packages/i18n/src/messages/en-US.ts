@@ -750,6 +750,8 @@ const messages: LocaleMessages = {
     "noFilePath": "Cannot get file path",
     "downloadFailed": "Download failed",
     "uploading": "Uploading…",
+    "reading": "Reading…",
+    "compressing": "Compressing…",
     "uploadingPercent": "Uploading… {percent}%",
     "imageTooLarge": "Image exceeds the size limit (max {limit}MB)",
     "fileTooLarge": "File exceeds the size limit (max {limit}MB)",

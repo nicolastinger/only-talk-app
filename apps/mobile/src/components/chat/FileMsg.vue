@@ -20,6 +20,8 @@ const props = defineProps<{
   sending?: boolean;
   /** 上传进度百分比 0-100 */
   uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: "reading" | "compressing" | "uploading";
 }>();
 
 const { t } = useI18n();
@@ -27,6 +29,16 @@ const { t } = useI18n();
 const uploadPercent = computed(() =>
   Math.max(0, Math.min(100, Math.round(props.uploadProgress ?? 0)))
 );
+/** 读取/压缩阶段无字节进度，展示不确定动画 */
+const uploadIndeterminate = computed(() => props.sendPhase !== "uploading");
+const uploadStatusText = computed(() => {
+  if (!uploadIndeterminate.value) {
+    return t("chat.uploadingPercent", { percent: uploadPercent.value });
+  }
+  return props.sendPhase === "compressing"
+    ? t("chat.compressing")
+    : t("chat.reading");
+});
 
 const busy = ref(false);
 const downloaded = ref(false);
@@ -142,7 +154,7 @@ watch(() => props.bizId, refreshDownloaded);
       <div class="file-meta">
         <span class="file-ext">.{{ fileType || "file" }}</span>
         <span v-if="sending" class="file-size sending-text">{{
-          t("chat.uploadingPercent", { percent: uploadPercent })
+          uploadStatusText
         }}</span>
         <span v-else-if="downloading" class="file-size sending-text">{{
           t("chat.downloadingPercent", { percent: progressPercent })
@@ -166,6 +178,12 @@ watch(() => props.bizId, refreshDownloaded);
         color="var(--brand-blue)"
         track-color="var(--border-light)"
       />
+      <div
+        v-else-if="sending && uploadIndeterminate"
+        class="file-progress-indeterminate"
+      >
+        <div class="file-progress-indeterminate-inner"></div>
+      </div>
       <van-progress
         v-else-if="sending"
         class="file-progress"
@@ -252,6 +270,32 @@ watch(() => props.bizId, refreshDownloaded);
 }
 .file-progress {
   margin-top: 6px;
+}
+.file-progress-indeterminate {
+  position: relative;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--border-light);
+}
+.file-progress-indeterminate-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 2px;
+  background: var(--brand-blue);
+  animation: file-upload-slide 1.1s ease-in-out infinite;
+}
+@keyframes file-upload-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
 }
 .sending-text {
   color: var(--brand-blue);

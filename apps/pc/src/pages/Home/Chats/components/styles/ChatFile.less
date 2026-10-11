@@ -66,6 +66,34 @@
   }
 }
 
+.progressIndeterminate {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.progressIndeterminateInner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 2px;
+  background: #4096ff;
+  animation: chatFileUploadSlide 1.1s ease-in-out infinite;
+}
+
+@keyframes chatFileUploadSlide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
 .downloadBtn {
   width: 32px;
   height: 32px;

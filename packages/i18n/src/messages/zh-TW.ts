@@ -750,6 +750,8 @@ const messages: LocaleMessages = {
     "noFilePath": "無法取得檔案路徑",
     "downloadFailed": "下載失敗",
     "uploading": "上傳中…",
+    "reading": "讀取中…",
+    "compressing": "壓縮中…",
     "uploadingPercent": "上傳中… {percent}%",
     "imageTooLarge": "圖片大小超過限制（最大 {limit}MB）",
     "fileTooLarge": "檔案大小超過限制（最大 {limit}MB）",

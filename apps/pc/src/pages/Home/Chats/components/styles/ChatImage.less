@@ -49,3 +49,46 @@
   background: rgba(0, 0, 0, 0.45);
   z-index: 2;
 }
+
+.upload-indeterminate-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 70%;
+}
+
+.upload-phase-text {
+  color: #fff;
+  font-size: 12px;
+}
+
+.upload-indeterminate {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.3);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 40%;
+    border-radius: 2px;
+    background: #fff;
+    animation: chatImageUploadSlide 1.1s ease-in-out infinite;
+  }
+}
+
+@keyframes chatImageUploadSlide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}

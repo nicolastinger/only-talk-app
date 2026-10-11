@@ -23,6 +23,8 @@ interface ChatFileProps {
   sending?: boolean;
   /** 上传进度百分比 0-100 */
   uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: string;
 }
 
 // 格式化文件大小
@@ -79,9 +81,19 @@ const ChatFile: React.FC<ChatFileProps> = ({
   loading = false,
   sending = false,
   uploadProgress = 0,
+  sendPhase,
 }) => {
   const intl = useIntl();
   const uploadPercent = Math.max(0, Math.min(100, Math.round(uploadProgress)));
+  const uploadIndeterminate = sending && sendPhase !== 'uploading';
+  const uploadStatusText = uploadIndeterminate
+    ? intl.formatMessage({
+        id: sendPhase === 'compressing' ? 'chat.compressing' : 'chat.reading',
+      })
+    : intl.formatMessage(
+        { id: 'chat.uploadingPercent' },
+        { percent: uploadPercent },
+      );
   const [downloading, setDownloading] = useState(false);
   // 下载进度(字节): total 优先取后端 Content-Length, 为 0 时用消息元数据 fileSize 兜底
   const [progress, setProgress] = useState<{
@@ -203,12 +215,7 @@ const ChatFile: React.FC<ChatFileProps> = ({
         <div className={styles.fileMeta}>
           <span className={styles.fileType}>.{fileType || 'file'}</span>
           {sending ? (
-            <span className={styles.fileSize}>
-              {intl.formatMessage(
-                { id: 'chat.uploadingPercent' },
-                { percent: uploadPercent },
-              )}
-            </span>
+            <span className={styles.fileSize}>{uploadStatusText}</span>
           ) : (
             <span className={styles.fileSize}>{formatFileSize(fileSize)}</span>
           )}
@@ -223,7 +230,14 @@ const ChatFile: React.FC<ChatFileProps> = ({
             />
           </div>
         )}
-        {sending && (
+        {sending && uploadIndeterminate && (
+          <div className={styles.progressBar}>
+            <div className={styles.progressIndeterminate}>
+              <div className={styles.progressIndeterminateInner} />
+            </div>
+          </div>
+        )}
+        {sending && !uploadIndeterminate && (
           <div className={styles.progressBar}>
             <Progress
               percent={uploadPercent}

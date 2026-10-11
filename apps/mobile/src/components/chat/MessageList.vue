@@ -240,6 +240,7 @@ const imageLoading = (msg: UiChatMessage): boolean =>
                   !!msg.sendingImage && msg.ack === false && !msg.failed
                 "
                 :upload-progress="msg.uploadProgress"
+                :send-phase="msg.sendPhase"
                 @preview="emit('preview', msg)"
               />
               <span v-if="showSentDot(msg)" class="sent-dot" />

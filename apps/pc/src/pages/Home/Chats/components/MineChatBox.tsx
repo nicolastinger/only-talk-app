@@ -25,6 +25,8 @@ type MineChatBoxProps = {
   currentBizId?: string;
   /** 上传进度百分比 0-100（发送中展示） */
   uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: string;
 };
 
 // 私聊消息类型
@@ -198,6 +200,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           autoDownload={true}
           sending={sending}
           uploadProgress={props.uploadProgress}
+          sendPhase={props.sendPhase}
           meUuid={userInfo?.uuid || ''}
           nanoId={nano_id}
         />
@@ -215,6 +218,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             loading={loading}
             sending={sending}
             uploadProgress={props.uploadProgress}
+            sendPhase={props.sendPhase}
           />
         );
       }

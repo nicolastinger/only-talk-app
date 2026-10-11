@@ -1,6 +1,10 @@
 import { computed, ref } from "vue";
-import { getAppLanguage, kv_get, kv_set, setConfig } from "@workspace/services";
-import { CLIENT_CONFIG_KEYS } from "@workspace/types";
+import {
+  getAppLanguage,
+  kv_get,
+  kv_set,
+  setAppLanguage,
+} from "@workspace/services";
 import {
   DEFAULT_LOCALE,
   SUPPORTED_LOCALES,
@@ -32,7 +36,7 @@ export function setLocale(value: Locale) {
   currentLocale.value = value;
   applyHtmlLang(value);
   kv_set(LOCALE_KEY, value).catch(() => {});
-  setConfig(CLIENT_CONFIG_KEYS.appLanguage, value).catch(() => {});
+  setAppLanguage(value).catch(() => {});
 }
 
 /** 翻译: 在模板/渲染中调用可自动响应语言切换 */

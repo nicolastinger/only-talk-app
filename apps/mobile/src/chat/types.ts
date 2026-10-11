@@ -24,6 +24,8 @@ export interface UiChatMessage {
   sendingFile?: boolean;
   /** 上传进度百分比 0-100(上传中展示进度条) */
   uploadProgress?: number;
+  /** 发送阶段: reading/compressing/uploading(发送中展示对应动画) */
+  sendPhase?: "reading" | "compressing" | "uploading";
   /** 群聊发送者昵称（解析后填充） */
   senderName?: string;
   senderUuid?: string;

@@ -849,6 +849,11 @@ pub async fn send_group_image_msg_service(
     let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
     let nano_id = text_quic_msg.nano_id.clone();
+    let file_name = Path::new(&file_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("image")
+        .to_string();
 
     // 0、大小校验
     ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
@@ -858,6 +863,7 @@ pub async fn send_group_image_msg_service(
         info!("跳过群图片压缩(原图上传): {}", file_path);
         file_path.clone()
     } else {
+        emit_chat_send_progress(&nano_id, &file_name, "compressing", 0, 0);
         compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
     };
 
@@ -879,11 +885,6 @@ pub async fn send_group_image_msg_service(
     let biz_id = file_info.biz_id.clone();
 
     // 6、组装 GroupImageRecord
-    let file_name = std::path::Path::new(&file_path)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("image")
-        .to_string();
     let group_image_record = GroupImageRecord {
         biz_id,
         file_name,
@@ -1193,24 +1194,33 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// 上传进度事件负载(事件名 `chat_file_upload_progress`)。
+/// 发送进度事件负载(事件名 `chat_file_upload_progress`)。
+/// `phase`: reading(读取/准备) / compressing(压缩) / uploading(上传, 带字节进度)。
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ChatFileUploadProgress {
     nano_id: String,
     file_name: String,
+    phase: String,
     uploaded: u64,
     total: u64,
 }
 
-/// 上报上传进度(前端按 nano_id 匹配对应消息; 无 AppHandle 时忽略)。
-fn emit_chat_file_upload_progress(nano_id: &str, file_name: &str, uploaded: u64, total: u64) {
+/// 上报发送进度(前端按 nano_id 匹配对应消息; 无 AppHandle 时忽略)。
+fn emit_chat_send_progress(
+    nano_id: &str,
+    file_name: &str,
+    phase: &str,
+    uploaded: u64,
+    total: u64,
+) {
     if let Some(handle) = APP_HANDLE.get() {
         let _ = handle.emit(
             "chat_file_upload_progress",
             ChatFileUploadProgress {
                 nano_id: nano_id.to_string(),
                 file_name: file_name.to_string(),
+                phase: phase.to_string(),
                 uploaded,
                 total,
             },
@@ -1218,12 +1228,12 @@ fn emit_chat_file_upload_progress(nano_id: &str, file_name: &str, uploaded: u64,
     }
 }
 
-/// 构造以 nano_id 为键的上传进度回调。
+/// 构造以 nano_id 为键的上传进度回调(phase = uploading)。
 fn build_upload_progress(nano_id: &str, file_name: &str) -> UploadProgressFn {
     let nano_id = nano_id.to_string();
     let file_name = file_name.to_string();
     Arc::new(move |uploaded, total| {
-        emit_chat_file_upload_progress(&nano_id, &file_name, uploaded, total);
+        emit_chat_send_progress(&nano_id, &file_name, "uploading", uploaded, total);
     })
 }
 
@@ -1288,6 +1298,11 @@ fn ensure_within_size_limit(file_path: &str, max_size: u64, kind: &str) -> Resul
 pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
     let nano_id = text_quic_msg.nano_id.clone();
+    let file_name = Path::new(&file_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("image")
+        .to_string();
 
     // 0、大小校验
     ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
@@ -1297,6 +1312,7 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
         info!("跳过图片压缩(原图上传): {}", file_path);
         file_path.clone()
     } else {
+        emit_chat_send_progress(&nano_id, &file_name, "compressing", 0, 0);
         compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
     };
 
@@ -1318,11 +1334,6 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     let biz_id = file_info.biz_id.clone();
 
     // 6、组装 ImageRecord
-    let file_name = std::path::Path::new(&file_path)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("image")
-        .to_string();
     let image_record = ImageRecord {
         prev_id: ZERO_UUID.to_string(),
         biz_id,

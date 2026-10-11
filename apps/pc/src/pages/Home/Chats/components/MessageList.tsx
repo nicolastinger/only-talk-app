@@ -19,8 +19,8 @@ interface MessageListProps {
   selectedIds?: Set<string>;
   onMessageContext?: (msg: ChatMessage, e: React.MouseEvent) => void;
   onToggleSelect?: (msg: ChatMessage) => void;
-  /** 上传进度：nano_id -> 百分比 */
-  uploadProgressMap?: Record<string, number>;
+  /** 发送进度：nano_id -> { percent, phase } */
+  uploadProgressMap?: Record<string, { percent: number; phase: string }>;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -144,7 +144,8 @@ const MessageList: React.FC<MessageListProps> = ({
                   isAck={msg.ack}
                   friendUuid={friendUuid}
                   currentBizId={currentBizId}
-                  uploadProgress={uploadProgressMap?.[message.nano_id]}
+                  uploadProgress={uploadProgressMap?.[message.nano_id]?.percent}
+                  sendPhase={uploadProgressMap?.[message.nano_id]?.phase}
                 />
               )}
             </div>

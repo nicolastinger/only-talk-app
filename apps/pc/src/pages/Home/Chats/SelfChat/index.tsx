@@ -1,10 +1,11 @@
-import { useBearStore } from '@/store/store';
 import {
   isMessageSelectable,
   useMessageSelection,
 } from '@/hooks/useMessageSelection';
+import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { useLocation, useIntl } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
+import { listenChatFileUploadProgress } from '@workspace/services';
 import {
   ChatMessage,
   MessageFrom,
@@ -46,6 +47,9 @@ const SelfChatPage: React.FC = () => {
   const [loadedMessageIds, setLoadedMessageIds] = useState<Set<string>>(
     new Set(),
   );
+  const [uploadProgressMap, setUploadProgressMap] = useState<
+    Record<string, { percent: number; phase: string }>
+  >({});
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -237,8 +241,28 @@ const SelfChatPage: React.FC = () => {
     loadChatRecordFromStore(meUuid, selfUuid, 1, true);
     setCurrentFriendSession(selfUuid);
 
+    let unlistenUpload: (() => void) | undefined;
+    let disposed = false;
+    listenChatFileUploadProgress((p) => {
+      const pct =
+        p.total > 0
+          ? Math.min(99, Math.floor((p.uploaded / p.total) * 100))
+          : 0;
+      setUploadProgressMap((prev) => ({
+        ...prev,
+        [p.nanoId]: { percent: pct, phase: p.phase },
+      }));
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlistenUpload = fn;
+      })
+      .catch(() => {});
+
     return () => {
+      disposed = true;
       setCurrentFriendSession('-1');
+      unlistenUpload?.();
     };
   }, [meUuid, selfUuid]);
 
@@ -446,7 +470,11 @@ const SelfChatPage: React.FC = () => {
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           <span className={styles.selfChatIcon}>📝</span>
-          <span>{userInfo?.username || intl.formatMessage({ id: 'chat.selfChat.me' })} - {intl.formatMessage({ id: 'chat.selfChat.notes' })}</span>
+          <span>
+            {userInfo?.username ||
+              intl.formatMessage({ id: 'chat.selfChat.me' })}{' '}
+            - {intl.formatMessage({ id: 'chat.selfChat.notes' })}
+          </span>
         </div>
       </div>
       <div className={styles.mainContainer}>
@@ -466,7 +494,9 @@ const SelfChatPage: React.FC = () => {
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'chat.noMoreMessages' })}</div>
+            <div className={styles.noMoreIndicator}>
+              {intl.formatMessage({ id: 'chat.noMoreMessages' })}
+            </div>
           )}
           <MessageList
             messages={messageList}
@@ -478,6 +508,7 @@ const SelfChatPage: React.FC = () => {
             selectedIds={selectedIds}
             onMessageContext={handleMessageContext}
             onToggleSelect={handleToggleSelect}
+            uploadProgressMap={uploadProgressMap}
           />
           <div id="anchor"></div>
         </div>
