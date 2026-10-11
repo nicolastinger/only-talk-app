@@ -9,6 +9,7 @@ export default defineConfig(async () => ({
       "@": resolve(__dirname, "src"),
       "@workspace/types": resolve(__dirname, "../../packages/types/src"),
       "@workspace/services": resolve(__dirname, "../../packages/services/src"),
+      "@workspace/i18n": resolve(__dirname, "../../packages/i18n/src"),
     },
   },
   css: {

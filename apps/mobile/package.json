@@ -20,6 +20,7 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-notification": "^2.4.0",
     "@tauri-apps/plugin-opener": "^2.5.3",
+    "@workspace/i18n": "workspace:*",
     "@workspace/services": "workspace:*",
     "@workspace/types": "workspace:*",
     "cropperjs": "^1.6.2",

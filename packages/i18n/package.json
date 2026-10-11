@@ -1,0 +1,16 @@
+{
+  "name": "@workspace/i18n",
+  "version": "1.0.0",
+  "description": "Shared i18n message dictionaries (PC is source of truth)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.3"
+  }
+}

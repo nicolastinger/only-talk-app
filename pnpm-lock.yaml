@@ -47,6 +47,9 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: ^2.5.3
         version: 2.5.3
+      '@workspace/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@workspace/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -129,6 +132,9 @@ importers:
       '@umijs/max':
         specifier: ^4.4.11
         version: 4.6.25(@babel/core@7.28.6)(@types/node@26.2.0)(@types/react-dom@18.2.25)(@types/react@18.2.79)(dva@2.4.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(less-loader@12.3.0(less@4.5.1)(webpack@5.104.1(lightningcss@1.22.1)(postcss@8.5.6)))(less@4.5.1)(lightningcss@1.22.1)(prettier@2.8.8)(rc-field-form@2.7.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(resolve-url-loader@5.0.0)(rollup@3.29.5)(sass-loader@16.0.6(sass@1.54.0)(webpack@5.104.1(lightningcss@1.22.1)(postcss@8.5.6)))(sass@1.54.0)(terser@5.50.0)(type-fest@1.4.0)(typescript@5.9.3)(webpack@5.104.1(lightningcss@1.22.1)(postcss@8.5.6))
+      '@workspace/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@workspace/services':
         specifier: workspace:*
         version: link:../../packages/services
@@ -224,6 +230,12 @@ importers:
       vue-tsc:
         specifier: ^2.0.0
         version: 2.2.12(typescript@5.9.3)
+
+  packages/i18n:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.3
+        version: 5.9.3
 
   packages/services:
     dependencies:

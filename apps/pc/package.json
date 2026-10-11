@@ -26,6 +26,7 @@
     "@tauri-apps/plugin-notification": "^2.4.0",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@umijs/max": "^4.4.11",
+    "@workspace/i18n": "workspace:*",
     "@workspace/services": "workspace:*",
     "@workspace/types": "workspace:*",
     "antd": "^5.4.0",

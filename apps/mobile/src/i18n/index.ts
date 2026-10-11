@@ -1,43 +1,24 @@
 import { computed, ref } from "vue";
 import { getAppLanguage, kv_get, kv_set, setConfig } from "@workspace/services";
 import { CLIENT_CONFIG_KEYS } from "@workspace/types";
-import enUS from "@/locales/en-US";
-import zhCN from "@/locales/zh-CN";
-import zhTW from "@/locales/zh-TW";
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  isLocale,
+  translate,
+  type Locale,
+} from "@workspace/i18n";
 
-export type Locale = "zh-CN" | "zh-TW" | "en-US";
-
-export const SUPPORTED_LOCALES: Locale[] = ["zh-CN", "zh-TW", "en-US"];
+export { SUPPORTED_LOCALES, isLocale };
+export type { Locale };
 
 /** 会话级 kv 键(与 PC 对齐) */
 const LOCALE_KEY = "ui_locale";
 
-const messages: Record<Locale, Record<string, string>> = {
-  "zh-CN": zhCN,
-  "zh-TW": zhTW,
-  "en-US": enUS,
-};
-
-export function isLocale(value: unknown): value is Locale {
-  return (
-    typeof value === "string" && (SUPPORTED_LOCALES as string[]).includes(value)
-  );
-}
-
-const currentLocale = ref<Locale>("zh-CN");
+const currentLocale = ref<Locale>(DEFAULT_LOCALE);
 
 function applyHtmlLang(value: Locale) {
   document.documentElement.setAttribute("lang", value);
-}
-
-function interpolate(
-  template: string,
-  params?: Record<string, unknown>
-): string {
-  if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    params[key] !== undefined ? String(params[key]) : match
-  );
 }
 
 /** 读取当前语言 */
@@ -56,10 +37,7 @@ export function setLocale(value: Locale) {
 
 /** 翻译: 在模板/渲染中调用可自动响应语言切换 */
 export function t(key: string, params?: Record<string, unknown>): string {
-  const dict = messages[currentLocale.value] ?? messages["zh-CN"];
-  const value = dict[key];
-  if (value === undefined) return key;
-  return interpolate(value, params);
+  return translate(currentLocale.value, key, params);
 }
 
 export function useI18n() {

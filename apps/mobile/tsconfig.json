@@ -19,7 +19,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@workspace/types": ["../../packages/types/src"],
-      "@workspace/services": ["../../packages/services/src"]
+      "@workspace/services": ["../../packages/services/src"],
+      "@workspace/i18n": ["../../packages/i18n/src"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
