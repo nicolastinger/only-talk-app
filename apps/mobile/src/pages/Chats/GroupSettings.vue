@@ -23,6 +23,7 @@ import type { GroupInfoVo, GroupMemberVo, FriendVo } from "@workspace/types";
 import { ReportTargetType } from "@workspace/types";
 import { useGroupMemberInfo } from "@/hooks/useGroupMemberInfo";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 import { getMyUuid } from "@/utils/api";
 import { resolveContentToTempFile } from "@/utils/tempImage";
 import { DEFAULT_AVATAR, useUserStore } from "@/stores/user";
@@ -32,6 +33,7 @@ import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const groupId = route.params.groupId as string;
 
 const { getAvatarUrl } = useAvatar();
@@ -87,11 +89,12 @@ const getMemberName = (m: GroupMemberVo) => {
 
 const getMemberAvatar = (m: GroupMemberVo) => avatarUrlMap[m.user_uuid] || null;
 
-const ROLE_TEXT: Record<number, string> = {
-  2: "群主",
-  1: "管理员",
-  0: "成员",
-};
+const roleText = (role: number) =>
+  role === 2
+    ? t("groupSettings.members.owner")
+    : role === 1
+      ? t("groupSettings.members.admin")
+      : t("groupSettings.members.member");
 
 const myMember = computed(() =>
   members.value.find((m) => m.user_uuid === myUuid.value)
@@ -154,9 +157,9 @@ const copyGroupId = async () => {
   if (!groupInfo.value) return;
   try {
     await window.navigator.clipboard.writeText(groupInfo.value.group_uuid);
-    showToast({ message: "群号已复制", icon: "success" });
+    showToast({ message: t("groupSettings.groupIdCopied"), icon: "success" });
   } catch {
-    showToast({ message: "复制失败", icon: "fail" });
+    showToast({ message: t("groupSettings.copyFailed"), icon: "fail" });
   }
 };
 
@@ -170,7 +173,7 @@ const saveName = async () => {
   const name = nameDraft.value.trim();
   if (savingFlag.value) return;
   if (!name) {
-    showToast({ message: "群名称不能为空", icon: "none" });
+    showToast({ message: t("groupSettings.nameRequired"), icon: "none" });
     return;
   }
   savingFlag.value = true;
@@ -182,9 +185,9 @@ const saveName = async () => {
     });
     showNameEdit.value = false;
     await loadData();
-    showToast({ message: "已保存", icon: "success" });
+    showToast({ message: t("groupSettings.saveSuccess"), icon: "success" });
   } catch (e) {
-    showToast((e as Error).message || "保存失败");
+    showToast((e as Error).message || t("groupSettings.saveFailed"));
   } finally {
     savingFlag.value = false;
   }
@@ -205,9 +208,9 @@ const saveDesc = async () => {
     });
     showDescEdit.value = false;
     await loadData();
-    showToast({ message: "已保存", icon: "success" });
+    showToast({ message: t("groupSettings.saveSuccess"), icon: "success" });
   } catch (e) {
-    showToast((e as Error).message || "保存失败");
+    showToast((e as Error).message || t("groupSettings.saveFailed"));
   } finally {
     savingFlag.value = false;
   }
@@ -230,7 +233,7 @@ const changeAvatar = async () => {
     if (!rect) return;
 
     avatarUploading.value = true;
-    showToast({ message: "裁剪处理中...", icon: "none" });
+    showToast({ message: t("groupSettings.avatar.cropping"), icon: "none" });
     const compressed = await invoke<string>("crop_image_to_webp_command", {
       inputPath: filePath,
       x: rect.x,
@@ -239,7 +242,7 @@ const changeAvatar = async () => {
       height: rect.height,
       outputSize: 512,
     });
-    showToast({ message: "上传头像中...", icon: "none" });
+    showToast({ message: t("groupSettings.avatar.uploading"), icon: "none" });
     const res = await invoke<{ status: number; body: string }>(
       "upload_file_request",
       {
@@ -258,16 +261,16 @@ const changeAvatar = async () => {
           avatar: json.data,
         };
         await loadData();
-        showToast({ message: "群头像已更新", icon: "success" });
+        showToast({ message: t("groupSettings.avatar.updateSuccess"), icon: "success" });
       } else {
-        showToast(json?.message || "上传头像失败");
+        showToast(json?.message || t("groupSettings.avatar.uploadFailed"));
       }
     } else {
-      showToast(`上传失败(${res.status})`);
+      showToast(t("groupSettings.avatar.uploadFailedStatus", { status: res.status }));
     }
   } catch (e) {
     console.error("更换群头像失败:", e);
-    showToast("更换群头像失败");
+    showToast(t("groupSettings.avatar.updateFailed"));
   } finally {
     avatarUploading.value = false;
   }
@@ -289,7 +292,7 @@ const loadFriendsForInvite = async () => {
     );
     selectedFriendIds.value = [];
   } catch (e) {
-    showToast("获取好友列表失败");
+    showToast(t("groupSettings.members.getFriendListFailed"));
   }
 };
 
@@ -307,7 +310,7 @@ const toggleFriend = (id: string) => {
 const sendInvite = async () => {
   if (inviteLoading.value) return;
   if (selectedFriendIds.value.length === 0) {
-    showToast({ message: "请选择要邀请的好友", icon: "none" });
+    showToast({ message: t("groupSettings.members.selectFriendsToInvite"), icon: "none" });
     return;
   }
   inviteLoading.value = true;
@@ -319,11 +322,11 @@ const sendInvite = async () => {
     invitePopup.value = false;
     await loadData();
     showToast({
-      message: `已邀请 ${invited.length} 位好友`,
+      message: t("groupSettings.members.inviteSent", { count: invited.length }),
       icon: "success",
     });
   } catch (e) {
-    showToast((e as Error).message || "邀请失败");
+    showToast((e as Error).message || t("groupSettings.members.inviteFailed"));
   } finally {
     inviteLoading.value = false;
   }
@@ -342,20 +345,26 @@ const openMemberActions = (m: GroupMemberVo) => {
     [];
   if (isOwner.value) {
     if (m.role === 0) {
-      actions.push({ name: "设为管理员", callback: () => setRole(m, 1) });
+      actions.push({
+        name: t("groupSettings.members.setAdmin"),
+        callback: () => setRole(m, 1),
+      });
     } else if (m.role === 1) {
-      actions.push({ name: "取消管理员", callback: () => setRole(m, 0) });
+      actions.push({
+        name: t("groupSettings.members.removeAdmin"),
+        callback: () => setRole(m, 0),
+      });
     }
     if (m.role !== 2) {
       actions.push({
-        name: "移出群聊",
+        name: t("groupSettings.members.removeMember"),
         danger: true,
         callback: () => kickMember(m),
       });
     }
   } else if (isAdminOrOwner.value && m.role === 0) {
     actions.push({
-      name: "移出群聊",
+      name: t("groupSettings.members.removeMember"),
       danger: true,
       callback: () => kickMember(m),
     });
@@ -379,31 +388,37 @@ const setRole = async (m: GroupMemberVo, role: number) => {
       user_uuid: m.user_uuid,
       role,
     });
-    showToast(role === 1 ? "已设为管理员" : "已取消管理员");
+    showToast(
+      role === 1
+        ? t("groupSettings.members.setAdminSuccess")
+        : t("groupSettings.members.removeAdminSuccess")
+    );
     await loadData();
   } catch (e) {
-    showToast((e as Error).message || "设置失败");
+    showToast((e as Error).message || t("groupSettings.members.setRoleFailed"));
   }
 };
 
 const kickMember = async (m: GroupMemberVo) => {
   try {
     await showConfirmDialog({
-      title: "移出群聊",
-      message: `确定将「${getMemberName(m)}」移出群聊吗？`,
-      confirmButtonText: "移出",
+      title: t("groupSettings.members.removeMember"),
+      message: t("groupSettings.members.removeMemberConfirm", {
+        name: getMemberName(m),
+      }),
+      confirmButtonText: t("groupSettings.members.removeMemberBtn"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
   } catch {
     return;
   }
   try {
     await remove_group_member(groupId, m.user_uuid);
-    showToast({ message: "已移出群聊", icon: "success" });
+    showToast({ message: t("groupSettings.members.removeMemberSuccess"), icon: "success" });
     await loadData();
   } catch (e) {
-    showToast((e as Error).message || "移除失败");
+    showToast((e as Error).message || t("groupSettings.members.removeMemberFailed"));
   }
 };
 
@@ -417,7 +432,7 @@ const transferCandidates = computed(() =>
 
 const openTransfer = () => {
   if (transferCandidates.value.length === 0) {
-    showToast({ message: "没有可转让的成员", icon: "none" });
+    showToast({ message: t("groupSettings.noMemberToTransfer"), icon: "none" });
     return;
   }
   transferTarget.value = null;
@@ -432,52 +447,54 @@ const confirmTransfer = async (m: GroupMemberVo) => {
       user_uuid: m.user_uuid,
       role: 2,
     });
-    showToast({ message: "群主已转让", icon: "success" });
+    showToast({ message: t("groupSettings.transferSuccess"), icon: "success" });
     await loadData();
   } catch (e) {
-    showToast((e as Error).message || "转让失败");
+    showToast((e as Error).message || t("groupSettings.transferFailed"));
   }
 };
 
 const handleLeave = async () => {
   try {
     await showConfirmDialog({
-      title: "退出群聊",
-      message: "确定要退出该群聊吗？",
-      confirmButtonText: "退出",
+      title: t("groupSettings.leaveGroup"),
+      message: t("groupSettings.leaveGroupConfirm"),
+      confirmButtonText: t("groupSettings.leaveGroupBtn"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
   } catch {
     return;
   }
   try {
     await quit_group(groupId);
-    showToast({ message: "已退出群聊", icon: "success" });
+    showToast({ message: t("groupSettings.leaveGroupSuccess"), icon: "success" });
     setTimeout(() => router.replace("/chats"), 500);
   } catch (e) {
-    showToast((e as Error).message || "退出失败");
+    showToast((e as Error).message || t("groupSettings.leaveGroupFailed"));
   }
 };
 
 const handleDissolve = async () => {
   try {
     await showConfirmDialog({
-      title: "解散群聊",
-      message: "解散后群聊将被删除，确定解散吗？",
-      confirmButtonText: "解散",
+      title: t("groupSettings.dissolveGroup"),
+      message: t("groupSettings.dissolveGroupConfirm", {
+        name: groupInfo.value?.group_name || "",
+      }),
+      confirmButtonText: t("groupSettings.dissolveGroupBtn"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
   } catch {
     return;
   }
   try {
     await dissolve_group(groupId);
-    showToast({ message: "群聊已解散", icon: "success" });
+    showToast({ message: t("groupSettings.dissolveGroupSuccess"), icon: "success" });
     setTimeout(() => router.replace("/chats"), 500);
   } catch (e) {
-    showToast((e as Error).message || "解散失败");
+    showToast((e as Error).message || t("groupSettings.dissolveGroupFailed"));
   }
 };
 </script>
@@ -492,12 +509,12 @@ const handleDissolve = async () => {
           />
         </svg>
       </button>
-      <h1 class="title">群设置</h1>
+      <h1 class="title">{{ t("groupSettings.title") }}</h1>
     </div>
 
     <div v-if="loading" class="loading-box">
       <div class="loading-spinner"></div>
-      <p>加载中...</p>
+      <p>{{ t("groupSettings.loading") }}</p>
     </div>
 
     <template v-else-if="groupInfo">
@@ -511,7 +528,7 @@ const handleDissolve = async () => {
           >
             <img
               :src="groupAvatarUrl || DEFAULT_AVATAR"
-              alt="群头像"
+              :alt="t('chat.groupAvatar')"
               class="group-avatar"
               @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
             />
@@ -541,7 +558,11 @@ const handleDissolve = async () => {
                 />
               </svg>
             </span>
-            <span class="group-meta">{{ groupInfo.member_count }} 位成员</span>
+            <span class="group-meta">{{
+              t("groupSettings.members.memberCount", {
+                count: groupInfo.member_count,
+              })
+            }}</span>
           </div>
         </div>
 
@@ -552,7 +573,7 @@ const handleDissolve = async () => {
           @click="canManage && openDescEdit()"
         >
           <span class="desc-text">
-            {{ groupInfo.description || "添加群描述" }}
+            {{ groupInfo.description || t("groupSettings.addDescription") }}
           </span>
           <svg
             v-if="canManage"
@@ -569,18 +590,18 @@ const handleDissolve = async () => {
         <!-- 基本信息 -->
         <div class="info-list">
           <div class="info-item" @click="copyGroupId">
-            <span class="info-label">群号</span>
+            <span class="info-label">{{ t("groupSettings.groupId") }}</span>
             <span class="info-value">{{ groupInfo.group_uuid }}</span>
             <span class="arrow">›</span>
           </div>
           <div class="info-item">
-            <span class="info-label">群主</span>
+            <span class="info-label">{{ t("groupSettings.members.owner") }}</span>
             <span class="info-value">{{
               memberMap[groupInfo.owner_uuid]?.username || groupInfo.owner_uuid
             }}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">创建时间</span>
+            <span class="info-label">{{ t("groupSettings.createdAt") }}</span>
             <span class="info-value">{{ fmtDate(groupInfo.created_at) }}</span>
           </div>
         </div>
@@ -588,9 +609,11 @@ const handleDissolve = async () => {
         <!-- 群成员 -->
         <div class="section">
           <div class="section-head">
-            <span class="section-title">群成员 ({{ members.length }})</span>
+            <span class="section-title"
+              >{{ t("groupSettings.groupMembers") }} ({{ members.length }})</span
+            >
             <button v-if="canManage" class="add-member-btn" @click="openInvite">
-              添加成员
+              {{ t("groupSettings.members.inviteMember") }}
             </button>
           </div>
 
@@ -603,7 +626,7 @@ const handleDissolve = async () => {
             >
               <img
                 :src="getMemberAvatar(m) || DEFAULT_AVATAR"
-                alt="头像"
+                :alt="t('chat.avatar')"
                 class="member-avatar"
                 @error="
                   ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
@@ -615,9 +638,11 @@ const handleDissolve = async () => {
                 v-if="m.role > 0"
                 class="role-tag"
                 :class="{ owner: m.role === 2, admin: m.role === 1 }"
-                >{{ ROLE_TEXT[m.role] }}</span
+                >{{ roleText(m.role) }}</span
               >
-              <span v-if="m.user_uuid === myUuid" class="me-tag">我</span>
+              <span v-if="m.user_uuid === myUuid" class="me-tag">{{
+                t("groupSettings.members.me")
+              }}</span>
             </div>
           </div>
         </div>
@@ -625,18 +650,20 @@ const handleDissolve = async () => {
         <!-- 危险操作 -->
         <div class="section">
           <template v-if="isOwner">
-            <button class="action-btn" @click="openTransfer">群主转让</button>
+            <button class="action-btn" @click="openTransfer">
+              {{ t("groupSettings.transferOwnership") }}
+            </button>
             <button class="action-btn danger" @click="handleDissolve">
-              解散群聊
+              {{ t("groupSettings.dissolveGroup") }}
             </button>
           </template>
           <template v-else>
             <button class="action-btn danger" @click="handleLeave">
-              退出群聊
+              {{ t("groupSettings.leaveGroup") }}
             </button>
           </template>
           <button class="action-btn" @click="showReport = true">
-            举报群聊
+            {{ t("groupSettings.reportGroup") }}
           </button>
         </div>
       </div>
@@ -664,23 +691,25 @@ const handleDissolve = async () => {
       :style="{ padding: '20px 16px' }"
       class="edit-popup"
     >
-      <div class="edit-popup-title">修改群名称</div>
+      <div class="edit-popup-title">{{ t("groupSettings.editNameTitle") }}</div>
       <div class="edit-input-wrap">
         <input
           v-model="nameDraft"
           class="edit-input"
           maxlength="100"
-          placeholder="请输入群名称"
+          :placeholder="t('groupSettings.namePlaceholder')"
         />
       </div>
       <div class="edit-popup-actions">
-        <button class="popup-btn" @click="showNameEdit = false">取消</button>
+        <button class="popup-btn" @click="showNameEdit = false">
+          {{ t("common.cancel") }}
+        </button>
         <button
           class="popup-btn primary"
           :disabled="savingFlag"
           @click="saveName"
         >
-          保存
+          {{ t("common.save") }}
         </button>
       </div>
     </van-popup>
@@ -693,24 +722,26 @@ const handleDissolve = async () => {
       :style="{ padding: '20px 16px' }"
       class="edit-popup"
     >
-      <div class="edit-popup-title">修改群描述</div>
+      <div class="edit-popup-title">{{ t("groupSettings.editDescTitle") }}</div>
       <div class="edit-input-wrap">
         <textarea
           v-model="descDraft"
           class="edit-input edit-textarea"
           maxlength="500"
           rows="3"
-          placeholder="请输入群描述"
+          :placeholder="t('groupSettings.descPlaceholder')"
         ></textarea>
       </div>
       <div class="edit-popup-actions">
-        <button class="popup-btn" @click="showDescEdit = false">取消</button>
+        <button class="popup-btn" @click="showDescEdit = false">
+          {{ t("common.cancel") }}
+        </button>
         <button
           class="popup-btn primary"
           :disabled="savingFlag"
           @click="saveDesc"
         >
-          保存
+          {{ t("common.save") }}
         </button>
       </div>
     </van-popup>
@@ -724,7 +755,7 @@ const handleDissolve = async () => {
       class="invite-popup"
     >
       <div class="invite-head">
-        <span class="invite-title">邀请好友进群</span>
+        <span class="invite-title">{{ t("groupSettings.members.inviteTitle") }}</span>
         <button class="invite-close" @click="invitePopup = false">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path
@@ -756,7 +787,7 @@ const handleDissolve = async () => {
           <span class="invite-account">@{{ f.friend_account }}</span>
         </div>
         <div v-if="friendList.length === 0" class="invite-empty">
-          没有可邀请的好友
+          {{ t("groupSettings.members.noFriends") }}
         </div>
       </div>
       <div class="invite-footer">
@@ -766,7 +797,11 @@ const handleDissolve = async () => {
           @click="sendInvite"
         >
           {{
-            inviteLoading ? "邀请中..." : `邀请 (${selectedFriendIds.length})`
+            inviteLoading
+              ? t("groupSettings.members.inviting")
+              : t("groupSettings.members.inviteCount", {
+                  count: selectedFriendIds.length,
+                })
           }}
         </button>
       </div>
@@ -776,18 +811,20 @@ const handleDissolve = async () => {
     <van-action-sheet
       v-model:show="showMemberSheet"
       :actions="memberActions"
-      cancel-text="取消"
+      :cancel-text="t('common.cancel')"
       @select="onMemberSheetSelect"
     />
 
     <!-- 群主转让 -->
     <van-action-sheet
       v-model:show="transferMemberSheet"
-      cancel-text="取消"
+      :cancel-text="t('common.cancel')"
       :close-on-click-action="false"
     >
       <div class="transfer-body">
-        <div class="transfer-title">选择要转让的成员</div>
+        <div class="transfer-title">
+          {{ t("groupSettings.selectMemberToTransfer") }}
+        </div>
         <div
           v-for="m in transferCandidates"
           :key="m.user_uuid"
@@ -796,7 +833,7 @@ const handleDissolve = async () => {
         >
           <img
             :src="getMemberAvatar(m) || DEFAULT_AVATAR"
-            alt="头像"
+            :alt="t('chat.avatar')"
             class="member-avatar"
             @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
           />
