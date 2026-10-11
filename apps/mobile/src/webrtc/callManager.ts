@@ -11,6 +11,7 @@
 import { reactive, ref } from "vue";
 import { listen } from "@tauri-apps/api/event";
 import { showToast } from "vant";
+import { t } from "@/i18n";
 import { WebRTCService } from "./WebRTCService";
 import {
   parseControl,
@@ -129,7 +130,7 @@ const attachServiceCallbacks = (svc: WebRTCService, friendId: string) => {
       call.connStatus = "failed";
       if (call.stage === "connecting" || call.stage === "connected") {
         call.stage = "failed";
-        call.errorMsg = "连接失败，请重试或挂断";
+        call.errorMsg = t("call.failed");
       }
     }
   });
@@ -181,9 +182,9 @@ const setupLocalMedia = async (wantVideo: boolean) => {
     localStream.value = null;
     if (wantVideo) {
       call.videoOn = false;
-      showToast("无法访问摄像头/麦克风，本次可能仅语音");
+      showToast(t("webrtc.mediaAccessError"));
     } else {
-      showToast("无法访问麦克风");
+      showToast(t("call.micAccessError"));
     }
   }
 };
@@ -196,7 +197,7 @@ const handleRemoteEnd = () => {
   localStream.value = null;
   remoteStream.value = null;
   call.stage = "ended";
-  call.errorMsg = "对方已挂断";
+  call.errorMsg = t("call.peerHungUp");
   exitCall();
 };
 
@@ -267,7 +268,7 @@ const onTextMessage = async (payload: string) => {
         call.stage = "connecting";
       } catch (e) {
         console.error("[CallManager] 创建 offer 失败:", e);
-        call.errorMsg = "连接建立失败";
+        call.errorMsg = t("call.failed");
         call.stage = "failed";
       }
     }
@@ -277,12 +278,12 @@ const onTextMessage = async (payload: string) => {
   if (msg.text_type === 14 && ctrl.type === "reject") {
     if (call.role === "initiator" && call.stage === "outgoing") {
       call.stage = "rejected";
-      call.errorMsg = "对方已拒绝";
+      call.errorMsg = t("call.peerRejected");
       exitCall();
     } else if (call.stage === "incoming") {
       // 发起方取消：不再响铃
       call.stage = "rejected";
-      call.errorMsg = "对方已取消";
+      call.errorMsg = t("call.peerCanceled");
       exitCall();
     }
   }
@@ -390,7 +391,7 @@ const beginIncoming = (
         }).catch(() => {});
       }
       call.stage = "rejected";
-      call.errorMsg = "未接听";
+      call.errorMsg = t("call.noAnswer");
       exitCall();
     }
   }, RING_TIMEOUT_MS);
@@ -404,12 +405,12 @@ const startCall = async (
   media: CallMediaType
 ): Promise<boolean> => {
   if (isMidCall()) {
-    showToast("正在通话中");
+    showToast(t("call.busy"));
     return false;
   }
   const me = await ensureMe();
   if (!me) {
-    showToast("未登录");
+    showToast(t("call.notLoggedIn"));
     return false;
   }
   reset();
@@ -440,7 +441,7 @@ const startCall = async (
     media,
   }).catch((e) => {
     console.error("[CallManager] 发送邀请失败:", e);
-    showToast("通话请求发送失败");
+    showToast(t("call.callFailed"));
   });
 
   // 45s 无人应答自动结束
@@ -448,7 +449,7 @@ const startCall = async (
   noAnswerTimer = setTimeout(() => {
     if (call.stage === "outgoing") {
       call.stage = "ended";
-      call.errorMsg = "对方无应答";
+      call.errorMsg = t("call.noResponse");
       service?.closeConnection(call.friendId);
       service?.closeLocalStream();
       exitCall();
@@ -568,7 +569,7 @@ const switchCamera = async () => {
     await service?.switchCamera();
   } catch (e) {
     console.error("[CallManager] 切换摄像头失败:", e);
-    showToast("切换摄像头失败");
+    showToast(t("call.switchCameraFailed"));
   }
 };
 

@@ -1,6 +1,7 @@
 import { reactive } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { t } from "@/i18n";
 
 type ConnectionState = "idle" | "connected" | "disconnected";
 type StatusTagState = "offline" | "reconnecting" | "online";
@@ -59,7 +60,7 @@ const registerListeners = async () => {
     await listen<string>("quic_disconnected", (event) => {
       state.isConnected = false;
       state.connectionState = "disconnected";
-      state.message = event.payload || "QUIC连接已断开";
+      state.message = event.payload || t("quicDisconnect.defaultMessage");
       // 首次断连显示"已离线"；重复广播不降级(重连中不回退)
       if (wasConnected) {
         wasConnected = false;
