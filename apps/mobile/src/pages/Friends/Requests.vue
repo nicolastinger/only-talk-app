@@ -12,6 +12,7 @@ import {
   readContactsNotification,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 import { parseResponse } from "@/utils/api";
 import { useUnreadStore } from "@/stores/unread";
 import { DEFAULT_AVATAR } from "@/stores/user";
@@ -22,11 +23,11 @@ import type {
 } from "@workspace/types";
 
 const router = useRouter();
+const { t } = useI18n();
 const { getAvatarUrl } = useAvatar();
 const { refreshFriendCounts } = useUnreadStore();
 const goBack = () => router.back();
 
-const DEFAULT_REQUEST_MESSAGE = "请求添加你为好友";
 const ACCEPT_MESSAGE = "我通过了你的好友申请";
 const REJECT_MESSAGE = "我拒绝了你的好友申请";
 
@@ -142,12 +143,12 @@ const handleAccept = async (req: FriendRequestInfo) => {
       version: 0,
       accept_status: 1,
     });
-    showToast({ message: "已接受", icon: "success" });
+    showToast({ message: t("friendRequest.accepted"), icon: "success" });
     await invoke("update_local_friend_list", {}).catch(() => {});
     await loadFriendRequests();
     await refreshFriendCounts();
   } catch (e) {
-    showToast({ message: "操作失败", icon: "fail" });
+    showToast({ message: t("common.operationFailed"), icon: "fail" });
   }
 };
 
@@ -160,16 +161,19 @@ const handleReject = async (req: FriendRequestInfo) => {
       version: 0,
       accept_status: 2,
     });
-    showToast({ message: "已拒绝", icon: "success" });
+    showToast({ message: t("friendRequest.rejected"), icon: "success" });
     await loadFriendRequests();
     await refreshFriendCounts();
   } catch (e) {
-    showToast({ message: "操作失败", icon: "fail" });
+    showToast({ message: t("common.operationFailed"), icon: "fail" });
   }
 };
 
 const getRequestName = (req: RequestWithUserInfo) =>
-  req.userInfo?.username || req.request_user || req.accept_user || "未知";
+  req.userInfo?.username ||
+  req.request_user ||
+  req.accept_user ||
+  t("friendRequest.unknown");
 
 const getRequestAccount = (req: RequestWithUserInfo) =>
   req.userInfo?.account || "";
@@ -181,28 +185,40 @@ const getRequestAvatarSrc = (req: RequestWithUserInfo) =>
 
 const getStatusMeta = (status?: number) => {
   if (status === 0)
-    return { text: "等待验证", cls: "pending", icon: CLOCK_ICON };
+    return {
+      text: t("friendRequest.waiting"),
+      cls: "pending",
+      icon: CLOCK_ICON,
+    };
   if (status === 1)
-    return { text: "已接受", cls: "accepted", icon: CHECK_ICON };
+    return {
+      text: t("friendRequest.accepted"),
+      cls: "accepted",
+      icon: CHECK_ICON,
+    };
   if (status === 2)
-    return { text: "已拒绝", cls: "rejected", icon: CLOSE_ICON };
-  return { text: "未知", cls: "unknown", icon: "" };
+    return {
+      text: t("friendRequest.rejected"),
+      cls: "rejected",
+      icon: CLOSE_ICON,
+    };
+  return { text: t("friendRequest.unknown"), cls: "unknown", icon: "" };
 };
 
 const isPending = (status?: number) => status === 0;
 
 const formatRequestTime = (ts?: number) => {
-  if (!ts) return "未知时间";
+  if (!ts) return t("friendRequest.unknownTime");
   const date = new Date(ts);
   const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes <= 1) return "刚刚";
-  if (minutes < 60) return `${minutes}分钟前`;
+  if (minutes <= 1) return t("friendRequest.justNow");
+  if (minutes < 60) return t("friendRequest.minutesAgo", { minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}小时前`;
+  if (hours < 24) return t("friendRequest.hoursAgo", { hours });
   const days = Math.floor(hours / 24);
-  if (days === 1) return "昨天";
-  if (days < 7) return `${days}天前`;
+  if (days === 1) return t("friendRequest.yesterday");
+  if (days < 7) return t("friendRequest.daysAgo", { days });
   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 };
 
@@ -235,7 +251,7 @@ onUnmounted(() => {
           />
         </svg>
       </button>
-      <h1 class="title">好友请求</h1>
+      <h1 class="title">{{ t("friendRequest.title") }}</h1>
     </div>
 
     <Tabs
@@ -252,7 +268,7 @@ onUnmounted(() => {
             :content="pendingReceivedCount"
             :show-zero="false"
             :offset="[8, -2]"
-            ><span>收到的</span></Badge
+            ><span>{{ t("friendRequest.received") }}</span></Badge
           ></template
         >
         <div v-if="receivedRequests.length > 0" class="request-list">
@@ -296,7 +312,7 @@ onUnmounted(() => {
                 getRequestBio(req)
               }}</span>
               <span class="request-msg">{{
-                req.request_message || DEFAULT_REQUEST_MESSAGE
+                req.request_message || t("friendRequest.defaultRequestMessage")
               }}</span>
               <span class="request-time">{{
                 formatRequestTime(req.created_at)
@@ -304,15 +320,15 @@ onUnmounted(() => {
             </div>
             <div v-if="isPending(req.accept_status)" class="request-actions">
               <button class="accept-btn" @click="handleAccept(req)">
-                接受
+                {{ t("friendRequest.accept") }}
               </button>
               <button class="reject-btn" @click="handleReject(req)">
-                拒绝
+                {{ t("friendRequest.reject") }}
               </button>
             </div>
           </div>
         </div>
-        <Empty v-else description="暂无收到的好友请求" />
+        <Empty v-else :description="t('friendRequest.noReceivedRequests')" />
       </Tab>
       <Tab>
         <template #title
@@ -320,7 +336,7 @@ onUnmounted(() => {
             :content="pendingSentCount"
             :show-zero="false"
             :offset="[8, -2]"
-            ><span>发出的</span></Badge
+            ><span>{{ t("friendRequest.sent") }}</span></Badge
           ></template
         >
         <div v-if="sentRequests.length > 0" class="request-list">
@@ -360,7 +376,7 @@ onUnmounted(() => {
                 getRequestBio(req)
               }}</span>
               <span class="request-msg">{{
-                req.request_message || DEFAULT_REQUEST_MESSAGE
+                req.request_message || t("friendRequest.defaultRequestMessage")
               }}</span>
               <span class="request-time">{{
                 formatRequestTime(req.created_at)
@@ -368,7 +384,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        <Empty v-else description="暂无发起的好友请求" />
+        <Empty v-else :description="t('friendRequest.noSentRequests')" />
       </Tab>
     </Tabs>
   </div>

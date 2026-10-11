@@ -3,8 +3,10 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { showToast } from "vant";
 import { create_group, create_group_chat_session } from "@workspace/services";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 
 const groupName = ref("");
 const description = ref("");
@@ -26,7 +28,7 @@ const submit = async () => {
   const name = groupName.value.trim();
   if (creating.value) return;
   if (!name) {
-    showToast({ message: "请输入群名称", icon: "none" });
+    showToast({ message: t("contacts.createGroup.nameRequired"), icon: "none" });
     return;
   }
   creating.value = true;
@@ -42,7 +44,7 @@ const submit = async () => {
     } catch {
       /* 会话可能已存在 */
     }
-    showToast({ message: "群聊创建成功", icon: "success" });
+    showToast({ message: t("contacts.createGroup.success"), icon: "success" });
     const qp = new URLSearchParams();
     qp.set("name", group.group_name || name);
     if (group.member_count > 0) qp.set("mc", String(group.member_count));
@@ -57,7 +59,7 @@ const submit = async () => {
     );
   } catch (e) {
     console.error("创建群聊失败:", e);
-    showToast((e as Error).message || "创建群聊失败");
+    showToast((e as Error).message || t("contacts.createGroup.failed"));
   } finally {
     creating.value = false;
   }
@@ -74,28 +76,33 @@ const submit = async () => {
           />
         </svg>
       </button>
-      <h1 class="title">发起群聊</h1>
+      <h1 class="title">{{ t("contacts.createGroup.title") }}</h1>
     </div>
 
     <div class="form-card">
       <div class="field">
-        <label class="field-label">群名称 <em class="required">*</em></label>
+        <label class="field-label"
+          >{{ t("contacts.createGroup.nameLabel") }}
+          <em class="required">*</em></label
+        >
         <input
           v-model="groupName"
           class="field-input"
           type="text"
-          placeholder="请输入群名称"
+          :placeholder="t('contacts.createGroup.namePlaceholder')"
           maxlength="100"
         />
         <span class="field-count">{{ groupName.length }}/100</span>
       </div>
 
       <div class="field">
-        <label class="field-label">群描述</label>
+        <label class="field-label">{{
+          t("contacts.createGroup.descLabel")
+        }}</label>
         <textarea
           v-model="description"
           class="field-input field-textarea"
-          placeholder="介绍一下这个群聊（选填）"
+          :placeholder="t('contacts.createGroup.descPlaceholder')"
           maxlength="500"
           rows="3"
         ></textarea>
@@ -103,7 +110,9 @@ const submit = async () => {
       </div>
 
       <div class="field">
-        <label class="field-label">最大成员数</label>
+        <label class="field-label">{{
+          t("contacts.createGroup.maxMembersLabel")
+        }}</label>
         <input
           v-model.number="maxMembers"
           class="field-input"
@@ -112,12 +121,16 @@ const submit = async () => {
           max="9999"
           @input="onMaxInput"
         />
-        <span class="field-hint">默认 500，范围 1-9999</span>
+        <span class="field-hint">{{ t("contacts.createGroup.maxHint") }}</span>
       </div>
     </div>
 
     <button class="submit-btn" :disabled="creating" @click="submit">
-      {{ creating ? "创建中..." : "创建群聊" }}
+      {{
+        creating
+          ? t("contacts.createGroup.creating")
+          : t("contacts.createGroup.submit")
+      }}
     </button>
   </div>
 </template>

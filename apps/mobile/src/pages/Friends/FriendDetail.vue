@@ -10,6 +10,7 @@ import {
   refresh_user_info,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import { calcAgeFromBirthday } from "@/utils/time";
 import type { FriendVo, UserInfo } from "@workspace/types";
@@ -19,6 +20,7 @@ import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const friendId = route.params.friendId as string;
 const { getAvatarUrl } = useAvatar();
 
@@ -102,23 +104,30 @@ const getAccount = () =>
   detail.value.friendVo?.friend_account || detail.value.userInfo?.account || "";
 const getBio = () => detail.value.userInfo?.info || "";
 const getGenderText = (g?: number) =>
-  ({ 0: "未知", 1: "保密", 2: "男", 3: "女", 4: "机器人", 5: "其他" }[g ?? 0] ||
-  "");
+  ({
+    0: t("userInfo.genderTypes.unknown"),
+    1: t("userInfo.genderTypes.secret"),
+    2: t("userInfo.genderTypes.male"),
+    3: t("userInfo.genderTypes.female"),
+    4: t("userInfo.genderTypes.robot"),
+    5: t("userInfo.genderTypes.other"),
+  }[g ?? 0] || "");
 
 const onDeleteFriend = async () => {
   try {
     await showConfirmDialog({
-      title: "删除好友",
-      message: `确定删除「${getDisplayName()}」吗？`,
-      confirmButtonText: "删除",
+      title: t("friends.deleteTitle"),
+      message: t("friends.deleteConfirm", { name: getDisplayName() }),
+      confirmButtonText: t("common.delete"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
     await delete_friend(friendId);
-    showToast({ message: "已删除", icon: "success" });
+    showToast({ message: t("friends.deleted"), icon: "success" });
     router.back();
   } catch (e) {
-    if (e !== "cancel") showToast({ message: "操作失败", icon: "fail" });
+    if (e !== "cancel")
+      showToast({ message: t("common.operationFailed"), icon: "fail" });
   }
 };
 
@@ -144,12 +153,16 @@ onMounted(loadDetail);
           />
         </svg>
       </button>
-      <h1 class="title">{{ isFriend ? "好友详情" : "用户资料" }}</h1>
+      <h1 class="title">
+        {{ isFriend ? t("friends.detailTitle") : t("friends.profileTitle") }}
+      </h1>
     </div>
 
-    <div v-if="loading" class="loading-state"><p>加载中...</p></div>
+    <div v-if="loading" class="loading-state">
+      <p>{{ t("common.loadingDots") }}</p>
+    </div>
     <div v-else-if="loadError" class="error-state">
-      <Empty description="加载失败，请返回重试" />
+      <Empty :description="t('friendInfo.loadError')" />
     </div>
 
     <template v-else>
@@ -173,27 +186,30 @@ onMounted(loadDetail);
 
       <div class="info-section" v-if="detail.userInfo">
         <div class="info-item" v-if="getGenderText(detail.userInfo.gender)">
-          <span class="info-label">性别</span
+          <span class="info-label">{{ t("userInfo.gender") }}</span
           ><span class="info-value">{{
             getGenderText(detail.userInfo.gender)
           }}</span>
         </div>
-        <div class="info-item" v-if="calcAgeFromBirthday(detail.userInfo?.birthday)">
-          <span class="info-label">年龄</span
+        <div
+          class="info-item"
+          v-if="calcAgeFromBirthday(detail.userInfo?.birthday)"
+        >
+          <span class="info-label">{{ t("userInfo.age") }}</span
           ><span class="info-value">{{
             calcAgeFromBirthday(detail.userInfo?.birthday)
           }}</span>
         </div>
         <div class="info-item" v-if="detail.userInfo.email">
-          <span class="info-label">邮箱</span
+          <span class="info-label">{{ t("userInfo.email") }}</span
           ><span class="info-value">{{ detail.userInfo.email }}</span>
         </div>
         <div class="info-item" v-if="detail.userInfo.phone">
-          <span class="info-label">手机</span
+          <span class="info-label">{{ t("userInfo.phone") }}</span
           ><span class="info-value">{{ detail.userInfo.phone }}</span>
         </div>
         <div class="info-item" v-if="detail.userInfo.address">
-          <span class="info-label">地址</span
+          <span class="info-label">{{ t("userInfo.address") }}</span
           ><span class="info-value">{{ detail.userInfo.address }}</span>
         </div>
       </div>
@@ -205,7 +221,7 @@ onMounted(loadDetail);
               d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
             />
           </svg>
-          <span>发消息</span>
+          <span>{{ t("friends.sendMessage") }}</span>
         </button>
         <button
           class="action-btn danger"
@@ -217,12 +233,12 @@ onMounted(loadDetail);
               d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
             />
           </svg>
-          <span>删除好友</span>
+          <span>{{ t("friends.deleteTitle") }}</span>
         </button>
       </div>
 
       <button class="report-action" @click="showReport = true">
-        举报该用户
+        {{ t("friends.reportUser") }}
       </button>
 
       <ReportSheet

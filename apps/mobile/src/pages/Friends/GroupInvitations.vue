@@ -11,8 +11,10 @@ import {
 } from "@workspace/services";
 import type { GroupInvitationVo, UserInfo } from "@workspace/types";
 import { useUnreadStore } from "@/stores/unread";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 const goBack = () => router.back();
 const { refreshFriendCounts } = useUnreadStore();
 
@@ -72,7 +74,7 @@ const enrichList = async (
       const uuid = useInviter ? item.inviter_uuid : item.invitee_uuid;
       const user = await resolveUserName(uuid);
       const partyName =
-        user?.username || (uuid ? uuid.slice(0, 8) + "..." : "未知");
+        user?.username || (uuid ? uuid.slice(0, 8) + "..." : t("friendRequest.unknown"));
       return { ...item, user, partyName };
     })
   );
@@ -95,15 +97,15 @@ const handleAccept = async (inv: GroupInvitationVo) => {
   try {
     const ok = await accept_group_invitation(inv.group_uuid);
     if (ok) {
-      showToast({ message: "已接受邀请", icon: "success" });
+      showToast({ message: t("contacts.invitation.acceptSuccess"), icon: "success" });
     } else {
-      showToast({ message: "接受失败", icon: "fail" });
+      showToast({ message: t("contacts.invitation.acceptFailed"), icon: "fail" });
     }
     await loadInvitations();
     await refreshFriendCounts();
   } catch (e) {
     console.error(e);
-    showToast({ message: "接受失败", icon: "fail" });
+    showToast({ message: t("contacts.invitation.acceptFailed"), icon: "fail" });
   }
 };
 
@@ -111,39 +113,56 @@ const handleDecline = async (inv: GroupInvitationVo) => {
   try {
     const ok = await decline_group_invitation(inv.group_uuid);
     if (ok) {
-      showToast({ message: "已拒绝邀请", icon: "success" });
+      showToast({ message: t("contacts.invitation.rejectSuccess"), icon: "success" });
     } else {
-      showToast({ message: "拒绝失败", icon: "fail" });
+      showToast({ message: t("contacts.invitation.rejectFailed"), icon: "fail" });
     }
     await loadInvitations();
     await refreshFriendCounts();
   } catch (e) {
     console.error(e);
-    showToast({ message: "拒绝失败", icon: "fail" });
+    showToast({ message: t("contacts.invitation.rejectFailed"), icon: "fail" });
   }
 };
 
 const getStatusMeta = (status?: number) => {
-  if (status === 1) return { text: "待处理", cls: "pending", icon: CLOCK_ICON };
+  if (status === 1)
+    return {
+      text: t("contacts.invitation.statusPending"),
+      cls: "pending",
+      icon: CLOCK_ICON,
+    };
   if (status === 2)
-    return { text: "已接受", cls: "accepted", icon: CHECK_ICON };
+    return {
+      text: t("contacts.invitation.statusAccepted"),
+      cls: "accepted",
+      icon: CHECK_ICON,
+    };
   if (status === 3)
-    return { text: "已拒绝", cls: "rejected", icon: CLOSE_ICON };
-  return { text: "未知", cls: "unknown", icon: "" };
+    return {
+      text: t("contacts.invitation.statusRejected"),
+      cls: "rejected",
+      icon: CLOSE_ICON,
+    };
+  return {
+    text: t("contacts.invitation.statusUnknown"),
+    cls: "unknown",
+    icon: "",
+  };
 };
 
 const formatTime = (ts?: number) => {
-  if (!ts) return "未知时间";
+  if (!ts) return t("friendRequest.unknownTime");
   const date = new Date(ts);
   const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes <= 1) return "刚刚";
-  if (minutes < 60) return `${minutes}分钟前`;
+  if (minutes <= 1) return t("friendRequest.justNow");
+  if (minutes < 60) return t("friendRequest.minutesAgo", { minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}小时前`;
+  if (hours < 24) return t("friendRequest.hoursAgo", { hours });
   const days = Math.floor(hours / 24);
-  if (days === 1) return "昨天";
-  if (days < 7) return `${days}天前`;
+  if (days === 1) return t("friendRequest.yesterday");
+  if (days < 7) return t("friendRequest.daysAgo", { days });
   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 };
 
@@ -162,7 +181,7 @@ onMounted(() => {
           />
         </svg>
       </button>
-      <h1 class="title">群组通知</h1>
+      <h1 class="title">{{ t("friends.groupRequests") }}</h1>
     </div>
 
     <Tabs
@@ -179,7 +198,7 @@ onMounted(() => {
             :content="pendingReceivedCount"
             :show-zero="false"
             :offset="[8, -2]"
-            ><span>邀请我的</span></Badge
+            ><span>{{ t("contacts.invitation.tabReceived") }}</span></Badge
           ></template
         >
         <div v-if="receivedList.length > 0" class="invite-list">
@@ -209,21 +228,22 @@ onMounted(() => {
               </div>
               <span class="invite-desc"
                 >{{ inv.partyName
-                }}<UserTypeTag :type="inv.user?.user_type" /> 邀请你加入群聊</span
+                }}<UserTypeTag :type="inv.user?.user_type" />
+                {{ t("contacts.invitation.inviteYouJoin") }}</span
               >
               <span class="invite-time">{{ formatTime(inv.created_at) }}</span>
             </div>
             <div v-if="inv.status === 1" class="invite-actions">
               <button class="accept-btn" @click="handleAccept(inv)">
-                接受
+                {{ t("contacts.invitation.accept") }}
               </button>
               <button class="reject-btn" @click="handleDecline(inv)">
-                拒绝
+                {{ t("contacts.invitation.reject") }}
               </button>
             </div>
           </div>
         </div>
-        <Empty v-else description="暂无收到的邀请" />
+        <Empty v-else :description="t('contacts.invitation.noReceived')" />
       </Tab>
       <Tab>
         <template #title
@@ -231,7 +251,7 @@ onMounted(() => {
             :content="pendingSentCount"
             :show-zero="false"
             :offset="[8, -2]"
-            ><span>我邀请的</span></Badge
+            ><span>{{ t("contacts.invitation.tabSent") }}</span></Badge
           ></template
         >
         <div v-if="sentList.length > 0" class="invite-list">
@@ -260,14 +280,15 @@ onMounted(() => {
                 </span>
               </div>
               <span class="invite-desc"
-                >你邀请了 {{ inv.partyName
-                }}<UserTypeTag :type="inv.user?.user_type" /> 加入群聊</span
+                >{{ t("contacts.invitation.youInvited") }} {{ inv.partyName
+                }}<UserTypeTag :type="inv.user?.user_type" />
+                {{ t("contacts.invitation.joinGroup") }}</span
               >
               <span class="invite-time">{{ formatTime(inv.created_at) }}</span>
             </div>
           </div>
         </div>
-        <Empty v-else description="暂无发出的邀请" />
+        <Empty v-else :description="t('contacts.invitation.noSent')" />
       </Tab>
     </Tabs>
   </div>
