@@ -3,11 +3,14 @@ import { ref, onMounted } from "vue";
 import { Loading, Empty } from "vant";
 import { get_plaza_likes } from "@workspace/services";
 import type { PlazaUser } from "@workspace/types";
+import { useI18n } from "@/i18n";
 import { usePagedUsers } from "./usePagedUsers";
 import PlazaCard from "./PlazaCard.vue";
 import ProfileSheet from "./ProfileSheet.vue";
 
 const PAGE_SIZE = 12;
+
+const { t } = useI18n();
 
 const paged = usePagedUsers((page) => get_plaza_likes(page, PAGE_SIZE));
 const { list, loading, finished, loadMore, refresh } = paged;
@@ -26,16 +29,16 @@ onMounted(refresh);
 <template>
   <div class="crush">
     <div v-if="loading && list.length === 0" class="state-box">
-      <Loading size="28">加载中...</Loading>
+      <Loading size="28">{{ t("common.loadingDots") }}</Loading>
     </div>
 
     <div v-else-if="list.length === 0" class="state-box">
-      <Empty description="还没有心动过的朋友，去广场逛逛吧">
+      <Empty :description="t('plaza.crushEmpty')">
         <template #image>
           <img
             src="@/assets/empty-state.svg"
             class="empty-state-img"
-            alt="暂无内容"
+            :alt="t('common.noContent')"
           />
         </template>
       </Empty>
@@ -53,7 +56,7 @@ onMounted(refresh);
 
     <div v-if="!finished && list.length > 0" class="load-more">
       <button class="more-btn" :disabled="loading" @click="loadMore">
-        {{ loading ? "加载中..." : "加载更多" }}
+        {{ loading ? t("common.loadingDots") : t("common.loadMore") }}
       </button>
     </div>
 

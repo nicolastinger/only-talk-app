@@ -1,25 +1,25 @@
 import { showDialog, showToast } from "vant";
 import { add_friend, switch_plaza_crush } from "@workspace/services";
 import { getMyUuid, parseResponse } from "@/utils/api";
+import { t } from "@/i18n";
 import type {
   FriendRequestInfoDTO,
   PlazaCrushResult,
   PlazaUser,
 } from "@workspace/types";
 
-export const GENDER_TEXT: Record<number, string> = {
-  0: "未知",
-  1: "保密",
-  2: "男",
-  3: "女",
-  4: "机器人",
-  5: "其他",
+export const genderText = (gender?: number) => {
+  if (gender === undefined || gender === null) return "";
+  const map: Record<number, string> = {
+    0: t("userInfo.genderTypes.unknown"),
+    1: t("userInfo.genderTypes.secret"),
+    2: t("userInfo.genderTypes.male"),
+    3: t("userInfo.genderTypes.female"),
+    4: t("userInfo.genderTypes.robot"),
+    5: t("userInfo.genderTypes.other"),
+  };
+  return map[gender] ?? map[0];
 };
-
-export const genderText = (gender?: number) =>
-  gender === undefined || gender === null
-    ? ""
-    : GENDER_TEXT[gender] ?? GENDER_TEXT[0];
 
 export const isMale = (gender?: number) => gender === 2;
 export const isFemale = (gender?: number) => gender === 3;
@@ -36,23 +36,24 @@ export const toggleCrush = async (
 /** 匹配成功弹窗，返回是否加好友 */
 export const confirmMatch = (userName: string): Promise<boolean> =>
   showDialog({
-    title: "互相心动啦！",
-    message: `你和「${userName}」互相心动了，要加个好友进一步了解吗？`,
-    confirmButtonText: "加好友",
+    title: t("plaza.matchTitle"),
+    message: t("plaza.matchMessage", { name: userName }),
+    confirmButtonText: t("plaza.addFriend"),
     confirmButtonColor: "#ff6b81",
-    cancelButtonText: "继续浏览",
+    cancelButtonText: t("plaza.continue"),
   })
     .then(() => true)
     .catch(() => false);
 
 const mapAddFriendError = (e: unknown): string => {
   const msg = e instanceof Error ? e.message : String(e);
-  if (msg.includes("Already added as friend")) return "你们已经是好友了";
+  if (msg.includes("Already added as friend"))
+    return t("friendRequest.alreadyFriend");
   if (msg.includes("Please do not add repeatedly"))
-    return "请勿重复申请，等待对方处理";
+    return t("friendRequest.duplicateRequest");
   if (msg.includes("request") || msg.includes("发送"))
-    return "发送失败，请稍后重试";
-  return msg || "发送失败，请稍后重试";
+    return t("friendRequest.sendFailed");
+  return msg || t("friendRequest.sendFailed");
 };
 
 /** 从广场发送好友申请，成功返回 true */
@@ -63,7 +64,7 @@ export const sendPlazaFriendRequest = async (
   try {
     const me = await getMyUuid();
     const dto: FriendRequestInfoDTO = {
-      request_message: "你好，很高兴认识你！",
+      request_message: t("plaza.helloMessage"),
       accept_message: "",
       request_user: me,
       accept_user: targetUuid,
@@ -72,7 +73,7 @@ export const sendPlazaFriendRequest = async (
       accept_status: 0,
     };
     parseResponse(await add_friend(dto, { autoShowError: false }));
-    showToast({ message: "好友申请已发送", icon: "success" });
+    showToast({ message: t("plaza.requestSent"), icon: "success" });
     return true;
   } catch (e) {
     showToast(mapAddFriendError(e));

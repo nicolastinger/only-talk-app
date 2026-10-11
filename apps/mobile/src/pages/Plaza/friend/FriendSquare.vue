@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { showToast, Loading, Empty } from "vant";
 import { get_plaza_users } from "@workspace/services";
 import type { PlazaUser, PlazaListQuery } from "@workspace/types";
+import { useI18n } from "@/i18n";
 import { usePagedUsers } from "./usePagedUsers";
 import PlazaCard from "./PlazaCard.vue";
 import ProfileSheet from "./ProfileSheet.vue";
@@ -10,23 +11,25 @@ import { toggleCrush, confirmMatch, sendPlazaFriendRequest } from "./utils";
 
 const PAGE_SIZE = 12;
 
-const genderOptions: { label: string; value: "" | number }[] = [
-  { label: "不限", value: "" },
-  { label: "男", value: 2 },
-  { label: "女", value: 3 },
-];
-const ageOptions = [
-  { label: "不限" },
+const { t } = useI18n();
+
+const genderOptions = computed<{ label: string; value: "" | number }[]>(() => [
+  { label: t("plaza.filterAll"), value: "" },
+  { label: t("plaza.male"), value: 2 },
+  { label: t("plaza.female"), value: 3 },
+]);
+const ageOptions = computed(() => [
+  { label: t("plaza.filterAll") },
   { label: "18-25", min: 18, max: 25 },
   { label: "26-35", min: 26, max: 35 },
   { label: "36+", min: 36 },
-];
+]);
 
 const gender = ref<"" | number>("");
 const ageIndex = ref(0);
 
 const query = computed<PlazaListQuery>(() => {
-  const age = ageOptions[ageIndex.value];
+  const age = ageOptions.value[ageIndex.value];
   return {
     gender: gender.value || undefined,
     age_min: age.min,
@@ -62,7 +65,7 @@ const onCrush = async (user: PlazaUser) => {
     const wasLiked = !!user.liked_by_me;
     const result = await toggleCrush(user);
     if (!wasLiked) {
-      showToast(user.liked_by_me ? "心动成功" : "已取消");
+      showToast(user.liked_by_me ? t("plaza.crushSuccess") : t("plaza.crushCanceled"));
       if (result.matched) {
         const ok = await confirmMatch(user.username || "");
         if (ok) await sendPlazaFriendRequest(user.uuid, "plaza");
@@ -70,7 +73,7 @@ const onCrush = async (user: PlazaUser) => {
     }
   } catch (e) {
     console.error("心动失败", e);
-    showToast("操作失败，请重试");
+    showToast(t("plaza.moment.opFailed"));
   }
 };
 
@@ -81,7 +84,7 @@ onMounted(refresh);
   <div class="square">
     <div class="filter-card">
       <div class="filter-row">
-        <span class="filter-label">性别</span>
+        <span class="filter-label">{{ t("plaza.gender") }}</span>
         <div class="filter-chips">
           <button
             v-for="opt in genderOptions"
@@ -95,7 +98,7 @@ onMounted(refresh);
         </div>
       </div>
       <div class="filter-row">
-        <span class="filter-label">年龄</span>
+        <span class="filter-label">{{ t("plaza.age") }}</span>
         <div class="filter-chips">
           <button
             v-for="(opt, i) in ageOptions"
@@ -111,16 +114,16 @@ onMounted(refresh);
     </div>
 
     <div v-if="loading && list.length === 0" class="state-box">
-      <Loading size="28">加载中...</Loading>
+      <Loading size="28">{{ t("common.loadingDots") }}</Loading>
     </div>
 
     <div v-else-if="list.length === 0" class="state-box">
-      <Empty description="暂无符合条件的朋友">
+      <Empty :description="t('plaza.emptyFiltered')">
         <template #image>
           <img
             src="@/assets/empty-state.svg"
             class="empty-state-img"
-            alt="暂无内容"
+            :alt="t('common.noContent')"
           />
         </template>
       </Empty>
@@ -138,7 +141,7 @@ onMounted(refresh);
 
     <div v-if="!finished && list.length > 0" class="load-more">
       <button class="more-btn" :disabled="loading" @click="loadMore">
-        {{ loading ? "加载中..." : "加载更多" }}
+        {{ loading ? t("common.loadingDots") : t("common.loadMore") }}
       </button>
     </div>
 

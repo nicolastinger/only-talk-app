@@ -2,9 +2,12 @@
 import { ref, watch, computed } from "vue";
 import type { PlazaUser } from "@workspace/types";
 import { ReportTargetType } from "@workspace/types";
+import { useI18n } from "@/i18n";
 import PlazaAvatar from "./PlazaAvatar.vue";
 import ReportSheet from "@/components/ReportSheet.vue";
 import { genderText, sendPlazaFriendRequest } from "./utils";
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -40,9 +43,9 @@ const infoRows = computed(() => {
   const u = props.user;
   if (!u) return [];
   const rows: { label: string; value: string }[] = [];
-  rows.push({ label: "性别", value: genderText(u.gender) || "-" });
-  rows.push({ label: "年龄", value: u.age ? `${u.age}` : "-" });
-  rows.push({ label: "地区", value: u.address || "-" });
+  rows.push({ label: t("plaza.gender"), value: genderText(u.gender) || "-" });
+  rows.push({ label: t("plaza.age"), value: u.age ? `${u.age}` : "-" });
+  rows.push({ label: t("plaza.address"), value: u.address || "-" });
   return rows;
 });
 
@@ -73,7 +76,7 @@ const onAddFriend = async () => {
           <PlazaAvatar :icon="user.icon" :size="84" />
         </div>
         <div class="hero-name">
-          {{ user.username || "未命名" }}
+          {{ user.username || t("plaza.unnamed") }}
           <UserTypeTag :type="user.user_type" />
           <span
             v-if="user.gender !== undefined && user.gender !== null"
@@ -87,7 +90,10 @@ const onAddFriend = async () => {
         </div>
         <div v-if="user.age || user.address" class="hero-meta">
           {{
-            [user.age ? `${user.age} 岁` : "", user.address]
+            [
+              user.age ? `${user.age} ${t("plaza.ageUnit")}` : "",
+              user.address,
+            ]
               .filter(Boolean)
               .join(" · ")
           }}
@@ -116,9 +122,17 @@ const onAddFriend = async () => {
           :disabled="sending || sent"
           @click="onAddFriend"
         >
-          {{ sent ? "已发送申请" : sending ? "发送中..." : "加好友" }}
+          {{
+            sent
+              ? t("plaza.applySent")
+              : sending
+                ? t("plaza.sending")
+                : t("plaza.addFriend")
+          }}
         </button>
-        <button class="report-btn" @click="showReport = true">举报</button>
+        <button class="report-btn" @click="showReport = true">
+          {{ t("report.action") }}
+        </button>
       </div>
     </div>
 

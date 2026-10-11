@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { showToast, Loading, Empty } from "vant";
 import { get_plaza_users } from "@workspace/services";
 import type { PlazaUser } from "@workspace/types";
+import { useI18n } from "@/i18n";
 import { usePagedUsers } from "./usePagedUsers";
 import PlazaAvatar from "./PlazaAvatar.vue";
 import ProfileSheet from "./ProfileSheet.vue";
@@ -14,6 +15,8 @@ import {
 } from "./utils";
 
 const PAGE_SIZE = 12;
+
+const { t } = useI18n();
 
 const paged = usePagedUsers((page) => get_plaza_users(page, PAGE_SIZE));
 const { list, loading, finished, loadMore, refresh } = paged;
@@ -55,7 +58,7 @@ const doHeart = async (user: PlazaUser) => {
     }
   } catch (e) {
     console.error("心动失败", e);
-    showToast("操作失败，请重试");
+    showToast(t("plaza.moment.opFailed"));
   }
 };
 
@@ -137,31 +140,33 @@ onMounted(refresh);
 <template>
   <div class="swipe">
     <div v-if="!current && loading" class="state-box">
-      <Loading size="28">加载中...</Loading>
+      <Loading size="28">{{ t("common.loadingDots") }}</Loading>
     </div>
 
     <div v-else-if="finished && !current" class="state-box">
-      <Empty description="暂时没有更多可以速配的朋友啦">
+      <Empty :description="t('plaza.swipeEmpty')">
         <template #image>
           <img
             src="@/assets/empty-state.svg"
             class="empty-state-img"
-            alt="暂无内容"
+            :alt="t('common.noContent')"
           />
         </template>
       </Empty>
-      <button class="restart-btn" @click="restart">重新开始</button>
+      <button class="restart-btn" @click="restart">
+        {{ t("plaza.swipeEmptyAction") }}
+      </button>
     </div>
 
     <template v-else-if="current">
-      <p class="hint">左滑跳过 · 右滑心动 · 点击查看资料</p>
+      <p class="hint">{{ t("plaza.swipeHintFull") }}</p>
       <div class="deck-stage">
         <div v-if="peek" class="deck-card peek">
           <div class="peek-hero">
             <div class="peek-avatar">
               <PlazaAvatar :icon="peek.icon" :size="56" />
             </div>
-            <span class="peek-name">{{ peek.username || "未命名" }}</span>
+            <span class="peek-name">{{ peek.username || t("plaza.unnamed") }}</span>
             <UserTypeTag :type="peek.user_type" />
           </div>
           <p v-if="peek.motto" class="peek-motto">{{ peek.motto }}</p>
@@ -177,13 +182,13 @@ onMounted(refresh);
           @pointercancel="onPointerUp"
         >
           <div class="card-head">
-            <span class="head-tag">速配</span>
+            <span class="head-tag">{{ t("plaza.tabSwipe") }}</span>
           </div>
           <div class="card-avatar">
             <PlazaAvatar :icon="current.icon" :size="84" />
           </div>
           <div class="card-name">
-            {{ current.username || "未命名" }}
+            {{ current.username || t("plaza.unnamed") }}
             <UserTypeTag :type="current.user_type" />
             <span
               v-if="current.gender !== undefined && current.gender !== null"
@@ -201,7 +206,10 @@ onMounted(refresh);
           </div>
           <p class="card-meta">
             {{
-              [current.age ? `${current.age} 岁` : "", current.address]
+              [
+                current.age ? `${current.age} ${t("plaza.ageUnit")}` : "",
+                current.address,
+              ]
                 .filter(Boolean)
                 .join(" · ")
             }}
@@ -236,7 +244,7 @@ onMounted(refresh);
         </button>
       </div>
 
-      <p class="action-hint">跳过</p>
+      <p class="action-hint">{{ t("plaza.swipeSkip") }}</p>
     </template>
 
     <ProfileSheet v-model="sheetShow" :user="profile" add-type="plaza" />

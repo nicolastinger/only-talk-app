@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { PlazaUser } from "@workspace/types";
+import { useI18n } from "@/i18n";
 import PlazaAvatar from "./PlazaAvatar.vue";
 import { isMale, isFemale, genderText } from "./utils";
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -27,7 +30,7 @@ const meta = computed(() => {
   const parts: string[] = [];
   const g = genderText(props.user.gender);
   if (g) parts.push(g);
-  if (props.user.age) parts.push(`${props.user.age} 岁`);
+  if (props.user.age) parts.push(`${props.user.age} ${t("plaza.ageUnit")}`);
   if (props.user.address) parts.push(props.user.address);
   return parts.join(" · ");
 });
@@ -64,7 +67,7 @@ const moreTagCount = computed(() =>
     </div>
 
     <div class="p-name-row">
-      <span class="p-name">{{ user.username || "未命名" }}</span>
+      <span class="p-name">{{ user.username || t("plaza.unnamed") }}</span>
       <UserTypeTag :type="user.user_type" />
       <span v-if="genderClass" class="p-gender" :class="genderClass">
         {{ genderText(user.gender) }}

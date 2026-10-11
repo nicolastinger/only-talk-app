@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import type { Component } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUnreadStore } from "@/stores/unread";
+import { useI18n } from "@/i18n";
 import NotificationBell from "@/components/NotificationBell/index.vue";
 import FriendSquare from "./friend/FriendSquare.vue";
 import FriendSwipe from "./friend/FriendSwipe.vue";
@@ -14,12 +15,14 @@ interface RailItem {
   label: string;
 }
 
-const railMenus: RailItem[] = [
-  { key: "square", label: "广场" },
-  { key: "swipe", label: "速配" },
-  { key: "crush", label: "我心动" },
-  { key: "match", label: "已匹配" },
-];
+const { t } = useI18n();
+
+const railMenus = computed<RailItem[]>(() => [
+  { key: "square", label: t("plaza.tabDiscover") },
+  { key: "swipe", label: t("plaza.tabSwipe") },
+  { key: "crush", label: t("plaza.tabCrush") },
+  { key: "match", label: t("plaza.tabMatch") },
+]);
 
 const activeKey = ref("square");
 
@@ -29,7 +32,10 @@ const router = useRouter();
 // 支持从外部入口(如发现页金刚键)带 sub 参数直达指定子页
 onMounted(() => {
   const sub = route.query.sub;
-  if (typeof sub === "string" && railMenus.some((item) => item.key === sub)) {
+  if (
+    typeof sub === "string" &&
+    railMenus.value.some((item) => item.key === sub)
+  ) {
     activeKey.value = sub;
   }
 });
@@ -58,7 +64,7 @@ const friendFeatures: Record<string, Component> = {
           d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
         />
       </svg>
-      <span class="page-title">交友</span>
+      <span class="page-title">{{ t("plaza.friendEntry") }}</span>
       <NotificationBell :count="plazaUnread" @click="goNotifications" />
       <button class="header-link" @click="router.push('/plaza')">
         <svg class="header-link-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -66,7 +72,7 @@ const friendFeatures: Record<string, Component> = {
             d="M13 3c-4.97 0-9 4.03-9 9H1l4 4 4-4H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.51 0-2.91-.49-4.06-1.3l-1.42 1.44C8.04 20.3 9.94 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"
           />
         </svg>
-        <span>动态</span>
+        <span>{{ t("plaza.feedTitle") }}</span>
       </button>
     </div>
 
