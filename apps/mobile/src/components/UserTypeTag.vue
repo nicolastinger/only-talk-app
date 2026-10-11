@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "@/i18n";
 
 /**
  * 用户类型标签
@@ -7,14 +8,16 @@ import { computed } from "vue";
  */
 const props = defineProps<{ type?: number | null }>();
 
+const { t } = useI18n();
+
 const meta = computed(() => {
   switch (props.type) {
     case 1:
-      return { label: "机器人", cls: "robot" };
+      return { label: t("userType.robot"), cls: "robot" };
     case 2:
-      return { label: "企业", cls: "enterprise" };
+      return { label: t("userType.enterprise"), cls: "enterprise" };
     default:
-      return props.type ? { label: "特殊", cls: "other" } : null;
+      return props.type ? { label: t("userType.other"), cls: "other" } : null;
   }
 });
 </script>

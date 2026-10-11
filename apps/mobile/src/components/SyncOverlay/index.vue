@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useQuicStore } from "@/stores/quic";
+import { useI18n } from "@/i18n";
 
+const { t } = useI18n();
 const { state } = useQuicStore();
 </script>
 
@@ -9,7 +11,7 @@ const { state } = useQuicStore();
     <div class="sync-mask">
       <div class="sync-card">
         <van-loading color="var(--color-primary)" size="30">
-          <span class="sync-text">正在同步离线消息...</span>
+          <span class="sync-text">{{ t("sync.syncing") }}</span>
         </van-loading>
       </div>
     </div>

@@ -5,10 +5,12 @@ import { Popup, Loading } from "vant";
 import type { AnnouncementVO } from "@workspace/types";
 import { useAuthStore } from "@/stores/auth";
 import { useAnnouncementStore } from "@/stores/announcement";
+import { useI18n } from "@/i18n";
 import { formatMomentTime } from "@/utils/time";
 import AnnouncementModal from "@/components/AnnouncementModal.vue";
 
 const route = useRoute();
+const { t } = useI18n();
 const { isLoggedIn } = useAuthStore();
 const {
   visibleList,
@@ -89,16 +91,16 @@ watch(isLoggedIn, (v) => {
               d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
             />
           </svg>
-          <span>系统公告</span>
+          <span>{{ t("chats.announcements") }}</span>
         </div>
         <span v-if="unreadCount > 0" class="list-unread"
-          >{{ unreadCount }} 条未读</span
+          >{{ unreadCount }} {{ t("notification.unreadCount") }}</span
         >
       </div>
 
       <Loading v-if="loading" class="list-load" size="20" />
       <div v-else-if="visibleList.length === 0" class="list-empty">
-        暂无公告
+        {{ t("announcement.empty") }}
       </div>
       <div v-else class="list-body">
         <div
@@ -110,7 +112,9 @@ watch(isLoggedIn, (v) => {
         >
           <div class="item-dot" :class="{ unread: !item.is_read }" />
           <div class="item-main">
-            <div class="item-title">{{ item.title || "系统公告" }}</div>
+            <div class="item-title">
+              {{ item.title || t("chats.announcements") }}
+            </div>
             <div class="item-time">{{ formatMomentTime(item.created_at) }}</div>
           </div>
           <svg class="item-arrow" viewBox="0 0 24 24" fill="currentColor">
@@ -122,7 +126,9 @@ watch(isLoggedIn, (v) => {
       </div>
 
       <div class="list-footer">
-        <button class="confirm-btn" @click="closeList">我知道了</button>
+        <button class="confirm-btn" @click="closeList">
+          {{ t("announcement.gotIt") }}
+        </button>
       </div>
     </div>
   </Popup>

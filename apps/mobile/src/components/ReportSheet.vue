@@ -3,6 +3,9 @@ import { ref, computed, watch } from "vue";
 import { showToast } from "vant";
 import { submit_report } from "@workspace/services";
 import type { ReportTargetTypeValue } from "@workspace/types";
+import { useI18n } from "@/i18n";
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -40,7 +43,7 @@ watch(
 const onSubmit = async () => {
   const text = reason.value.trim();
   if (!text) {
-    showToast("请填写举报原因");
+    showToast(t("report.reasonRequired"));
     return;
   }
   if (submitting.value) return;
@@ -51,11 +54,12 @@ const onSubmit = async () => {
       target_uuid: props.targetUuid,
       reason: text,
     });
-    showToast({ message: "举报已提交", icon: "success" });
+    showToast({ message: t("report.success"), icon: "success" });
     emit("success");
     show.value = false;
   } catch (e) {
-    const msg = e instanceof Error && e.message ? e.message : "举报失败，请重试";
+    const msg =
+      e instanceof Error && e.message ? e.message : t("report.failed");
     showToast(msg);
   } finally {
     submitting.value = false;
@@ -74,19 +78,23 @@ const onSubmit = async () => {
   >
     <div class="report-body">
       <h3 class="report-title">
-        举报{{ targetName ? `「${targetName}」` : "" }}
+        {{
+          targetName
+            ? t("report.titleWithName", { name: targetName })
+            : t("report.title")
+        }}
       </h3>
-      <p class="report-tip">请描述举报原因，我们会在核实后处理</p>
+      <p class="report-tip">{{ t("report.tip") }}</p>
       <van-field
         v-model="reason"
         type="textarea"
         rows="4"
         maxlength="500"
         show-word-limit
-        placeholder="请输入举报原因（必填）"
+        :placeholder="t('report.placeholder')"
       />
       <button class="report-submit" :disabled="submitting" @click="onSubmit">
-        {{ submitting ? "提交中..." : "提交举报" }}
+        {{ submitting ? t("report.submitting") : t("report.submit") }}
       </button>
     </div>
   </van-popup>

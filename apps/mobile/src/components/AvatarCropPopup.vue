@@ -2,6 +2,9 @@
 import { onBeforeUnmount, ref, watch } from "vue";
 import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
+import { useI18n } from "@/i18n";
+
+const { t } = useI18n();
 
 export interface CropRect {
   x: number;
@@ -109,7 +112,7 @@ onBeforeUnmount(() => {
     :close-on-click-overlay="false"
   >
     <div class="crop-body">
-      <div class="crop-title">裁剪头像</div>
+      <div class="crop-title">{{ t("avatarCrop.title") }}</div>
       <div class="crop-container">
         <img
           v-if="show"
@@ -121,13 +124,13 @@ onBeforeUnmount(() => {
         />
       </div>
       <div class="crop-zoom">
-        <van-button size="small" plain type="default" @click="onZoomOut" aria-label="缩小">
+        <van-button size="small" plain type="default" @click="onZoomOut" :aria-label="t('imagePreview.zoomOut')">
           <svg viewBox="0 0 24 24" fill="currentColor" class="zoom-icon">
             <path d="M5 11h14v2H5z" />
           </svg>
         </van-button>
-        <span class="crop-zoom-tip">双指缩放 · 拖动调整位置</span>
-        <van-button size="small" plain type="default" @click="onZoomIn" aria-label="放大">
+        <span class="crop-zoom-tip">{{ t("avatarCrop.hint") }}</span>
+        <van-button size="small" plain type="default" @click="onZoomIn" :aria-label="t('imagePreview.zoomIn')">
           <svg viewBox="0 0 24 24" fill="currentColor" class="zoom-icon">
             <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
           </svg>
@@ -135,10 +138,10 @@ onBeforeUnmount(() => {
       </div>
       <div class="crop-footer">
         <van-button size="small" plain type="default" @click="onCancel">
-          取消
+          {{ t("avatarCrop.cancel") }}
         </van-button>
         <van-button size="small" type="primary" :loading="confirming" @click="onConfirm">
-          确定
+          {{ t("avatarCrop.confirm") }}
         </van-button>
       </div>
     </div>

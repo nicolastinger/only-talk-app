@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useQuicStore } from "@/stores/quic";
+import { useI18n } from "@/i18n";
 
+const { t } = useI18n();
 const { state } = useQuicStore();
 </script>
 
@@ -14,7 +16,13 @@ const { state } = useQuicStore();
     ]"
   >
     <span v-if="state.statusTag === 'reconnecting'" class="conn-tag__spinner" />
-    <span>{{ state.statusTag === 'offline' ? '已离线' : state.statusTag === 'reconnecting' ? '重连中' : '已上线' }}</span>
+    <span>{{
+      state.statusTag === "offline"
+        ? t("homeLayout.connOffline")
+        : state.statusTag === "reconnecting"
+          ? t("homeLayout.connReconnecting")
+          : t("homeLayout.connOnline")
+    }}</span>
   </div>
 </template>
 

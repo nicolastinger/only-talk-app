@@ -19,10 +19,12 @@ import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
 import { clearUuidCache } from "@/utils/api";
+import { useI18n } from "@/i18n";
 import AnnouncementCenter from "@/components/AnnouncementCenter.vue";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const { isLoggedIn, clearAuth } = useAuthStore();
 useTheme();
 useCallManager();
@@ -153,13 +155,12 @@ onMounted(() => {
   // 收到服务端"账号已在其他设备登录"通知:弹窗确认后再退出登录
   listen<string>("force_logout", (event) => {
     const reason =
-      event.payload ||
-      "您的账号已在其他设备登录，本机已被强制下线。";
+      event.payload || t("homeLayout.forceLogoutContent");
     showDialog({
-      title: "账号已在其他设备登录",
+      title: t("homeLayout.forceLogoutTitle"),
       message: reason,
       showCancelButton: false,
-      confirmButtonText: "退出登录",
+      confirmButtonText: t("homeLayout.forceLogout"),
       confirmButtonColor: "#ef4444",
       closeOnClickOverlay: false,
     })

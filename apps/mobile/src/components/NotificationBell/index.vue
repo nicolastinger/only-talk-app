@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "@/i18n";
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
     count?: number;
     title?: string;
   }>(),
-  { count: 0, title: "本页通知" }
+  { count: 0 }
 );
 
 const emit = defineEmits<{ (e: "click"): void }>();
+
+const bellTitle = computed(() => props.title || t("notification.bellTitle"));
 
 const badgeText = computed(() =>
   props.count > 99 ? "99+" : String(props.count)
@@ -17,7 +22,7 @@ const badgeText = computed(() =>
 </script>
 
 <template>
-  <button class="notify-link" :title="title" @click="emit('click')">
+  <button class="notify-link" :title="bellTitle" @click="emit('click')">
     <svg viewBox="0 0 24 24" fill="currentColor">
       <path
         d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"

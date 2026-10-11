@@ -4,8 +4,11 @@ import { Popup, Loading } from "vant";
 import { get_announcement_read_users, mark_announcement_read } from "@workspace/services";
 import type { AnnouncementReadUserVO, AnnouncementVO } from "@workspace/types";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 import { useAnnouncementStore } from "@/stores/announcement";
 import MarkdownRenderer from "@/components/MarkdownRenderer.vue";
+
+const { t } = useI18n();
 
 interface ReadUserWithAvatar extends AnnouncementReadUserVO {
   avatarUrl?: string | null;
@@ -97,7 +100,7 @@ const handleIgnore = () => {
         <div class="header-meta">
           <div class="header-title">{{ announcement.title }}</div>
           <div class="header-sub">
-            <span>已读</span>
+            <span>{{ t("announcement.read") }}</span>
             <span class="header-count">{{ announcement.read_count }}</span>
           </div>
         </div>
@@ -118,13 +121,13 @@ const handleIgnore = () => {
                 d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
               />
             </svg>
-            <span>已读</span>
+            <span>{{ t("announcement.read") }}</span>
             <span class="read-count">{{ announcement.read_count }}</span>
           </div>
 
           <Loading v-if="loading" class="load-spin" size="18" />
           <div v-else-if="readUsers.length === 0" class="read-empty">
-            暂无已读用户
+            {{ t("announcement.noReadUsers") }}
           </div>
           <div v-else class="user-list">
             <div v-for="u in readUsers" :key="u.uuid" class="user-chip">
@@ -142,8 +145,12 @@ const handleIgnore = () => {
       </div>
 
       <div class="modal-footer">
-        <button class="ignore-btn" @click="handleIgnore">忽略此公告</button>
-        <button class="confirm-btn" @click="close">我知道了</button>
+        <button class="ignore-btn" @click="handleIgnore">
+          {{ t("announcement.ignore") }}
+        </button>
+        <button class="confirm-btn" @click="close">
+          {{ t("announcement.gotIt") }}
+        </button>
       </div>
     </div>
   </Popup>

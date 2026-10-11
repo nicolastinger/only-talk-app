@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useQuicStore } from "@/stores/quic";
+import { useI18n } from "@/i18n";
 
+const { t } = useI18n();
 const { state, reconnect } = useQuicStore();
 </script>
 
@@ -8,7 +10,7 @@ const { state, reconnect } = useQuicStore();
   <div v-if="!state.isConnected" class="quic-bar">
     <span class="bar-icon" aria-hidden="true">⚠️</span>
     <span class="bar-text">{{
-      state.message || "QUIC 连接已断开，请检查网络"
+      state.message || t("quicDisconnect.defaultMessage")
     }}</span>
     <button
       class="bar-btn"
@@ -26,7 +28,11 @@ const { state, reconnect } = useQuicStore();
           d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
         />
       </svg>
-      <span>{{ state.reconnecting ? "连接中..." : "重新连接" }}</span>
+      <span>{{
+        state.reconnecting
+          ? t("quicDisconnect.reconnecting")
+          : t("quicDisconnect.reconnect")
+      }}</span>
     </button>
   </div>
 </template>
