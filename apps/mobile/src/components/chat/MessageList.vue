@@ -13,11 +13,14 @@ import {
 } from "@/chat/messageTypes";
 import { getMessageDisplayText, isRecallMessage } from "@/chat/messageParse";
 import { isMessageSelectable } from "@/chat/useMessageSelection";
+import { useI18n } from "@/i18n";
 import FileMsgItem from "./FileMsgItem.vue";
 import ImageMsg from "./ImageMsg.vue";
 import MsgTimeDivider from "./MsgTimeDivider.vue";
 import PrivacyMsg from "./PrivacyMsg.vue";
 import SystemMsg from "./SystemMsg.vue";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   mode: "single" | "group";
@@ -143,7 +146,9 @@ const senderName = (msg: UiChatMessage): string => {
   const info = props.memberMap?.[msg.senderUuid || msg.textMsg.send_user || ""];
   const username = info?.username || "";
   if (username) return username;
-  return msg.textMsg.send_user ? msg.textMsg.send_user.slice(0, 8) : "群成员";
+  return msg.textMsg.send_user
+    ? msg.textMsg.send_user.slice(0, 8)
+    : t("groupChat.groupMember");
 };
 
 /** 撤回控制消息（居中提示，不渲染气泡） */
@@ -152,9 +157,13 @@ const isRecallRow = (msg: UiChatMessage): boolean =>
 
 /** 撤回提示文案：我/群成员昵称/对方 + 撤回了一条消息 */
 const recallText = (msg: UiChatMessage): string => {
-  if (msg.from === "mine") return "你撤回了一条消息";
-  if (isGroup.value) return `${senderName(msg)}撤回了一条消息`;
-  return `${props.peerName || "对方"}撤回了一条消息`;
+  if (msg.from === "mine")
+    return t("chat.recall.notice", { name: t("chat.recall.you") });
+  if (isGroup.value)
+    return t("chat.recall.notice", { name: senderName(msg) });
+  return t("chat.recall.notice", {
+    name: props.peerName || t("chat.recall.peer"),
+  });
 };
 
 const senderUserType = (msg: UiChatMessage): number | undefined => {
@@ -256,14 +265,14 @@ const senderAvatar = (msg: UiChatMessage): string => {
             @click="emit('retry', msg)"
           >
             <span class="fail-mark">!</span>
-            <span>发送失败，点击重发</span>
+            <span>{{ t("chat.sendFailed") }}</span>
           </div>
           <span
             v-else-if="
               msg.ack === false && !msg.sendingImage && !msg.sendingFile
             "
             class="ack-label pending"
-            >发送中</span
+            >{{ t("chat.pending.sending") }}</span
           >
         </div>
       </div>
