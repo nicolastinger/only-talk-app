@@ -985,8 +985,11 @@ const messages: LocaleMessages = {
   },
   "notification": {
     "title": "Notification Center",
+    "subtitle": "Alerts for friends, groups and moments",
     "noNotifications": "No notifications",
     "unreadCount": "unread",
+    "unreadChip": "{count} unread",
+    "cleared": "Unread cleared",
     "clearUnread": "Clear unread",
     "justNow": "Just now",
     "minutesAgo": "{minutes} minutes ago",

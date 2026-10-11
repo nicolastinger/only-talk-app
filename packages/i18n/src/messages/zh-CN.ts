@@ -985,8 +985,11 @@ const messages: LocaleMessages = {
   },
   "notification": {
     "title": "通知中心",
+    "subtitle": "好友、群组与动态的消息提醒",
     "noNotifications": "暂无通知",
     "unreadCount": "条未读",
+    "unreadChip": "{count} 未读",
+    "cleared": "已清空未读",
     "clearUnread": "清空未读",
     "justNow": "刚刚",
     "minutesAgo": "{minutes}分钟前",

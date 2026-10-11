@@ -10,10 +10,12 @@ import {
   type NotificationCategoryKey,
 } from "@workspace/types";
 import { useUnreadStore } from "@/stores/unread";
+import { useI18n } from "@/i18n";
 import type { SystemNotification } from "@workspace/types";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const { refresh: refreshUnread } = useUnreadStore();
 const goBack = () => router.back();
 
@@ -30,13 +32,43 @@ interface Category {
   clearLevel2: number;
 }
 
-const categories: Category[] = [
-  { key: "all", label: "全部", level1: 1, level2: undefined, clearLevel2: -1 },
-  { key: "friend", label: "好友", level1: 1, level2: 1, clearLevel2: 1 },
-  { key: "group", label: "群组", level1: 1, level2: 3, clearLevel2: 3 },
-  { key: "plaza", label: "交友", level1: 1, level2: 4, clearLevel2: 4 },
-  { key: "moments", label: "动态", level1: 1, level2: 5, clearLevel2: 5 },
-];
+const categories = computed<Category[]>(() => [
+  {
+    key: "all",
+    label: t("notification.tab.all"),
+    level1: 1,
+    level2: undefined,
+    clearLevel2: -1,
+  },
+  {
+    key: "friend",
+    label: t("notification.tab.friend"),
+    level1: 1,
+    level2: 1,
+    clearLevel2: 1,
+  },
+  {
+    key: "group",
+    label: t("notification.tab.group"),
+    level1: 1,
+    level2: 3,
+    clearLevel2: 3,
+  },
+  {
+    key: "plaza",
+    label: t("notification.tab.plaza"),
+    level1: 1,
+    level2: 4,
+    clearLevel2: 4,
+  },
+  {
+    key: "moments",
+    label: t("notification.tab.moments"),
+    level1: 1,
+    level2: 5,
+    clearLevel2: 5,
+  },
+]);
 
 // 支持外部入口带 type 参数: /notifications?type=friend|group|plaza|moments
 // 传入时只展示该分类(单类型模式), 不传则为通知中心全量模式
@@ -58,45 +90,54 @@ const pageType = computed<NotificationCategoryKey | null>(() => {
 });
 
 const visibleCategories = computed<Category[]>(() => {
-  if (!pageType.value) return categories;
+  if (!pageType.value) return categories.value;
   const level2 = NOTIFICATION_LEVEL2[pageType.value];
-  return categories.filter((c) => c.key !== "all" && c.level2 === level2);
+  return categories.value.filter((c) => c.key !== "all" && c.level2 === level2);
 });
 
 const pageTitle = computed(() => {
-  if (!pageType.value) return "通知中心";
-  const labelMap: Record<NotificationCategoryKey, string> = {
-    friend: "好友通知",
-    group: "群组通知",
-    plaza: "交友通知",
-    moments: "动态通知",
-  };
-  return labelMap[pageType.value];
+  if (!pageType.value) return t("notification.title");
+  return t(`notification.tab.${pageType.value}`);
 });
 
 /** 单类型模式下当前展示的分类(仅一个) */
 const singleCategory = computed<Category>(
-  () => visibleCategories.value[0] || categories[0]
+  () => visibleCategories.value[0] || categories.value[0]
 );
 
-const TYPE_META: Record<string, { label: string; color: string }> = {
-  "1-1-1": { label: "好友申请", color: "#1677ff" },
-  "1-1-2": { label: "好友处理", color: "#52c41a" },
-  "1-3-1": { label: "群邀请", color: "#fa8c16" },
-  "1-3-2": { label: "群信息更新", color: "#13c2c2" },
-  "1-3-3": { label: "群成员变动", color: "#722ed1" },
-  "1-3-4": { label: "邀请结果", color: "#fa541c" },
-  "1-4-1": { label: "心动", color: "#eb2f96" },
-  "1-4-2": { label: "互相心动", color: "#f5222d" },
-  "1-5-1": { label: "动态点赞", color: "#faad14" },
-  "1-5-2": { label: "动态评论", color: "#2f54eb" },
+const TYPE_COLORS: Record<string, string> = {
+  "1-1-1": "#1677ff",
+  "1-1-2": "#52c41a",
+  "1-3-1": "#fa8c16",
+  "1-3-2": "#13c2c2",
+  "1-3-3": "#722ed1",
+  "1-3-4": "#fa541c",
+  "1-4-1": "#eb2f96",
+  "1-4-2": "#f5222d",
+  "1-5-1": "#faad14",
+  "1-5-2": "#2f54eb",
 };
 
-const typeMeta = (n: SystemNotification) =>
-  TYPE_META[`${n.level1}-${n.level2}-${n.level3}`] || {
-    label: "系统通知",
-    color: "#8c8c8c",
+const TYPE_LABELS: Record<string, string> = {
+  "1-1-1": "notification.type.friendRequest",
+  "1-1-2": "notification.type.friendProcess",
+  "1-3-1": "notification.type.groupInvite",
+  "1-3-2": "notification.type.groupInfoUpdate",
+  "1-3-3": "notification.type.groupMemberChange",
+  "1-3-4": "notification.type.inviteResult",
+  "1-4-1": "notification.type.plazaLike",
+  "1-4-2": "notification.type.plazaMatch",
+  "1-5-1": "notification.type.momentLike",
+  "1-5-2": "notification.type.momentComment",
+};
+
+const typeMeta = (n: SystemNotification) => {
+  const key = `${n.level1}-${n.level2}-${n.level3}`;
+  return {
+    label: t(TYPE_LABELS[key] || "notification.type.system"),
+    color: TYPE_COLORS[key] || "#8c8c8c",
   };
+};
 
 /** hex 颜色转 rgba, 用于生成柔和底色/阴影 */
 const withAlpha = (hex: string, alpha: number) => {
@@ -135,13 +176,13 @@ const formatTime = (timestamp?: number) => {
   const date = new Date(timestamp);
   const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / (1000 * 60));
-  if (minutes <= 1) return "刚刚";
-  if (minutes < 60) return `${minutes}分钟前`;
+  if (minutes <= 1) return t("notification.justNow");
+  if (minutes < 60) return t("notification.minutesAgo", { minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}小时前`;
+  if (hours < 24) return t("notification.hoursAgo", { hours });
   const days = Math.floor(hours / 24);
-  if (days === 1) return "昨天";
-  if (days < 7) return `${days}天前`;
+  if (days === 1) return t("notification.yesterday");
+  if (days < 7) return t("notification.daysAgo", { days });
   return date.toLocaleDateString();
 };
 
@@ -174,7 +215,7 @@ const clearUnread = async (cat: Category) => {
   try {
     await clearUnreadByLevel(cat.level1, cat.clearLevel2, -1, -1);
     await Promise.all([loadNotifications(), refreshUnread()]);
-    showToast("已清空未读");
+    showToast(t("notification.cleared"));
   } catch (e) {
     console.error("清空未读失败", e);
   }
@@ -214,10 +255,10 @@ onUnmounted(() => {
       </button>
       <div class="header-main">
         <h1 class="title">{{ pageTitle }}</h1>
-        <p class="subtitle">好友、群组与动态的消息提醒</p>
+        <p class="subtitle">{{ t("notification.subtitle") }}</p>
       </div>
       <span v-if="totalUnread > 0" class="unread-chip">
-        {{ totalUnread }} 未读
+        {{ t("notification.unreadChip", { count: totalUnread }) }}
       </span>
     </div>
 
@@ -240,15 +281,17 @@ onUnmounted(() => {
 
         <div class="clear-bar">
           <span class="clear-count">{{
-            unreadOf(cat) > 0 ? `${unreadOf(cat)} 条未读` : ""
+            unreadOf(cat) > 0
+              ? `${unreadOf(cat)} ${t("notification.unreadCount")}`
+              : ""
           }}</span>
           <Button size="small" type="primary" plain @click="clearUnread(cat)">
-            清空未读
+            {{ t("notification.clearUnread") }}
           </Button>
         </div>
 
         <div v-if="getFiltered(cat).length === 0" class="empty-wrap">
-          <Empty description="暂无通知" />
+          <Empty :description="t('notification.noNotifications')" />
         </div>
 
         <div v-else class="notify-list">
@@ -291,7 +334,7 @@ onUnmounted(() => {
       <div class="clear-bar">
         <span class="clear-count">{{
           unreadOf(singleCategory) > 0
-            ? `${unreadOf(singleCategory)} 条未读`
+            ? `${unreadOf(singleCategory)} ${t("notification.unreadCount")}`
             : ""
         }}</span>
         <Button
@@ -300,12 +343,12 @@ onUnmounted(() => {
           plain
           @click="clearUnread(singleCategory)"
         >
-          清空未读
+          {{ t("notification.clearUnread") }}
         </Button>
       </div>
 
       <div v-if="getFiltered(singleCategory).length === 0" class="empty-wrap">
-        <Empty description="暂无通知" />
+        <Empty :description="t('notification.noNotifications')" />
       </div>
 
       <div v-else class="notify-list">
