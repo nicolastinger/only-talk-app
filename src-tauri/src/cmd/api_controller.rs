@@ -310,8 +310,7 @@ fn copy_android_content_uri(app: &tauri::AppHandle, uri: &str) -> Result<String,
     // 按真实格式修正扩展名(GIF/PNG/WebP 等), 供后续解码/压缩/预览正确识别
     let ext = sniff_image_extension(&temp_file).unwrap_or("jpg");
     let final_file = temp_dir.join(format!("img_{}.{}", timestamp, ext));
-    std::fs::rename(&temp_file, &final_file)
-        .map_err(|e| format!("重命名临时文件失败: {}", e))?;
+    std::fs::rename(&temp_file, &final_file).map_err(|e| format!("重命名临时文件失败: {}", e))?;
 
     info!("Content URI copied to: {}", final_file.display());
     Ok(final_file.to_string_lossy().to_string())

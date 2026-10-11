@@ -1207,13 +1207,7 @@ struct ChatFileUploadProgress {
 }
 
 /// 上报发送进度(前端按 nano_id 匹配对应消息; 无 AppHandle 时忽略)。
-fn emit_chat_send_progress(
-    nano_id: &str,
-    file_name: &str,
-    phase: &str,
-    uploaded: u64,
-    total: u64,
-) {
+fn emit_chat_send_progress(nano_id: &str, file_name: &str, phase: &str, uploaded: u64, total: u64) {
     if let Some(handle) = APP_HANDLE.get() {
         let _ = handle.emit(
             "chat_file_upload_progress",
@@ -1263,8 +1257,7 @@ async fn upload_chat_file_server(
     nano_id: &str,
 ) -> Result<UploadData, anyhow::Error> {
     let url = format!("{}/file_integrated/upload/user_chat/{}", talk_api_base(), friend_uuid);
-    let file_name =
-        Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
+    let file_name = Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
     let progress = build_upload_progress(nano_id, file_name);
     let response = upload_file_with_progress(&url, file_path, "file", Some(progress)).await?;
     parse_upload_response(response).await
@@ -1277,15 +1270,18 @@ async fn upload_group_chat_file_server(
     nano_id: &str,
 ) -> Result<UploadData, anyhow::Error> {
     let url = format!("{}/file_integrated/upload/group_chat/{}", talk_api_base(), group_uuid);
-    let file_name =
-        Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
+    let file_name = Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
     let progress = build_upload_progress(nano_id, file_name);
     let response = upload_file_with_progress(&url, file_path, "file", Some(progress)).await?;
     parse_upload_response(response).await
 }
 
 /// 校验上传文件大小, 超限返回面向用户的错误。
-fn ensure_within_size_limit(file_path: &str, max_size: u64, kind: &str) -> Result<u64, anyhow::Error> {
+fn ensure_within_size_limit(
+    file_path: &str,
+    max_size: u64,
+    kind: &str,
+) -> Result<u64, anyhow::Error> {
     let size = std::fs::metadata(file_path)?.len();
     if size > max_size {
         let limit_mb = max_size / (1024 * 1024);
@@ -1391,7 +1387,8 @@ pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), a
     let file_size = ensure_within_size_limit(&file_path, MAX_FILE_UPLOAD_SIZE, "文件")? as i64;
 
     // 3、上传文件到文件服务器(流式 + 进度)
-    let upload_data = upload_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
+    let upload_data =
+        upload_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 4、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;

@@ -197,15 +197,17 @@ pub async fn upload_file_with_progress(
 
     let file = tokio::fs::File::open(path).await?;
     let total = file.metadata().await?.len();
-    info!(
-        "upload_file_with_progress - file: {}, size: {}, url: {}",
-        file_path, total, url
-    );
+    info!("upload_file_with_progress - file: {}, size: {}, url: {}", file_path, total, url);
 
     let part = match on_progress {
         Some(on_progress) => {
-            let reader =
-                ProgressReader { inner: file, uploaded: 0, total, last: Instant::now(), on_progress };
+            let reader = ProgressReader {
+                inner: file,
+                uploaded: 0,
+                total,
+                last: Instant::now(),
+                on_progress,
+            };
             let stream = ReaderStream::new(reader);
             let body = reqwest::Body::wrap_stream(stream);
             reqwest::multipart::Part::stream_with_length(body, total).file_name(file_name)

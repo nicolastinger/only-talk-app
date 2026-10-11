@@ -15,10 +15,7 @@ pub fn get_network_type() -> Result<String, String> {
 #[cfg(target_os = "android")]
 fn detect_network_type() -> &'static str {
     // ndk_context 未初始化时会 panic，这里兜底避免影响前端
-    std::panic::catch_unwind(android_network_type)
-        .ok()
-        .flatten()
-        .unwrap_or("unknown")
+    std::panic::catch_unwind(android_network_type).ok().flatten().unwrap_or("unknown")
 }
 
 #[cfg(target_os = "android")]
@@ -53,11 +50,8 @@ fn android_network_type() -> Option<&'static str> {
         return None;
     }
 
-    let network = env
-        .call_method(&cm, "getActiveNetwork", "()Landroid/net/Network;", &[])
-        .ok()?
-        .l()
-        .ok()?;
+    let network =
+        env.call_method(&cm, "getActiveNetwork", "()Landroid/net/Network;", &[]).ok()?.l().ok()?;
     if network.is_null() {
         return Some("offline");
     }
@@ -87,12 +81,7 @@ fn android_network_type() -> Option<&'static str> {
         .and_then(|v| v.z().ok())
         .unwrap_or(false);
     let has_cellular = env
-        .call_method(
-            &caps,
-            "hasTransport",
-            "(I)Z",
-            &[JValue::Int(TRANSPORT_CELLULAR)],
-        )
+        .call_method(&caps, "hasTransport", "(I)Z", &[JValue::Int(TRANSPORT_CELLULAR)])
         .ok()
         .and_then(|v| v.z().ok())
         .unwrap_or(false);
