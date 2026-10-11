@@ -5,10 +5,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallManager } from "@/webrtc/callManager";
 import type { CallStage } from "@/webrtc/callManager";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type { ChatSessionVo } from "@workspace/types";
 
 const router = useRouter();
+const { t } = useI18n();
 const { call, localStream, remoteStream, accept, decline, hangup, retry, toggleAudio, toggleVideo, switchCamera } = useCallManager();
 
 const { getAvatarUrl } = useAvatar();
@@ -36,19 +38,19 @@ const showLocalPreview = computed(
 const stageText = computed(() => {
   switch (call.stage) {
     case "outgoing":
-      return "正在等待对方接听…";
+      return t("call.outgoing");
     case "incoming":
-      return isVideo.value ? "邀请你进行视频通话" : "邀请你进行语音通话";
+      return isVideo.value ? t("call.incomingVideo") : t("call.incomingAudio");
     case "connecting":
-      return "正在建立连接…";
+      return t("call.connecting");
     case "connected":
       return formatDuration(call.elapsedSec);
     case "ended":
-      return call.errorMsg || "通话已结束";
+      return call.errorMsg || t("call.ended");
     case "rejected":
-      return call.errorMsg || "通话已取消";
+      return call.errorMsg || t("call.canceled");
     case "failed":
-      return call.errorMsg || "连接失败";
+      return call.errorMsg || t("call.failed");
     default:
       return "";
   }
@@ -177,7 +179,7 @@ const coverAvatar = computed(
 
     <!-- 失败提示条（仍在视频画面上） -->
     <div v-if="call.stage === 'failed'" class="failed-panel">
-      <div class="failed-text">连接失败，请检查网络后重试</div>
+      <div class="failed-text">{{ t("call.failedRetry") }}</div>
       <div class="failed-actions">
         <button class="ctrl-btn retry" @click="retry">
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -185,7 +187,7 @@ const coverAvatar = computed(
               d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
             />
           </svg>
-          <span>重试</span>
+          <span>{{ t("call.retry") }}</span>
         </button>
         <button class="ctrl-btn hang" @click="hangup">
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -193,7 +195,7 @@ const coverAvatar = computed(
               d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.7l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85-.33-.16-.56-.51-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"
             />
           </svg>
-          <span>挂断</span>
+          <span>{{ t("call.hangup") }}</span>
         </button>
       </div>
     </div>
@@ -206,7 +208,7 @@ const coverAvatar = computed(
             d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.7l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85-.33-.16-.56-.51-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"
           />
         </svg>
-        <span>拒绝</span>
+        <span>{{ t("call.decline") }}</span>
       </button>
       <button class="big-ctrl accept" @click="accept">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -214,7 +216,7 @@ const coverAvatar = computed(
             d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
           />
         </svg>
-        <span>接听</span>
+        <span>{{ t("call.accept") }}</span>
       </button>
     </div>
 
@@ -237,7 +239,7 @@ const coverAvatar = computed(
             d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"
           />
         </svg>
-        <span>{{ call.audioOn ? "静音" : "静音开" }}</span>
+        <span>{{ call.audioOn ? t("call.mute") : t("call.unmute") }}</span>
       </button>
       <button
         v-if="isVideo"
@@ -250,7 +252,7 @@ const coverAvatar = computed(
             d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
           />
         </svg>
-        <span>{{ call.videoOn ? "关闭画面" : "开启画面" }}</span>
+        <span>{{ call.videoOn ? t("call.videoOff") : t("call.videoOn") }}</span>
       </button>
       <button
         v-if="isVideo && call.videoOn"
@@ -262,7 +264,7 @@ const coverAvatar = computed(
             d="M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 11.5V13H9v2.5L5.5 12 9 8.5V11h6V8.5l3.5 3.5-3.5 3.5z"
           />
         </svg>
-        <span>翻转</span>
+        <span>{{ t("call.switchCamera") }}</span>
       </button>
       <button class="big-ctrl hang" @click="hangup">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -270,7 +272,7 @@ const coverAvatar = computed(
             d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.7l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85-.33-.16-.56-.51-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"
           />
         </svg>
-        <span>挂断</span>
+        <span>{{ t("call.hangup") }}</span>
       </button>
     </div>
 
@@ -282,7 +284,7 @@ const coverAvatar = computed(
             d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.7l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85-.33-.16-.56-.51-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"
           />
         </svg>
-        <span>挂断</span>
+        <span>{{ t("call.hangup") }}</span>
       </button>
     </div>
 
