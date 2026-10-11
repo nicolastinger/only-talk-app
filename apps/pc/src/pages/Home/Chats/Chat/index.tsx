@@ -8,6 +8,7 @@ import { useBearStore } from '@/store/store';
 import { isRecallChatMessage, isRecallMessage } from '@/utils/recall';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
+import { listenChatFileUploadProgress } from '@workspace/services';
 import {
   ChatMessage,
   FriendVo,
@@ -55,6 +56,10 @@ const ChatPage: React.FC = () => {
     new Set(),
   );
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadProgressMap, setUploadProgressMap] = useState<
+    Record<string, number>
+  >({});
   const [pendingBarVisible, setPendingBarVisible] = useState(false);
   const [pendingRefreshSignal, setPendingRefreshSignal] = useState(0);
 
@@ -249,7 +254,14 @@ const ChatPage: React.FC = () => {
         copyMessage(msg);
       }
     },
-    [actionMenu, enterSelect, openForward, confirmRecall, confirmDelete, copyMessage],
+    [
+      actionMenu,
+      enterSelect,
+      openForward,
+      confirmRecall,
+      confirmDelete,
+      copyMessage,
+    ],
   );
 
   const { textMessage } = useMessageApi(friendUuid, meUuid);
@@ -288,16 +300,40 @@ const ChatPage: React.FC = () => {
     setCurrentFriendSession(friendUuid);
 
     // 监听全局上传事件
-    const handleUploadStartEvent = () => setIsUploading(true);
-    const handleUploadEndEvent = () => setIsUploading(false);
+    const handleUploadStartEvent = () => {
+      setIsUploading(true);
+      setUploadPercent(0);
+    };
+    const handleUploadEndEvent = () => {
+      setUploadPercent(100);
+      setIsUploading(false);
+    };
 
     window.addEventListener('uploadStart', handleUploadStartEvent);
     window.addEventListener('uploadEnd', handleUploadEndEvent);
 
+    let unlistenUpload: (() => void) | undefined;
+    let disposed = false;
+    listenChatFileUploadProgress((p) => {
+      const pct =
+        p.total > 0
+          ? Math.min(99, Math.floor((p.uploaded / p.total) * 100))
+          : 0;
+      setUploadPercent(pct);
+      setUploadProgressMap((prev) => ({ ...prev, [p.nanoId]: pct }));
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlistenUpload = fn;
+      })
+      .catch(() => {});
+
     return () => {
+      disposed = true;
       setCurrentFriendSession('-1');
       window.removeEventListener('uploadStart', handleUploadStartEvent);
       window.removeEventListener('uploadEnd', handleUploadEndEvent);
+      unlistenUpload?.();
     };
   }, [meUuid, friendUuid]);
 
@@ -571,9 +607,11 @@ const ChatPage: React.FC = () => {
 
   const handleUploadStart = () => {
     setIsUploading(true);
+    setUploadPercent(0);
   };
 
   const handleUploadEnd = () => {
+    setUploadPercent(100);
     setIsUploading(false);
   };
 
@@ -586,7 +624,10 @@ const ChatPage: React.FC = () => {
         />
         {isUploading && (
           <div className={styles.uploadLoadingBar}>
-            <div className={styles.uploadLoadingProgress} />
+            <div
+              className={styles.uploadLoadingProgress}
+              style={{ width: `${uploadPercent}%` }}
+            />
           </div>
         )}
       </div>
@@ -622,6 +663,7 @@ const ChatPage: React.FC = () => {
             selectedIds={selectedIds}
             onMessageContext={handleMessageContext}
             onToggleSelect={handleToggleSelect}
+            uploadProgressMap={uploadProgressMap}
           />
           <div id="anchor"></div>
         </div>

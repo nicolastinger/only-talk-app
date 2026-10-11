@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { FileVo, Page, TextQuicMsgVo } from "@workspace/types";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 /**
  * 本地文件记录 + 前端运行时追加的 tauri 路径。
@@ -23,6 +23,43 @@ export interface ChatFileDownloadProgress {
   /** 总字节数(total 为 0 表示大小未知, 前端可用消息元数据 file_size 兜底) */
   total: number;
 }
+
+/** 聊天文件上传进度(来自后端 `chat_file_upload_progress` 事件) */
+export interface ChatFileUploadProgress {
+  /** 消息 nano_id(前端按此匹配对应消息) */
+  nanoId: string;
+  /** 文件名 */
+  fileName: string;
+  /** 已上传字节数 */
+  uploaded: number;
+  /** 总字节数 */
+  total: number;
+}
+
+/**
+ * 订阅聊天文件上传进度事件
+ * @param onProgress 进度回调
+ * @returns 取消订阅函数
+ */
+export const listenChatFileUploadProgress = (
+  onProgress: (progress: ChatFileUploadProgress) => void
+): Promise<UnlistenFn> =>
+  listen<ChatFileUploadProgress>("chat_file_upload_progress", (event) => {
+    onProgress(event.payload);
+  });
+
+/**
+ * 读取本地文件大小(字节), 用于上传前大小预校验。
+ * @param path 本地绝对路径
+ */
+export const getLocalFileSize = async (path: string): Promise<number> => {
+  try {
+    return (await invoke<number>("get_local_file_size", { path })) as number;
+  } catch (error) {
+    console.error("get_local_file_size failed:", error);
+    return 0;
+  }
+};
 
 /**
  * 选择文件

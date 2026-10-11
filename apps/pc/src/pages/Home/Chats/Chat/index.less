@@ -40,11 +40,21 @@
 
 .uploadLoadingProgress {
   height: 100%;
-  width: 30%;
+  width: 0;
   background: linear-gradient(90deg, #4096ff, #69b1ff, #4096ff);
   background-size: 200% 100%;
-  animation: loadingSlide 1.5s ease-in-out infinite;
+  transition: width 0.25s ease;
+  animation: loadingShimmer 1.2s linear infinite;
   box-shadow: 0 0 10px rgba(64, 150, 255, 0.5);
+}
+
+@keyframes loadingShimmer {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @keyframes loadingSlide {

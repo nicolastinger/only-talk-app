@@ -17,6 +17,29 @@ const MAX_OUTPUT_SIZE: u64 = 200 * 1024;
 const TARGET_QUALITY: u8 = 80;
 const MAX_DIMENSION: u32 = 800;
 
+/// 是否需要跳过压缩(直接上传原图):
+/// - GIF: 压缩会丢动画, 原样上传;
+/// - WebP: 已是压缩产物, 二次压缩无意义;
+/// - 已位于当月资源目录内(此前压缩产物): 避免重复压缩。
+pub fn should_skip_image_compression(input_path: &Path) -> bool {
+    let ext = input_path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_lowercase())
+        .unwrap_or_default();
+    if matches!(ext.as_str(), "gif" | "webp") {
+        return true;
+    }
+
+    if let Some(resource_path) = get_config(MONTHLY_RESOURCE_PATH) {
+        if !resource_path.is_empty() && input_path.starts_with(Path::new(&resource_path)) {
+            return true;
+        }
+    }
+
+    false
+}
+
 pub fn compress_image_to_webp(input_path: &std::path::Path) -> Result<PathBuf> {
     let start = Instant::now();
 

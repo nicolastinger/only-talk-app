@@ -22,9 +22,12 @@ import {
   convertPathToTauriUrl,
   getAllFileExtensions,
   getImageExtensions,
+  getLocalFileSize,
+  listenChatFileUploadProgress,
   selectFile,
   shouldAutoDownloadImage,
 } from "@workspace/services";
+import { UPLOAD_LIMITS } from "@workspace/types";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import { useMyAvatar } from "@/hooks/useMyAvatar";
 import type { TextQuicMsgVo, GroupVo } from "@workspace/types";
@@ -84,8 +87,42 @@ const { myAvatar, ensureMyAvatar } = useMyAvatar(() => meUuid.value);
 const groupAvatar = ref<string | null>(null);
 /** 当前是否允许自动下载群成员发来的图片（开关开启且处于非计量网络） */
 const allowImageAutoDownload = ref(false);
+
+/** 顶部全局上传进度条：是否有正在上传的消息 */
+const globalUploading = computed(() =>
+  messages.value.some(
+    (m) => (m.sendingImage || m.sendingFile) && m.ack === false && !m.failed
+  )
+);
+const globalUploadPercent = computed(() => {
+  let max = 0;
+  for (const m of messages.value) {
+    if ((m.sendingImage || m.sendingFile) && m.ack === false && !m.failed) {
+      max = Math.max(max, m.uploadProgress ?? 0);
+    }
+  }
+  return max;
+});
 const ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let viewportCleanup: (() => void) | null = null;
+let uploadUnlisten: (() => void) | null = null;
+
+/** 上传进度事件：按 nano_id 更新对应消息的进度 */
+const applyUploadProgress = (payload: {
+  nanoId: string;
+  uploaded: number;
+  total: number;
+}) => {
+  const idx = messages.value.findIndex(
+    (m) => m.textMsg.nano_id === payload.nanoId
+  );
+  if (idx === -1) return;
+  const percent =
+    payload.total > 0
+      ? Math.min(100, Math.floor((payload.uploaded / payload.total) * 100))
+      : 0;
+  messages.value[idx].uploadProgress = percent;
+};
 
 const senderUuids = computed(() => {
   const set = new Set<string>();
@@ -536,6 +573,20 @@ const selectAndSendGroup = async (
       }
     }
 
+    // 大小预校验：超限直接提示并中止
+    const limit = media === "image" ? UPLOAD_LIMITS.image : UPLOAD_LIMITS.file;
+    const size = await getLocalFileSize(filePath);
+    if (size > limit) {
+      showToast({
+        message: t(
+          media === "image" ? "chat.imageTooLarge" : "chat.fileTooLarge",
+          { limit: Math.floor(limit / (1024 * 1024)) }
+        ),
+        icon: "fail",
+      });
+      return;
+    }
+
     const textMsg: TextQuicMsgVo = {
       nano_id: genNanoId(),
       text_type: type,
@@ -563,6 +614,7 @@ const selectAndSendGroup = async (
     } else if (media === "file") {
       ui.sendingFile = true;
     }
+    ui.uploadProgress = 0;
     messages.value.push(ui);
     await nextTick();
     scrollToBottom(true);
@@ -579,12 +631,15 @@ const selectAndSendGroup = async (
         messages.value[idx].failed = true;
         messages.value[idx].sendingImage = false;
         messages.value[idx].sendingFile = false;
+        messages.value[idx].uploadProgress = undefined;
       }
+      const errText = typeof e === "string" ? e : (e as Error)?.message;
       showToast({
         message:
-          media === "image"
+          errText ||
+          (media === "image"
             ? t("chat.sendImageFailed")
-            : t("chat.sendFileFailed"),
+            : t("chat.sendFileFailed")),
         icon: "fail",
       });
     }
@@ -779,12 +834,19 @@ onMounted(async () => {
   }).catch(() => {});
 
   viewportCleanup = attachViewportHeight(() => chatPageRef.value);
+  listenChatFileUploadProgress(applyUploadProgress)
+    .then((fn) => {
+      uploadUnlisten = fn;
+    })
+    .catch(() => {});
 });
 
 onUnmounted(() => {
   ackTimers.forEach((t) => clearTimeout(t));
   ackTimers.clear();
   viewportCleanup?.();
+  uploadUnlisten?.();
+  uploadUnlisten = null;
   invoke("add_user_map", {
     map: { current_session_friend: "-1" },
   }).catch(() => {});
@@ -854,6 +916,13 @@ const handlePreview = async (msg: UiChatMessage) => {
           />
         </svg>
       </button>
+    </div>
+
+    <div v-if="globalUploading" class="global-upload-bar">
+      <div
+        class="global-upload-progress"
+        :style="{ width: globalUploadPercent + '%' }"
+      ></div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -1064,5 +1133,28 @@ const handlePreview = async (msg: UiChatMessage) => {
   padding: 8px;
   font-size: 12px;
   color: var(--text-placeholder);
+}
+.global-upload-bar {
+  height: 3px;
+  width: 100%;
+  background: rgba(64, 150, 255, 0.15);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.global-upload-progress {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #4096ff, #69b1ff, #4096ff);
+  background-size: 200% 100%;
+  transition: width 0.25s ease;
+  animation: global-upload-shimmer 1.2s linear infinite;
+}
+@keyframes global-upload-shimmer {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

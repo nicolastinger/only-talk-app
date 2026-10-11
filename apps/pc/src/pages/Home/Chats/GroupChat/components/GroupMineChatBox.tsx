@@ -22,6 +22,8 @@ type GroupMineChatBoxProps = {
   icon?: string;
   groupUuid: string;
   currentBizId?: string;
+  /** 上传进度百分比 0-100（发送中展示） */
+  uploadProgress?: number;
 };
 
 // 群聊消息类型
@@ -95,6 +97,7 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
     groupUuid,
     currentBizId,
   } = props;
+  const sending = isAck === false;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -240,6 +243,8 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           currentBizId={imageBizId || currentBizId || ''}
           bizId={imageBizId || currentBizId || ''}
           autoDownload={true}
+          sending={sending}
+          uploadProgress={props.uploadProgress}
           meUuid={userInfo?.uuid || ''}
           isGroup={true}
           nanoId={nano_id}
@@ -256,6 +261,8 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
             fileType={fileRecord.file_type}
             nanoId={nano_id}
             loading={loading}
+            sending={sending}
+            uploadProgress={props.uploadProgress}
           />
         );
       }

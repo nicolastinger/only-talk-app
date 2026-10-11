@@ -22,6 +22,8 @@ export interface UiChatMessage {
   sendingImage?: boolean;
   /** 文件上传中(展示上传动画) */
   sendingFile?: boolean;
+  /** 上传进度百分比 0-100(上传中展示进度条) */
+  uploadProgress?: number;
   /** 群聊发送者昵称（解析后填充） */
   senderName?: string;
   senderUuid?: string;

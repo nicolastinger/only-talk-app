@@ -12,6 +12,10 @@ const props = defineProps<{
   nanoId?: string;
   /** 是否允许在非计量网络下自动下载（发送方的本地图片恒为 true） */
   allowAutoDownload?: boolean;
+  /** 是否正在上传（发送中展示进度遮罩） */
+  sending?: boolean;
+  /** 上传进度百分比 0-100 */
+  uploadProgress?: number;
 }>();
 
 const emit = defineEmits<{
@@ -49,11 +53,16 @@ const needsDownload = computed(
     !downloading.value
 );
 
+const uploadPercent = computed(() =>
+  Math.max(0, Math.min(100, Math.round(props.uploadProgress ?? 0)))
+);
+
 const onImgError = () => {
   error.value = true;
 };
 
 const onClick = () => {
+  if (props.sending) return;
   if (showImage.value) emit("preview");
   else if (needsDownload.value) void downloadImage();
 };
@@ -114,14 +123,27 @@ watch(
 
 <template>
   <div class="image-msg">
-    <img
-      v-if="showImage"
-      :src="resolvedUrl!"
-      :alt="alt || t('chat.imageMessage')"
-      class="img"
-      @click="onClick"
-      @error="onImgError"
-    />
+    <div v-if="showImage" class="image-wrap">
+      <img
+        :src="resolvedUrl!"
+        :alt="alt || t('chat.imageMessage')"
+        class="img"
+        @click="onClick"
+        @error="onImgError"
+      />
+      <div v-if="sending" class="upload-overlay">
+        <span class="upload-spinner"></span>
+        <span class="upload-percent">{{ uploadPercent }}%</span>
+        <van-progress
+          class="upload-bar"
+          :percentage="uploadPercent"
+          :show-pivot="false"
+          :stroke-width="3"
+          color="#ffffff"
+          track-color="rgba(255, 255, 255, 0.35)"
+        />
+      </div>
+    </div>
 
     <div v-else-if="downloading" class="image-downloading">
       <van-progress
@@ -160,6 +182,11 @@ watch(
 
 <style scoped lang="less">
 .image-msg {
+  .image-wrap {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
   .img {
     max-width: 220px;
     max-height: 300px;
@@ -167,6 +194,41 @@ watch(
     box-shadow: var(--shadow-md);
     object-fit: cover;
     display: block;
+  }
+}
+.upload-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  color: #fff;
+}
+.upload-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: upload-spin 0.8s linear infinite;
+}
+.upload-percent {
+  font-size: 12px;
+  font-weight: 600;
+}
+.upload-bar {
+  width: 100%;
+  margin-top: 2px;
+}
+@keyframes upload-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 .image-placeholder {

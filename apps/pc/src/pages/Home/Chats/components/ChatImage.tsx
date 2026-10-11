@@ -30,6 +30,10 @@ interface ChatImageProps {
   bizId?: string;
   /** 是否允许自动下载（关闭或非计量网络外时为 false → 展示点击下载） */
   autoDownload?: boolean;
+  /** 是否正在上传（发送中展示进度遮罩） */
+  sending?: boolean;
+  /** 上传进度百分比 0-100 */
+  uploadProgress?: number;
 }
 
 const ChatImage: React.FC<ChatImageProps> = ({
@@ -48,6 +52,8 @@ const ChatImage: React.FC<ChatImageProps> = ({
   nanoId,
   bizId,
   autoDownload = true,
+  sending = false,
+  uploadProgress = 0,
 }) => {
   const [isOpening, setIsOpening] = React.useState(false);
   const [downloading, setDownloading] = React.useState(false);
@@ -64,6 +70,7 @@ const ChatImage: React.FC<ChatImageProps> = ({
     progress.total > 0
       ? Math.min(100, Math.floor((progress.downloaded / progress.total) * 100))
       : 0;
+  const uploadPercent = Math.max(0, Math.min(100, Math.round(uploadProgress)));
   // 禁止自动下载但本地已有文件时直接展示；仅「本地无文件」才展示点击下载
   const needsDownload =
     !resolvedSrc &&
@@ -191,17 +198,33 @@ const ChatImage: React.FC<ChatImageProps> = ({
 
   // loading / 无 bizId 时沿用 AppImage 的加载与错误态
   return (
-    <AppImage
-      src={resolvedSrc}
-      loading={loading || autoDownload || checkingLocal}
-      alt={alt}
-      className={className}
-      style={style}
-      maxWidth={maxWidth}
-      maxHeight={maxHeight}
-      borderRadius={borderRadius}
-      onClick={handlePreview}
-    />
+    <div className={styles.imageWrap}>
+      <AppImage
+        src={resolvedSrc}
+        loading={loading || autoDownload || checkingLocal}
+        alt={alt}
+        className={className}
+        style={style}
+        maxWidth={maxWidth}
+        maxHeight={maxHeight}
+        borderRadius={borderRadius}
+        onClick={sending ? undefined : handlePreview}
+      />
+      {sending && (
+        <div className={styles.uploadOverlay} style={{ borderRadius }}>
+          <Progress
+            type="circle"
+            percent={uploadPercent}
+            size={44}
+            strokeColor="#ffffff"
+            trailColor="rgba(255, 255, 255, 0.3)"
+            format={(p) => (
+              <span style={{ color: '#fff', fontSize: 12 }}>{p}%</span>
+            )}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 

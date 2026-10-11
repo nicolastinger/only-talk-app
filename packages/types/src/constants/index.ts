@@ -20,6 +20,15 @@ export interface ClientConfigItem {
   value: string;
 }
 
+/**
+ * 上传大小上限(字节), 与后端 src-tauri/src/utils/global_static_str.rs 保持一致。
+ * 前端在发送前预校验并提示, 后端仍会二次校验。
+ */
+export const UPLOAD_LIMITS = {
+  image: 100 * 1024 * 1024,
+  file: 500 * 1024 * 1024,
+} as const;
+
 export const HTTP_METHOD = {
   GET: "get_request",
   POST: "post_request",

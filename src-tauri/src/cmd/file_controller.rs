@@ -214,6 +214,16 @@ pub async fn has_local_chat_file(biz_id: String) -> Result<bool, String> {
     })
 }
 
+/// 获取本地文件大小(字节), 用于前端上传前大小预校验
+#[tauri::command]
+pub async fn get_local_file_size(path: String) -> Result<u64, String> {
+    if path.is_empty() {
+        return Err("文件路径不能为空".to_string());
+    }
+    let metadata = fs::metadata(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+    Ok(metadata.len())
+}
+
 /// 打开本地文件（跨平台）
 /// - 桌面: 直接交给系统默认程序打开
 /// - Android: 复制到 cache 目录后交给 tauri-plugin-view，

@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -49,13 +50,15 @@ use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
-use crate::service::api_service::upload_file;
+use crate::service::api_service::{upload_file_with_progress, UploadProgressFn};
 use crate::service::message_convert::normalize_for_target;
 use crate::service::recall::{build_recall_raw, parse_group_recall_target, parse_recall_target};
 use crate::service::send_queue;
 use crate::service::user_service::{get_user_info, get_user_map};
-use crate::utils::global_static_str::{talk_api_base, PLATFORM, ZERO_UUID};
-use crate::utils::image_utils::compress_image_to_webp;
+use crate::utils::global_static_str::{
+    talk_api_base, MAX_FILE_UPLOAD_SIZE, MAX_IMAGE_UPLOAD_SIZE, PLATFORM, ZERO_UUID,
+};
+use crate::utils::image_utils::{compress_image_to_webp, should_skip_image_compression};
 use crate::utils::message_lifecycle::{CallControlLifecycle, MessageLifecycle};
 use crate::utils::message_types::{
     MSG_TYPE_GROUP_TEXT, MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
@@ -845,14 +848,22 @@ pub async fn send_group_image_msg_service(
 ) -> Result<(), anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
+    let nano_id = text_quic_msg.nano_id.clone();
 
-    // 1、压缩图片到当月资源目录
-    let compressed_path = compress_image_to_webp(Path::new(&file_path))?;
-    let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
+    // 0、大小校验
+    ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
 
-    // 2、上传图片到文件服务器（使用群聊专用接口）
+    // 1、GIF/WebP/已压缩产物跳过压缩(原图上传), 否则压缩到当月资源目录
+    let upload_path = if should_skip_image_compression(Path::new(&file_path)) {
+        info!("跳过群图片压缩(原图上传): {}", file_path);
+        file_path.clone()
+    } else {
+        compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
+    };
+
+    // 2、上传图片到文件服务器（使用群聊专用接口, 流式 + 进度）
     let upload_data =
-        upload_group_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+        upload_group_chat_file_server(&upload_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 3、获取图片尺寸信息
     let img = ImageReader::open(&file_path)?.decode()?;
@@ -860,7 +871,7 @@ pub async fn send_group_image_msg_service(
     let img_height = img.height() as i32;
 
     // 4、获取文件大小
-    let metadata = std::fs::metadata(compressed_path_str)?;
+    let metadata = std::fs::metadata(&upload_path)?;
     let img_size = metadata.len() as i32;
 
     // 5、获取第一个 file_info 的 biz_id
@@ -901,6 +912,7 @@ pub async fn send_group_file_msg_service(
     let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
     let path = Path::new(&file_path);
+    let nano_id = text_quic_msg.nano_id.clone();
 
     // 1、获取文件名和文件扩展名
     let file_name =
@@ -908,12 +920,12 @@ pub async fn send_group_file_msg_service(
 
     let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
 
-    // 2、获取文件大小
-    let metadata = std::fs::metadata(&file_path)?;
-    let file_size = metadata.len() as i64;
+    // 2、获取文件大小(含大小限制校验)
+    let file_size = ensure_within_size_limit(&file_path, MAX_FILE_UPLOAD_SIZE, "文件")? as i64;
 
-    // 3、上传文件到文件服务器（使用群聊专用接口）
-    let upload_data = upload_group_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
+    // 3、上传文件到文件服务器（使用群聊专用接口, 流式 + 进度）
+    let upload_data =
+        upload_group_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 4、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
@@ -1181,13 +1193,42 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn upload_chat_file_server(
-    file_path: &str,
-    friend_uuid: &str,
-) -> Result<UploadData, anyhow::Error> {
-    let url = format!("{}/file_integrated/upload/user_chat/{}", talk_api_base(), friend_uuid);
-    let response = upload_file(&url, file_path, "file").await?;
+/// 上传进度事件负载(事件名 `chat_file_upload_progress`)。
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChatFileUploadProgress {
+    nano_id: String,
+    file_name: String,
+    uploaded: u64,
+    total: u64,
+}
 
+/// 上报上传进度(前端按 nano_id 匹配对应消息; 无 AppHandle 时忽略)。
+fn emit_chat_file_upload_progress(nano_id: &str, file_name: &str, uploaded: u64, total: u64) {
+    if let Some(handle) = APP_HANDLE.get() {
+        let _ = handle.emit(
+            "chat_file_upload_progress",
+            ChatFileUploadProgress {
+                nano_id: nano_id.to_string(),
+                file_name: file_name.to_string(),
+                uploaded,
+                total,
+            },
+        );
+    }
+}
+
+/// 构造以 nano_id 为键的上传进度回调。
+fn build_upload_progress(nano_id: &str, file_name: &str) -> UploadProgressFn {
+    let nano_id = nano_id.to_string();
+    let file_name = file_name.to_string();
+    Arc::new(move |uploaded, total| {
+        emit_chat_file_upload_progress(&nano_id, &file_name, uploaded, total);
+    })
+}
+
+/// 解析上传响应为 UploadData。
+async fn parse_upload_response(response: reqwest::Response) -> Result<UploadData, anyhow::Error> {
     let status = response.status();
     let response_text = response.text().await?;
 
@@ -1205,42 +1246,63 @@ async fn upload_chat_file_server(
     Ok(upload_response.data)
 }
 
-/// 上传群聊文件到服务器（不检查好友关系）
+/// 上传单聊聊天文件(流式 + 进度上报)。
+async fn upload_chat_file_server(
+    file_path: &str,
+    friend_uuid: &str,
+    nano_id: &str,
+) -> Result<UploadData, anyhow::Error> {
+    let url = format!("{}/file_integrated/upload/user_chat/{}", talk_api_base(), friend_uuid);
+    let file_name =
+        Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
+    let progress = build_upload_progress(nano_id, file_name);
+    let response = upload_file_with_progress(&url, file_path, "file", Some(progress)).await?;
+    parse_upload_response(response).await
+}
+
+/// 上传群聊文件到服务器（不检查好友关系, 流式 + 进度上报）。
 async fn upload_group_chat_file_server(
     file_path: &str,
     group_uuid: &str,
+    nano_id: &str,
 ) -> Result<UploadData, anyhow::Error> {
     let url = format!("{}/file_integrated/upload/group_chat/{}", talk_api_base(), group_uuid);
-    let response = upload_file(&url, file_path, "file").await?;
+    let file_name =
+        Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
+    let progress = build_upload_progress(nano_id, file_name);
+    let response = upload_file_with_progress(&url, file_path, "file", Some(progress)).await?;
+    parse_upload_response(response).await
+}
 
-    let status = response.status();
-    let response_text = response.text().await?;
-
-    if !status.is_success() {
-        return Err(anyhow!("上传失败: {}, 响应: {}", status, response_text));
+/// 校验上传文件大小, 超限返回面向用户的错误。
+fn ensure_within_size_limit(file_path: &str, max_size: u64, kind: &str) -> Result<u64, anyhow::Error> {
+    let size = std::fs::metadata(file_path)?.len();
+    if size > max_size {
+        let limit_mb = max_size / (1024 * 1024);
+        return Err(anyhow!("{}大小超过限制（最大 {}MB）", kind, limit_mb));
     }
-
-    let upload_response: UploadResponse = serde_json::from_str(&response_text)
-        .map_err(|e| anyhow!("解析上传响应失败: {}, 响应内容: {}", e, response_text))?;
-
-    if upload_response.code != 200 {
-        return Err(anyhow!("上传失败: {}", upload_response.message));
-    }
-
-    Ok(upload_response.data)
+    Ok(size)
 }
 
 // 发送图片数据
 pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
+    let nano_id = text_quic_msg.nano_id.clone();
 
-    // 1、压缩图片到当月资源目录
-    let compressed_path = compress_image_to_webp(Path::new(&file_path))?;
-    let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
+    // 0、大小校验
+    ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
 
-    // 2、上传图片到文件服务器
+    // 1、GIF/WebP/已压缩产物跳过压缩(原图上传), 否则压缩到当月资源目录
+    let upload_path = if should_skip_image_compression(Path::new(&file_path)) {
+        info!("跳过图片压缩(原图上传): {}", file_path);
+        file_path.clone()
+    } else {
+        compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
+    };
+
+    // 2、上传图片到文件服务器(流式 + 进度)
     let upload_data =
-        upload_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+        upload_chat_file_server(&upload_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 3、获取图片尺寸信息
     let img = ImageReader::open(&file_path)?.decode()?;
@@ -1248,7 +1310,7 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     let img_height = img.height() as i32;
 
     // 4、获取文件大小
-    let metadata = std::fs::metadata(compressed_path_str)?;
+    let metadata = std::fs::metadata(&upload_path)?;
     let img_size = metadata.len() as i32;
 
     // 5、获取第一个 file_info 的 biz_id
@@ -1306,6 +1368,7 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
 pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
     let path = Path::new(&file_path);
+    let nano_id = text_quic_msg.nano_id.clone();
 
     // 1、获取文件名和文件扩展名
     let file_name =
@@ -1313,12 +1376,11 @@ pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), a
 
     let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
 
-    // 2、获取文件大小
-    let metadata = std::fs::metadata(&file_path)?;
-    let file_size = metadata.len() as i64;
+    // 2、获取文件大小(含大小限制校验)
+    let file_size = ensure_within_size_limit(&file_path, MAX_FILE_UPLOAD_SIZE, "文件")? as i64;
 
-    // 3、上传文件到文件服务器
-    let upload_data = upload_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
+    // 3、上传文件到文件服务器(流式 + 进度)
+    let upload_data = upload_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 4、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;

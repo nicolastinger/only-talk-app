@@ -1,6 +1,6 @@
 import { isRecallMessage } from '@/utils/recall';
-import { ChatMessage, MessageFrom } from '@workspace/types';
 import { useIntl } from '@umijs/max';
+import { ChatMessage, MessageFrom } from '@workspace/types';
 import React from 'react';
 import CustomerChatBox from './CustomerChatBox';
 import MessageTimestamp from './MessageTimestamp';
@@ -19,6 +19,8 @@ interface MessageListProps {
   selectedIds?: Set<string>;
   onMessageContext?: (msg: ChatMessage, e: React.MouseEvent) => void;
   onToggleSelect?: (msg: ChatMessage) => void;
+  /** 上传进度：nano_id -> 百分比 */
+  uploadProgressMap?: Record<string, number>;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -35,6 +37,7 @@ const MessageList: React.FC<MessageListProps> = ({
   selectedIds,
   onMessageContext,
   onToggleSelect,
+  uploadProgressMap,
 }) => {
   const intl = useIntl();
   const getMessageAnimationClass = (nanoId: string): string => {
@@ -141,6 +144,7 @@ const MessageList: React.FC<MessageListProps> = ({
                   isAck={msg.ack}
                   friendUuid={friendUuid}
                   currentBizId={currentBizId}
+                  uploadProgress={uploadProgressMap?.[message.nano_id]}
                 />
               )}
             </div>
@@ -177,6 +181,7 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
   }
 
   if (
+    prevProps.uploadProgressMap !== nextProps.uploadProgressMap ||
     prevProps.selectMode !== nextProps.selectMode ||
     prevProps.selectedIds !== nextProps.selectedIds ||
     prevProps.friendName !== nextProps.friendName ||

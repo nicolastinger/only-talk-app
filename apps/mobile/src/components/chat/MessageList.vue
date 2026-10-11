@@ -236,6 +236,10 @@ const imageLoading = (msg: UiChatMessage): boolean =>
                 :biz-id="msg.imageBizId"
                 :nano-id="msg.textMsg.nano_id"
                 :allow-auto-download="imageAutoDownload(msg)"
+                :sending="
+                  !!msg.sendingImage && msg.ack === false && !msg.failed
+                "
+                :upload-progress="msg.uploadProgress"
                 @preview="emit('preview', msg)"
               />
               <span v-if="showSentDot(msg)" class="sent-dot" />

@@ -18,9 +18,15 @@ const props = defineProps<{
   localPath?: string;
   /** 是否上传中(展示上传动画) */
   sending?: boolean;
+  /** 上传进度百分比 0-100 */
+  uploadProgress?: number;
 }>();
 
 const { t } = useI18n();
+
+const uploadPercent = computed(() =>
+  Math.max(0, Math.min(100, Math.round(props.uploadProgress ?? 0)))
+);
 
 const busy = ref(false);
 const downloaded = ref(false);
@@ -136,7 +142,7 @@ watch(() => props.bizId, refreshDownloaded);
       <div class="file-meta">
         <span class="file-ext">.{{ fileType || "file" }}</span>
         <span v-if="sending" class="file-size sending-text">{{
-          t("chat.uploading")
+          t("chat.uploadingPercent", { percent: uploadPercent })
         }}</span>
         <span v-else-if="downloading" class="file-size sending-text">{{
           t("chat.downloadingPercent", { percent: progressPercent })
@@ -160,6 +166,15 @@ watch(() => props.bizId, refreshDownloaded);
         color="var(--brand-blue)"
         track-color="var(--border-light)"
       />
+      <van-progress
+        v-else-if="sending"
+        class="file-progress"
+        :percentage="uploadPercent"
+        :show-pivot="false"
+        :stroke-width="3"
+        color="var(--brand-blue)"
+        track-color="var(--border-light)"
+      />
     </div>
     <div
       class="file-action"
@@ -168,7 +183,9 @@ watch(() => props.bizId, refreshDownloaded);
     >
       <span v-if="sending || downloading" class="spinner"></span>
       <svg v-else-if="downloaded" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M14 3v4a1 1 0 0 0 1 1h4v13H5V3h9zm1-2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-6-6h-1zM12 8h2v3h3v2h-5V8zm0 5H7v-1h5v1z" />
+        <path
+          d="M14 3v4a1 1 0 0 0 1 1h4v13H5V3h9zm1-2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-6-6h-1zM12 8h2v3h3v2h-5V8zm0 5H7v-1h5v1z"
+        />
       </svg>
       <svg v-else viewBox="0 0 24 24" fill="currentColor">
         <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />

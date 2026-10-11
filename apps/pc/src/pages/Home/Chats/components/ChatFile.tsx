@@ -5,8 +5,9 @@ import {
   PaperClipOutlined,
 } from '@ant-design/icons';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
-import { getChatFileByBizId } from '@workspace/services';
+import { useIntl } from '@umijs/max';
 import type { ChatFileDownloadProgress } from '@workspace/services';
+import { getChatFileByBizId } from '@workspace/services';
 import { Dropdown, message, Progress } from 'antd';
 import React, { useState } from 'react';
 import styles from './styles/ChatFile.less';
@@ -18,6 +19,10 @@ interface ChatFileProps {
   fileType: string;
   nanoId?: string;
   loading?: boolean;
+  /** 是否正在上传（发送中展示上传进度条） */
+  sending?: boolean;
+  /** 上传进度百分比 0-100 */
+  uploadProgress?: number;
 }
 
 // 格式化文件大小
@@ -72,7 +77,11 @@ const ChatFile: React.FC<ChatFileProps> = ({
   fileType,
   nanoId,
   loading = false,
+  sending = false,
+  uploadProgress = 0,
 }) => {
+  const intl = useIntl();
+  const uploadPercent = Math.max(0, Math.min(100, Math.round(uploadProgress)));
   const [downloading, setDownloading] = useState(false);
   // 下载进度(字节): total 优先取后端 Content-Length, 为 0 时用消息元数据 fileSize 兜底
   const [progress, setProgress] = useState<{
@@ -81,7 +90,9 @@ const ChatFile: React.FC<ChatFileProps> = ({
   }>({ downloaded: 0, total: 0 });
   const total = progress.total || fileSize;
   const percent =
-    total > 0 ? Math.min(100, Math.floor((progress.downloaded / total) * 100)) : 0;
+    total > 0
+      ? Math.min(100, Math.floor((progress.downloaded / total) * 100))
+      : 0;
 
   const onProgress = (p: ChatFileDownloadProgress) => {
     setProgress({ downloaded: p.downloaded, total: p.total });
@@ -105,7 +116,7 @@ const ChatFile: React.FC<ChatFileProps> = ({
 
   // 直接打开文件
   const handleOpenFile = async () => {
-    if (downloading) return;
+    if (downloading || sending) return;
 
     setDownloading(true);
     setProgress({ downloaded: 0, total: 0 });
@@ -133,7 +144,7 @@ const ChatFile: React.FC<ChatFileProps> = ({
 
   // 在文件资源管理器中显示
   const handleShowInFolder = async () => {
-    if (downloading) return;
+    if (downloading || sending) return;
 
     setDownloading(true);
     setProgress({ downloaded: 0, total: 0 });
@@ -191,12 +202,31 @@ const ChatFile: React.FC<ChatFileProps> = ({
         </div>
         <div className={styles.fileMeta}>
           <span className={styles.fileType}>.{fileType || 'file'}</span>
-          <span className={styles.fileSize}>{formatFileSize(fileSize)}</span>
+          {sending ? (
+            <span className={styles.fileSize}>
+              {intl.formatMessage(
+                { id: 'chat.uploadingPercent' },
+                { percent: uploadPercent },
+              )}
+            </span>
+          ) : (
+            <span className={styles.fileSize}>{formatFileSize(fileSize)}</span>
+          )}
         </div>
         {downloading && (
           <div className={styles.progressBar}>
             <Progress
               percent={percent}
+              size="small"
+              status="active"
+              showInfo={false}
+            />
+          </div>
+        )}
+        {sending && (
+          <div className={styles.progressBar}>
+            <Progress
+              percent={uploadPercent}
               size="small"
               status="active"
               showInfo={false}
@@ -211,7 +241,7 @@ const ChatFile: React.FC<ChatFileProps> = ({
           }`}
           title={downloading ? `下载中 ${percent}%` : '点击选择操作'}
         >
-          {downloading ? (
+          {downloading || sending ? (
             <div className={styles.loadingIcon}>
               <LoadingOutlined />
             </div>

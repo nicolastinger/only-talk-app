@@ -15,6 +15,12 @@ pub static CONFIG_SERVER_DOMAIN: &str = "server.domain";
 pub static CONFIG_APP_THEME: &str = "app.theme";
 pub static CONFIG_APP_LANGUAGE: &str = "app.language";
 pub static CONFIG_APP_AUTO_DOWNLOAD_WIFI: &str = "app.auto_download_wifi";
+
+// ---------------- 上传大小限制(前后端需保持一致: packages/types 的 UPLOAD_LIMITS) ----------------
+/// 图片上传大小上限: 100MB
+pub const MAX_IMAGE_UPLOAD_SIZE: u64 = 100 * 1024 * 1024;
+/// 普通文件上传大小上限: 500MB
+pub const MAX_FILE_UPLOAD_SIZE: u64 = 500 * 1024 * 1024;
 pub static CONFIG_UPDATE_GITHUB_REPO: &str = "update.github_repo";
 
 /// HTTP API 基础地址: 优先取配置表 `server.api_base`, 未配置按运行环境兜底。

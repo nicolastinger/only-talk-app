@@ -1,7 +1,7 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
-import { useMessageApi } from '@/hooks/useMessageApi';
 import { useGroupMessageAckApi } from '@/hooks/useGroupMessageAckApi';
+import { useMessageApi } from '@/hooks/useMessageApi';
 import {
   isMessageSelectable,
   useMessageSelection,
@@ -10,6 +10,7 @@ import { useBearStore } from '@/store/store';
 import { isRecallChatMessage, isRecallMessage } from '@/utils/recall';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
+import { listenChatFileUploadProgress } from '@workspace/services';
 import {
   ChatMessage,
   GroupVo,
@@ -18,15 +19,21 @@ import {
   TextQuicMsgVo,
 } from '@workspace/types';
 import { message, Modal } from 'antd';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import GroupMessageList from './components/GroupMessageList';
-import GroupChatFooter from './components/GroupChatFooter';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import ForwardModal, { ForwardTarget } from '../components/ForwardModal';
+import GroupTopBar from '../components/GroupTopBar';
 import MessageActionMenu, {
   MessageAction,
 } from '../components/MessageActionMenu';
 import MessageSelectionBar from '../components/MessageSelectionBar';
-import GroupTopBar from '../components/GroupTopBar';
+import GroupChatFooter from './components/GroupChatFooter';
+import GroupMessageList from './components/GroupMessageList';
 import styles from './index.less';
 
 const PAGE_SIZE = 20;
@@ -54,6 +61,10 @@ const GroupChatPage: React.FC = () => {
     new Set(),
   );
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadProgressMap, setUploadProgressMap] = useState<
+    Record<string, number>
+  >({});
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -259,18 +270,24 @@ const GroupChatPage: React.FC = () => {
         copyMessage(msg);
       }
     },
-    [actionMenu, enterSelect, openForward, confirmRecall, confirmDelete, copyMessage],
+    [
+      actionMenu,
+      enterSelect,
+      openForward,
+      confirmRecall,
+      confirmDelete,
+      copyMessage,
+    ],
   );
 
   const uniqueSenderUuids = useMemo(
-    () =>
-      [
-        ...new Set(
-          messageList
-            .map((msg) => msg.sender_uuid || msg.text_msg_raw.send_user)
-            .filter((uuid) => uuid && uuid !== meUuid && uuid !== SYSTEM_ACCOUNT),
-        ),
-      ],
+    () => [
+      ...new Set(
+        messageList
+          .map((msg) => msg.sender_uuid || msg.text_msg_raw.send_user)
+          .filter((uuid) => uuid && uuid !== meUuid && uuid !== SYSTEM_ACCOUNT),
+      ),
+    ],
     [messageList, meUuid],
   );
   const { memberInfoMap } = useGroupMemberInfo(uniqueSenderUuids);
@@ -299,16 +316,40 @@ const GroupChatPage: React.FC = () => {
     getGroupInfo(groupId);
     setCurrentGroupSession(groupId);
 
-    const handleUploadStartEvent = () => setIsUploading(true);
-    const handleUploadEndEvent = () => setIsUploading(false);
+    const handleUploadStartEvent = () => {
+      setIsUploading(true);
+      setUploadPercent(0);
+    };
+    const handleUploadEndEvent = () => {
+      setUploadPercent(100);
+      setIsUploading(false);
+    };
 
     window.addEventListener('uploadStart', handleUploadStartEvent);
     window.addEventListener('uploadEnd', handleUploadEndEvent);
 
+    let unlistenUpload: (() => void) | undefined;
+    let disposed = false;
+    listenChatFileUploadProgress((p) => {
+      const pct =
+        p.total > 0
+          ? Math.min(99, Math.floor((p.uploaded / p.total) * 100))
+          : 0;
+      setUploadPercent(pct);
+      setUploadProgressMap((prev) => ({ ...prev, [p.nanoId]: pct }));
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlistenUpload = fn;
+      })
+      .catch(() => {});
+
     return () => {
+      disposed = true;
       setCurrentGroupSession('');
       window.removeEventListener('uploadStart', handleUploadStartEvent);
       window.removeEventListener('uploadEnd', handleUploadEndEvent);
+      unlistenUpload?.();
     };
   }, [groupId]);
 
@@ -367,10 +408,13 @@ const GroupChatPage: React.FC = () => {
         current: page,
         total: 0,
       };
-      const data: TextQuicMsgVo[] = await invoke('get_group_chat_record_from_store', {
-        groupId,
-        page: pageParam,
-      });
+      const data: TextQuicMsgVo[] = await invoke(
+        'get_group_chat_record_from_store',
+        {
+          groupId,
+          page: pageParam,
+        },
+      );
 
       if (data.length === 0) {
         setHasMore(false);
@@ -403,7 +447,10 @@ const GroupChatPage: React.FC = () => {
               ? latest
               : current,
           );
-          markRead(last_read_msg.text_msg_raw.nano_id, last_read_msg.text_msg_raw.timestamp);
+          markRead(
+            last_read_msg.text_msg_raw.nano_id,
+            last_read_msg.text_msg_raw.timestamp,
+          );
         }
       } else {
         const container = messageContainerRef.current;
@@ -559,9 +606,11 @@ const GroupChatPage: React.FC = () => {
 
   const handleUploadStart = () => {
     setIsUploading(true);
+    setUploadPercent(0);
   };
 
   const handleUploadEnd = () => {
+    setUploadPercent(100);
     setIsUploading(false);
   };
 
@@ -575,7 +624,10 @@ const GroupChatPage: React.FC = () => {
         />
         {isUploading && (
           <div className={styles.uploadLoadingBar}>
-            <div className={styles.uploadLoadingProgress} />
+            <div
+              className={styles.uploadLoadingProgress}
+              style={{ width: `${uploadPercent}%` }}
+            />
           </div>
         )}
       </div>
@@ -596,7 +648,9 @@ const GroupChatPage: React.FC = () => {
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'groupChat.noMoreMessages' })}</div>
+            <div className={styles.noMoreIndicator}>
+              {intl.formatMessage({ id: 'groupChat.noMoreMessages' })}
+            </div>
           )}
           <GroupMessageList
             messages={messageList}
@@ -608,6 +662,7 @@ const GroupChatPage: React.FC = () => {
             selectedIds={selectedIds}
             onMessageContext={handleMessageContext}
             onToggleSelect={handleToggleSelect}
+            uploadProgressMap={uploadProgressMap}
           />
         </div>
         {selectMode ? (

@@ -23,6 +23,8 @@ type MineChatBoxProps = {
   icon?: string;
   friendUuid: string;
   currentBizId?: string;
+  /** 上传进度百分比 0-100（发送中展示） */
+  uploadProgress?: number;
 };
 
 // 私聊消息类型
@@ -46,6 +48,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     icon,
     friendUuid,
   } = props;
+  const sending = isAck === false;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -193,6 +196,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           currentBizId={imageBizId}
           bizId={imageBizId}
           autoDownload={true}
+          sending={sending}
+          uploadProgress={props.uploadProgress}
           meUuid={userInfo?.uuid || ''}
           nanoId={nano_id}
         />
@@ -208,6 +213,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             fileType={fileRecord.file_type}
             nanoId={nano_id}
             loading={loading}
+            sending={sending}
+            uploadProgress={props.uploadProgress}
           />
         );
       }

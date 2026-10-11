@@ -1,14 +1,24 @@
-import { invoke } from '@tauri-apps/api/core';
-import { useIntl } from '@umijs/max';
-import { getAllFileExtensions, getImageExtensions, selectFile } from '@workspace/services';
-import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
-import { Button, Input, message } from 'antd';
-import { TextAreaRef } from 'antd/es/input/TextArea';
 import {
   PaperClipOutlined,
   PictureOutlined,
   SmileOutlined,
 } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
+import {
+  getAllFileExtensions,
+  getImageExtensions,
+  getLocalFileSize,
+  selectFile,
+} from '@workspace/services';
+import {
+  ChatMessage,
+  MessageFrom,
+  TextQuicMsgVo,
+  UPLOAD_LIMITS,
+} from '@workspace/types';
+import { Button, Input, message } from 'antd';
+import { TextAreaRef } from 'antd/es/input/TextArea';
 import { nanoid } from 'nanoid';
 import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
 import styles from './GroupChatFooter.less';
@@ -27,14 +37,70 @@ interface GroupChatFooterProps {
 }
 
 const EMOJI_LIST = [
-  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
-  '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
-  '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜',
-  '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐',
-  '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬',
-  '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷',
-  '👍', '👎', '👏', '🙌', '🤝', '🙏', '💪', '🤘',
-  '❤️', '💔', '💯', '🔥', '⭐', '✨', '💥', '🎉',
+  '😀',
+  '😃',
+  '😄',
+  '😁',
+  '😆',
+  '😅',
+  '🤣',
+  '😂',
+  '🙂',
+  '🙃',
+  '😉',
+  '😊',
+  '😇',
+  '🥰',
+  '😍',
+  '🤩',
+  '😘',
+  '😗',
+  '😚',
+  '😙',
+  '🥲',
+  '😋',
+  '😛',
+  '😜',
+  '🤪',
+  '😝',
+  '🤑',
+  '🤗',
+  '🤭',
+  '🤫',
+  '🤔',
+  '🤐',
+  '🤨',
+  '😐',
+  '😑',
+  '😶',
+  '😏',
+  '😒',
+  '🙄',
+  '😬',
+  '😮‍💨',
+  '🤥',
+  '😌',
+  '😔',
+  '😪',
+  '🤤',
+  '😴',
+  '😷',
+  '👍',
+  '👎',
+  '👏',
+  '🙌',
+  '🤝',
+  '🙏',
+  '💪',
+  '🤘',
+  '❤️',
+  '💔',
+  '💯',
+  '🔥',
+  '⭐',
+  '✨',
+  '💥',
+  '🎉',
 ];
 
 const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
@@ -105,6 +171,16 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
+        const size = await getLocalFileSize(filePath);
+        if (size > UPLOAD_LIMITS.image) {
+          message.error(
+            intl.formatMessage(
+              { id: 'chat.imageTooLarge' },
+              { limit: Math.floor(UPLOAD_LIMITS.image / (1024 * 1024)) },
+            ),
+          );
+          return;
+        }
         const text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
           text_type: MSG_TYPE_GROUP_IMAGE,
@@ -143,6 +219,16 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
+        const size = await getLocalFileSize(filePath);
+        if (size > UPLOAD_LIMITS.file) {
+          message.error(
+            intl.formatMessage(
+              { id: 'chat.fileTooLarge' },
+              { limit: Math.floor(UPLOAD_LIMITS.file / (1024 * 1024)) },
+            ),
+          );
+          return;
+        }
         const text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
           text_type: MSG_TYPE_GROUP_FILE,
@@ -199,10 +285,18 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
             </div>
           )}
         </div>
-        <div className={styles.footerBtn} onClick={sendImage} title={intl.formatMessage({ id: 'groupChat.sendImage' })}>
+        <div
+          className={styles.footerBtn}
+          onClick={sendImage}
+          title={intl.formatMessage({ id: 'groupChat.sendImage' })}
+        >
           <PictureOutlined />
         </div>
-        <div className={styles.footerBtn} onClick={sendFile} title={intl.formatMessage({ id: 'groupChat.sendFile' })}>
+        <div
+          className={styles.footerBtn}
+          onClick={sendFile}
+          title={intl.formatMessage({ id: 'groupChat.sendFile' })}
+        >
           <PaperClipOutlined />
         </div>
       </div>
@@ -210,7 +304,9 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
         <TextArea
           onPressEnter={sendMessage}
           value={msg}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMsg(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+            setMsg(e.target.value)
+          }
           className={styles.footerTextArea}
           placeholder={intl.formatMessage({ id: 'groupChat.inputPlaceholder' })}
         />
