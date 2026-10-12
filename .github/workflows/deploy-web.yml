@@ -1,0 +1,55 @@
+name: deploy-web
+
+# 官网(apps/web)静态站点发布：构建后把 dist 同步到后端部署机的 deploy/web，
+# 由 only-talk-rs 的 nginx 网关以 www 子域名托管(bind-mount, 同步即生效)。
+on:
+  push:
+    tags: ["web-v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: 构建并发布官网
+    runs-on: ubuntu-latest
+    # 复用 deploy 环境以获取 SSH 凭据(需在本仓库配置同名 secrets/environment)
+    environment: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建官网
+        run: pnpm --filter @workspace/app-web build
+
+      # 同步到后端部署目录(<home>/only-talk-rs-deploy/deploy/web)。
+      # strip_components=3 去掉 apps/web/dist/ 前缀, 直接把 dist 内容铺到目标目录。
+      # 静态文件为 nginx bind-mount, 无需 reload nginx。
+      - name: 发布到服务器
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "apps/web/dist/*"
+          target: "only-talk-rs-deploy/deploy/web"
+          strip_components: 3
+          overwrite: true
