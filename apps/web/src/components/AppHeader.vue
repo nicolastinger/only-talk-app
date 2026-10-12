@@ -4,6 +4,20 @@ import { useRouter } from "vue-router";
 import { useTheme, toggleTheme } from "@/theme";
 import { locale, setLocale, useMessages } from "@/i18n";
 import type { Locale } from "@/i18n";
+import { GITHUB_APP_REPO_URL, GITHUB_RS_REPO_URL } from "@/config/downloads";
+
+const githubLinks = [
+  {
+    href: GITHUB_APP_REPO_URL,
+    labelKey: "githubClient",
+    shortKey: "githubClientShort",
+  },
+  {
+    href: GITHUB_RS_REPO_URL,
+    labelKey: "githubServer",
+    shortKey: "githubServerShort",
+  },
+] as const;
 
 const { t } = useMessages();
 const router = useRouter();
@@ -69,6 +83,25 @@ const toggleLang = () => {
       </nav>
 
       <div class="header-actions">
+        <a
+          v-for="link in githubLinks"
+          :key="link.href"
+          class="gh-link"
+          :href="link.href"
+          target="_blank"
+          rel="noopener noreferrer"
+          :aria-label="t.common[link.labelKey]"
+          :title="t.common[link.labelKey]"
+        >
+          <svg class="gh-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+            />
+          </svg>
+          <span class="gh-label">{{ t.common[link.shortKey] }}</span>
+        </a>
+
         <button
           class="lang-toggle"
           type="button"
@@ -215,6 +248,34 @@ const toggleLang = () => {
   gap: 8px;
 }
 
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  transition: color var(--transition-fast), background var(--transition-fast);
+
+  &:hover {
+    color: var(--blue-600);
+    background: var(--blue-50);
+  }
+}
+
+.gh-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.gh-label {
+  white-space: nowrap;
+}
+
 .lang-toggle {
   display: inline-flex;
   align-items: center;
@@ -352,6 +413,14 @@ const toggleLang = () => {
 @media (max-width: 768px) {
   .nav {
     display: none;
+  }
+
+  .gh-label {
+    display: none;
+  }
+
+  .gh-link {
+    padding: 0 8px;
   }
 
   .menu-toggle {
