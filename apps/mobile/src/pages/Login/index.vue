@@ -2,16 +2,20 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   showToast,
   showLoadingToast,
   closeToast,
   showConfirmDialog,
   ActionSheet,
-  Overlay,
 } from "vant";
 import type { HttpResponse, ResponseData, UserInfo } from "@workspace/types";
-import { CLIENT_CONFIG_KEYS, AuthFactorType } from "@workspace/types";
+import {
+  CLIENT_CONFIG_KEYS,
+  AuthFactorType,
+  PRIVACY_POLICY_URL,
+} from "@workspace/types";
 import {
   getApiBase,
   setConfig,
@@ -35,8 +39,6 @@ const { setLoggedIn, clearAuth } = useAuthStore();
 const form = reactive({ account: "", password: "" });
 const agreed = ref(false);
 const loading = ref(false);
-const showPrivacy = ref(false);
-const privacyContent = ref("");
 const accountError = ref("");
 const passwordError = ref("");
 
@@ -389,16 +391,14 @@ const onLogin = async () => {
   }
 };
 
-const loadPrivacyMd = async () => {
-  try {
-    privacyContent.value = await (await fetch("/markdown/privacy.md")).text();
-  } catch {
-    privacyContent.value = t("login.privacyLoadFailed");
-  }
-};
+/** 打开官网隐私协议页面 */
 const onOpenPrivacy = async () => {
-  await loadPrivacyMd();
-  showPrivacy.value = true;
+  try {
+    await openUrl(PRIVACY_POLICY_URL);
+  } catch (e) {
+    console.error("打开隐私协议失败:", e);
+    showToast({ message: t("login.privacyLoadFailed"), icon: "fail" });
+  }
 };
 onMounted(() => {
   clearAuth();
@@ -588,9 +588,9 @@ onMounted(() => {
             ></label>
             <span class="agreement-text"
               >{{ t("login.agreePrefix")
-              }}<a class="privacy-link" @click.prevent="onOpenPrivacy"
-                >{{ t("login.privacyPolicyLink") }}</a
-              ></span
+              }}<a class="privacy-link" @click.prevent="onOpenPrivacy">{{
+                t("login.privacyPolicyLink")
+              }}</a></span
             >
           </div>
           <button class="login-btn" :disabled="loading" @click="onLogin">
@@ -614,26 +614,6 @@ onMounted(() => {
         </div>
       </template>
     </div>
-    <Overlay :show="showPrivacy" @click="showPrivacy = false">
-      <div class="privacy-modal" @click.stop>
-        <div class="privacy-header">
-          <h2>{{ t("login.privacyTitle") }}</h2>
-          <button class="privacy-close" @click="showPrivacy = false">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-              />
-            </svg>
-          </button>
-        </div>
-        <div class="privacy-body" v-html="privacyContent"></div>
-        <div class="privacy-footer">
-          <button class="privacy-confirm" @click="showPrivacy = false">
-            {{ t("login.gotIt") }}
-          </button>
-        </div>
-      </div>
-    </Overlay>
     <ActionSheet
       v-model:show="showApiSheet"
       :actions="apiActions"

@@ -2,21 +2,33 @@ import LanguageSwitcher from '@/components/LanguageSwitch';
 import LocalImage from '@/components/LocalImage';
 import LoginSettingsModal from '@/components/LoginSettingsModal';
 import { openNewWindow } from '@/components/Window/OpenWindow';
-import { DEFAULT_ICON } from '@/constants';
 import { FormattedMessage } from '@@/exports';
-import { CloseOutlined, LockOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined, LeftOutlined, RightOutlined, DeleteOutlined, SettingOutlined, GithubOutlined } from '@ant-design/icons';
+import {
+  CloseOutlined,
+  DeleteOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+  GithubOutlined,
+  LeftOutlined,
+  LockOutlined,
+  RightOutlined,
+  SettingOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { history, useIntl } from '@umijs/max';
 import { getApiBase, getFiles, isBackendSuccess } from '@workspace/services';
-import { HttpResponse, ResponseData } from '@workspace/types';
-import { Avatar, Button, Checkbox, message, Modal, Spin } from 'antd';
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import {
+  HttpResponse,
+  PRIVACY_POLICY_URL,
+  ResponseData,
+} from '@workspace/types';
+import { Avatar, Checkbox, message } from 'antd';
+import React, { useEffect, useState } from 'react';
 import styles from './index.less';
-
-// 懒加载 markdown 渲染器（react-markdown 体积较大），仅在打开隐私协议弹窗时加载
-const MarkdownRenderer = lazy(() => import('@/components/MarkdownRenderer'));
 
 interface QuickLoginUser {
   user_id: string;
@@ -33,8 +45,6 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [agreed, setAgreed] = useState(false);
-  const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
-  const [privacyContent, setPrivacyContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [userCodeError, setUserCodeError] = useState('');
@@ -46,7 +56,7 @@ const LoginPage: React.FC = () => {
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const [quickLoginLoading, setQuickLoginLoading] = useState(false);
   const [showQuickLogin, setShowQuickLogin] = useState(true);
-const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     loadQuickUsers();
@@ -80,7 +90,8 @@ const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handlePrevUser = () => {
     if (quickUsers.length <= 1) return;
-    const newIndex = (currentUserIndex - 1 + quickUsers.length) % quickUsers.length;
+    const newIndex =
+      (currentUserIndex - 1 + quickUsers.length) % quickUsers.length;
     setCurrentUserIndex(newIndex);
     loadUserAvatar(quickUsers[newIndex]);
   };
@@ -101,12 +112,13 @@ const [settingsOpen, setSettingsOpen] = useState(false);
       await invoke('delete_quick_login_user', { userId: user.user_id });
       const newUsers = quickUsers.filter((_, idx) => idx !== currentUserIndex);
       setQuickUsers(newUsers);
-      
+
       if (newUsers.length === 0) {
         setShowQuickLogin(false);
         setAvatarUrl('');
       } else {
-        const newIndex = currentUserIndex >= newUsers.length ? 0 : currentUserIndex;
+        const newIndex =
+          currentUserIndex >= newUsers.length ? 0 : currentUserIndex;
         setCurrentUserIndex(newIndex);
         loadUserAvatar(newUsers[newIndex]);
       }
@@ -141,7 +153,12 @@ const [settingsOpen, setSettingsOpen] = useState(false);
           x: 200,
           y: 200,
         };
-        await openNewWindow('home', webviewOptions, Window.getCurrent(), 'Only Talk');
+        await openNewWindow(
+          'home',
+          webviewOptions,
+          Window.getCurrent(),
+          'Only Talk',
+        );
       } else {
         messageApi.error('免登录失败，请手动登录');
         setShowQuickLogin(false);
@@ -166,11 +183,15 @@ const [settingsOpen, setSettingsOpen] = useState(false);
 
   const validateUserCode = (value: string): boolean => {
     if (!value) {
-      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameRequired' }));
+      setUserCodeError(
+        intl.formatMessage({ id: 'signIn.errors.usernameRequired' }),
+      );
       return false;
     }
     if (value.length < 5) {
-      setUserCodeError(intl.formatMessage({ id: 'signIn.errors.usernameTooShort' }));
+      setUserCodeError(
+        intl.formatMessage({ id: 'signIn.errors.usernameTooShort' }),
+      );
       return false;
     }
     setUserCodeError('');
@@ -179,11 +200,15 @@ const [settingsOpen, setSettingsOpen] = useState(false);
 
   const validatePassword = (value: string): boolean => {
     if (!value) {
-      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordRequired' }));
+      setPasswordError(
+        intl.formatMessage({ id: 'signIn.errors.passwordRequired' }),
+      );
       return false;
     }
     if (value.length < 8) {
-      setPasswordError(intl.formatMessage({ id: 'signIn.errors.passwordTooShort' }));
+      setPasswordError(
+        intl.formatMessage({ id: 'signIn.errors.passwordTooShort' }),
+      );
       return false;
     }
     setPasswordError('');
@@ -205,7 +230,7 @@ const [settingsOpen, setSettingsOpen] = useState(false);
       return;
     }
     const matchedUser = quickUsers.find(
-      (user) => user.account === account || user.username === account
+      (user) => user.account === account || user.username === account,
     );
     if (matchedUser) {
       loadUserAvatar(matchedUser);
@@ -243,19 +268,30 @@ const [settingsOpen, setSettingsOpen] = useState(false);
           x: 200,
           y: 200,
         };
-        await openNewWindow('home', webviewOptions, Window.getCurrent(), 'Only Talk');
+        await openNewWindow(
+          'home',
+          webviewOptions,
+          Window.getCurrent(),
+          'Only Talk',
+        );
       } else {
-        messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+        messageApi.error(
+          <FormattedMessage id="signIn.errors.invalidCredentials" />,
+        );
       }
     } catch (error: unknown) {
       if (error != null && typeof error === 'string') {
         try {
           const result = JSON.parse(error);
           if (result.code === 500) {
-            messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+            messageApi.error(
+              <FormattedMessage id="signIn.errors.invalidCredentials" />,
+            );
           }
         } catch (e) {
-          messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
+          messageApi.error(
+            <FormattedMessage id="signIn.errors.networkError" />,
+          );
         }
       } else {
         messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
@@ -270,7 +306,9 @@ const [settingsOpen, setSettingsOpen] = useState(false);
     const isPasswordValid = validatePassword(password);
     if (!isUserCodeValid || !isPasswordValid) return;
     if (!agreed) {
-      messageApi.warning(intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }));
+      messageApi.warning(
+        intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }),
+      );
       return;
     }
     fetchData(userCode, password);
@@ -278,7 +316,9 @@ const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleGithubLogin = async () => {
     if (!agreed) {
-      messageApi.warning(intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }));
+      messageApi.warning(
+        intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }),
+      );
       return;
     }
     setGithubLoading(true);
@@ -300,9 +340,16 @@ const [settingsOpen, setSettingsOpen] = useState(false);
           x: 200,
           y: 200,
         };
-        await openNewWindow('home', webviewOptions, Window.getCurrent(), 'Only Talk');
+        await openNewWindow(
+          'home',
+          webviewOptions,
+          Window.getCurrent(),
+          'Only Talk',
+        );
       } else {
-        messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+        messageApi.error(
+          <FormattedMessage id="signIn.errors.invalidCredentials" />,
+        );
       }
     } catch (error: unknown) {
       if (error != null && typeof error === 'string') {
@@ -311,7 +358,9 @@ const [settingsOpen, setSettingsOpen] = useState(false);
           if (result.message) {
             messageApi.error(result.message);
           } else if (result.code === 500) {
-            messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+            messageApi.error(
+              <FormattedMessage id="signIn.errors.invalidCredentials" />,
+            );
           }
         } catch {
           messageApi.error(error);
@@ -324,21 +373,13 @@ const [settingsOpen, setSettingsOpen] = useState(false);
     }
   };
 
-  const loadPrivacyMd = async () => {
-    const res = await fetch('/markdown/privacy.md');
-    const text = await res.text();
-    setPrivacyContent(text);
-  };
-
-  const openPrivacyModal = async (e?: React.MouseEvent) => {
+  /** 打开官网隐私协议页面 */
+  const openPrivacyModal = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    await loadPrivacyMd();
-    setPrivacyModalOpen(true);
-  };
-
-  const closePrivacyModal = () => {
-    setPrivacyModalOpen(false);
+    openUrl(PRIVACY_POLICY_URL).catch((err) =>
+      console.error('打开隐私协议失败:', err),
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -353,7 +394,10 @@ const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div className={styles.container}>
       {contextHolder}
-      <LoginSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <LoginSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
       <div className={styles.titleBar}>
         <div className={styles.logo}>
           <span className={styles.appName}>Only Talk</span>
@@ -408,8 +452,13 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                 {quickUsers.map((_, idx) => (
                   <span
                     key={idx}
-                    className={`${styles.dot} ${idx === currentUserIndex ? styles.dotActive : ''}`}
-                    onClick={() => { setCurrentUserIndex(idx); loadUserAvatar(quickUsers[idx]); }}
+                    className={`${styles.dot} ${
+                      idx === currentUserIndex ? styles.dotActive : ''
+                    }`}
+                    onClick={() => {
+                      setCurrentUserIndex(idx);
+                      loadUserAvatar(quickUsers[idx]);
+                    }}
                   />
                 ))}
               </div>
@@ -425,7 +474,13 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                 '一键登录'
               )}
             </button>
-            <a className={styles.switchToPassword} onClick={() => { setAvatarUrl(''); setShowQuickLogin(false); }}>
+            <a
+              className={styles.switchToPassword}
+              onClick={() => {
+                setAvatarUrl('');
+                setShowQuickLogin(false);
+              }}
+            >
               使用密码登录
             </a>
           </div>
@@ -446,7 +501,11 @@ const [settingsOpen, setSettingsOpen] = useState(false);
 
             <div className={styles.formSection}>
               <div className={styles.inputWrapper}>
-                <div className={`${styles.inputGroup} ${userCodeError ? styles.inputError : ''}`}>
+                <div
+                  className={`${styles.inputGroup} ${
+                    userCodeError ? styles.inputError : ''
+                  }`}
+                >
                   <UserOutlined className={styles.inputIcon} />
                   <input
                     type="text"
@@ -456,11 +515,17 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                     onChange={handleUserCodeChange}
                   />
                 </div>
-                {userCodeError && <span className={styles.errorText}>{userCodeError}</span>}
+                {userCodeError && (
+                  <span className={styles.errorText}>{userCodeError}</span>
+                )}
               </div>
 
               <div className={styles.inputWrapper}>
-                <div className={`${styles.inputGroup} ${passwordError ? styles.inputError : ''}`}>
+                <div
+                  className={`${styles.inputGroup} ${
+                    passwordError ? styles.inputError : ''
+                  }`}
+                >
                   <LockOutlined className={styles.inputIcon} />
                   <input
                     type={passwordVisible ? 'text' : 'password'}
@@ -470,35 +535,73 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                     onChange={handlePasswordChange}
                     onBlur={() => validatePassword(password)}
                   />
-                  <span className={styles.eyeIcon} onClick={() => setPasswordVisible(!passwordVisible)}>
-                    {passwordVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                  <span
+                    className={styles.eyeIcon}
+                    onClick={() => setPasswordVisible(!passwordVisible)}
+                  >
+                    {passwordVisible ? (
+                      <EyeInvisibleOutlined />
+                    ) : (
+                      <EyeOutlined />
+                    )}
                   </span>
                 </div>
-                {passwordError && <span className={styles.errorText}>{passwordError}</span>}
+                {passwordError && (
+                  <span className={styles.errorText}>{passwordError}</span>
+                )}
               </div>
 
               <div className={styles.options}>
-                <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className={styles.checkbox}>
+                <Checkbox
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className={styles.checkbox}
+                >
                   <FormattedMessage id="signIn.agreement" />
-                  <a onClick={(e) => openPrivacyModal(e)} className={styles.link}>
+                  <a
+                    onClick={(e) => openPrivacyModal(e)}
+                    className={styles.link}
+                  >
                     <FormattedMessage id="signIn.privacyPolicy" />
                   </a>
                 </Checkbox>
               </div>
 
-              <button className={styles.loginBtn} onClick={onFinish} disabled={loading}>
-                {loading ? <span className={styles.loadingDot}>...</span> : intl.formatMessage({ id: 'signIn.submit' })}
+              <button
+                className={styles.loginBtn}
+                onClick={onFinish}
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className={styles.loadingDot}>...</span>
+                ) : (
+                  intl.formatMessage({ id: 'signIn.submit' })
+                )}
               </button>
 
-              <button className={styles.githubBtn} onClick={handleGithubLogin} disabled={githubLoading}>
+              <button
+                className={styles.githubBtn}
+                onClick={handleGithubLogin}
+                disabled={githubLoading}
+              >
                 <GithubOutlined className={styles.githubIcon} />
-                {githubLoading ? <span className={styles.loadingDot}>...</span> : '使用 GitHub 登录'}
+                {githubLoading ? (
+                  <span className={styles.loadingDot}>...</span>
+                ) : (
+                  '使用 GitHub 登录'
+                )}
               </button>
 
               <div className={styles.footerLinks}>
                 {hasQuickUsers && (
                   <>
-                    <a className={styles.link} onClick={() => { setShowQuickLogin(true); loadUserAvatar(quickUsers[currentUserIndex]); }}>
+                    <a
+                      className={styles.link}
+                      onClick={() => {
+                        setShowQuickLogin(true);
+                        loadUserAvatar(quickUsers[currentUserIndex]);
+                      }}
+                    >
                       免登录
                     </a>
                     <span className={styles.divider}>|</span>
@@ -516,29 +619,6 @@ const [settingsOpen, setSettingsOpen] = useState(false);
           </div>
         )}
       </div>
-
-      <Modal
-        open={isPrivacyModalOpen}
-        onOk={closePrivacyModal}
-        onCancel={closePrivacyModal}
-        closable={false}
-        title=""
-        className={styles.scrollbarHidden}
-        footer={[
-          <Button key="close" onClick={closePrivacyModal}>
-            <FormattedMessage id="signIn.close" />
-          </Button>,
-          <Button key="ok" type="primary" onClick={closePrivacyModal}>
-            <FormattedMessage id="signIn.confirm" />
-          </Button>,
-        ]}
-        width={'100%'}
-        height={'60vh'}
-      >
-        <Suspense fallback={<Spin style={{ display: 'block', margin: '24px auto' }} />}>
-          <MarkdownRenderer content={privacyContent} />
-        </Suspense>
-      </Modal>
     </div>
   );
 };

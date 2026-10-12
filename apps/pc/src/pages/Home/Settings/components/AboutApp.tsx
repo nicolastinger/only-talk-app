@@ -1,10 +1,12 @@
 import {
+  FileTextOutlined,
   InfoCircleOutlined,
   MessageOutlined,
   QuestionCircleOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import { getVersion } from '@tauri-apps/api/app';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { useIntl } from '@umijs/max';
 import type { UpdateDownloadProgress } from '@workspace/services';
 import {
@@ -13,7 +15,11 @@ import {
   formatFileSize,
   installUpdate,
 } from '@workspace/services';
-import { UpdateInfo } from '@workspace/types';
+import {
+  PRIVACY_POLICY_URL,
+  USER_AGREEMENT_URL,
+  UpdateInfo,
+} from '@workspace/types';
 import {
   Alert,
   Button,
@@ -112,6 +118,11 @@ const AboutApp = () => {
     }
   };
 
+  /** 打开官网法务页面(用户协议 / 隐私协议) */
+  const openExternal = (url: string) => {
+    openUrl(url).catch((e) => console.error('打开链接失败:', url, e));
+  };
+
   const forceUpdate = !!updateInfo?.force_update;
   const downloadPercent =
     progress.total > 0
@@ -193,6 +204,27 @@ const AboutApp = () => {
             style={{ marginLeft: '10px' }}
           >
             {intl.formatMessage({ id: 'settings.aboutApp.helpDoc' })}
+          </Button>
+        </div>
+      </Card>
+
+      <Card className={styles.settingCard}>
+        <div className={styles.cardHeader}>
+          <FileTextOutlined className={styles.cardIcon} />
+          <Text strong>
+            {intl.formatMessage({ id: 'settings.aboutApp.legal' })}
+          </Text>
+        </div>
+        <Divider className={styles.divider} />
+        <div className={styles.buttonGroup}>
+          <Button onClick={() => openExternal(USER_AGREEMENT_URL)}>
+            {intl.formatMessage({ id: 'settings.aboutApp.userAgreement' })}
+          </Button>
+          <Button
+            style={{ marginLeft: '10px' }}
+            onClick={() => openExternal(PRIVACY_POLICY_URL)}
+          >
+            {intl.formatMessage({ id: 'settings.aboutApp.privacyPolicy' })}
           </Button>
         </div>
       </Card>

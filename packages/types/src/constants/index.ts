@@ -29,6 +29,16 @@ export const UPLOAD_LIMITS = {
   file: 500 * 1024 * 1024,
 } as const;
 
+/**
+ * 官网地址与法务页面(与 apps/web 的路由保持一致)。
+ * 客户端"用户协议/隐私协议"入口统一指向官网页面, 不内置正文。
+ */
+export const OFFICIAL_SITE_URL = "https://www.onlytalk.cn";
+/** 隐私协议页面 */
+export const PRIVACY_POLICY_URL = `${OFFICIAL_SITE_URL}/privacy`;
+/** 用户使用协议页面 */
+export const USER_AGREEMENT_URL = `${OFFICIAL_SITE_URL}/agreement`;
+
 export const HTTP_METHOD = {
   GET: "get_request",
   POST: "post_request",

@@ -3,12 +3,14 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { showDialog, showToast } from "vant";
 import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   checkForUpdate,
   downloadUpdatePackage,
   formatFileSize,
   installUpdate,
 } from "@workspace/services";
+import { PRIVACY_POLICY_URL, USER_AGREEMENT_URL } from "@workspace/types";
 import type { UpdateInfo } from "@workspace/types";
 import { useI18n } from "@/i18n";
 
@@ -97,7 +99,10 @@ const onDownload = async () => {
     });
     toast.close();
     localPath.value = path;
-    showToast({ message: t("settings.aboutApp.downloadDone"), icon: "success" });
+    showToast({
+      message: t("settings.aboutApp.downloadDone"),
+      icon: "success",
+    });
     await askInstall();
   } catch (e) {
     console.error("下载更新失败:", e);
@@ -147,6 +152,18 @@ const onComingSoon = (row: string) => {
     icon: "none",
   });
 };
+
+/** 打开官网法务页面(用户协议 / 隐私协议) */
+const openExternal = async (url: string) => {
+  try {
+    await openUrl(url);
+  } catch (e) {
+    console.error("打开链接失败:", url, e);
+    showToast({ message: t("common.operationFailed"), icon: "fail" });
+  }
+};
+const onOpenUserAgreement = () => void openExternal(USER_AGREEMENT_URL);
+const onOpenPrivacy = () => void openExternal(PRIVACY_POLICY_URL);
 </script>
 
 <template>
@@ -202,28 +219,26 @@ const onComingSoon = (row: string) => {
             installing
               ? t("settings.aboutApp.installing")
               : downloading
-                ? t("settings.aboutApp.downloading")
-                : ""
+              ? t("settings.aboutApp.downloading")
+              : ""
           }}
         </span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <div
-        class="menu-item"
-        @click="onComingSoon(t('settings.aboutApp.userAgreement'))"
-      >
-        <span class="menu-name">{{ t("settings.aboutApp.userAgreement") }}</span>
+      <div class="menu-item" @click="onOpenUserAgreement">
+        <span class="menu-name">{{
+          t("settings.aboutApp.userAgreement")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <div
-        class="menu-item"
-        @click="onComingSoon(t('settings.aboutApp.privacyPolicy'))"
-      >
-        <span class="menu-name">{{ t("settings.aboutApp.privacyPolicy") }}</span>
+      <div class="menu-item" @click="onOpenPrivacy">
+        <span class="menu-name">{{
+          t("settings.aboutApp.privacyPolicy")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>

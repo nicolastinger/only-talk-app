@@ -539,6 +539,7 @@ const messages: LocaleMessages = {
       "checking": "Checking...",
       "userAgreement": "User Agreement",
       "privacyPolicy": "Privacy Policy",
+      "legal": "Legal",
       "openSourceLicenses": "Open Source Licenses",
       "updateSize": "Package size: {size}",
       "downloadingPackage": "Downloading update package...",

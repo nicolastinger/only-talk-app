@@ -539,6 +539,7 @@ const messages: LocaleMessages = {
       "checking": "正在檢查...",
       "userAgreement": "用戶協議",
       "privacyPolicy": "隱私政策",
+      "legal": "法律條款",
       "openSourceLicenses": "開源許可",
       "updateSize": "更新包大小：{size}",
       "downloadingPackage": "正在下載更新包...",
