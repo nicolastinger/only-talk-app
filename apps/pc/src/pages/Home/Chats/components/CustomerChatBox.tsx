@@ -1,7 +1,12 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
-import { getChatFileByBizId, getFiles } from '@workspace/services';
+import { openUserProfile } from '@/utils/userProfile';
+import {
+  getChatFileByBizId,
+  getFiles,
+  shouldAutoDownloadImage,
+} from '@workspace/services';
 import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import ChatFile from './ChatFile';
@@ -9,13 +14,13 @@ import ChatImage from './ChatImage';
 import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/CustomerChatBox.less';
 import { TextBox } from './TextBox';
-import WebRTCMessage from './WebRTCMessage';
 
 const imageCache = new Map<string, string>();
 
 interface CustomerChatBoxProps extends ChatMessage {
   friendUuid: string;
   senderName?: string;
+  currentBizId?: string;
 }
 
 // 私聊消息类型
@@ -39,6 +44,8 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
+  const [imageBizId, setImageBizId] = useState<string>('');
+  const [autoDownload, setAutoDownload] = useState(true);
 
   // 加载好友头像
   useEffect(() => {
@@ -66,51 +73,67 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
 
   // 处理图片消息（私聊：单层 JSON）
   useEffect(() => {
-    if (text_type === MSG_TYPE_IMAGE) {
-      try {
-        const imageRecord: ImageRecord = JSON.parse(raw);
-        const bizId = imageRecord.biz_id;
-
-        if (!bizId) {
-          console.error('CustomerChatBox - No bizId found');
-          return;
+    if (text_type !== MSG_TYPE_IMAGE) {
+      // 处理文件消息（私聊：单层 JSON）
+      if (text_type === MSG_TYPE_FILE) {
+        try {
+          const record: FileRecord = JSON.parse(raw);
+          setFileRecord(record);
+        } catch (error) {
+          console.error('CustomerChatBox - Error parsing file record:', error);
         }
-
-        if (imageCache.has(bizId)) {
-          setImageUrl(imageCache.get(bizId)!);
-          return;
-        }
-
-        setLoading(true);
-        getChatFileByBizId(bizId, nano_id)
-          .then((files) => {
-            if (files && files.length > 0) {
-              const tauriFilePath = files[0].tauri_file_path;
-              if (tauriFilePath) {
-                imageCache.set(bizId, tauriFilePath);
-                setImageUrl(tauriFilePath);
-              }
-            }
-            setLoading(false);
-          })
-          .catch((error) => {
-            console.error('CustomerChatBox - Error loading image:', error);
-            setLoading(false);
-          });
-      } catch (error) {
-        console.error('CustomerChatBox - Error parsing image record:', error);
       }
+      return;
     }
 
-    // 处理文件消息（私聊：单层 JSON）
-    if (text_type === MSG_TYPE_FILE) {
-      try {
-        const record: FileRecord = JSON.parse(raw);
-        setFileRecord(record);
-      } catch (error) {
-        console.error('CustomerChatBox - Error parsing file record:', error);
-      }
+    let bizId = '';
+    try {
+      const imageRecord: ImageRecord = JSON.parse(raw);
+      bizId = imageRecord.biz_id;
+    } catch (error) {
+      console.error('CustomerChatBox - Error parsing image record:', error);
+      return;
     }
+    if (!bizId) {
+      console.error('CustomerChatBox - No bizId found');
+      return;
+    }
+
+    setImageBizId(bizId);
+    if (imageCache.has(bizId)) {
+      setImageUrl(imageCache.get(bizId)!);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      // 非计量网络且开关开启才自动下载，否则交给 ChatImage 点击下载
+      const allow = await shouldAutoDownloadImage();
+      if (cancelled) return;
+      setAutoDownload(allow);
+      if (!allow) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const files = await getChatFileByBizId(bizId, nano_id);
+        if (cancelled) return;
+        const tauriFilePath = files?.[0]?.tauri_file_path;
+        if (tauriFilePath) {
+          imageCache.set(bizId, tauriFilePath);
+          setImageUrl(tauriFilePath);
+        }
+      } catch (error) {
+        console.error('CustomerChatBox - Error loading image:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [raw, text_type, nano_id]);
 
   const renderMessage = () => {
@@ -118,14 +141,16 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
       return TextBox(raw);
     }
     if (text_type === MSG_TYPE_IMAGE) {
-      const bizId = fileRecord?.biz_id || '';
       return (
         <ChatImage
           src={imageUrl}
           loading={loading}
           friendUuid={friendUuid}
-          currentBizId={bizId}
+          currentBizId={imageBizId}
+          bizId={imageBizId}
+          autoDownload={autoDownload}
           meUuid={userInfo?.uuid || ''}
+          nanoId={nano_id}
         />
       );
     }
@@ -147,13 +172,6 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
     switch (text_type) {
       case MSG_TYPE_PRIVACY:
         return <PrivacyModeMessage isMine={false} />;
-      case 5:
-      case 12:
-      case 13:
-      case 14:
-      case 15:
-      case 100:
-        return <WebRTCMessage textType={text_type} isMine={false} />;
       default:
         return TextBox(raw);
     }
@@ -161,7 +179,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
 
   const isImageMessage = text_type === MSG_TYPE_IMAGE;
   const isFileMessage = text_type === MSG_TYPE_FILE;
-  const isSpecialMessage = [MSG_TYPE_PRIVACY, 5, 12, 13, 14, 15, 100].includes(text_type);
+  const isSpecialMessage = [MSG_TYPE_PRIVACY].includes(text_type);
 
   return (
     <div className={styles.container}>
@@ -173,15 +191,16 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
           className={styles.imgItem}
           alt="avatar"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() =>
+            openUserProfile(props.text_msg_raw.send_user || friendUuid)
+          }
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}
         />
       </div>
       <div className={styles.chatContainerWrapper}>
-        {senderName && (
-          <div className={styles.senderName}>{senderName}</div>
-        )}
+        {senderName && <div className={styles.senderName}>{senderName}</div>}
         <div
           className={`${styles.chatContainer} ${
             isImageMessage ? styles.imageMessage : ''

@@ -1,0 +1,62 @@
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  color: var(--text-color-secondary, #666);
+  font-size: 13px;
+  text-align: center;
+
+  svg {
+    width: 34px;
+    height: 34px;
+    color: var(--text-color-tertiary, #b0b0b0);
+  }
+}
+
+.img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  animation: imgIn 0.3s ease;
+}
+
+.fillWrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.imgFill {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  margin: auto;
+  animation: imgIn 0.3s ease;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-color-secondary, #666);
+  font-size: 13px;
+  background: var(--card-bg, #fff);
+}
+
+@keyframes imgIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

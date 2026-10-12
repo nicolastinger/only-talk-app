@@ -17,6 +17,29 @@ const MAX_OUTPUT_SIZE: u64 = 200 * 1024;
 const TARGET_QUALITY: u8 = 80;
 const MAX_DIMENSION: u32 = 800;
 
+/// 是否需要跳过压缩(直接上传原图):
+/// - GIF: 压缩会丢动画, 原样上传;
+/// - WebP: 已是压缩产物, 二次压缩无意义;
+/// - 已位于当月资源目录内(此前压缩产物): 避免重复压缩。
+pub fn should_skip_image_compression(input_path: &Path) -> bool {
+    let ext = input_path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_lowercase())
+        .unwrap_or_default();
+    if matches!(ext.as_str(), "gif" | "webp") {
+        return true;
+    }
+
+    if let Some(resource_path) = get_config(MONTHLY_RESOURCE_PATH) {
+        if !resource_path.is_empty() && input_path.starts_with(Path::new(&resource_path)) {
+            return true;
+        }
+    }
+
+    false
+}
+
 pub fn compress_image_to_webp(input_path: &std::path::Path) -> Result<PathBuf> {
     let start = Instant::now();
 
@@ -92,14 +115,61 @@ pub fn compress_image_to_webp(input_path: &std::path::Path) -> Result<PathBuf> {
     Ok(output_path)
 }
 
+/// 头像裁剪：按原始像素坐标裁剪为方形，缩放到 output_size×output_size 后编码 WebP 落盘。
+/// x/y/width/height 与 decode_image_optimized 矫正 EXIF 后的像素空间一致（与前端裁剪库对齐）。
+pub fn crop_image_to_webp(
+    input_path: &Path,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    output_size: u32,
+) -> Result<PathBuf> {
+    let start = Instant::now();
+
+    info!("[裁剪] 开始解码图片...");
+    let img = decode_image_optimized(input_path)?;
+
+    let x = x.min(img.width());
+    let y = y.min(img.height());
+    let width = width.min(img.width() - x);
+    let height = height.min(img.height() - y);
+
+    if width == 0 || height == 0 {
+        return Err(anyhow!("裁剪区域无效"));
+    }
+
+    info!("[裁剪] 裁剪区域: {}x{} at ({}, {})", width, height, x, y);
+    let cropped = img.crop_imm(x, y, width, height);
+    let square = DynamicImage::ImageRgba8(image::imageops::resize(
+        &cropped,
+        output_size,
+        output_size,
+        FilterType::Triangle,
+    ));
+
+    info!("[裁剪] 输出尺寸: {}x{}", output_size, output_size);
+    let final_data = encode_to_webp(&square)?;
+    info!("[裁剪] 编码完成，大小: {} bytes", final_data.len());
+
+    let output_path = get_output_path(input_path)?;
+    let mut output_file = File::create(&output_path)?;
+    output_file.write_all(&final_data)?;
+
+    let total_time = start.elapsed();
+    info!("[裁剪] 总耗时: {:?}", total_time);
+    info!("[裁剪] 输出路径: {:?}", output_path);
+
+    Ok(output_path)
+}
+
 fn get_output_path(input_path: &std::path::Path) -> Result<PathBuf> {
     let monthly_resource_path =
         get_config(MONTHLY_RESOURCE_PATH).ok_or_else(|| anyhow!("获取当月资源路径失败"))?;
 
     let file_stem = input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("image");
 
-    let timestamp =
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
+    let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis();
 
     let output_filename = format!("{}_{}.webp", file_stem, timestamp);
     let output_path = Path::new(&monthly_resource_path).join(output_filename);

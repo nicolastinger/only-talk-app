@@ -1,12 +1,17 @@
 import { PictureOutlined, SmileOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
-import { selectFile } from '@workspace/services';
+import {
+  getImageExtensions,
+  getLocalFileSize,
+  selectFile,
+} from '@workspace/services';
 import {
   ChatMessage,
   MessageFrom,
   TextMsgRaw,
   TextQuicMsgVo,
+  UPLOAD_LIMITS,
 } from '@workspace/types';
 import { Button, Input, message } from 'antd';
 import { TextAreaRef } from 'antd/es/input/TextArea';
@@ -152,12 +157,23 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
   const sendImage = async () => {
     try {
       const filePaths = await selectFile(false, false, [
-        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+        { name: 'Images', extensions: await getImageExtensions() },
       ]);
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
         console.log('Selected image path:', filePath);
+
+        const size = await getLocalFileSize(filePath);
+        if (size > UPLOAD_LIMITS.image) {
+          message.error(
+            intl.formatMessage(
+              { id: 'chat.imageTooLarge' },
+              { limit: Math.floor(UPLOAD_LIMITS.image / (1024 * 1024)) },
+            ),
+          );
+          return;
+        }
 
         let text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
@@ -174,8 +190,9 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
           ack: false,
         };
 
-        await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
+        // 先上屏(展示气泡与上传进度)，再执行发送
         onMessageSent?.(JSON.stringify(temp));
+        await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
       }
     } catch (e) {
       console.log('发送图片失败', e);
@@ -214,7 +231,11 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
             </div>
           )}
         </div>
-        <div className={styles.footerBtn} onClick={sendImage} title={intl.formatMessage({ id: 'chat.footer.sendImage' })}>
+        <div
+          className={styles.footerBtn}
+          onClick={sendImage}
+          title={intl.formatMessage({ id: 'chat.footer.sendImage' })}
+        >
           <PictureOutlined />
         </div>
       </div>

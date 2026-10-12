@@ -1,23 +1,22 @@
-import darkCss from '@/theme/dark.json';
-import lightCss from '@/theme/light.json';
+import { useIntl } from '@umijs/max';
+import { useTheme } from '@/hooks/useTheme';
 
 const ChangeTheme = () => {
-  const changeThemeColor = () => {
-    let currentTheme = localStorage.getItem('theme') || 'dark';
-    const root = document.documentElement;
-    let currentCss = darkCss;
-    if (currentTheme === 'dark') {
-      localStorage.setItem('theme', 'light');
-      currentCss = lightCss;
-    } else {
-      localStorage.setItem('theme', 'dark');
-    }
-    currentCss.forEach((i) => {
-      root.style.setProperty(i.name, i.value);
+  const { mode, setMode } = useTheme();
+  const intl = useIntl();
+
+  const changeThemeColor = (e: React.MouseEvent<HTMLDivElement>) => {
+    setMode(mode === 'dark' ? 'light' : 'dark', {
+      x: e.clientX,
+      y: e.clientY,
     });
   };
 
-  return <div onClick={changeThemeColor}>更换主题</div>;
+  return (
+    <div onClick={changeThemeColor}>
+      {intl.formatMessage({ id: 'settings.generalSettings.theme' })}
+    </div>
+  );
 };
 
 export default ChangeTheme;

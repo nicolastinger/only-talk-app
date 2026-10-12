@@ -14,6 +14,8 @@ pub struct GroupChatRecord {
     pub group_id: String,
     pub send_user: String,
     pub timestamp: i64,
+    /// 服务端消息 id(任务07): 离线同步落库时填充; 在线 QUIC 消息为 NULL
+    pub server_id: Option<i64>,
 }
 
 impl SqliteStore for GroupChatRecord {
@@ -26,7 +28,9 @@ impl SqliteStore for GroupChatRecord {
             timestamp INTEGER NOT NULL,
             send_user TEXT NOT NULL,
             group_id TEXT NOT NULL,
-            text_type INTEGER NOT NULL DEFAULT 0
+            text_type INTEGER NOT NULL DEFAULT 0,
+            server_id INTEGER DEFAULT NULL,
+            deleted INTEGER NOT NULL DEFAULT 0
         )"#,
         )
         .execute(pool_sqlite)
@@ -34,7 +38,16 @@ impl SqliteStore for GroupChatRecord {
         Ok(())
     }
 
-    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        let _ =
+            sqlx::query("ALTER TABLE group_chat_record ADD COLUMN server_id INTEGER DEFAULT NULL")
+                .execute(pool_sqlite)
+                .await; // Column already exists, ignore
+        let _ = sqlx::query(
+            "ALTER TABLE group_chat_record ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0",
+        )
+        .execute(pool_sqlite)
+        .await; // Column already exists, ignore
         Ok(())
     }
 
@@ -44,10 +57,11 @@ impl SqliteStore for GroupChatRecord {
 }
 
 impl GroupChatRecord {
-    pub async fn insert(record: &GroupChatRecord) -> Result<(), anyhow::Error> {
+    /// 插入群聊消息，返回是否真正新增（本地已有同 nano_id 的消息则返回 false）
+    pub async fn insert(record: &GroupChatRecord) -> Result<bool, anyhow::Error> {
         let pool_sqlite = get_private_db_client().await?;
-        sqlx::query(
-            r#"INSERT OR IGNORE INTO group_chat_record (nano_id, raw, timestamp, send_user, group_id, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#
+        let res = sqlx::query(
+            r#"INSERT OR IGNORE INTO group_chat_record (nano_id, raw, timestamp, send_user, group_id, text_type, server_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"#
         )
         .bind(&record.nano_id)
         .bind(&record.raw)
@@ -55,9 +69,10 @@ impl GroupChatRecord {
         .bind(&record.send_user)
         .bind(&record.group_id)
         .bind(record.text_type)
+        .bind(record.server_id)
         .execute(&pool_sqlite)
         .await?;
-        Ok(())
+        Ok(res.rows_affected() > 0)
     }
 
     pub async fn query_by_group_id(
@@ -67,7 +82,7 @@ impl GroupChatRecord {
     ) -> Result<Vec<GroupChatRecord>, anyhow::Error> {
         let pool_sqlite = get_private_db_client().await?;
         let records = sqlx::query_as::<_, GroupChatRecord>(
-            r#"SELECT * from(SELECT * FROM group_chat_record WHERE group_id = ?1 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
+            r#"SELECT * from(SELECT * FROM group_chat_record WHERE group_id = ?1 AND deleted = 0 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
         )
         .bind(group_id)
         .bind(limit)
@@ -82,7 +97,7 @@ impl GroupChatRecord {
     ) -> Result<Option<GroupChatRecord>, anyhow::Error> {
         let pool_sqlite = get_private_db_client().await?;
         let record = sqlx::query_as::<_, GroupChatRecord>(
-            r#"select * from group_chat_record where group_id = ?1 order by timestamp desc limit 1"#
+            r#"select * from group_chat_record where group_id = ?1 and deleted = 0 order by timestamp desc limit 1"#
         )
         .bind(group_id)
         .fetch_optional(&pool_sqlite)

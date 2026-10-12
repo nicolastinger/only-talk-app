@@ -1,8 +1,11 @@
 import { history, useIntl } from '@umijs/max';
 import { Avatar, Dropdown, Modal, Typography } from 'antd';
-import { UserOutlined, MoreOutlined } from '@ant-design/icons';
+import { UserOutlined, MoreOutlined, WarningOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { invoke } from '@tauri-apps/api/core';
+import { useState } from 'react';
+import { ReportTargetType } from '@workspace/types';
+import ReportModal from '@/components/ReportModal';
 import styles from './styles/TopBar.less';
 
 interface GroupTopBarProps {
@@ -17,6 +20,7 @@ const GroupTopBar: React.FC<GroupTopBarProps> = ({
   memberCount,
 }) => {
   const intl = useIntl();
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   const handleLeaveGroup = () => {
     Modal.confirm({
       title: intl.formatMessage({ id: 'chat.group.leaveGroup' }),
@@ -50,6 +54,12 @@ const GroupTopBar: React.FC<GroupTopBarProps> = ({
       onClick: () => history.push(`/home/chats/group-settings?groupId=${groupId}`),
     },
     {
+      key: 'report',
+      label: intl.formatMessage({ id: 'report.action' }),
+      icon: <WarningOutlined />,
+      onClick: () => setReportModalVisible(true),
+    },
+    {
       type: 'divider',
     },
     {
@@ -72,6 +82,13 @@ const GroupTopBar: React.FC<GroupTopBarProps> = ({
           <MoreOutlined className={styles.moreIcon} />
         </Dropdown>
       </div>
+      <ReportModal
+        open={reportModalVisible}
+        targetType={ReportTargetType.GROUP}
+        targetUuid={groupId}
+        targetName={title}
+        onClose={() => setReportModalVisible(false)}
+      />
     </div>
   );
 };

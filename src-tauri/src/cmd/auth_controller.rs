@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
-use reqwest::{Client, Url};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::command;
@@ -10,16 +10,19 @@ use crate::cmd::api_controller::{post_request, ApiResponse};
 use crate::dto::http_result::HttpResult;
 use crate::entity::user_info::UserInfo;
 use crate::entity::user_token::UserToken;
-use crate::service::user_service::{add_user_map, get_user_info, user_login};
-use crate::utils::global_static_str::DOMAIN_NAME;
-use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL};
+use crate::service::p2p_service;
+use crate::service::user_service::{add_user_map, teardown_session, user_login};
+use crate::utils::global_static_str::talk_api_domain;
+use crate::utils::http_client::http_client;
+use crate::GLOBAL_QUIC_USER_INFO;
 
 #[command]
 pub async fn sign_in(
     url: String,
     mut body: HashMap<String, String>,
 ) -> Result<ApiResponse, String> {
-    let client = Client::new();
+    body.insert("device_fingerprint".to_string(), crate::utils::device_info::device_fingerprint());
+    let client = http_client();
     let response = client.post(&url).json(&body).send().await.map_err(|e| e.to_string())?;
 
     let status = response.status().as_u16();
@@ -37,11 +40,28 @@ pub async fn sign_in(
         return Err(response_body);
     }
 
-    let parsed = Url::parse(&url).map_err(|x| x.to_string())?;
-    let domain = parsed.domain().unwrap_or(DOMAIN_NAME).to_string();
-    let port = parsed.port_or_known_default().unwrap_or(8443);
-    let me_url = format!("https://{}:{}/user/me", &domain, &port);
+    let account = body.remove("account").unwrap_or_default();
+    finish_login(&url, status, &response_body, account).await
+}
 
+/// 登录收尾（账号密码 / GitHub OAuth 共用）：
+/// 写全局用户信息 → 拉 /user/me 取 uuid → 启动登录会话 → 持久化 refresh_token
+async fn finish_login(
+    url: &str,
+    status: u16,
+    response_body: &str,
+    account: String,
+) -> Result<ApiResponse, String> {
+    let parsed = Url::parse(url).map_err(|x| x.to_string())?;
+    let scheme = parsed.scheme().to_string();
+    let host = parsed.host_str().map(|h| h.to_string()).unwrap_or_else(talk_api_domain);
+    let me_url = match parsed.port() {
+        Some(p) => format!("{}://{}:{}/user/me", scheme, host, p),
+        None => format!("{}://{}/user/me", scheme, host),
+    };
+
+    let sign_in_result: HttpResult =
+        serde_json::from_str(response_body).map_err(|e| e.to_string())?;
     let data = sign_in_result.data.as_object().ok_or("sign_in data 不是 JSON 对象")?;
     let access_token =
         data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
@@ -54,10 +74,7 @@ pub async fn sign_in(
             .write()
             .await
             .insert("refresh_token".to_string(), refresh_token.to_string());
-        GLOBAL_QUIC_USER_INFO
-            .write()
-            .await
-            .insert("account".to_string(), body.remove("account").unwrap_or_default());
+        GLOBAL_QUIC_USER_INFO.write().await.insert("account".to_string(), account);
     }
 
     let me_res = post_request(me_url, String::new()).await?;
@@ -67,6 +84,10 @@ pub async fn sign_in(
         let data = res["data"].as_object().ok_or("me_res.body 不是 JSON 对象")?;
         let uuid = data["uuid"].as_str().ok_or("me_res.body 缺少 uuid 字段")?.to_string();
         add_user_map("uuid", &uuid).await.map_err(|e| e.to_string())?;
+        // GitHub 等场景以服务端 account 为准
+        if let Some(acc) = data.get("account").and_then(|v| v.as_str()) {
+            GLOBAL_QUIC_USER_INFO.write().await.insert("account".to_string(), acc.to_string());
+        }
         Some(uuid)
     } else {
         None
@@ -74,10 +95,12 @@ pub async fn sign_in(
 
     user_login().await.map_err(|e| e.to_string())?;
 
+    // 登录成功后延迟检测 IPv6 支持(需从 API 动态获取 NAT UDP 端口)
+    tauri::async_runtime::spawn(p2p_service::check_ipv6_support());
+
     // 持久化 refresh_token 到 user_token 表
     if let Some(ref user_uuid) = uuid {
-        let local_credit =
-            local_ip_address::local_ip().ok().map(|ip| ip.to_string()).unwrap_or_default();
+        let local_credit = crate::utils::device_info::device_fingerprint();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)
@@ -97,11 +120,129 @@ pub async fn sign_in(
     }
 
     info!("登录成功");
-    Ok(ApiResponse { status, body: response_body })
+    Ok(ApiResponse { status, body: response_body.to_string() })
+}
+
+/// GitHub OAuth 登录（免密）：
+/// 后端取授权地址 → 系统浏览器授权 → 本机回环 127.0.0.1:9527 收 code → 后端换 token → 收尾登录
+#[command]
+pub async fn github_login(url: String, app: tauri::AppHandle) -> Result<ApiResponse, String> {
+    use tauri_plugin_opener::OpenerExt;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    let base = url.trim_end_matches('/');
+    let device_fp = crate::utils::device_info::device_fingerprint();
+
+    // 1. 后端生成 state + 授权地址
+    let authorize_endpoint = format!("{}/user/github/authorize_url", base);
+    let authorize_body = serde_json::json!({
+        "platform": "PC",
+        "device_fingerprint": device_fp,
+    });
+    let client = http_client();
+    let resp = client
+        .post(&authorize_endpoint)
+        .json(&authorize_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let resp_body = resp.text().await.map_err(|e| e.to_string())?;
+    let result: HttpResult = serde_json::from_str(&resp_body).map_err(|_| resp_body.clone())?;
+    if result.code != 200 {
+        return Err(resp_body);
+    }
+    let authorize_url = result
+        .data
+        .get("authorize_url")
+        .and_then(|v| v.as_str())
+        .ok_or("缺少 authorize_url")?
+        .to_string();
+    let state = result.data.get("state").and_then(|v| v.as_str()).ok_or("缺少 state")?.to_string();
+
+    // 2. 启动本机回环监听（GitHub OAuth App 回调地址须与配置一致）
+    let listener = TcpListener::bind("127.0.0.1:9527")
+        .await
+        .map_err(|e| format!("启动 GitHub 回调监听失败: {}", e))?;
+
+    // 3. 系统浏览器打开授权页
+    app.opener()
+        .open_url(&authorize_url, None::<&str>)
+        .map_err(|e| format!("打开 GitHub 授权页失败: {}", e))?;
+
+    // 4. 等待回调（5 分钟超时）
+    let (code, state_back, oauth_error) = tokio::time::timeout(
+        std::time::Duration::from_secs(300),
+        async {
+            let (mut socket, _) = listener.accept().await.map_err(|e| e.to_string())?;
+                let mut buf = [0u8; 4096];
+                let n = socket.read(&mut buf).await.map_err(|e| e.to_string())?;
+                let req_text = String::from_utf8_lossy(&buf[..n]).to_string();
+                let path = req_text.split_whitespace().nth(1).unwrap_or("/").to_string();
+
+                let params: std::collections::HashMap<String, String> = url::Url::parse(
+                    &format!("http://127.0.0.1:9527{}", path),
+                )
+                .map_err(|e| format!("解析回调地址失败: {}", e))?
+                .query_pairs()
+                .into_owned()
+                .collect();
+
+                let html = if params.get("error").is_some() {
+                    "<h2>GitHub 授权失败, 请关闭此页面重试</h2>"
+                } else {
+                    "<h2>OnlyTalk 登录成功, 可关闭此页面</h2>"
+                };
+                let http_resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    html.len(),
+                    html
+                );
+                let _ = socket.write_all(http_resp.as_bytes()).await;
+
+                Ok::<(Option<String>, Option<String>, Option<String>), String>((
+                    params.get("code").cloned(),
+                    params.get("state").cloned(),
+                    params.get("error").cloned(),
+                ))
+        },
+    )
+    .await
+    .map_err(|_| "等待 GitHub 授权超时".to_string())?
+    .map_err(|e| e)?;
+
+    if oauth_error.is_some() {
+        return Err(format!("GitHub 授权失败: {}", oauth_error.unwrap_or_default()));
+    }
+    if state_back.as_deref() != Some(state.as_str()) {
+        return Err("GitHub 授权 state 校验失败".to_string());
+    }
+    let code = code.ok_or("GitHub 授权回调缺少 code")?;
+
+    // 5. 后端换 token（免密，首次自动注册）
+    let callback_endpoint = format!("{}/user/github/callback", base);
+    let cb_body = serde_json::json!({
+        "code": code,
+        "state": state,
+        "platform": "PC",
+        "device_fingerprint": device_fp,
+    });
+    let resp =
+        client.post(&callback_endpoint).json(&cb_body).send().await.map_err(|e| e.to_string())?;
+    let status = resp.status().as_u16();
+    let response_body = resp.text().await.map_err(|e| e.to_string())?;
+    let cb_result: HttpResult =
+        serde_json::from_str(&response_body).map_err(|_| response_body.clone())?;
+    if cb_result.code != 200 {
+        return Err(response_body);
+    }
+
+    finish_login(&url, status, &response_body, "github".to_string()).await
 }
 
 /// 通过 refresh_token 刷新 access_token
 #[command]
+#[allow(clippy::disallowed_methods)]
 pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
     let refresh_token = {
         GLOBAL_QUIC_USER_INFO
@@ -113,9 +254,12 @@ pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
     };
 
     let refresh_url = format!("{}/user/refresh_token", url.trim_end_matches('/'));
-    let body = serde_json::json!({ "refresh_token": refresh_token });
+    let body = serde_json::json!({
+        "refresh_token": refresh_token,
+        "device_fingerprint": crate::utils::device_info::device_fingerprint()
+    });
 
-    let client = Client::new();
+    let client = http_client();
     let response = client.post(&refresh_url).json(&body).send().await.map_err(|e| e.to_string())?;
     let status = response.status().as_u16();
     let response_body = response.text().await.map_err(|e| e.to_string())?;
@@ -147,51 +291,19 @@ pub async fn refresh_token_command(url: String) -> Result<ApiResponse, String> {
     Ok(ApiResponse { status, body: response_body })
 }
 
-/// 登出命令
+/// 登出命令: 统一清理当前会话(QUIC/定时任务/媒体/数据库连接/全局状态)
 #[command]
 pub async fn logout() -> Result<String, String> {
-    // 清空用户信息
-    {
-        let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
-        user_info.clear();
-        info!("用户信息已清空")
-    }
-
-    // 清空全局服务器列表
-    {
-        let mut guard = GLOBAL_QUIC_SERVER_LIST.write().await;
-        guard.clear();
-        info!("服务器列表已清空")
-    }
-
-    // 清空数据库连接
-    {
-        let mut guard = GLOBAL_SQL_POOL.write().await;
-        guard.take();
-        info!("数据库连接已清空")
-    }
-
+    teardown_session().await.map_err(|e| e.to_string())?;
     info!("用户已登出");
     Ok("登出成功".to_string())
 }
 
-/// 清除用户信息命令
+/// 清除用户信息命令(复用统一会话清理, 幂等, 与 logout 重复调用无副作用)
 #[command]
 pub async fn clear_user_info() -> Result<String, String> {
     info!("清除用户信息");
-
-    // 清空全局用户信息
-    {
-        let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
-        guard.clear();
-    }
-
-    // 清空全局服务器列表
-    {
-        let mut guard = GLOBAL_QUIC_SERVER_LIST.write().await;
-        guard.clear();
-    }
-
+    teardown_session().await.map_err(|e| e.to_string())?;
     Ok("用户信息已清除".to_string())
 }
 
@@ -218,12 +330,13 @@ pub async fn get_quick_login_users() -> Result<Vec<QuickLoginUser>, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
-    let twenty_days_secs: i64 = 20 * 24 * 3600;
+    // 与后端 refresh_token 有效期保持一致 (30 天, 见 only-talk-rs user_service 3600*24*30)
+    let thirty_days_secs: i64 = 30 * 24 * 3600;
 
     let mut result = Vec::new();
     for token in tokens {
         let updated = token.updated_at.unwrap_or(0);
-        if now - updated > twenty_days_secs {
+        if now - updated > thirty_days_secs {
             continue;
         }
 
@@ -244,11 +357,15 @@ pub async fn get_quick_login_users() -> Result<Vec<QuickLoginUser>, String> {
 }
 
 #[command]
+#[allow(clippy::disallowed_methods)]
 pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiResponse, String> {
     let refresh_url = format!("{}/user/refresh_token", url.trim_end_matches('/'));
-    let body = serde_json::json!({ "refresh_token": refresh_token });
+    let body = serde_json::json!({
+        "refresh_token": refresh_token,
+        "device_fingerprint": crate::utils::device_info::device_fingerprint()
+    });
 
-    let client = Client::new();
+    let client = http_client();
     let response = client.post(&refresh_url).json(&body).send().await.map_err(|e| e.to_string())?;
     let status = response.status().as_u16();
     let response_body = response.text().await.map_err(|e| e.to_string())?;
@@ -280,9 +397,12 @@ pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiRespon
     }
 
     let parsed = Url::parse(&url).map_err(|x| x.to_string())?;
-    let domain = parsed.domain().unwrap_or(DOMAIN_NAME).to_string();
-    let port = parsed.port_or_known_default().unwrap_or(8443);
-    let me_url = format!("https://{}:{}/user/me", &domain, &port);
+    let scheme = parsed.scheme().to_string();
+    let host = parsed.host_str().map(|h| h.to_string()).unwrap_or_else(talk_api_domain);
+    let me_url = match parsed.port() {
+        Some(p) => format!("{}://{}:{}/user/me", scheme, host, p),
+        None => format!("{}://{}/user/me", scheme, host),
+    };
 
     let me_res = post_request(me_url, String::new()).await?;
     let uuid = if me_res.status == 200 {
@@ -299,8 +419,7 @@ pub async fn quick_login(refresh_token: String, url: String) -> Result<ApiRespon
     user_login().await.map_err(|e| e.to_string())?;
 
     if let Some(ref user_uuid) = uuid {
-        let local_credit =
-            local_ip_address::local_ip().ok().map(|ip| ip.to_string()).unwrap_or_default();
+        let local_credit = crate::utils::device_info::device_fingerprint();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)

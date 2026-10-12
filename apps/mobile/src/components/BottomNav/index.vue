@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useUnreadStore } from "@/stores/unread";
 
 interface NavItem {
   name: string;
@@ -9,20 +10,37 @@ interface NavItem {
 
 const route = useRoute();
 const router = useRouter();
+const { chatBadge, friendBadge, friendPlazaBadge, feedBadge } =
+  useUnreadStore();
 
 const navItems: NavItem[] = [
   { name: "chat", path: "/chats" },
   { name: "friends", path: "/friends" },
-  { name: "moments", path: "/moments" },
+  { name: "friendPlaza", path: "/plaza/friend" },
+  { name: "feed", path: "/plaza" },
   { name: "profile", path: "/profile" },
 ];
 
+const badgeOf = (name: string) => {
+  if (name === "chat") return chatBadge.value;
+  if (name === "friends") return friendBadge.value;
+  if (name === "friendPlaza") return friendPlazaBadge.value;
+  if (name === "feed") return feedBadge.value;
+  return 0;
+};
+
+const formatBadge = (count: number) => (count > 99 ? "99+" : String(count));
+
+// 最长前缀匹配，避免 /plaza 误命中 /plaza/friend
 const active = computed(() => {
   const path = route.path;
+  let best = "";
   for (const item of navItems) {
-    if (path.startsWith(item.path)) return item.path;
+    if (path === item.path || path.startsWith(item.path + "/")) {
+      if (item.path.length > best.length) best = item.path;
+    }
   }
-  return "/chats";
+  return best || "/chats";
 });
 
 const onChange = (path: string) => {
@@ -106,9 +124,33 @@ const onChange = (path: string) => {
         />
       </svg>
 
-      <!-- Moments: globe with orbiting ring -->
+      <!-- 交友广场: heart with pulsing ring -->
       <svg
-        v-else-if="item.name === 'moments'"
+        v-else-if="item.name === 'friendPlaza'"
+        class="nav-icon"
+        viewBox="0 0 32 32"
+        fill="none"
+      >
+        <circle
+          class="heart-pulse"
+          cx="16"
+          cy="16"
+          r="10"
+          stroke="currentColor"
+          stroke-width="0.7"
+        />
+        <path
+          class="heart-base"
+          d="M16 27C16 27 5 20.5 5 13a5.5 5.5 0 0 1 11-3 5.5 5.5 0 0 1 11 3c0 7.5-11 14-11 14z"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linejoin="round"
+        />
+      </svg>
+
+      <!-- 动态广场: globe with orbiting ring -->
+      <svg
+        v-else-if="item.name === 'feed'"
         class="nav-icon"
         viewBox="0 0 32 32"
         fill="none"
@@ -188,6 +230,12 @@ const onChange = (path: string) => {
           fill="var(--nav-active-color)"
         />
       </svg>
+
+      <span
+        v-if="badgeOf(item.name) > 0"
+        class="nav-badge"
+        >{{ formatBadge(badgeOf(item.name)) }}</span
+      >
     </button>
   </div>
 </template>
@@ -226,33 +274,53 @@ const onChange = (path: string) => {
   -webkit-tap-highlight-color: transparent;
   padding: 0;
 
+  /* 活跃态由图标颜色 + 底部小圆点指示 */
   .nav-icon {
+    position: relative;
     width: var(--nav-icon-size, 28px);
     height: var(--nav-icon-size, 28px);
     color: var(--nav-inactive-color, #b0c4de);
-    transition: color 0.15s ease, transform 0.15s ease;
+    transition: color 0.15s ease;
   }
 
   &.active .nav-icon {
-    color: var(--nav-active-color, #4a90ff);
-    transform: scale(1.08);
+    color: var(--nav-active-color);
   }
 
   &::after {
     content: "";
     position: absolute;
-    bottom: 6px;
+    bottom: 7px;
     left: 50%;
     transform: translateX(-50%) scale(0);
     width: 4px;
     height: 4px;
-    background: var(--nav-active-color, #4a90ff);
+    background: var(--nav-active-color);
     border-radius: 50%;
     transition: transform 0.15s ease;
   }
 
   &.active::after {
     transform: translateX(-50%) scale(1);
+  }
+
+  .nav-badge {
+    position: absolute;
+    top: 7px;
+    left: calc(50% + 9px);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--badge-text, #fff);
+    background: var(--badge-bg, #ef4444);
+    border-radius: var(--radius-full, 999px);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
   }
 }
 
@@ -331,7 +399,47 @@ const onChange = (path: string) => {
   }
 }
 
-// ===== Moments icon animations =====
+// ===== 交友广场 icon animations =====
+.heart-pulse {
+  opacity: 0;
+}
+.nav-btn.active .heart-pulse {
+  animation: heartPulse 2s ease-out infinite;
+  transform-origin: 16px 16px;
+}
+.nav-btn.active .heart-base {
+  animation: heartBeat 2s ease-in-out infinite;
+  transform-origin: 16px 16px;
+}
+
+@keyframes heartPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  40% {
+    opacity: 0.5;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+@keyframes heartBeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.12);
+  }
+  24% {
+    transform: scale(1);
+  }
+}
+
+// ===== 动态广场 icon animations =====
 .orbit-ring {
   transform-origin: 16px 16px;
 }

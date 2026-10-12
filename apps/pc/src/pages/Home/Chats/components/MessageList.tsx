@@ -1,3 +1,5 @@
+import { isRecallMessage } from '@/utils/recall';
+import { useIntl } from '@umijs/max';
 import { ChatMessage, MessageFrom } from '@workspace/types';
 import React from 'react';
 import CustomerChatBox from './CustomerChatBox';
@@ -9,9 +11,16 @@ interface MessageListProps {
   messages: ChatMessage[];
   friendIcon?: string;
   friendUuid: string;
+  friendName?: string;
   groupMode?: boolean;
   newMessageIds?: Set<string>;
   loadedMessageIds?: Set<string>;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onMessageContext?: (msg: ChatMessage, e: React.MouseEvent) => void;
+  onToggleSelect?: (msg: ChatMessage) => void;
+  /** 发送进度：nano_id -> { percent, phase } */
+  uploadProgressMap?: Record<string, { percent: number; phase: string }>;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -20,10 +29,17 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   friendIcon,
   friendUuid,
+  friendName,
   groupMode,
   newMessageIds,
   loadedMessageIds,
+  selectMode,
+  selectedIds,
+  onMessageContext,
+  onToggleSelect,
+  uploadProgressMap,
 }) => {
+  const intl = useIntl();
   const getMessageAnimationClass = (nanoId: string): string => {
     if (newMessageIds?.has(nanoId)) {
       return styles.newMessageAnimation;
@@ -61,6 +77,25 @@ const MessageList: React.FC<MessageListProps> = ({
         }
 
         const animationClass = getMessageAnimationClass(message.nano_id);
+        const isMine = msg.from === MessageFrom.Mine;
+        const selected = !!selectedIds?.has(message.nano_id);
+
+        // 撤回提示：居中灰条
+        if (isRecallMessage(message.text_type, message.raw)) {
+          const name = isMine
+            ? intl.formatMessage({ id: 'chat.recall.you' })
+            : friendName || intl.formatMessage({ id: 'chat.recall.peer' });
+          return (
+            <React.Fragment key={message.nano_id}>
+              {shouldShowTimestamp && (
+                <MessageTimestamp timestamp={currentTimestamp} />
+              )}
+              <div className={styles.recallNotice}>
+                {intl.formatMessage({ id: 'chat.recall.notice' }, { name })}
+              </div>
+            </React.Fragment>
+          );
+        }
 
         // For group mode, show sender icon/name from the message
         const displayIcon = groupMode
@@ -73,8 +108,26 @@ const MessageList: React.FC<MessageListProps> = ({
             {shouldShowTimestamp && (
               <MessageTimestamp timestamp={currentTimestamp} />
             )}
-            <div className={animationClass}>
-              {msg.from !== MessageFrom.Mine ? (
+            <div
+              className={`${animationClass} ${styles.rowWrapper} ${
+                selectMode ? styles.selectRow : ''
+              } ${selected ? styles.selectedRow : ''}`}
+              onContextMenu={(e) => onMessageContext?.(msg, e)}
+              onClickCapture={(e) => {
+                if (!selectMode) return;
+                e.stopPropagation();
+                e.preventDefault();
+                onToggleSelect?.(msg);
+              }}
+            >
+              {selectMode && (
+                <span
+                  className={`${styles.selectMark} ${
+                    selected ? styles.checked : ''
+                  }`}
+                />
+              )}
+              {!isMine ? (
                 <CustomerChatBox
                   from={MessageFrom.System}
                   ack={undefined}
@@ -91,6 +144,8 @@ const MessageList: React.FC<MessageListProps> = ({
                   isAck={msg.ack}
                   friendUuid={friendUuid}
                   currentBizId={currentBizId}
+                  uploadProgress={uploadProgressMap?.[message.nano_id]?.percent}
+                  sendPhase={uploadProgressMap?.[message.nano_id]?.phase}
                 />
               )}
             </div>
@@ -122,6 +177,17 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
   if (
     prevProps.newMessageIds?.size !== nextProps.newMessageIds?.size ||
     prevProps.loadedMessageIds?.size !== nextProps.loadedMessageIds?.size
+  ) {
+    return false;
+  }
+
+  if (
+    prevProps.uploadProgressMap !== nextProps.uploadProgressMap ||
+    prevProps.selectMode !== nextProps.selectMode ||
+    prevProps.selectedIds !== nextProps.selectedIds ||
+    prevProps.friendName !== nextProps.friendName ||
+    prevProps.onMessageContext !== nextProps.onMessageContext ||
+    prevProps.onToggleSelect !== nextProps.onToggleSelect
   ) {
     return false;
   }

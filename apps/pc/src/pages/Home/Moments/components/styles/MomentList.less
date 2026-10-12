@@ -1,0 +1,42 @@
+.list {
+  padding: 24px 28px 44px;
+  width: 100%;
+}
+
+.masonry {
+  position: relative;
+}
+
+.item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform, width;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--color-gray-6, #999);
+  font-size: 14px;
+}
+
+.sentinel {
+  height: 1px;
+  width: 100%;
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}

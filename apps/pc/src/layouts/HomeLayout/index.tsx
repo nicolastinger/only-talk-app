@@ -1,5 +1,8 @@
+import AnnouncementBanner from '@/components/AnnouncementBanner';
+import ConnectionStatusTag from '@/components/ConnectionStatusTag';
 import DraggableHeader from '@/components/DraggableHeader';
 import { LeftAside } from '@/components/LeftAside';
+import MessageAlertBanner from '@/components/MessageAlertBanner';
 import OnlineStatusSwitch from '@/components/OnlineStatusSwitch';
 import {
   CamouflageButton,
@@ -9,7 +12,6 @@ import {
   QuicReconnectButton,
   ThemeButton,
 } from '@/components/ToolButtons';
-import { TALK_API } from '@/constants';
 import { useQuicDisconnect } from '@/hooks/useQuicDisconnect';
 import { useSystemNotify } from '@/hooks/useSystemNotify';
 import { useBearStore } from '@/store/store';
@@ -21,13 +23,27 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { Window } from '@tauri-apps/api/window';
-import { Outlet, useIntl } from '@umijs/max';
-import { cache_user_info, get_cached_user_info } from '@workspace/services';
-import { HttpResponse, ResponseData, UserInfo } from '@workspace/types';
+import { Outlet, history, useIntl } from '@umijs/max';
+import {
+  cache_user_info,
+  getApiBase,
+  get_cached_user_info,
+  list_auth_factors,
+} from '@workspace/services';
+import {
+  AuthFactorType,
+  HttpResponse,
+  ResponseData,
+  UserInfo,
+} from '@workspace/types';
 import { Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
+
+// 同一次应用运行内只提示一次二次认证绑定引导
+let authFactorChecked = false;
 
 const HomeLayout = () => {
   const intl = useIntl();
@@ -35,9 +51,41 @@ const HomeLayout = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [closeModalVisible, setCloseModalVisible] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [forceLogoutVisible, setForceLogoutVisible] = useState(false);
+  const [forceLogoutReason, setForceLogoutReason] = useState('');
+  const setIsLogin = useBearStore((state) => state.setIsLogin);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
-  const { isConnected, resetConnection } = useQuicDisconnect();
+  const { isConnected, resetConnection, statusTag } = useQuicDisconnect();
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    // 收到服务端"账号已在其他设备登录"通知后弹出确认框，
+    // 由用户点击"退出登录"确认后再执行登出（避免误触自动下线）。
+    listen<string>('force_logout', (event) => {
+      setForceLogoutReason(event.payload || '');
+      setForceLogoutVisible(true);
+    })
+      .then((stop) => {
+        unlisten = stop;
+      })
+      .catch(console.error);
+    return () => unlisten?.();
+  }, []);
+
+  // 确认强制退出：先关闭弹窗，再执行登出（无论登出成功与否弹窗都能关闭）
+  const confirmForceLogout = async () => {
+    setForceLogoutVisible(false);
+    try {
+      await invoke('logout');
+      await invoke('clear_user_info');
+      setIsLogin(false);
+      setUserInfo({ uuid: '' });
+      history.push('/signIn');
+    } catch (error) {
+      console.error('强制退出登录失败:', error);
+    }
+  };
 
   // 使用系统通知hook
   useSystemNotify(userInfo.uuid);
@@ -89,7 +137,9 @@ const HomeLayout = () => {
   // 最小化到系统托盘
   const hideToTray = async () => {
     const currentWindow = Window.getCurrent();
-    await invoke('add_user_map', { map: { window_hide: '1' } });
+    await invoke('add_user_map', {
+      map: { window_hide: '1', app_foreground: '0' },
+    });
     await currentWindow.hide();
     setCloseModalVisible(false);
   };
@@ -121,10 +171,10 @@ const HomeLayout = () => {
     // 从服务器获取用户信息
     try {
       const res: HttpResponse = await invoke('post_request', {
-        url: TALK_API + '/user/me',
+        url: getApiBase() + '/user/me',
         body: '',
       });
-      const data: ResponseData = JSON.parse(res.body);
+      const data: ResponseData<UserInfo> = JSON.parse(res.body);
       const remoteUserInfo: UserInfo = data.data;
 
       // 从 common_db 获取缓存的用户信息
@@ -148,9 +198,43 @@ const HomeLayout = () => {
     }
   };
 
+  // 登录后检查是否已绑定二次认证因素, 未绑定则引导绑定邮箱(可跳过)
+  const checkAuthFactorBound = async () => {
+    if (authFactorChecked) return;
+    authFactorChecked = true;
+    try {
+      const data = await list_auth_factors();
+      const hasEmail = data.list.some(
+        (f) => f.factor_type === AuthFactorType.EMAIL,
+      );
+      if (hasEmail) return;
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'settings.authFactor.title' }),
+        content: intl.formatMessage({
+          id: 'settings.authFactor.loginPrompt',
+          defaultMessage: '为了账号安全，建议绑定邮箱二次认证。是否现在绑定？',
+        }),
+        okText: intl.formatMessage({
+          id: 'settings.authFactor.goBind',
+          defaultMessage: '去绑定',
+        }),
+        cancelText: intl.formatMessage({
+          id: 'settings.authFactor.later',
+          defaultMessage: '稍后',
+        }),
+        onOk: () => {
+          history.push('/home/settings?tab=authFactor');
+        },
+      });
+    } catch (error) {
+      console.log('检查二次认证因素失败', error);
+    }
+  };
+
   //初始化用户信息
   useEffect(() => {
     initUserInfo();
+    checkAuthFactorBound();
   }, []);
 
   return (
@@ -180,18 +264,25 @@ const HomeLayout = () => {
           <div className={styles.rightSideBarToolDraggable}>
             <DraggableHeader />
           </div>
+          <AnnouncementBanner />
           {!isConnected && (
             <div className={styles.quicReconnectTip}>
               <span className={styles.tipIcon}>⚠️</span>
               <span className={styles.tipText}>
-                {intl.formatMessage({ id: 'homeLayout.connectionDisconnected' })}
+                {intl.formatMessage({
+                  id: 'homeLayout.connectionDisconnected',
+                })}
               </span>
               <div
                 className={styles.tipReconnectButton}
                 onClick={handleReconnect}
               >
                 <ReloadOutlined spin={isReconnecting} />
-                <span>{isReconnecting ? intl.formatMessage({ id: 'homeLayout.reconnecting' }) : intl.formatMessage({ id: 'homeLayout.reconnect' })}</span>
+                <span>
+                  {isReconnecting
+                    ? intl.formatMessage({ id: 'homeLayout.reconnecting' })
+                    : intl.formatMessage({ id: 'homeLayout.reconnect' })}
+                </span>
               </div>
             </div>
           )}
@@ -225,15 +316,20 @@ const HomeLayout = () => {
           <Outlet />
         </div>
       </div>
+      <ConnectionStatusTag statusTag={statusTag} />
+      <MessageAlertBanner />
       <Modal
         title={intl.formatMessage({ id: 'homeLayout.closeWindow' })}
         open={closeModalVisible}
         onCancel={() => setCloseModalVisible(false)}
+        closable={false}
         footer={null}
         centered
       >
         <div style={{ padding: '16px 0' }}>
-          <p style={{ marginBottom: 16 }}>{intl.formatMessage({ id: 'homeLayout.selectCloseMethod' })}</p>
+          <p style={{ marginBottom: 16 }}>
+            {intl.formatMessage({ id: 'homeLayout.selectCloseMethod' })}
+          </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button
               onClick={hideToTray}
@@ -262,6 +358,21 @@ const HomeLayout = () => {
             </button>
           </div>
         </div>
+      </Modal>
+      <Modal
+        title={intl.formatMessage({ id: 'homeLayout.forceLogoutTitle' })}
+        open={forceLogoutVisible}
+        onOk={confirmForceLogout}
+        okText={intl.formatMessage({ id: 'homeLayout.forceLogout' })}
+        cancelButtonProps={{ style: { display: 'none' } }}
+        closable={false}
+        maskClosable={false}
+        centered
+      >
+        <p style={{ padding: '16px 0' }}>
+          {forceLogoutReason ||
+            intl.formatMessage({ id: 'homeLayout.forceLogoutContent' })}
+        </p>
       </Modal>
     </div>
   );

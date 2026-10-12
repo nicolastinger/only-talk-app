@@ -5,25 +5,8 @@ import { listen } from '@tauri-apps/api/event';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { WindowOptions } from '@tauri-apps/api/window';
+import { TextQuicMsgVo } from '@workspace/types';
 import { useEffect, useMemo, useState } from 'react';
-
-interface WebRTCSignalMsgRaw {
-  type: 'offer' | 'answer' | 'candidate';
-  sender: string;
-  receiver: string;
-  sessionId: string;
-  data: any;
-  timestamp: number;
-}
-
-interface TextQuicMsgVo {
-  nano_id: string;
-  text_type: number;
-  raw: string;
-  recv_user: string;
-  send_user: string;
-  timestamp: number;
-}
 
 /** WebRTC窗口最大数量 */
 const MAX_WEBRTC_WINDOWS = 2;
@@ -125,6 +108,7 @@ const openWebRTCChatHandler = async (
   localUserId: string,
   isInitiator: boolean,
   signalData?: string,
+  sessionId?: string,
 ) => {
   // 检查是否已有该好友的WebRTC窗口
   const isAlreadyOpen = await isWebRTCWindowOpen(friendId);
@@ -157,6 +141,9 @@ const openWebRTCChatHandler = async (
   if (signalData) {
     url += `&signalData=${encodeURIComponent(signalData)}`;
   }
+  if (sessionId) {
+    url += `&sessionId=${encodeURIComponent(sessionId)}`;
+  }
   const webviewOptions: WebviewOptions = {
     x: 0,
     y: 0,
@@ -181,68 +168,68 @@ const openWebRTCChatHandler = async (
 };
 
 const useWebRTCSignalApi = () => {
-  const [state, setState] = useState<boolean>(false);
-  const userInfo = useBearStore((state) => state.userInfo);
+  const [state] = useState<boolean>(false);
+
+  // WebRTC 窗口的开启由「邀请(12)来电监听 / 发起方直接开窗」流程驱动。
+  // 100 信令只在已打开的 WebRTC 窗口内部处理，本 hook 不再监听信令自动开窗。
+  return useMemo(() => ({ state }), [state]);
+};
+
+/**
+ * 全局监听视频通话来电（text_type=12），在 RootLayout 中调用，
+ * 避免依赖聊天会话窗口的 useMessageApi 而漏接。作为被叫打开 WebRTC 窗口（responder）。
+ */
+const useWebRTCIncomingCall = () => {
+  const meUuid = useBearStore((state) => state.userInfo?.uuid) || '';
 
   useEffect(() => {
+    if (!meUuid) return;
     let unlisten: (() => void) | undefined;
 
     const setupListener = async () => {
       try {
-        unlisten = await listen<string>('webrtc_signal', async (event) => {
-          console.log('主窗口收到 WebRTC 信令消息:', event.payload);
-          try {
-            const msgVo: TextQuicMsgVo = JSON.parse(event.payload);
-            const signalMsg: WebRTCSignalMsgRaw = JSON.parse(msgVo.raw);
-            const localUserId = userInfo.uuid;
+        unlisten = await listen<string>('call_control', async (event) => {
+          const text: TextQuicMsgVo = JSON.parse(event.payload);
+          if (text.recv_user !== meUuid) return;
+          // 自己发给自己的邀请(self-echo)：忽略，避免打开自呼窗口形成本端自连
+          if (text.send_user === meUuid) return;
+          if (text.text_type !== 12) return; // MSG_TYPE_P2P_VIDEO_CALL_INVITE
 
-            if (signalMsg.type === 'offer') {
-              // 检查是否已有该好友的WebRTC窗口
-              const isAlreadyOpen = await isWebRTCWindowOpen(signalMsg.sender);
-              if (isAlreadyOpen) {
-                console.log(
-                  `[WebRTC] 好友 ${signalMsg.sender} 的窗口已存在，信令将由Chat窗口自行处理`,
-                );
-                // Chat窗口自己监听了webrtc_signal事件，会自动处理
-                // 只需聚焦已有窗口
-                const label = getWebRTCWindowLabel(signalMsg.sender);
-                const existingWindow = await WebviewWindow.getByLabel(label);
-                if (existingWindow) {
-                  try {
-                    await existingWindow.setFocus();
-                  } catch {
-                    // 忽略聚焦失败
-                  }
-                }
-                return;
-              }
-              console.log('收到 offer，打开 WebRTC 聊天窗口');
-              await openWebRTCChatHandler(
-                signalMsg.sender,
-                localUserId,
-                false,
-                msgVo.raw,
-              );
-            }
-          } catch (e) {
-            console.error('处理 WebRTC 信令失败:', e);
+          let sessionId = '';
+          try {
+            const parsed = JSON.parse(text.raw);
+            sessionId = parsed.sessionId || '';
+          } catch {
+            // 忽略解析失败
           }
+
+          console.log(
+            `[WebRTC] 收到来电邀请 - 发起方: ${text.send_user}, sessionId: ${sessionId}`,
+          );
+          await openWebRTCChatHandler(
+            text.send_user,
+            meUuid,
+            false,
+            undefined,
+            sessionId,
+          ).catch((e) => {
+            console.error('[WebRTC] 打开被叫窗口失败:', e);
+          });
         });
+        console.log('[WebRTC] ✅ 来电监听已设置');
       } catch (e) {
-        console.error('监听 WebRTC 信令失败:', e);
+        console.error('[WebRTC] ❌ 设置来电监听失败:', e);
       }
     };
 
     setupListener();
 
     return () => {
-      if (unlisten) {
-        unlisten();
-      }
+      if (unlisten) unlisten();
     };
-  }, [userInfo.uuid]);
+  }, [meUuid]);
 
-  return useMemo(() => ({ state }), [state]);
+  return undefined;
 };
 
 export {
@@ -250,5 +237,6 @@ export {
   isWebRTCWindowOpen,
   openWebRTCChatHandler,
   updateWebRTCWindowState,
+  useWebRTCIncomingCall,
   useWebRTCSignalApi,
 };

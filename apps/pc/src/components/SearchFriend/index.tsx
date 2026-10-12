@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { FormattedMessage, useIntl } from '@umijs/max';
@@ -5,6 +6,7 @@ import {
   add_friend,
   cache_user_info,
   getFiles,
+  isHttpSuccess,
   search_user_by_account,
 } from '@workspace/services';
 import { FriendRequestInfoDTO, UserInfo } from '@workspace/types';
@@ -30,7 +32,7 @@ const SearchFriend = () => {
     try {
       let result = await search_user_by_account(values.searchKey);
       console.log(result);
-      if (result.netSuccess && result.res.status === 200) {
+      if (result.netSuccess && isHttpSuccess(result.res.status)) {
         const data = JSON.parse(result.res.body);
         const users: UserInfo = data.data;
         setResults([users]);
@@ -74,7 +76,7 @@ const SearchFriend = () => {
 
       const result = await add_friend(friendData);
       console.log('请求结果', result);
-      if (result.netSuccess && result.res.status === 200) {
+      if (result.netSuccess && isHttpSuccess(result.res.status)) {
         message.success(
           intl.formatMessage(
             { id: 'friendRequest.requestSent' },
@@ -181,7 +183,12 @@ const SearchFriend = () => {
                       {item.username}
                     </Avatar>
                   }
-                  title={item.username}
+                  title={
+                    <span>
+                      {item.username}
+                      <UserTypeTag type={item.user_type} />
+                    </span>
+                  }
                   description={item.info}
                 />
               </List.Item>
@@ -200,6 +207,7 @@ const SearchFriend = () => {
         open={isModalVisible}
         onOk={handleAddFriend}
         onCancel={handleCancel}
+        closable={false}
         okText={intl.formatMessage({ id: 'friendRequest.sendRequest' })}
         cancelText={intl.formatMessage({ id: 'friendRequest.cancel' })}
       >

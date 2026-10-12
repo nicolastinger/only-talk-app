@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
+import { openUserProfile } from '@/utils/userProfile';
 import {
   convertPathToTauriUrl,
   getChatFileByBizId,
@@ -21,6 +22,10 @@ type GroupMineChatBoxProps = {
   icon?: string;
   groupUuid: string;
   currentBizId?: string;
+  /** 上传进度百分比 0-100（发送中展示） */
+  uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: string;
 };
 
 // 群聊消息类型
@@ -29,6 +34,8 @@ const MSG_TYPE_GROUP_IMAGE = 2002;
 const MSG_TYPE_GROUP_FILE = 2003;
 
 const isLocalFilePath = (raw: string): boolean => {
+  // JSON 格式的 raw 不是本地文件路径（群聊消息 raw 始终是 JSON）
+  if (raw.startsWith('{') || raw.startsWith('[')) return false;
   return (
     raw.includes(':\\') || raw.startsWith('/') || raw.startsWith('file://')
   );
@@ -92,10 +99,12 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
     groupUuid,
     currentBizId,
   } = props;
+  const sending = isAck === false;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<GroupFileRecord | null>(null);
+  const [imageBizId, setImageBizId] = useState<string>('');
 
   const userInfo = useBearStore((state) => state.userInfo);
   const [ackFlag, setAckFlag] = React.useState(0);
@@ -169,13 +178,15 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           return;
         }
 
-        bizId = parseGroupImageBizId(raw);
+        bizId = parseGroupImageBizId(raw) || undefined;
       }
 
       if (!bizId) {
         console.error('GroupMineChatBox - No bizId found');
         return;
       }
+
+      setImageBizId(bizId);
 
       if (imageCache.has(bizId)) {
         setImageUrl(imageCache.get(bizId)!);
@@ -231,8 +242,15 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           src={imageUrl}
           loading={loading}
           friendUuid={groupUuid}
-          currentBizId={currentBizId || ''}
+          currentBizId={imageBizId || currentBizId || ''}
+          bizId={imageBizId || currentBizId || ''}
+          autoDownload={true}
+          sending={sending}
+          uploadProgress={props.uploadProgress}
+          sendPhase={props.sendPhase}
           meUuid={userInfo?.uuid || ''}
+          isGroup={true}
+          nanoId={nano_id}
         />
       );
     }
@@ -246,6 +264,9 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
             fileType={fileRecord.file_type}
             nanoId={nano_id}
             loading={loading}
+            sending={sending}
+            uploadProgress={props.uploadProgress}
+            sendPhase={props.sendPhase}
           />
         );
       }
@@ -288,13 +309,9 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
             }`}
           >
             {renderMessage()}
-            {ackFlag === 101 && (
-              <span className={styles.sentBadge} />
-            )}
+            {ackFlag === 101 && <span className={styles.sentBadge} />}
           </div>
-          {ackFlag === 101 && (
-            <span className={styles.sentLabel}>已发送</span>
-          )}
+          {ackFlag === 101 && <span className={styles.sentLabel}>已发送</span>}
           <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
         </div>
       </div>
@@ -306,6 +323,7 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
           className={styles.imgItem}
           alt="icon"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() => openUserProfile(userInfo?.uuid || '')}
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}

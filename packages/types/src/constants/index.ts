@@ -1,4 +1,33 @@
-export const TALK_API = "https://onlytalk.cn:8443";
+/**
+ * HTTP API 基础地址的兜底默认值(prod)。
+ * 实际运行时地址由客户端公共库 client_config 表的 `server.api_base` 决定(dev 自动 http://127.0.0.1:8443),
+ * 启动后经 appConfig.initAppConfig() 写入内存, 请用 httpService 的 getApiBase() 获取。
+ */
+export const TALK_API = "https://onlytalk.cn";
+
+/** 客户端配置键(公共库 client_config 表) */
+export const CLIENT_CONFIG_KEYS = {
+  serverApiBase: "server.api_base",
+  serverDomain: "server.domain",
+  appTheme: "app.theme",
+  appLanguage: "app.language",
+  autoDownloadWifi: "app.auto_download_wifi",
+} as const;
+
+/** 客户端配置项 */
+export interface ClientConfigItem {
+  key: string;
+  value: string;
+}
+
+/**
+ * 上传大小上限(字节), 与后端 src-tauri/src/utils/global_static_str.rs 保持一致。
+ * 前端在发送前预校验并提示, 后端仍会二次校验。
+ */
+export const UPLOAD_LIMITS = {
+  image: 100 * 1024 * 1024,
+  file: 500 * 1024 * 1024,
+} as const;
 
 export const HTTP_METHOD = {
   GET: "get_request",
@@ -14,4 +43,5 @@ export const HttpStatusMap: Map<number, string> = new Map([
   [403, "Forbidden"],
   [404, "Not Found"],
   [500, "Internal Server Error"],
+  [604, "DTO Validation Failed"],
 ]);

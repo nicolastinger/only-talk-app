@@ -1,6 +1,8 @@
+use tauri::ipc::Channel;
 use tauri::{generate_handler, AppHandle, Manager, Wry};
 mod quic_service;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, OnceLock};
 
 use crc::Crc;
@@ -10,52 +12,64 @@ use sqlx::SqlitePool;
 use tauri::path::BaseDirectory;
 use tokio::sync::{Mutex, RwLock};
 pub mod cmd;
-mod config;
-mod dao;
-mod dto;
+pub mod config;
+pub mod dao;
+pub mod dto;
 mod emit_app;
-mod entity;
+pub mod entity;
 mod init_app;
 pub mod service;
 #[cfg(desktop)]
 mod tray;
 pub mod utils;
-mod vo;
+pub mod vo;
 
 use entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
-    compress_image_to_webp_command, delete_request, get_request, post_form_data_request,
-    post_request, put_request, upload_file_request, upload_file_with_extra_fields_request,
-    upload_multiple_files_request, upload_multiple_files_with_extra_fields_request,
+    compress_image_to_webp_command, copy_file_to_temp, crop_image_to_webp_command, delete_request,
+    get_request, post_form_data_request, post_request, put_request, upload_file_request,
+    upload_file_with_extra_fields_request, upload_multiple_files_request,
+    upload_multiple_files_with_extra_fields_request,
 };
 use crate::cmd::auth_controller::{
-    clear_user_info, delete_quick_login_user, get_quick_login_users, logout, quick_login,
-    refresh_token_command, sign_in,
+    clear_user_info, delete_quick_login_user, get_quick_login_users, github_login, logout,
+    quick_login, refresh_token_command, sign_in,
 };
 use crate::cmd::chat_record_controller::{
-    get_chat_record_by_type, get_chat_record_from_store, get_group_chat_record_from_store,
-    mark_group_read, mark_read, send_file_msg, send_group_file_msg, send_group_image_msg,
-    send_group_text_msg, send_image_msg, send_text_msg,
+    delete_chat_record, delete_group_chat_record, forward_chat_messages, get_chat_record_by_type,
+    get_chat_record_from_store, get_group_chat_record_from_store, get_pending_send_records,
+    ignore_send_msg, mark_group_read, mark_read, recall_chat_message, recall_group_chat_message,
+    retry_send_msg, send_call_control_msg, send_file_msg, send_group_file_msg,
+    send_group_image_msg, send_group_text_msg, send_image_msg, send_text_msg, send_webrtc_signal,
 };
 use crate::cmd::chat_session_controller::{
-    clear_all_unread_sessions, create_chat_session, get_chat_session_from_store,
-    mark_read_chat_session, search_chat_session,
+    clear_all_unread_sessions, create_chat_session, get_chat_session_from_store, hide_chat_session,
+    mark_read_chat_session, search_chat_session, session_uuid_cmd,
 };
+use crate::cmd::config_controller::{
+    get_all_client_config, get_client_config, reset_client_config, set_client_config,
+};
+use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
-    debug_resource_paths, get_chat_file_by_biz_id, get_file_by_biz_id, get_local_file,
+    debug_resource_paths, delete_local_file, get_chat_file_by_biz_id, get_file_by_biz_id,
+    get_local_file, get_local_file_list, get_local_file_size, has_local_chat_file, open_local_file,
 };
 use crate::cmd::friend_controller::{
-    delete_friend_command, get_friend_info, get_friend_list, search_friend,
-    update_local_friend_list,
+    block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
+    search_friend, unblock_friend_command, update_friend_profile_command, update_local_friend_list,
 };
 use crate::cmd::group_controller::{
     accept_group_invitation_command, create_group_chat_session_command, create_group_command,
     decline_group_invitation_command, get_group_chat_session_list, get_group_info_command,
     get_group_list, get_group_members, invite_group_members_command, join_group_command,
     leave_group_command, remove_group_member_command, search_group, sync_group_list_command,
-    sync_group_members_command,
+    sync_group_members_command, update_group_profile_command,
 };
+use crate::cmd::log_controller::{
+    clear_app_logs, get_app_logs, get_client_log_files, read_client_log_file,
+};
+use crate::cmd::network_controller::get_network_type;
 use crate::cmd::notification_controller::{
     batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level,
     get_system_notification, get_unread_notification_counts,
@@ -66,11 +80,15 @@ use crate::cmd::p2p_controller::{
     send_p2p_init_msg, send_p2p_media_config, send_p2p_media_control, send_p2p_media_info,
     send_p2p_media_ready, send_p2p_text_msg, send_p2p_video_call_end, send_p2p_video_call_invite,
     send_p2p_video_call_response, send_p2p_video_config, send_p2p_video_frame, send_video_frame,
+    start_video_channel,
 };
+use crate::cmd::sync_controller::get_sync_history;
+use crate::cmd::update_controller::{download_update_package, get_latest_release, install_update};
 use crate::cmd::user_controller::{
     add_user_map, cache_user_info, disconnect_quic_command, get_cached_user_info,
     get_cached_user_info_by_account, get_quic_connection_state, get_user_info_with_cache,
-    get_user_map, reconnect_quic_command, refresh_user_info, update_user_info_command,
+    get_user_map, reconnect_quic_command, refresh_user_info, remove_user_map,
+    update_user_info_command,
 };
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
@@ -82,6 +100,27 @@ static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();
 // 创建CRC-16/X25计算器
 const X25: Crc<u16> = Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
 
+/// P2P 媒体数据接收通道（前端注册，用于二进制帧直传）
+/// 使用 `InvokeResponseBody`：`Vec<u8>` 的 `IpcResponse` 实现会序列化为 JSON number 数组，
+/// 而 `InvokeResponseBody::Raw(bytes)` 走二进制 octet-stream。
+pub struct P2pMediaChannels {
+    pub video: Channel<tauri::ipc::InvokeResponseBody>,
+    pub audio: Channel<tauri::ipc::InvokeResponseBody>,
+}
+
+/// P2P 媒体发送队列：有界 mpsc 队列 + 丢帧计数器
+/// 用于发送路径非阻塞入队，网络背压时主动丢帧而非阻塞编码线程
+pub struct MediaSendQueue {
+    pub tx: tokio::sync::mpsc::Sender<Vec<u8>>,
+    pub dropped_frames: Arc<AtomicU64>,
+}
+
+/// 会话后台任务控制（退出登录时 cancel + await 彻底退出）
+pub struct SessionControl {
+    pub cancel: tokio_util::sync::CancellationToken,
+    pub handle: tokio::task::JoinHandle<()>,
+}
+
 lazy_static! {
     pub static ref GLOBAL_QUIC_SERVER_LIST: Arc<RwLock<HashMap<String, QuicConnection>>> =
         Arc::new(RwLock::new(HashMap::new()));
@@ -89,6 +128,10 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
     pub static ref P2P_STREAM_SENDER: DashMap<String, DashMap<String, TargetSendStream>> =
         DashMap::new();
+    // P2P 媒体接收通道注册表：key = friend_id(uuid)，value = 前端注册的视频/音频 Channel
+    pub static ref P2P_MEDIA_CHANNELS: DashMap<String, P2pMediaChannels> = DashMap::new();
+    // P2P 媒体发送队列注册表：key = friend_id(uuid)，value = 有界发送队列
+    pub static ref P2P_MEDIA_SEND_QUEUES: DashMap<String, MediaSendQueue> = DashMap::new();
     pub static ref GLOBAL_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_COMMON_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
     pub static ref GLOBAL_PRIVATE_SQL_POOL: RwLock<Option<Arc<SqlitePool>>> = RwLock::new(None);
@@ -99,10 +142,13 @@ lazy_static! {
     // MediaData通道取消令牌，用于视频通话结束时停止媒体帧接收循环
     pub static ref MEDIA_DATA_CANCEL_TOKEN: Arc<RwLock<Option<tokio_util::sync::CancellationToken>>> =
         Arc::new(RwLock::new(None));
+    // 会话级后台任务控制(登录启动/登出 cancel+await)
+    pub static ref SESSION_CONTROL: RwLock<Option<SessionControl>> = RwLock::new(None);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(non_snake_case)]
+#[allow(clippy::disallowed_methods)]
 pub fn run() {
     #[cfg(target_os = "linux")]
     {
@@ -115,9 +161,25 @@ pub fn run() {
         std::env::set_var("RUST_BACKTRACE", "full");
     }
 
-    tauri::Builder::default()
+    #[cfg(desktop)]
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_view::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ));
+
+    #[cfg(not(desktop))]
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_view::init());
+
+    builder
         .setup(|app| {
             APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
             let handle = app.handle().clone();
@@ -136,6 +198,19 @@ pub fn run() {
                 }
             }
 
+            // 窗口初始为隐藏(visible:false)，由前端首帧渲染后调用 show()
+            // 兜底：5 秒后若前端仍未显示（如 JS 异常），强制显示，避免窗口永久不可见
+            #[cfg(desktop)]
+            {
+                let win = app.get_webview_window("main");
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                    if let Some(win) = win {
+                        let _ = win.show();
+                    }
+                });
+            }
+
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = init_app(root_path, Some(handle)).await {
                     eprintln!("初始化失败: {}", e);
@@ -146,6 +221,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(generate_handler![
             send_text_msg,
+            send_webrtc_signal,
+            send_call_control_msg,
             send_group_text_msg,
             send_group_image_msg,
             send_group_file_msg,
@@ -159,8 +236,14 @@ pub fn run() {
             upload_multiple_files_with_extra_fields_request,
             post_form_data_request,
             compress_image_to_webp_command,
+            crop_image_to_webp_command,
+            copy_file_to_temp,
+            get_device_info,
+            get_network_type,
+            get_local_file_size,
             sign_in,
             refresh_token_command,
+            github_login,
             logout,
             clear_user_info,
             get_quick_login_users,
@@ -168,6 +251,7 @@ pub fn run() {
             delete_quick_login_user,
             get_user_map,
             add_user_map,
+            remove_user_map,
             send_video_frame,
             send_p2p_init_msg,
             send_init_p2p_udp,
@@ -187,28 +271,55 @@ pub fn run() {
             send_p2p_file_data,
             send_p2p_file_transfer_request,
             send_p2p_file_transfer_response,
+            start_video_channel,
             get_chat_record_from_store,
             get_chat_record_by_type,
             get_group_chat_record_from_store,
+            get_pending_send_records,
+            retry_send_msg,
+            ignore_send_msg,
+            delete_chat_record,
+            delete_group_chat_record,
+            forward_chat_messages,
+            recall_chat_message,
+            recall_group_chat_message,
             mark_group_read,
             get_chat_session_from_store,
+            get_sync_history,
+            get_app_logs,
+            clear_app_logs,
+            get_client_log_files,
+            read_client_log_file,
             get_friend_info,
             delete_friend_command,
             mark_read,
             get_friend_list,
             search_friend,
+            block_friend_command,
+            unblock_friend_command,
+            get_black_list,
             create_chat_session,
             get_system_notification,
             update_local_friend_list,
+            get_client_config,
+            set_client_config,
+            get_all_client_config,
+            reset_client_config,
+            update_friend_profile_command,
             batch_read_system_notification,
             clear_all_unread_notifications,
             clear_unread_by_level,
             get_unread_notification_counts,
             mark_read_chat_session,
+            hide_chat_session,
             clear_all_unread_sessions,
             get_local_file,
             get_file_by_biz_id,
             get_chat_file_by_biz_id,
+            has_local_chat_file,
+            open_local_file,
+            get_local_file_list,
+            delete_local_file,
             debug_resource_paths,
             send_image_msg,
             send_file_msg,
@@ -233,10 +344,15 @@ pub fn run() {
             remove_group_member_command,
             sync_group_list_command,
             sync_group_members_command,
+            update_group_profile_command,
             create_group_chat_session_command,
             get_group_chat_session_list,
             search_group,
-            search_chat_session
+            search_chat_session,
+            session_uuid_cmd,
+            get_latest_release,
+            download_update_package,
+            install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

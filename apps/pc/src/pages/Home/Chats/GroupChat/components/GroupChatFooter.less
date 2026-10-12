@@ -2,6 +2,7 @@
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   width: 100%;
   height: 100%;
+  border-radius: 8px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
 }
@@ -27,7 +28,7 @@
 }
 
 .footerBtn {
-  font-size: 20px;
+  font-size: 18px;
   color: var(--color-gray-7);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -169,8 +170,8 @@
   resize: none;
   min-height: 100%;
   max-height: 100%;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 12px;
   padding: 12px 14px;
   color: var(--text-color);
@@ -182,7 +183,7 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1),
       0 2px 8px rgba(64, 150, 255, 0.1);
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--input-bg-focus);
   }
 
   &::placeholder {
@@ -193,8 +194,8 @@
 .footerTextArea:global(.ant-input-outlined) {
   height: 100%;
   min-height: unset;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
 
   &:focus {
     border-color: var(--color-primary);
@@ -207,7 +208,7 @@
   height: 100%;
   min-height: unset;
   resize: none;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--input-bg);
   color: var(--text-color);
 
   &:focus {

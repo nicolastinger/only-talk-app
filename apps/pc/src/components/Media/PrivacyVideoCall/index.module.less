@@ -105,6 +105,95 @@
   }
 }
 
+/* ==================== 响铃/呼叫遮罩 ==================== */
+
+.ringOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    rgba(26, 26, 46, 0.96) 0%,
+    rgba(15, 52, 96, 0.96) 100%
+  );
+  z-index: 120;
+  backdrop-filter: blur(12px);
+}
+
+.ringContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.ringAvatarWrap {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  padding: 6px;
+  background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
+  box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.5);
+  animation: ringPulse 1.8s ease-out infinite;
+}
+
+.ringAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #1a1a2e;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+}
+
+.ringName {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.ringStatus {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+.ringActions {
+  margin-top: 12px;
+}
+
+.ringCancelBtn {
+  width: 60px !important;
+  height: 60px !important;
+  font-size: 24px;
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%) !important;
+  border: none !important;
+  box-shadow: 0 6px 24px rgba(255, 77, 79, 0.4);
+  animation: pulse 2s infinite;
+
+  &:hover {
+    background: linear-gradient(135deg, #ff7875 0%, #ffa39e 100%) !important;
+    box-shadow: 0 8px 28px rgba(255, 77, 79, 0.5);
+  }
+}
+
+@keyframes ringPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 22px rgba(24, 144, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+  }
+}
+
 .videoOffOverlay {
   position: absolute;
   top: 0;

@@ -60,9 +60,9 @@ impl UserToken {
         .bind(&token.user_id)
         .bind(&token.refresh_token)
         .bind(&token.local_credit)
-        .bind(&token.created_at)
-        .bind(&token.updated_at)
-        .bind(&token.version)
+        .bind(token.created_at)
+        .bind(token.updated_at)
+        .bind(token.version)
         .execute(&pool_sqlite)
         .await?;
         Ok(())

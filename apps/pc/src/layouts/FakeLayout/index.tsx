@@ -1,6 +1,6 @@
 import DraggableHeader from '@/components/DraggableHeader';
 import { CamouflageButton } from '@/components/ToolButtons';
-import { TALK_API } from '@/constants';
+import { getApiBase } from '@workspace/services';
 import { useSystemNotify } from '@/hooks/useSystemNotify';
 import { useBearStore } from '@/store/store';
 import {
@@ -74,10 +74,10 @@ const HomeLayout = () => {
     // 从服务器获取用户信息
     try {
       const res: HttpResponse = await invoke('post_request', {
-        url: TALK_API + '/user/me',
+        url: getApiBase() + '/user/me',
         body: '',
       });
-      const data: ResponseData = JSON.parse(res.body);
+      const data: ResponseData<UserInfo> = JSON.parse(res.body);
       const userInfo: UserInfo = data.data;
       await invoke('add_user_map', { map: { me: JSON.stringify(userInfo) } });
       setUserInfo(userInfo);

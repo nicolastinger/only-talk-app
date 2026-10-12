@@ -104,6 +104,26 @@ const routes = [
               },
             ],
           },
+          {
+            name: 'menu.plaza',
+            path: 'plaza',
+            component: '@/layouts/HomeLayout/PlazaLayout',
+          },
+          {
+            name: 'menu.plazaUserMoments',
+            path: 'plaza/user/:uuid',
+            component: './Home/Plaza/UserMoments',
+          },
+          {
+            name: 'menu.moments',
+            path: 'moments',
+            component: './Home/Moments',
+          },
+          {
+            name: 'menu.momentDetail',
+            path: 'moments/:id',
+            component: './Home/Moments/Detail',
+          },
         ],
       },
       {

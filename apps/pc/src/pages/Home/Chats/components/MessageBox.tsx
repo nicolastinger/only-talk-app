@@ -1,5 +1,7 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { formatMessageTime } from '@/utils/format';
+import { isRecallMessage } from '@/utils/recall';
 import { getFiles } from '@workspace/services';
 import { MessageQueueProps } from '@workspace/types';
 import { Badge } from 'antd';
@@ -9,7 +11,13 @@ import styles from './styles/MessageBox.less';
 // 图片缓存
 const imageCache = new Map<string, string>();
 
-const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
+const MessageBox = (
+  props: MessageQueueProps & {
+    isSelected?: boolean;
+    userType?: number;
+    isGroup?: boolean;
+  },
+) => {
   const {
     message,
     title,
@@ -20,6 +28,8 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
     send_user,
     recv_user,
     isSelected,
+    userType,
+    isGroup,
   } = props;
 
   // 判断是否是自己给自己的会话
@@ -29,40 +39,16 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
   const [loading, setLoading] = useState(false);
 
   const displayMessage = useMemo(() => {
+    if (isRecallMessage(text_type ?? -1, message)) {
+      return '撤回了一条消息';
+    }
+
     if (text_type === 2 || text_type === 2002) {
       return '[图片]';
     }
 
     if (text_type === 3 || text_type === 2003) {
       return '[文件]';
-    }
-
-    if (text_type === 4) {
-      return '[隐私模式]';
-    }
-
-    if (text_type === 5) {
-      return '[视频通话]';
-    }
-
-    if (text_type === 12) {
-      return '[视频通话邀请]';
-    }
-
-    if (text_type === 13) {
-      return '[已接听]';
-    }
-
-    if (text_type === 14) {
-      return '[已拒绝]';
-    }
-
-    if (text_type === 15) {
-      return '[通话结束]';
-    }
-
-    if (text_type === 100) {
-      return '[WebRTC信令]';
     }
 
     if (text_type === 2004) {
@@ -145,6 +131,8 @@ const MessageBox = (props: MessageQueueProps & { isSelected?: boolean }) => {
           <div className={styles.titleText}>
             <div className={styles.title}>
               {title}
+              <UserTypeTag type={userType} />
+              {isGroup && <span className={styles.groupBadge}>群</span>}
               {isSelfChat && (
                 <span className={styles.selfChatBadge}>📝 笔记</span>
               )}

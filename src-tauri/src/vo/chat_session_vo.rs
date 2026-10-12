@@ -17,7 +17,13 @@ pub struct ChatSessionVo {
     pub is_top: i64,
     pub friend_icon: String,
     pub friend_name: String,
+    /// 好友用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
+    pub friend_user_type: Option<i16>,
     pub group_id: Option<String>,
+    /// 会话标识: 单聊由用户对 v5 派生 / 群聊 = group_id
+    pub session_uuid: Option<String>,
+    /// 会话事实: 服务端该会话最新消息 id(来自 /session/list)
+    pub last_message_id: i64,
 }
 
 impl ChatSessionVo {
@@ -35,7 +41,10 @@ impl ChatSessionVo {
             is_top: chat_session.is_top,
             friend_icon: "".to_string(),
             friend_name: "".to_string(),
+            friend_user_type: None,
             group_id: chat_session.group_id,
+            session_uuid: chat_session.session_uuid,
+            last_message_id: chat_session.last_message_id,
         })
     }
 }

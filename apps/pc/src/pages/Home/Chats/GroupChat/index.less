@@ -1,7 +1,7 @@
 .container {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: var(--chat-bg-gradient);
   overflow: hidden;
   position: relative;
 }
@@ -13,16 +13,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(
-      ellipse at 10% 20%,
-      rgba(102, 126, 234, 0.04) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 90% 80%,
-      rgba(118, 75, 162, 0.04) 0%,
-      transparent 50%
-    );
+  background: var(--chat-bg-overlay);
   pointer-events: none;
   z-index: 0;
 }
@@ -49,11 +40,38 @@
 
 .uploadLoadingProgress {
   height: 100%;
-  width: 30%;
+  width: 0;
   background: linear-gradient(90deg, #4096ff, #69b1ff, #4096ff);
   background-size: 200% 100%;
-  animation: loadingSlide 1.5s ease-in-out infinite;
+  transition: width 0.25s ease;
+  animation: loadingShimmer 1.2s linear infinite;
   box-shadow: 0 0 10px rgba(64, 150, 255, 0.5);
+}
+
+.uploadLoadingIndeterminate {
+  height: 100%;
+  width: 40%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #4096ff, #69b1ff, #4096ff);
+  animation: uploadLoadingSlide 1.1s ease-in-out infinite;
+}
+
+@keyframes loadingShimmer {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes uploadLoadingSlide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
 }
 
 @keyframes loadingSlide {

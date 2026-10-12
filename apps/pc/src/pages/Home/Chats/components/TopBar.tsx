@@ -1,3 +1,5 @@
+import ReportModal from '@/components/ReportModal';
+import UserTypeTag from '@/components/UserTypeTag';
 import { useBearStore } from '@/store/store';
 import {
   BellOutlined,
@@ -5,10 +7,15 @@ import {
   MoreOutlined,
   StopOutlined,
   UserOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { history, useIntl } from '@umijs/max';
-import { delete_friend } from '@workspace/services';
-import { FriendVo } from '@workspace/types';
+import {
+  block_friend,
+  delete_friend,
+  unblock_friend,
+} from '@workspace/services';
+import { FriendVo, ReportTargetType } from '@workspace/types';
 import { Dropdown, Modal, message } from 'antd';
 import React, { useState } from 'react';
 import styles from './styles/TopBar.less';
@@ -22,6 +29,8 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   const { title, friendInfo } = props;
   const intl = useIntl();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [blockModalVisible, setBlockModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   const triggerRefresh = useBearStore((state) => state.triggerRefresh);
 
   const handleViewProfile = () => {
@@ -54,7 +63,40 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   };
 
   const handleBlock = () => {
-    message.info(intl.formatMessage({ id: 'chat.topBar.blockDeveloping' }));
+    if (friendInfo?.is_block === 1) {
+      handleUnblock();
+    } else {
+      setBlockModalVisible(true);
+    }
+  };
+
+  const confirmBlock = async () => {
+    if (!friendInfo?.friend_id) return;
+
+    try {
+      await block_friend(friendInfo.friend_id);
+      message.success(intl.formatMessage({ id: 'chat.topBar.blockedSuccess' }));
+      setBlockModalVisible(false);
+      triggerRefresh();
+    } catch (error) {
+      message.error(intl.formatMessage({ id: 'chat.topBar.blockedFailed' }));
+      console.error('拉黑好友失败:', error);
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!friendInfo?.friend_id) return;
+
+    try {
+      await unblock_friend(friendInfo.friend_id);
+      message.success(
+        intl.formatMessage({ id: 'chat.topBar.unblockedSuccess' }),
+      );
+      triggerRefresh();
+    } catch (error) {
+      message.error(intl.formatMessage({ id: 'chat.topBar.unblockedFailed' }));
+      console.error('取消拉黑失败:', error);
+    }
   };
 
   const menuItems = [
@@ -72,9 +114,20 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
     },
     {
       key: 'block',
-      label: intl.formatMessage({ id: 'chat.topBar.blockFriend' }),
+      label: intl.formatMessage({
+        id:
+          friendInfo?.is_block === 1
+            ? 'chat.topBar.unblockFriend'
+            : 'chat.topBar.blockFriend',
+      }),
       icon: <StopOutlined />,
       onClick: handleBlock,
+    },
+    {
+      key: 'report',
+      label: intl.formatMessage({ id: 'report.action' }),
+      icon: <WarningOutlined />,
+      onClick: () => setReportModalVisible(true),
     },
     {
       type: 'divider' as const,
@@ -90,7 +143,10 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.leftContainer}>{title}</div>
+      <div className={styles.leftContainer}>
+        {title}
+        <UserTypeTag type={friendInfo?.friend_user_type} />
+      </div>
       <div className={styles.rightContainer}>
         <Dropdown
           menu={{ items: menuItems }}
@@ -105,6 +161,7 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
         open={deleteModalVisible}
         onOk={confirmDeleteFriend}
         onCancel={() => setDeleteModalVisible(false)}
+        closable={false}
         okText={intl.formatMessage({ id: 'chat.topBar.confirm' })}
         cancelText={intl.formatMessage({ id: 'chat.topBar.cancel' })}
         okButtonProps={{ danger: true }}
@@ -119,6 +176,35 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
           {intl.formatMessage({ id: 'chat.topBar.deleteWarning' })}
         </p>
       </Modal>
+      <Modal
+        title={intl.formatMessage({ id: 'chat.topBar.confirmBlock' })}
+        open={blockModalVisible}
+        onOk={confirmBlock}
+        onCancel={() => setBlockModalVisible(false)}
+        closable={false}
+        okText={intl.formatMessage({ id: 'chat.topBar.confirm' })}
+        cancelText={intl.formatMessage({ id: 'chat.topBar.cancel' })}
+        okButtonProps={{ danger: true }}
+      >
+        <p>
+          {intl.formatMessage(
+            { id: 'chat.topBar.confirmBlockMsg' },
+            { name: friendInfo?.friend_name || title },
+          )}
+        </p>
+        <p style={{ color: '#999', fontSize: '12px' }}>
+          {intl.formatMessage({ id: 'chat.topBar.blockWarning' })}
+        </p>
+      </Modal>
+      {friendInfo?.friend_id && (
+        <ReportModal
+          open={reportModalVisible}
+          targetType={ReportTargetType.USER}
+          targetUuid={friendInfo.friend_id}
+          targetName={friendInfo.friend_name || title}
+          onClose={() => setReportModalVisible(false)}
+        />
+      )}
     </div>
   );
 };

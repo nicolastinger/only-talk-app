@@ -4,11 +4,13 @@ import { useRouter } from "vue-router";
 import { showToast, Field, Empty, Overlay } from "vant";
 import { search_user_by_account, add_friend } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 import { parseResponse } from "@/utils/api";
 import { DEFAULT_AVATAR } from "@/stores/user";
 import type { FriendRequestInfoDTO, UserInfo } from "@workspace/types";
 
 const router = useRouter();
+const { t } = useI18n();
 const { getAvatarUrl } = useAvatar();
 
 const searchText = ref("");
@@ -23,7 +25,7 @@ const resultAvatarUrl = ref<string | null>(null);
 const onSearch = async () => {
   const account = searchText.value.trim();
   if (!account) {
-    showToast("请输入账号");
+    showToast(t("searchFriend.enterAccount"));
     return;
   }
   searching.value = true;
@@ -38,10 +40,10 @@ const onSearch = async () => {
         resultAvatarUrl.value = await getAvatarUrl(searchResult.value.icon);
       }
     } else {
-      showToast("搜索失败，请稍后重试");
+      showToast(t("searchFriend.searchFailed"));
     }
   } catch (e) {
-    showToast("未找到该用户");
+    showToast(t("searchFriend.notFound"));
   } finally {
     searching.value = false;
   }
@@ -57,17 +59,17 @@ const onSendRequest = async () => {
   requestLoading.value = true;
   try {
     await add_friend({
-      request_message: requestMessage.value.trim() || "请求添加好友",
+      request_message: requestMessage.value.trim() || t("searchFriend.defaultRequestMsg"),
       accept_message: "",
       accept_user: searchResult.value.uuid,
       add_type: "search",
       version: 0,
       accept_status: 0,
     } as FriendRequestInfoDTO);
-    showToast({ message: "好友请求已发送", icon: "success" });
+    showToast({ message: t("searchFriend.requestSent"), icon: "success" });
     showRequestModal.value = false;
   } catch (e) {
-    showToast("发送失败，请稍后重试");
+    showToast(t("searchFriend.sendFailed"));
   } finally {
     requestLoading.value = false;
   }
@@ -90,7 +92,7 @@ const goBack = () => router.back();
           />
         </svg>
       </button>
-      <h1 class="title">添加好友</h1>
+      <h1 class="title">{{ t("searchFriend.title") }}</h1>
     </div>
 
     <div class="search-section">
@@ -103,7 +105,7 @@ const goBack = () => router.back();
         <input
           v-model="searchText"
           type="text"
-          placeholder="输入好友账号搜索"
+          :placeholder="t('searchFriend.accountPlaceholder')"
           class="search-input"
           @keyup.enter="onSearch"
         />
@@ -113,7 +115,7 @@ const goBack = () => router.back();
         :disabled="searching || !searchText.trim()"
         @click="onSearch"
       >
-        {{ searching ? "搜索中..." : "搜索" }}
+        {{ searching ? t("search.searching") : t("searchFriend.submit") }}
       </button>
     </div>
 
@@ -128,6 +130,7 @@ const goBack = () => router.back();
           <span class="result-name">{{
             searchResult.username || searchResult.account
           }}</span>
+          <UserTypeTag :type="searchResult.user_type" />
           <span class="result-account">@{{ searchResult.account }}</span>
           <span v-if="searchResult.info" class="result-bio">{{
             searchResult.info
@@ -139,12 +142,12 @@ const goBack = () => router.back();
               d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
             />
           </svg>
-          <span>添加</span>
+          <span>{{ t("searchFriend.add") }}</span>
         </button>
       </div>
       <Empty
         v-else-if="searchedAccount && !searching"
-        description="未找到该用户"
+        :description="t('searchFriend.notFound')"
       />
       <div v-else-if="!searching" class="search-hint">
         <svg viewBox="0 0 24 24" fill="currentColor" class="hint-icon">
@@ -152,14 +155,14 @@ const goBack = () => router.back();
             d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
           />
         </svg>
-        <p>输入好友的账号进行搜索</p>
+        <p>{{ t("searchFriend.hint") }}</p>
       </div>
     </div>
 
     <Overlay :show="showRequestModal" @click="showRequestModal = false">
       <div class="modal-wrapper" @click.stop>
         <div class="request-modal">
-          <h2 class="modal-title">发送好友请求</h2>
+          <h2 class="modal-title">{{ t("searchFriend.requestTitle") }}</h2>
           <div class="modal-target" v-if="searchResult">
             <img
               :src="getAvatar()"
@@ -170,6 +173,7 @@ const goBack = () => router.back();
               <span class="target-name">{{
                 searchResult.username || searchResult.account
               }}</span>
+              <UserTypeTag :type="searchResult.user_type" />
               <span class="target-account">@{{ searchResult.account }}</span>
             </div>
           </div>
@@ -177,21 +181,25 @@ const goBack = () => router.back();
             v-model="requestMessage"
             type="textarea"
             rows="3"
-            placeholder="发送一段验证消息（选填）"
+            :placeholder="t('searchFriend.requestPlaceholder')"
             maxlength="100"
             show-word-limit
             class="message-field"
           />
           <div class="modal-actions">
             <button class="cancel-btn" @click="showRequestModal = false">
-              取消
+              {{ t("common.cancel") }}
             </button>
             <button
               class="send-btn"
               :disabled="requestLoading"
               @click="onSendRequest"
             >
-              {{ requestLoading ? "发送中..." : "发送请求" }}
+              {{
+                requestLoading
+                  ? t("searchFriend.sending")
+                  : t("searchFriend.sendRequest")
+              }}
             </button>
           </div>
         </div>
@@ -210,7 +218,7 @@ const goBack = () => router.back();
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: max(16px, env(safe-area-inset-top)) 20px;
   background: var(--header-bg);
   backdrop-filter: blur(20px);
   position: sticky;

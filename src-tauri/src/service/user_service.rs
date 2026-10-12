@@ -1,64 +1,159 @@
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::Duration;
 
+use anyhow::anyhow;
+use log::{error, info, warn};
+use tauri::Emitter;
+use tokio::task::JoinSet;
+use tokio::time::timeout;
+use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
+
 use crate::cmd::api_controller::{get_request, post_request};
-use crate::dao::chat_record_db::{insert_chat_record, query_last_read_msg};
+use crate::dao::app_log_db::log_quic_event;
+use crate::dao::chat_record_db::{
+    chat_record_timestamp_by_nano_id, insert_chat_record, local_max_server_id,
+    query_chat_record_by_id_from_db, query_read_peers, recall_chat_record_db,
+    set_chat_record_server_id,
+};
+use crate::dao::chat_record_read::{
+    query_read_watermark, read_reported_position, read_watermark_nano_id, update_last_read_msg,
+    update_reported_position,
+};
+use crate::dao::group_chat_record_db::{
+    group_chat_record_timestamp_by_nano_id, local_max_group_server_id,
+    query_group_chat_record_by_id, recall_group_chat_record_db, set_group_server_id,
+};
+use crate::dao::group_message_read::{
+    group_read_reported_position, group_read_watermark_nano_id, query_group_message_read,
+    query_group_read_peers, update_group_message_read, update_group_reported_position,
+};
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
-use crate::dto::add_read_chat_record::AddReadChatRecord;
+use crate::dao::{get_db_client, get_private_db_client};
 use crate::dto::http_result::HttpResult;
+use crate::entity::app_log::LOG_LEVEL_INFO;
+use crate::entity::chat_record_read::{ChatRecordRead, CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::entity::chat_session::ChatSession;
+use crate::entity::group_chat_record::GroupChatRecord;
+use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::system_notification::SystemNotification;
-use crate::entity::text_msg::TextQuicMsg;
-use crate::quic_service::center_service::text_quic_client::run_client;
+use crate::quic_service::center_service::text_quic_client::{spawn_client_loop, stop_client_loop};
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
-use crate::service::group_service::{pull_group_messages, sync_group_list};
+use crate::service::group_service::{parse_http_result, sync_group_list};
+use crate::service::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::utils::dns::resolve_ipv4;
-use crate::utils::global_static_str::{DOMAIN_NAME, TALK_API};
+use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
+use crate::utils::session_uuid::single_session_uuid;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
-use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-use anyhow::anyhow;
-use log::{error, info, warn};
-use tokio::time::timeout;
-use uuid::Uuid;
+use crate::{
+    SessionControl, APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_PRIVATE_SQL_POOL,
+    GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL, MEDIA_DATA_CANCEL_TOKEN,
+    SESSION_CONTROL,
+};
 
-/// 用户登录执行操作
-pub async fn user_login() -> Result<(), anyhow::Error> {
-    info!("用户登录开始");
-    // 初始化数据库
-    init_sqlite().await.expect("初始化数据库失败!");
-    // 初始化私有数据库
-    init_private_db().await.expect("初始化私有数据库失败");
-    //1、获取好友列表
+/// 从服务端拉取当前用户+设备 唯一的本地加密库密钥(按 user_id + 设备指纹签发)
+async fn fetch_private_db_key() -> Result<String, anyhow::Error> {
+    let url = format!("{}/user/sqlite_key/fetch", talk_api_base());
+    // 设备指纹为小写 hex，无需额外转义
+    let body = format!(
+        "{{\"device_fingerprint\":\"{}\"}}",
+        crate::utils::device_info::device_fingerprint()
+    );
+    let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
+    let response: HttpResult = serde_json::from_str(&result.body)?;
+    if response.code != 200 {
+        return Err(anyhow!("获取数据库密钥失败: {}", response.message));
+    }
+    let db_key = response
+        .data
+        .get("db_key")
+        .and_then(|v| v.as_str())
+        .ok_or(anyhow!("获取数据库密钥响应缺少 db_key"))?
+        .to_string();
+    Ok(db_key)
+}
+
+/// 登录会话的任务执行(由会话状态机 actor 在 LoggingIn 阶段调用)
+pub(crate) async fn perform_session_login_tasks() -> Result<(), anyhow::Error> {
+    info!("[session][login] 开始登录任务: LoggingIn 阶段资源装载");
+
+    info!("[session][login] 步骤1/6 拉取本设备私库密钥(user+设备指纹签发)");
+    let db_key = fetch_private_db_key().await.map_err(|e| {
+        error!("[session][login] 拉取私库密钥失败: {:?}", e);
+        e
+    })?;
+    insert_user_info("private_db_key", &db_key).await?;
+    info!("[session][login] 步骤1/6 完成: 私库密钥已装载(仅内存)");
+
+    info!("[session][login] 步骤2/6 初始化明文 user 库");
+    init_sqlite().await.map_err(|e| {
+        error!("[session][login] 初始化 user 库失败: {:?}", e);
+        e
+    })?;
+    info!("[session][login] 步骤2/6 完成: user 库就绪");
+
+    info!("[session][login] 步骤3/6 初始化加密 private 库(聊天记录存储)");
+    init_private_db().await.map_err(|e| {
+        error!("[session][login] 初始化 private 库失败: {:?}", e);
+        e
+    })?;
+    info!("[session][login] 步骤3/6 完成: private 库就绪");
+
+    info!("[session][login] 步骤4/6 同步好友/群聊/离线消息/会话列表/未读通知");
     update_friend_list().await.unwrap_or_else(|e| {
-        error!("获取好友列表失败 {:?}", e);
+        error!("[session][login] 同步好友列表失败(继续): {:?}", e);
     });
-    //2、获取群聊列表
     sync_group_list().await.unwrap_or_else(|e| {
-        error!("获取群聊列表失败 {:?}", e);
+        error!("[session][login] 同步群聊列表失败(继续): {:?}", e);
     });
-    //3、获取未读消息
-    get_unread_message().await.unwrap_or_else(|e| error!("获取未读消息失败 {:?}", e));
-    //4、获取未读通知
-    get_unread_notification().await.unwrap_or_else(|e| error!("获取未读通知失败 {:?}", e));
-    //启动quic服务（带状态机和自动重连）
+    // 任务12 简化: refresh 落会话事实(last_message_id) → 串行正向追平
+    refresh_and_forward().await;
+    get_unread_notification().await.unwrap_or_else(|e| {
+        error!("[session][login] 拉取未读通知失败(继续): {:?}", e);
+    });
+    info!("[session][login] 步骤4/6 完成");
+
+    info!("[session][login] 步骤5/6 启动 QUIC 客户端连接循环");
     {
         *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
         tokio::spawn(async move {
             let addr = discover_quic_server_addr().await;
-            run_client(addr).await.expect("quic服务启动失败");
+            info!("[session][login] QUIC 服务器地址已解析: {}, 启动连接循环", addr);
+            spawn_client_loop(addr).await;
         });
     }
-    //启动定时任务
-    tokio::spawn(async move {
-        start_read_task().await.unwrap_or_else(|e| error!("启动定时任务失败 {:?}", e));
-    });
+    info!("[session][login] 步骤5/6 完成: QUIC 连接循环已派发");
 
+    info!("[session][login] 步骤6/6 注册会话级后台任务 supervisor");
+    {
+        // 若上一个会话的控制句柄尚未清干净(异常路径), 先取消等待其退出
+        if let Some(old) = SESSION_CONTROL.write().await.take() {
+            info!("[session][login] 发现上一个会话残留句柄, 先取消等待退出");
+            old.cancel.cancel();
+            let _ = old.handle.await;
+        }
+        let cancel = CancellationToken::new();
+        let task_cancel = cancel.clone();
+        let handle = tokio::spawn(async move {
+            if let Err(e) = start_session_tasks(task_cancel).await {
+                error!("[session][task] 会话定时任务异常退出: {:?}", e);
+            }
+        });
+        *SESSION_CONTROL.write().await = Some(SessionControl { cancel, handle });
+    }
+    info!("[session][login] 步骤6/6 完成: supervisor 已注册");
+
+    info!("[session][login] 全部步骤完成, 会话就绪, 待迁移 LoggedIn");
     Ok(())
+}
+
+/// 用户登录入口(会话状态机 actor): LoggedOut -> LoggingIn -> LoggedIn
+pub async fn user_login() -> Result<(), anyhow::Error> {
+    crate::service::session_manager::SESSION_MANAGER.login().await
 }
 
 /// 获取用户信息
@@ -76,105 +171,58 @@ pub async fn insert_user_info(key: &str, value: &str) -> Result<(), anyhow::Erro
     Ok(())
 }
 
-/// 获取未读消息
-pub async fn get_unread_message() -> Result<(), anyhow::Error> {
-    let url = format!("{}/msg/get_unread_chat_record", TALK_API);
-    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
-
-    let data = result.body;
-    let result = serde_json::from_str::<HttpResult>(&data)?;
-    if result.code == 204 {
-        info!("无未读消息");
-        return Ok(());
+/// 会话级后台任务监督。
+///
+/// 10s 预热后写入 schedule_key，托管「已读上报」「通知已读上报」两个长循环，
+/// 并周期性派发「未发送消息重发」子任务。退出登录时 teardown_session 触发 cancel：
+/// JoinSet abort 全部子任务并 await，保证该会话后台任务彻底退出，不残留跨会话执行。
+pub async fn start_session_tasks(cancel: CancellationToken) -> Result<(), anyhow::Error> {
+    tokio::select! {
+        _ = cancel.cancelled() => return Ok(()),
+        _ = tokio::time::sleep(Duration::from_secs(10)) => {}
     }
-    if result.code != 200 {
-        error!("获取未读通知失败 {:?}", result);
-        return Ok(());
-    }
-    let json: Vec<TextQuicMsg> = serde_json::from_value(result.data)?;
-    let text_quic_msg_vec = TextQuicMsgVo::from_vec(json)?;
-    info!("获取未读消息结果 {:?}", text_quic_msg_vec);
-    // 未读消息计数
-    let mut unread_count_map: HashMap<String, ChatSession> = HashMap::new();
-    let uuid = get_user_info("uuid").await?;
-
-    for text_quic_msg in text_quic_msg_vec {
-        //保存未读消息
-        match insert_chat_record(&text_quic_msg).await {
-            Ok(_) => {}
-            Err(_) => {
-                continue;
-            }
-        }
-        let user = match text_quic_msg.recv_user == uuid {
-            true => text_quic_msg.send_user.clone(),
-            false => text_quic_msg.recv_user.clone(),
-        };
-        let chat_session = unread_count_map.get_mut(&user);
-        if chat_session.is_none() {
-            let chat_session = ChatSession {
-                id: 0,
-                nano_id: text_quic_msg.nano_id,
-                timestamp: text_quic_msg.timestamp,
-                text_type: text_quic_msg.text_type,
-                unread_count: 1,
-                last_message: text_quic_msg.raw,
-                recv_user: uuid.clone(),
-                send_user: user.clone(),
-                session_type: 1,
-                is_show: 1,
-                is_top: 0,
-                group_id: None,
-            };
-            unread_count_map.insert(user, chat_session);
-        } else {
-            let chat_session = chat_session.ok_or(anyhow!("未读消息计数失败"))?;
-            chat_session.unread_count += 1;
-            if chat_session.timestamp < text_quic_msg.timestamp {
-                chat_session.timestamp = text_quic_msg.timestamp;
-                chat_session.last_message = text_quic_msg.raw;
-                chat_session.text_type = text_quic_msg.text_type;
-                chat_session.nano_id = text_quic_msg.nano_id;
-            }
-        }
-    }
-
-    // 更新会话
-    for (_, chat_session) in unread_count_map.iter() {
-        info!("更新会话信息 {:?}", chat_session);
-        update_chat_session_db(chat_session).await?;
-    }
-
-    Ok(())
-}
-
-/// 启动定时已读任务
-pub async fn start_read_task() -> Result<(), anyhow::Error> {
-    tokio::time::sleep(Duration::from_secs(10)).await;
     let schedule_key = uuid::Uuid::new_v4().to_string();
     // 设置定时任务key
     insert_user_info("schedule_key", &schedule_key).await?;
-    info!("定时任务key: {}, 启动", schedule_key);
+    info!("[session][task] 定时任务key: {}, 启动", schedule_key);
 
+    let mut set = JoinSet::new();
     let read_task_key = schedule_key.clone();
-    // 用户消息已读任务
-    tokio::spawn(async move {
+    set.spawn(async move {
         send_read_message(read_task_key).await.expect("消息已读任务失败");
     });
+    let notify_task_key = schedule_key.clone();
+    set.spawn(async move {
+        send_notify_read_message(notify_task_key).await.expect("通知已读上报任务失败");
+    });
+
     let mut count = 0u64;
-    while count < 1000000000 {
-        // 校验定时任务key
+    loop {
+        count += 1;
+        tokio::select! {
+            _ = cancel.cancelled() => {
+                info!("[session][task] 收到取消, 停止会话后台任务(abort 子任务并等待退出)");
+                set.abort_all();
+                while let Some(result) = set.join_next().await {
+                    if let Err(e) = result {
+                        warn!("会话定时任务子任务退出异常: {:?}", e);
+                    }
+                }
+                return Ok(());
+            }
+            _ = tokio::time::sleep(Duration::from_secs(1)) => {}
+        }
+        // 回收已完成子任务(避免 JoinSet 堆积已完成句柄)
+        while set.try_join_next().is_some() {}
+        // 校验定时任务key: 会话已被替换时自然退出
         let result = check_schedule_key(&schedule_key).await;
         if result.is_err() {
-            error!("定时任务key不匹配");
+            error!("[session][task] schedule_key 不匹配, 会话任务自愈退出");
             break;
         }
-        count += 1;
-        // 10秒触发一次
+        // 10秒触发一次: 处理未发送消息
         if count % 10 == 0 {
-            // 处理未发送消息
-            tokio::spawn(async move {
-                // 处理未发送消息
+            set.spawn(async move {
                 timeout(Duration::from_secs(10), async {
                     let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
                     process_no_send_success_msg().await.expect("处理未发送消息失败");
@@ -183,16 +231,8 @@ pub async fn start_read_task() -> Result<(), anyhow::Error> {
                 .expect("定时任务，处理未发送消息超时");
             });
         }
-
-        // 20秒触发一次
-        if count % 20 == 0 {}
-
-        // 30秒触发一次
-        if count % 30 == 0 {}
-
-        tokio::time::sleep(Duration::from_secs(1)).await;
     }
-    info!("定时任务结束");
+    info!("[session][task] 会话后台任务监督结束");
     Ok(())
 }
 
@@ -213,11 +253,28 @@ pub async fn check_schedule_key(key: &str) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-// 发送已读消息
+// 发送已读消息(任务07): 按会话聚合, 只上报本地已读水位的 nano_id。
+//
+// 上报值 = 已读水位(nano_id), 而不是本地 max(server_id) 或换算出的数值游标:
+// - 本地 chat_record.server_id 靠同步回填、在线消息为 NULL, 用它拼数值游标天然不可靠;
+// - 已读以服务端同步下来的 last_read_id 为第一准则(backfill_read_watermark 已对齐本地水位);
+// - 服务端收到 nano_id 后按会话类型反查自己的消息 id 再推进(只前进)。
+//
+// 推进校验(缓存表 reported_nano_id + reported_timestamp): 上报前按 nano_id 回查**本地聊天记录表**
+// (`chat_record` / `group_chat_record`) 的时间戳, **必须严格大于**上次已上报的时间戳才允许上报。
+// 水位表记录的时间戳是"阅读事件"水位, 可能被跨端回填推到历史位置; 聊天记录表的时间戳才是
+// 消息本身的先后顺序 —— 只推它更晚的消息, 避免把更旧位置重复推给服务端。
+//
+// 上报节流: 每次上报间隔随机 60~90 秒(打散各端上报时刻, 防"已读风暴"集中打服务端)。
+fn next_read_report_delay() -> Duration {
+    // 取 uuid v4 的 128 位随机数取模, 均匀落在 [0, 31) → 60 + r ∈ [60, 90]
+    let r = (Uuid::new_v4().as_u128() % 31) as u64;
+    Duration::from_secs(60 + r)
+}
+
 pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
-    let mut timestamp = 0;
     let mut count = 0;
     while count < 1000000 {
         // 校验定时任务key
@@ -233,35 +290,149 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
             }
         }
 
-        let last_chat_record = query_last_read_msg(&uuid, timestamp).await?;
-        if !last_chat_record.is_empty() {
-            let mut read_record_vec: Vec<AddReadChatRecord> = Vec::new();
-            for item in last_chat_record {
-                if item.timestamp > timestamp {
-                    timestamp = item.timestamp;
-                }
-                let read_record = AddReadChatRecord {
-                    nano_id: item.nano_id,
-                    timestamp: item.timestamp,
-                    send_user: item.send_user,
-                    recv_user: item.recv_user,
-                };
-                read_record_vec.push(read_record);
+        // 本次待上报项: (session_uuid, session_type, 上报后待推进的 (peer|group, nano_id, ts))
+        let mut reads: Vec<serde_json::Value> = Vec::new();
+        let mut pending_single: Vec<(String, String, i64)> = Vec::new();
+        let mut pending_group: Vec<(String, String, i64)> = Vec::new();
+
+        // 单聊: 按对端聚合 → 派生 session_uuid → 已读水位 nano_id
+        for (peer, _ts) in query_read_peers(&uuid, 0).await? {
+            let su = match (Uuid::parse_str(&uuid), Uuid::parse_str(&peer)) {
+                (Ok(a), Ok(b)) => single_session_uuid(&a, &b).to_string(),
+                _ => continue,
+            };
+            // 无水位(未读过) → 跳过
+            let Some(nano_id) = read_watermark_nano_id(&uuid, &peer).await? else { continue };
+            if nano_id.is_empty() {
+                continue;
             }
+            // 按 nano_id 回查本地聊天记录表时间戳: 推进校验以它为准(非水位表时间戳)
+            let Some(ts) = chat_record_timestamp_by_nano_id(&nano_id).await? else { continue };
+            // 推进校验: 聊天记录时间戳必须严格大于上次已上报时间戳
+            let (_, last_ts) = read_reported_position(&uuid, &peer).await?;
+            if ts <= last_ts {
+                continue;
+            }
+            reads.push(serde_json::json!({
+                "session_uuid": su,
+                "session_type": CHAT_TYPE_SINGLE,
+                "last_read_nano_id": nano_id,
+            }));
+            pending_single.push((peer, nano_id, ts));
+        }
 
-            info!("发送已读消息 {:?}", read_record_vec);
+        // 群聊: group_uuid 即 session_uuid
+        for (group, _ts) in query_group_read_peers(&uuid, 0).await? {
+            let Some(nano_id) = group_read_watermark_nano_id(&group, &uuid).await? else {
+                continue;
+            };
+            if nano_id.is_empty() {
+                continue;
+            }
+            let Some(ts) = group_chat_record_timestamp_by_nano_id(&nano_id).await? else {
+                continue;
+            };
+            let (_, last_ts) = group_read_reported_position(&group, &uuid).await?;
+            if ts <= last_ts {
+                continue;
+            }
+            reads.push(serde_json::json!({
+                "session_uuid": group,
+                "session_type": CHAT_TYPE_GROUP,
+                "last_read_nano_id": nano_id,
+            }));
+            pending_group.push((group, nano_id, ts));
+        }
 
+        if !reads.is_empty() {
+            info!("发送已读消息(水位 nano_id) {:?}", reads);
             match post_request(
-                format!("{}/msg/add_read_chat_record", TALK_API),
-                serde_json::to_string(&read_record_vec).expect("序列化已读消息失败"),
+                format!("{}/session/read", talk_api_base()),
+                serde_json::to_string(&serde_json::json!({ "reads": reads }))
+                    .expect("序列化已读消息失败"),
             )
             .await
             {
                 Ok(m) => {
-                    info!("发送已读消息成功 {:?}", m.body)
+                    // 成功后推进本地上报位置(记 nano_id + 聊天记录时间戳); 失败则下轮重试
+                    let ok = parse_http_result(&m.body)
+                        .map(|r| r.code == 200 || r.code == 204)
+                        .unwrap_or(false);
+                    if ok {
+                        info!("发送已读消息成功 {:?}", m.body);
+                        for (peer, nano_id, ts) in pending_single {
+                            update_reported_position(&uuid, &peer, &nano_id, ts).await?;
+                        }
+                        for (group, nano_id, ts) in pending_group {
+                            update_group_reported_position(&group, &uuid, &nano_id, ts).await?;
+                        }
+                    } else {
+                        error!("发送已读消息失败(响应异常): {}", m.body);
+                    }
+                }
+                Err(e) => error!("发送已读消息失败 {:?}", e),
+            }
+        }
+        count += 1;
+        tokio::time::sleep(next_read_report_delay()).await;
+    }
+    Ok(())
+}
+
+/// 定时上报系统通知已读状态到服务端
+pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+    let mut count = 0;
+    while count < 1000000 {
+        // 校验定时任务key
+        check_schedule_key(&key).await?;
+
+        // 同步中则跳过
+        {
+            let user_info = GLOBAL_QUIC_USER_INFO.read().await;
+            if user_info.get("is_syncing").map(|v| v == "true").unwrap_or(false) {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                count += 1;
+                continue;
+            }
+        }
+
+        // 查询本地已读但未同步的通知 id
+        let read_ids = SystemNotification::query_read_not_synced_ids(&uuid).await?;
+        if !read_ids.is_empty() {
+            info!("上报通知已读: {:?}", read_ids);
+            // 服务端 MarkReadDTO 期望 `{"ids": [...]}` 对象; 裸数组会 400(契约不匹配)
+            let body = serde_json::to_string(&serde_json::json!({ "ids": read_ids }))
+                .expect("序列化通知已读失败");
+            match post_request(format!("{}/notify/mark_read", talk_api_base()), body).await {
+                Ok(m) => {
+                    let result = match serde_json::from_str::<HttpResult>(&m.body) {
+                        Ok(r) => r,
+                        Err(parse_err) => {
+                            // 响应体不是预期 JSON(如 404/500 的文本页): 带上状态码与原文便于定位
+                            error!(
+                                "通知已读上报失败: 响应解析失败 status={} body={} err={}",
+                                m.status, m.body, parse_err
+                            );
+                            HttpResult {
+                                code: -1,
+                                message: String::new(),
+                                data: serde_json::Value::Null,
+                            }
+                        }
+                    };
+                    if result.code == 200 || result.code == 204 {
+                        SystemNotification::mark_read_synced(&uuid, &read_ids).await?;
+                        info!("通知已读上报成功: {:?}", read_ids);
+                    } else {
+                        error!(
+                            "通知已读上报失败: status={} code={} message={}",
+                            m.status, result.code, result.message
+                        );
+                    }
                 }
                 Err(e) => {
-                    error!("发送已读消息失败 {:?}", e);
+                    error!("通知已读上报失败 {:?}", e);
                 }
             }
         }
@@ -273,7 +444,7 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
 
 /// 获取未读通知
 pub async fn get_unread_notification() -> Result<(), anyhow::Error> {
-    let url = format!("{}/notify/get_user_unread_notification", TALK_API);
+    let url = format!("{}/notify/get_user_unread_notification", talk_api_base());
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
     let data = result.body;
     let result = serde_json::from_str::<HttpResult>(&data)?;
@@ -300,7 +471,7 @@ pub async fn get_unread_notification() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// 重连后同步离线消息（私聊 + 通知 + 群聊）
+/// 重连后同步离线消息(任务12 简化: 正向追平): 通知 → refresh → 串行逐会话追平。
 pub async fn sync_offline_messages() {
     // 设置同步中标志，阻止已读消息发送
     {
@@ -308,15 +479,545 @@ pub async fn sync_offline_messages() {
         user_info.insert("is_syncing".to_string(), "true".to_string());
     }
 
-    get_unread_message().await.unwrap_or_else(|e| error!("拉取私聊未读消息失败 {:?}", e));
     get_unread_notification().await.unwrap_or_else(|e| error!("拉取未读通知失败 {:?}", e));
-    pull_group_messages().await.unwrap_or_else(|e| error!("拉取群聊未读消息失败 {:?}", e));
+    refresh_and_forward().await;
 
     // 同步完成，移除标志
     {
         let mut user_info = GLOBAL_QUIC_USER_INFO.write().await;
         user_info.insert("is_syncing".to_string(), "false".to_string());
     }
+}
+
+/// 刷新会话列表并正向追平离线消息(任务12 简化): 先 `refresh_session_list` 拿到
+/// 每个会话服务端最新 id(`last_message_id`), 再 `sync_sessions_forward` 串行追平。
+async fn refresh_and_forward() {
+    match refresh_session_list().await {
+        Ok(sessions) => {
+            if let Err(e) = sync_sessions_forward(&sessions).await {
+                error!("[session][sync] 离线消息正向追平失败 {:?}", e);
+            }
+        }
+        Err(e) => error!("[session][sync] 刷新会话列表失败 {:?}", e),
+    }
+}
+
+// ===== 任务12: 离线同步(正向追平, 客户端游标驱动) =====
+
+/// 单会话单次正向拉取条数。
+const SYNC_PULL_LIMIT: u32 = 100;
+/// 追平记录保留批数(每轮重连 = 一批)。
+const SYNC_BATCH_KEEP: i64 = 50;
+
+#[derive(Debug, serde::Deserialize)]
+struct SyncResponse {
+    #[allow(dead_code)]
+    server_time: i64,
+    sessions: Vec<SyncSession>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct SyncSession {
+    #[allow(dead_code)]
+    session_uuid: String,
+    session_type: i16,
+    /// 服务端已读游标(user_session.last_read_id): id <= 该值的消息视为其他端已读, 不计未读
+    last_read_id: i64,
+    messages: Vec<SyncMessage>,
+    next_cursor: i64,
+    has_more: bool,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct SyncMessage {
+    id: i64,
+    nano_id: String,
+    #[allow(dead_code)]
+    session_uuid: String,
+    #[allow(dead_code)]
+    session_type: i16,
+    send_user: String,
+    recv_user: String,
+    text_type: u16,
+    timestamp: i64,
+    raw: Vec<u8>,
+}
+
+/// 会话列表响应(任务06 §4.1)
+#[derive(Debug, serde::Deserialize)]
+struct SessionListResponse {
+    sessions: Vec<SessionListItem>,
+    has_more: bool,
+    next_cursor: Option<SessionListCursor>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct SessionListItem {
+    session_uuid: String,
+    session_type: i16,
+    peer_uuid: Option<String>,
+    last_message_id: i64,
+    last_message_at: i64,
+    last_preview: String,
+    pinned: i16,
+    #[allow(dead_code)]
+    muted: i16,
+    #[allow(dead_code)]
+    unread: i64,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct SessionListCursor {
+    pinned: i16,
+    last_message_at: i64,
+    session_uuid: String,
+}
+
+/// 正向追平(任务12 简化): 串行遍历会话, 把本地已同步的最新 id(`after_id`)发给服务端,
+/// 拉取窗口内 `id > after_id` 的消息, 直到追平服务端最新 id(`last_message_id`)或 7 天窗口尽头。
+///
+/// 本地前沿 = `chat_record.server_id` / `group_chat_record.server_id` 的最大值(在线 QUIC 消息
+/// 无 server_id, 会在此被重新拉取, nano_id 去重兜底并顺带回填 server_id)。
+///
+/// 每轮 = 一个批次(`batch_id = now`), 每个有增量并尝试追平的会话写一条**终态**记录到
+/// `sync_task`(成功/失败), 供前端 `get_sync_history` 查看追平结果。单会话失败不阻断整轮。
+async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let batch_id = crate::utils::time::get_now_time_stamp_as_millis()?;
+    let mut synced_sessions = 0usize;
+    let mut failed_sessions = 0usize;
+    for s in sessions {
+        let target = s.last_message_id;
+        if target <= 0 {
+            continue; // 服务端该会话无消息
+        }
+        // 本地前沿: 单聊按对端、群聊按 group_uuid
+        let mine = match s.session_type {
+            2 => local_max_group_server_id(&s.session_uuid).await?.unwrap_or(0),
+            _ => {
+                let Some(peer) = s.peer_uuid.as_ref().filter(|p| !p.is_empty()) else {
+                    continue;
+                };
+                local_max_server_id(&me, peer).await?.unwrap_or(0)
+            }
+        };
+        if target <= mine {
+            continue; // 已追平
+        }
+
+        let mut after = mine;
+        let mut pulled = 0usize;
+        let mut total_new = 0i64;
+        let mut server_last_read_id = 0i64;
+        let pull_result: Result<(), anyhow::Error> = async {
+            loop {
+                let body = serde_json::json!({
+                    "sessions": [{ "session_uuid": s.session_uuid, "after_id": after }],
+                    "limit": SYNC_PULL_LIMIT,
+                });
+                let resp =
+                    post_request(format!("{}/session/sync", talk_api_base()), body.to_string())
+                        .await
+                        .map_err(|e| anyhow!(e))?;
+                let result: HttpResult = parse_http_result(&resp.body)?;
+                if result.code != 200 || result.data.is_null() {
+                    return Err(anyhow!("离线同步响应异常: code={}", result.code));
+                }
+                let sync: SyncResponse = serde_json::from_value(result.data)?;
+                let Some(sess) = sync.sessions.first() else { break };
+                if sess.messages.is_empty() {
+                    break; // 已追平服务端最新
+                }
+                server_last_read_id = sess.last_read_id;
+                let new_count = apply_sync_session(&me, sess, sess.last_read_id).await?;
+                total_new += new_count;
+                pulled += 1;
+                after = sess.next_cursor;
+                if !sess.has_more {
+                    break; // 窗口内取尽 → 追平最新 id 或 7 天窗口尽头
+                }
+            }
+            Ok(())
+        }
+        .await;
+
+        if let Err(e) = pull_result {
+            // 单会话失败 → 记失败, 继续下一会话(不阻断整轮)
+            failed_sessions += 1;
+            error!("[session][sync] 会话追平失败: {}, err={:?}", s.session_uuid, e);
+            let _ = crate::dao::sync_task_db::record_forward_catchup(
+                batch_id,
+                &s.session_uuid,
+                crate::entity::sync_task::SYNC_STATUS_FAILED,
+                pulled as i64,
+                total_new,
+                Some(&e.to_string()),
+            )
+            .await;
+            continue;
+        }
+
+        if pulled > 0 {
+            // 撤回核对：按会话全量核对一次（幂等），修正同步批次内"撤回先于原消息"等时序遗漏
+            if s.session_type == 2 {
+                let _ =
+                    crate::service::chat_service::reconcile_group_recalls(&s.session_uuid).await;
+            } else if let Some(peer) = s.peer_uuid.as_ref().filter(|p| !p.is_empty()) {
+                let _ = crate::service::chat_service::reconcile_single_recalls(&me, peer).await;
+            }
+            // 跨端已读回填: 把服务端 last_read_id 映射到本地水位(只在本地水位更旧时推进)
+            if let Err(e) = backfill_read_watermark(&me, s, server_last_read_id).await {
+                warn!("[session][sync] 已读水位回填失败: {}, err={:?}", s.session_uuid, e);
+            }
+            // 先落库再回报(宁重勿漏; 回报失败 → 下轮重拉, nano_id 去重兜住)
+            let report = post_request(
+                format!("{}/session/synced", talk_api_base()),
+                serde_json::to_string(&serde_json::json!({
+                    "sessions": [{ "session_uuid": s.session_uuid, "synced_id": after }]
+                }))?,
+            )
+            .await
+            .map_err(|e| anyhow!(e));
+            if let Err(e) = report {
+                failed_sessions += 1;
+                error!("[session][sync] 会话追平回报失败: {}, err={:?}", s.session_uuid, e);
+                let _ = crate::dao::sync_task_db::record_forward_catchup(
+                    batch_id,
+                    &s.session_uuid,
+                    crate::entity::sync_task::SYNC_STATUS_FAILED,
+                    pulled as i64,
+                    total_new,
+                    Some(&e.to_string()),
+                )
+                .await;
+                continue;
+            }
+            synced_sessions += 1;
+            let _ = crate::dao::sync_task_db::record_forward_catchup(
+                batch_id,
+                &s.session_uuid,
+                crate::entity::sync_task::SYNC_STATUS_SUCCESS,
+                pulled as i64,
+                total_new,
+                None,
+            )
+            .await;
+            info!("[session][sync] 会话追平完成: {} (after={})", s.session_uuid, after);
+        }
+    }
+    // 记录有界: 仅保留最近 N 批
+    let _ = crate::dao::sync_task_db::prune_batches(SYNC_BATCH_KEEP).await;
+    info!(
+        "[session][sync] 正向追平完成: {} 个会话有增量, 失败 {} 个",
+        synced_sessions, failed_sessions
+    );
+    Ok(())
+}
+
+/// 追平记录批次视图(任务12: `get_sync_history` 命令返回值)。
+#[derive(Debug, serde::Serialize)]
+pub struct SyncBatchView {
+    pub batch_id: i64,
+    pub total: i64,
+    pub success: i64,
+    pub failed: i64,
+    pub pending: i64,
+    pub tasks: Vec<crate::entity::sync_task::SyncTask>,
+}
+
+/// 追平记录历史(任务12: `get_sync_history` 命令): 按轮次(batch_id)聚合 + 明细。
+pub async fn get_sync_history() -> Result<Vec<SyncBatchView>, anyhow::Error> {
+    let summaries = crate::dao::sync_task_db::history().await?;
+    let mut out = Vec::with_capacity(summaries.len());
+    for s in summaries {
+        let tasks = crate::dao::sync_task_db::list_batch_tasks(s.batch_id).await?;
+        out.push(SyncBatchView {
+            batch_id: s.batch_id,
+            total: s.total,
+            success: s.success,
+            failed: s.failed,
+            pending: s.pending,
+            tasks,
+        });
+    }
+    Ok(out)
+}
+
+/// 应用一批同步结果: 落库(nano_id 去重) + 回写 server_id + 更新会话表; 返回本批新增消息数。
+///
+/// `server_last_read_id` 为服务端已读游标: `id <= 该值` 的消息是其他端已读的, 不计入未读角标。
+async fn apply_sync_session(
+    me: &str,
+    s: &SyncSession,
+    server_last_read_id: i64,
+) -> Result<i64, anyhow::Error> {
+    let mut new_count = 0i64;
+    for msg in &s.messages {
+        if s.session_type == 1 {
+            if insert_single_sync_message(me, msg, server_last_read_id).await? {
+                new_count += 1;
+            }
+        } else if insert_group_sync_message(me, msg, server_last_read_id).await? {
+            new_count += 1;
+        }
+    }
+    Ok(new_count)
+}
+
+/// 跨端已读回填: 同步完成后, 把服务端已读游标映射到本地水位(chat_record_read /
+/// group_message_read), 使本端 UI 直接呈现其他端已读位置, 后续 /session/read 上报不越位。
+///
+/// 只在本地无水位或水位比服务端游标更旧时推进 —— 不覆盖本端已读到的更前位置。
+/// 回填的水位即服务端已有游标, 同步把 reported 位置(nano_id + timestamp)一并推进到该消息,
+/// 避免下次 /session/read 把同一位置重复上报(服务端"未推进"路径)。
+async fn backfill_read_watermark(
+    me: &str,
+    s: &SessionListItem,
+    last_read_id: i64,
+) -> Result<(), anyhow::Error> {
+    if last_read_id <= 0 {
+        return Ok(());
+    }
+    let pool = get_private_db_client().await?;
+    if s.session_type == 2 {
+        let existing = query_group_message_read(&s.session_uuid, me).await?;
+        let row: Option<(String, i64)> = sqlx::query_as(
+            r#"SELECT nano_id, timestamp FROM group_chat_record WHERE group_id = ?1 AND server_id <= ?2 ORDER BY server_id DESC LIMIT 1"#,
+        )
+        .bind(&s.session_uuid)
+        .bind(last_read_id)
+        .fetch_optional(&pool)
+        .await?;
+        let Some((nano_id, ts)) = row else { return Ok(()) };
+        if let Some(existing) = existing {
+            if ts <= existing.timestamp {
+                return Ok(());
+            }
+        }
+        update_group_message_read(&GroupMessageRead {
+            id: 0,
+            nano_id: nano_id.clone(),
+            group_uuid: s.session_uuid.clone(),
+            user_uuid: me.to_string(),
+            timestamp: ts,
+        })
+        .await?;
+        update_group_reported_position(&s.session_uuid, me, &nano_id, ts).await?;
+    } else {
+        let Some(peer) = s.peer_uuid.as_ref().filter(|p| !p.is_empty()) else {
+            return Ok(());
+        };
+        let existing = query_read_watermark(me, peer).await?;
+        let row: Option<(String, i64)> = sqlx::query_as(
+            r#"SELECT nano_id, timestamp FROM chat_record WHERE ((send_user = ?1 AND recv_user = ?2) OR (send_user = ?2 AND recv_user = ?1)) AND server_id <= ?3 ORDER BY server_id DESC LIMIT 1"#,
+        )
+        .bind(me)
+        .bind(peer)
+        .bind(last_read_id)
+        .fetch_optional(&pool)
+        .await?;
+        let Some((nano_id, ts)) = row else { return Ok(()) };
+        if let Some(existing) = existing {
+            if ts <= existing.timestamp {
+                return Ok(());
+            }
+        }
+        update_last_read_msg(&ChatRecordRead {
+            id: 0,
+            nano_id: nano_id.clone(),
+            timestamp: ts,
+            recv_user: me.to_string(),
+            send_user: peer.clone(),
+        })
+        .await?;
+        update_reported_position(me, peer, &nano_id, ts).await?;
+    }
+    Ok(())
+}
+
+/// 单聊同步消息落库(复用 insert_chat_record 去重链); 返回是否新增。
+async fn insert_single_sync_message(
+    me: &str,
+    msg: &SyncMessage,
+    server_last_read_id: i64,
+) -> Result<bool, anyhow::Error> {
+    let vo = TextQuicMsgVo {
+        nano_id: msg.nano_id.clone(),
+        text_type: msg.text_type,
+        raw: String::from_utf8_lossy(&msg.raw).to_string(),
+        recv_user: msg.recv_user.clone(),
+        send_user: msg.send_user.clone(),
+        timestamp: msg.timestamp,
+    };
+    // 离线同步的撤回消息：同样需要清除目标消息内容并置 deleted = 1
+    if let Some(target) = parse_recall_target(&vo.raw) {
+        match query_chat_record_by_id_from_db(&target, me).await {
+            Ok(original) if can_recall(&original.send_user, &vo.send_user) => {
+                recall_chat_record_db(&target, &vo.send_user).await?;
+            }
+            _ => info!("同步单聊撤回校验未通过/目标缺失: target={}", target),
+        }
+    }
+    let is_new = insert_chat_record(&vo).await?;
+    set_chat_record_server_id(&msg.nano_id, msg.id).await?;
+
+    let peer = if msg.send_user == me { msg.recv_user.clone() } else { msg.send_user.clone() };
+    let session_uuid = match (Uuid::parse_str(me), Uuid::parse_str(&peer)) {
+        (Ok(a), Ok(b)) => single_session_uuid(&a, &b).to_string(),
+        _ => String::new(),
+    };
+    let is_received = msg.recv_user == me;
+    let already_read = msg.id <= server_last_read_id; // 其他端已读的消息不计未读
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: msg.nano_id.clone(),
+        timestamp: msg.timestamp,
+        text_type: msg.text_type,
+        unread_count: if is_new && is_received && !already_read { 1 } else { 0 },
+        last_message: vo.raw.clone(),
+        recv_user: me.to_string(),
+        send_user: peer,
+        session_type: 1,
+        is_show: 1,
+        is_top: 0,
+        group_id: None,
+        session_uuid: Some(session_uuid),
+        last_message_id: msg.id,
+    };
+    update_chat_session_db(&chat_session).await?;
+    Ok(is_new)
+}
+
+/// 群聊同步消息落库(recv_user 即 group_uuid); 返回是否新增。
+async fn insert_group_sync_message(
+    me: &str,
+    msg: &SyncMessage,
+    server_last_read_id: i64,
+) -> Result<bool, anyhow::Error> {
+    let group_id = msg.recv_user.clone();
+    let raw = String::from_utf8_lossy(&msg.raw).to_string();
+    // 离线同步的群撤回消息：解析内层载荷并清除目标消息
+    if let Some(target) = parse_group_recall_target(&raw) {
+        match query_group_chat_record_by_id(&target, &group_id).await {
+            Ok(Some(original)) if can_recall(&original.send_user, &msg.send_user) => {
+                recall_group_chat_record_db(&target, &group_id, &msg.send_user).await?;
+            }
+            _ => info!("同步群撤回校验未通过/目标缺失: target={}", target),
+        }
+    }
+    let record = GroupChatRecord {
+        id: 0,
+        nano_id: msg.nano_id.clone(),
+        text_type: msg.text_type,
+        raw: raw.clone(),
+        group_id: group_id.clone(),
+        send_user: msg.send_user.clone(),
+        timestamp: msg.timestamp,
+        server_id: None,
+    };
+    let is_new = GroupChatRecord::insert(&record).await?;
+    set_group_server_id(&msg.nano_id, msg.id).await?;
+
+    let already_read = msg.id <= server_last_read_id; // 其他端已读的消息不计未读
+    let chat_session = ChatSession {
+        id: 0,
+        nano_id: msg.nano_id.clone(),
+        timestamp: msg.timestamp,
+        text_type: msg.text_type,
+        unread_count: if is_new && msg.send_user != me && !already_read { 1 } else { 0 },
+        last_message: raw,
+        recv_user: me.to_string(),
+        send_user: group_id.clone(),
+        session_type: 2,
+        is_show: 1,
+        is_top: 0,
+        group_id: Some(group_id.clone()),
+        session_uuid: Some(group_id),
+        last_message_id: msg.id,
+    };
+    update_chat_session_db(&chat_session).await?;
+    Ok(is_new)
+}
+
+/// 拉取 /session/list 并把服务端状态合并进本地会话表(任务07 §5.6)。
+///
+/// 返回全量会话 —— 客户端据此做正向追平: 每会话 `target = last_message_id`。
+async fn refresh_session_list() -> Result<Vec<SessionListItem>, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let mut all = Vec::new();
+    let mut cursor: Option<serde_json::Value> = None;
+    loop {
+        let body = serde_json::json!({ "cursor": cursor, "size": 50 });
+        let resp = post_request(format!("{}/session/list", talk_api_base()), body.to_string())
+            .await
+            .map_err(|e| anyhow!(e))?;
+        let result: HttpResult = parse_http_result(&resp.body)?;
+        if result.code != 200 || result.data.is_null() {
+            break;
+        }
+        let list: SessionListResponse = serde_json::from_value(result.data)?;
+        for s in &list.sessions {
+            merge_local_session(&me, s).await?;
+            all.push(s.clone());
+        }
+        if !list.has_more {
+            break;
+        }
+        cursor = list.next_cursor.map(|c| {
+            serde_json::json!({
+                "pinned": c.pinned,
+                "last_message_at": c.last_message_at,
+                "session_uuid": c.session_uuid,
+            })
+        });
+        if cursor.is_none() {
+            break;
+        }
+    }
+    Ok(all)
+}
+
+/// 把一条服务端会话合并进本地 chat_session(不覆盖本地角标; 落会话事实 last_message_id)。
+async fn merge_local_session(me: &str, s: &SessionListItem) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let peer_or_group = match s.session_type {
+        2 => s.session_uuid.clone(),
+        _ => s.peer_uuid.clone().unwrap_or_default(),
+    };
+    let group_id = if s.session_type == 2 { Some(s.session_uuid.clone()) } else { None };
+    let res = sqlx::query(
+        r#"UPDATE chat_session SET session_uuid = ?1, is_top = ?2, last_message = ?3, timestamp = ?4, last_message_id = ?5 WHERE recv_user = ?6 AND send_user = ?7 AND session_type = ?8"#,
+    )
+    .bind(&s.session_uuid)
+    .bind(s.pinned)
+    .bind(&s.last_preview)
+    .bind(s.last_message_at)
+    .bind(s.last_message_id)
+    .bind(me)
+    .bind(&peer_or_group)
+    .bind(s.session_type as i64)
+    .execute(&pool_sqlite)
+    .await?;
+    if res.rows_affected() < 1 {
+        // 本地尚无该会话(如好友通过预建、无本地消息): 建一行。
+        // 未读播种为 0 —— 新行随后必经 sync 按服务端 last_read_id 重算,
+        // 用服务端 unread 播种会与 sync 增量叠加造成双计(任务04跨端)。
+        sqlx::query(
+            r#"INSERT INTO chat_session (nano_id, timestamp, text_type, unread_count, last_message, send_user, recv_user, session_type, is_show, is_top, group_id, session_uuid, last_message_id) VALUES ('', ?1, 0, 0, ?2, ?3, ?4, ?5, 1, ?6, ?7, ?8, ?9)"#,
+        )
+        .bind(s.last_message_at)
+        .bind(&s.last_preview)
+        .bind(&peer_or_group)
+        .bind(me)
+        .bind(s.session_type as i64)
+        .bind(s.pinned)
+        .bind(&group_id)
+        .bind(&s.session_uuid)
+        .bind(s.last_message_id)
+        .execute(&pool_sqlite)
+        .await?;
+    }
+    Ok(())
 }
 
 pub async fn get_user_map(key: &str) -> Result<String, String> {
@@ -328,32 +1029,117 @@ pub async fn add_user_map(key: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// 登出会话的任务执行(由会话状态机 actor 在 LoggingOut 阶段调用)。幂等。
+pub(crate) async fn perform_session_logout_tasks() -> Result<(), anyhow::Error> {
+    info!("[session][logout] 开始登出任务: LoggingOut 阶段资源释放");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "开始清理当前登录会话", "").await;
+
+    // 1. 停 QUIC 连接循环(需在用户信息与 user 库仍在时执行: 内部写断开标记并落事件日志)
+    let has_quic_session = {
+        let state = *GLOBAL_QUIC_STATE.read().await;
+        let has_conns = !GLOBAL_QUIC_SERVER_LIST.read().await.is_empty();
+        state != QuicConnectionState::Idle || has_conns
+    };
+    if has_quic_session {
+        info!("[session][logout] 步骤1/6 断开 QUIC 连接循环");
+        if let Err(e) = disconnect_quic().await {
+            warn!("[session][logout] 断开 QUIC 失败(继续清理): {:?}", e);
+        } else {
+            info!("[session][logout] 步骤1/6 完成: QUIC 已断开(状态 Idle)");
+        }
+    } else {
+        info!("[session][logout] 步骤1/6 跳过: QUIC 本就空闲(无连接)");
+    }
+
+    // 2. 停止会话级定时任务(cancel + await, 子任务 JoinSet abort 后彻底退出)
+    if let Some(ctl) = SESSION_CONTROL.write().await.take() {
+        info!("[session][logout] 步骤2/6 取消会话后台任务并等待退出");
+        ctl.cancel.cancel();
+        let waited = timeout(Duration::from_secs(15), ctl.handle).await;
+        if waited.is_err() {
+            warn!("[session][logout] 步骤2/6 等待后台任务退出超时(15s)");
+        } else {
+            info!("[session][logout] 步骤2/6 完成: 会话后台任务已全部退出");
+        }
+    } else {
+        info!("[session][logout] 步骤2/6 跳过: 无会话后台任务");
+    }
+
+    // 3. 取消在途媒体/视频通话帧发送
+    if let Some(token) = MEDIA_DATA_CANCEL_TOKEN.write().await.take() {
+        token.cancel();
+        info!("[session][logout] 步骤3/6 完成: 已取消在途媒体/视频帧发送");
+    } else {
+        info!("[session][logout] 步骤3/6 跳过: 无在途媒体");
+    }
+
+    // 4. 状态复位
+    *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Idle;
+    info!("[session][logout] 步骤4/6 完成: QUIC 状态复位为 Idle");
+
+    // 5. 清空用户信息与服务器连接列表
+    GLOBAL_QUIC_USER_INFO.write().await.clear();
+    GLOBAL_QUIC_SERVER_LIST.write().await.clear();
+    info!("[session][logout] 步骤5/6 完成: 用户信息与服务器连接列表已清空");
+
+    // 6. 关闭明文/加密用户库连接(保留 common 库供免登录用户列表使用)
+    GLOBAL_SQL_POOL.write().await.take();
+    GLOBAL_PRIVATE_SQL_POOL.write().await.take();
+    info!("[session][logout] 步骤6/6 完成: user/private 库连接已关闭(保留 common 库)");
+
+    info!("[session][logout] 全部步骤完成, 待迁移 LoggedOut");
+    Ok(())
+}
+
+/// 登出入口(会话状态机 actor): LoggedIn -> LoggingOut -> LoggedOut, 幂等
+pub async fn teardown_session() -> Result<(), anyhow::Error> {
+    crate::service::session_manager::SESSION_MANAGER.logout().await
+}
+
 /// 断开QUIC连接
 /// 设置状态为 Idle 停止重连循环，清理连接资源
 pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始断开QUIC连接");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "开始断开QUIC连接", "").await;
 
     // 设置状态为 Idle，停止 run_client 重连循环
     *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Idle;
 
+    // 手动断开时主动通知前端，触发 topbar 断连提示
+    // （run_client 检测到 Idle 会直接返回，不会进入 Disconnected 广播 quic_disconnected）
+    if let Some(handle) = APP_HANDLE.get() {
+        let _ = handle.emit("quic_disconnected", "QUIC 连接已手动断开");
+    }
+
     // 清除服务器连接列表
     {
         let mut server_list = GLOBAL_QUIC_SERVER_LIST.write().await;
+        for connection in server_list.values() {
+            connection.conn.close(0u32.into(), b"client disconnect");
+        }
         server_list.clear();
         info!("已清理QUIC服务器连接列表");
+        let _ =
+            log_quic_event(LOG_LEVEL_INFO, "user_service", "已清理QUIC服务器连接列表", "").await;
     }
 
     // 标记用户离线状态
     {
         insert_user_info("quic_disconnected", "true").await?;
         insert_user_info("ping_lost_count", "0").await?;
+        insert_user_info("last_pong_time", "0").await?;
         let ping_uuid = Uuid::new_v4();
         let ping_uuid = ping_uuid.to_string();
         insert_user_info("ping_uuid", &ping_uuid).await?;
         info!("已标记QUIC断开状态");
     }
 
+    // 作废代次 + 取消 in-flight 握手/等待，确保连接循环彻底退出（旧 endpoint 已 drop）
+    stop_client_loop().await;
+
     info!("QUIC连接已断开（状态: Idle）");
+    let _ =
+        log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC连接已断开（状态: Idle）", "").await;
     Ok(())
 }
 
@@ -361,6 +1147,7 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
 /// 如果 run_client 循环仍在运行，先停止再重启
 pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
     info!("开始重新连接QUIC服务");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "开始重新连接QUIC服务", "").await;
 
     // 先断开现有连接（设 Idle 会停止当前循环）
     disconnect_quic().await?;
@@ -371,17 +1158,17 @@ pub async fn reconnect_quic() -> Result<(), anyhow::Error> {
         user_info.insert("quic_disconnected".to_string(), "false".to_string());
     }
 
-    // 重新启动连接循环
+    // 重新启动连接循环（disconnect_quic 已保证旧循环彻底退出）
     *GLOBAL_QUIC_STATE.write().await = QuicConnectionState::Disconnected;
     tokio::spawn(async move {
         let addr = discover_quic_server_addr().await;
-        match run_client(addr).await {
-            Ok(_) => info!("QUIC连接循环正常退出"),
-            Err(e) => error!("QUIC连接循环异常退出: {}", e),
-        }
+        spawn_client_loop(addr).await;
+        info!("QUIC连接循环已启动/重建");
+        let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC连接循环已启动/重建", "").await;
     });
 
     info!("QUIC重连请求已发送");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "user_service", "QUIC重连请求已发送", "").await;
     Ok(())
 }
 
@@ -405,7 +1192,7 @@ async fn discover_quic_server_addr() -> SocketAddr {
     }
 
     // 尝试通过 API 获取 QUIC 服务器列表
-    let url = format!("{}/integrated/quic_servers", TALK_API);
+    let url = format!("{}/integrated/quic_servers", talk_api_base());
     match get_request(url).await {
         Ok(response) => match serde_json::from_str::<ApiResult>(&response.body) {
             Ok(result) => {
@@ -426,5 +1213,72 @@ async fn discover_quic_server_addr() -> SocketAddr {
     }
 
     // 回退：DNS 解析默认域名
-    SocketAddr::V4(resolve_ipv4(DOMAIN_NAME, 4433).await.expect("解析域名失败"))
+    SocketAddr::V4(resolve_ipv4(&talk_api_domain(), 4433).await.expect("解析域名失败"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 任务07 §8.1: /session/sync 响应结构完整解析。
+    #[test]
+    fn sync_response_parse() {
+        let json = r#"{
+            "server_time": 1758000000000,
+            "sessions": [{
+                "session_uuid": "3f2b",
+                "session_type": 1,
+                "last_read_id": 0,
+                "messages": [{
+                    "id": 12345,
+                    "nano_id": "n1",
+                    "session_uuid": "3f2b",
+                    "session_type": 1,
+                    "send_user": "a",
+                    "recv_user": "b",
+                    "text_type": 1,
+                    "timestamp": 1757999999000,
+                    "raw": [104, 105]
+                }],
+                "next_cursor": 12345,
+                "has_more": false
+            }]
+        }"#;
+        let resp: SyncResponse = serde_json::from_str(json).expect("解析 SyncResponse 失败");
+        assert_eq!(resp.sessions.len(), 1);
+        let s = &resp.sessions[0];
+        assert_eq!(s.session_uuid, "3f2b");
+        assert_eq!(s.session_type, 1);
+        assert_eq!(s.messages.len(), 1);
+        assert_eq!(s.messages[0].id, 12345);
+        assert_eq!(s.messages[0].raw, vec![104, 105]);
+        assert_eq!(s.next_cursor, 12345);
+        assert!(!s.has_more);
+    }
+
+    /// 任务07 §8.1: /session/list 响应结构完整解析。
+    #[test]
+    fn session_list_response_parse() {
+        let json = r#"{
+            "sessions": [{
+                "session_uuid": "su1",
+                "session_type": 1,
+                "peer_uuid": "p1",
+                "last_message_id": 9,
+                "last_message_at": 1758000000000,
+                "last_preview": "hi",
+                "pinned": 1,
+                "muted": 0,
+                "unread": 2
+            }],
+            "has_more": true,
+            "next_cursor": { "pinned": 1, "last_message_at": 1758000000000, "session_uuid": "su1" }
+        }"#;
+        let resp: SessionListResponse = serde_json::from_str(json).expect("解析 SessionList 失败");
+        assert_eq!(resp.sessions.len(), 1);
+        assert!(resp.has_more);
+        let c = resp.next_cursor.expect("应有游标");
+        assert_eq!(c.session_uuid, "su1");
+        assert_eq!(c.pinned, 1);
+    }
 }

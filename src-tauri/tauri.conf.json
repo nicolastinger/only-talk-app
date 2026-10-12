@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "only-talk",
-  "version": "1.0.0",
+  "productName": "Only Talk",
+  "version": "1.0.1",
   "identifier": "com.only.talk.app",
   "build": {
     "frontendDist": "../apps/pc/dist",
@@ -20,7 +20,8 @@
         "fullscreen": false,
         "dragDropEnabled": true,
         "center": true,
-        "decorations": false
+        "decorations": false,
+        "visible": false
       }
     ],
     "security": {
@@ -36,7 +37,7 @@
           "content://**"
         ]
       },
-      "capabilities": ["window-default"]
+      "capabilities": ["window-default", "pc-autostart"]
     }
   },
   "bundle": {

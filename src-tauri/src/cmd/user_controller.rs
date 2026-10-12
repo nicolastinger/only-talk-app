@@ -1,15 +1,16 @@
 use std::collections::HashMap;
 
+use log::{info, warn};
+use serde::{Deserialize, Serialize};
+
 use crate::dto::http_result::HttpResult;
 use crate::dto::update_user_dto::UpdateUserDTO;
 use crate::entity::user_info::UserInfo;
 use crate::quic_service::connection_state::GLOBAL_QUIC_STATE;
 use crate::service::api_service::{get_with_token, post_json};
 use crate::service::user_service::{disconnect_quic, reconnect_quic};
-use crate::utils::global_static_str::TALK_API;
+use crate::utils::global_static_str::talk_api_base;
 use crate::GLOBAL_QUIC_USER_INFO;
-use log::{info, warn};
-use serde::{Deserialize, Serialize};
 
 /// 用户信息响应（包含缓存状态）
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,6 +32,13 @@ pub async fn add_user_map(map: HashMap<String, String>) -> Result<String, String
 #[tauri::command]
 pub async fn get_user_map(key: String) -> Result<String, String> {
     Ok(GLOBAL_QUIC_USER_INFO.read().await.get(&key).cloned().ok_or("not found")?.to_string())
+}
+
+/// 删除持久化数据
+#[tauri::command]
+pub async fn remove_user_map(key: String) -> Result<(), String> {
+    GLOBAL_QUIC_USER_INFO.write().await.remove(&key);
+    Ok(())
 }
 
 /// 断开QUIC连接
@@ -87,7 +95,7 @@ pub async fn get_user_info_with_cache(uuid: String) -> Result<UserInfoWithCache,
     }
 
     info!("本地缓存未命中，从远程获取用户信息: uuid={}", uuid);
-    let url = format!("{}/user/get_user_by_uuid/{}", TALK_API, uuid);
+    let url = format!("{}/user/get_user_by_uuid/{}", talk_api_base(), uuid);
 
     let response = get_with_token(url).await.map_err(|e| {
         warn!("远程获取用户信息失败: uuid={}, error={}", uuid, e);
@@ -123,7 +131,7 @@ pub async fn get_user_info_with_cache(uuid: String) -> Result<UserInfoWithCache,
 #[tauri::command]
 pub async fn refresh_user_info(uuid: String) -> Result<UserInfo, String> {
     info!("强制刷新用户信息: uuid={}", uuid);
-    let url = format!("{}/user/get_user_by_uuid/{}", TALK_API, uuid);
+    let url = format!("{}/user/get_user_by_uuid/{}", talk_api_base(), uuid);
 
     let response = get_with_token(url).await.map_err(|e| e.to_string())?;
     let status = response.status();
@@ -151,7 +159,7 @@ pub async fn refresh_user_info(uuid: String) -> Result<UserInfo, String> {
 /// 更新用户信息
 #[tauri::command]
 pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<String, String> {
-    let url = format!("{}/user/update", TALK_API);
+    let url = format!("{}/user/update", talk_api_base());
 
     let response = post_json(url, &update_dto).await.map_err(|e| e.to_string())?;
 
@@ -160,7 +168,8 @@ pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<Strin
 
     if status.is_success() {
         let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-        if http_result.code == 200 {
+        // 后端 update 走 success_empty()，业务成功码为 204（无数据），与 200 同样视为成功
+        if http_result.code == 200 || http_result.code == 204 {
             if let Some(uuid) = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned() {
                 if let Ok(Some(mut cached_user)) = UserInfo::query_by_uuid(&uuid).await {
                     if let Some(ref username) = update_dto.username {
@@ -171,9 +180,6 @@ pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<Strin
                     }
                     if update_dto.gender.is_some() {
                         cached_user.gender = update_dto.gender;
-                    }
-                    if update_dto.age.is_some() {
-                        cached_user.age = update_dto.age;
                     }
                     if update_dto.birthday.is_some() {
                         cached_user.birthday = update_dto.birthday;

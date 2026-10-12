@@ -1,11 +1,27 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
+import { kv_get } from "@workspace/services";
+
+const AUTH_KEY = "ui_auth_flag";
+
+const getAuthFlag = async (): Promise<string | null> => {
+  try {
+    return await kv_get(AUTH_KEY);
+  } catch {
+    return null;
+  }
+};
 
 const routes: RouteRecordRaw[] = [
   {
     path: "/login",
     name: "Login",
     component: () => import("@/pages/Login/index.vue"),
+  },
+  {
+    path: "/signup",
+    name: "SignUp",
+    component: () => import("@/pages/SignUp/index.vue"),
   },
   {
     path: "/chats",
@@ -23,6 +39,12 @@ const routes: RouteRecordRaw[] = [
     path: "/chats/group-chat/:groupId",
     name: "GroupChat",
     component: () => import("@/pages/Chats/GroupChat/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/chats/group-settings/:groupId",
+    name: "GroupSettings",
+    component: () => import("@/pages/Chats/GroupSettings.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -44,9 +66,57 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/moments",
-    name: "Moments",
-    component: () => import("@/pages/Moments/index.vue"),
+    path: "/friends/requests",
+    name: "FriendRequests",
+    component: () => import("@/pages/Friends/Requests.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/friends/group-requests",
+    name: "GroupInvitations",
+    component: () => import("@/pages/Friends/GroupInvitations.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/friends/create-group",
+    name: "CreateGroup",
+    component: () => import("@/pages/Friends/CreateGroup.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plaza",
+    name: "Plaza",
+    component: () => import("@/pages/Plaza/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plaza/friend",
+    name: "PlazaFriend",
+    component: () => import("@/pages/Plaza/FriendPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plaza/moment/create",
+    name: "MomentCreate",
+    component: () => import("@/pages/Plaza/feed/MomentComposer.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/plaza/moment/:id",
+    name: "MomentDetail",
+    component: () => import("@/pages/Plaza/feed/MomentDetail.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/notifications",
+    name: "Notifications",
+    component: () => import("@/pages/Notifications/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/files",
+    name: "Files",
+    component: () => import("@/pages/Files/index.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -59,6 +129,69 @@ const routes: RouteRecordRaw[] = [
     path: "/profile/edit",
     name: "EditProfile",
     component: () => import("@/pages/Profile/EditProfile.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/settings",
+    component: () => import("@/pages/Settings/_layout.vue"),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: "",
+        name: "Settings",
+        component: () => import("@/pages/Settings/index.vue"),
+      },
+      {
+        path: "general",
+        name: "SettingsGeneral",
+        component: () => import("@/pages/Settings/General.vue"),
+      },
+      {
+        path: "notification",
+        name: "SettingsNotification",
+        component: () => import("@/pages/Settings/Notification.vue"),
+      },
+      {
+        path: "account",
+        name: "SettingsAccount",
+        component: () => import("@/pages/Settings/Account.vue"),
+      },
+      {
+        path: "auth-factor",
+        name: "SettingsAuthFactor",
+        component: () => import("@/pages/Settings/AuthFactor.vue"),
+      },
+      {
+        path: "change-password",
+        name: "SettingsChangePassword",
+        component: () => import("@/pages/Settings/ChangePassword.vue"),
+      },
+      {
+        path: "blacklist",
+        name: "SettingsBlacklist",
+        component: () => import("@/pages/Settings/BlackList.vue"),
+      },
+      {
+        path: "plaza",
+        name: "SettingsPlaza",
+        component: () => import("@/pages/Settings/Plaza.vue"),
+      },
+      {
+        path: "about",
+        name: "SettingsAbout",
+        component: () => import("@/pages/Settings/About.vue"),
+      },
+      {
+        path: "developer",
+        name: "SettingsDeveloper",
+        component: () => import("@/pages/Settings/Developer.vue"),
+      },
+    ],
+  },
+  {
+    path: "/call",
+    name: "Call",
+    component: () => import("@/pages/Call/index.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -76,11 +209,11 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   // 登录页不需要验证，直接放行
   if (to.name === "Login") {
     // 如果已登录却访问登录页，重定向到主页
-    if (sessionStorage.getItem("auth_flag")) {
+    if (await getAuthFlag()) {
       next({ name: "Chats" });
       return;
     }
@@ -89,7 +222,7 @@ router.beforeEach((to, _from, next) => {
   }
 
   if (to.meta.requiresAuth) {
-    const flag = sessionStorage.getItem("auth_flag");
+    const flag = await getAuthFlag();
     if (!flag) {
       // 未登录，跳转到登录页
       next({ name: "Login", query: { redirect: to.fullPath } });

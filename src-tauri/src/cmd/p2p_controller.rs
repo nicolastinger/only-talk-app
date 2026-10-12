@@ -1,4 +1,5 @@
 use log::info;
+use tauri::ipc::{InvokeBody, InvokeResponseBody, Request};
 
 use crate::entity::p2p_models::{
     MediaFrameType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg,
@@ -6,8 +7,8 @@ use crate::entity::p2p_models::{
 use crate::quic_service::p2p_service::p2p_quic_service::send_media_frame;
 use crate::quic_service::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
-    access_p2p_request, close_p2p_connection_service, find_available_udp_port, reject_p2p_request,
-    send_p2p_audio_frame_service, send_p2p_file_data_service,
+    access_p2p_request, close_p2p_connection_service, find_available_udp_port, get_nat_udp_ports,
+    reject_p2p_request, send_p2p_audio_frame_service, send_p2p_file_data_service,
     send_p2p_file_transfer_request_service, send_p2p_file_transfer_response_service,
     send_p2p_media_config_service, send_p2p_media_control_service, send_p2p_media_info_service,
     send_p2p_media_ready_service, send_p2p_text_msg_service, send_p2p_video_call_end_service,
@@ -15,7 +16,22 @@ use crate::service::p2p_service::{
     send_p2p_video_config_service, send_p2p_video_frame_service,
 };
 use crate::utils::dns::resolve_ipv4;
-use crate::utils::global_static_str::{DOMAIN_NAME, UDP_PORT};
+use crate::utils::global_static_str::talk_api_domain;
+
+/// 注册 P2P 媒体接收通道
+/// 前端创建 Channel 后调用此命令，将视频/音频帧的接收通道注册到 Rust 端。
+/// 之后 MediaData 通道收到的帧通过 Channel.send 直传二进制，避免 JSON 序列化。
+#[tauri::command]
+pub async fn start_video_channel(
+    friend_id: String,
+    video_channel: tauri::ipc::Channel<InvokeResponseBody>,
+    audio_channel: tauri::ipc::Channel<InvokeResponseBody>,
+) -> Result<(), String> {
+    info!("注册P2P媒体接收通道: friend={}", friend_id);
+    crate::P2P_MEDIA_CHANNELS
+        .insert(friend_id, crate::P2pMediaChannels { video: video_channel, audio: audio_channel });
+    Ok(())
+}
 
 /// 发送p2p请求给好友
 /// 用于建立P2P连接
@@ -32,12 +48,10 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<String, String> {
 pub async fn send_init_p2p_udp() -> Result<String, String> {
     let udp_port = find_available_udp_port(10024).ok_or("no available UDP port")?;
     let addr = format!("0.0.0.0:{}", udp_port);
-    let remote_addr = resolve_ipv4(DOMAIN_NAME, UDP_PORT)
-        .await
-        .map_err(|e| e.to_string())?;
-    send_udp_ping_msg(addr, remote_addr.to_string())
-        .await
-        .map_err(|e| e.to_string())?;
+    let nat_ports = get_nat_udp_ports().await.map_err(|e| e.to_string())?;
+    let remote_addr =
+        resolve_ipv4(&talk_api_domain(), nat_ports.v4_port_1).await.map_err(|e| e.to_string())?;
+    send_udp_ping_msg(addr, remote_addr.to_string()).await.map_err(|e| e.to_string())?;
 
     Ok(format!("127.0.0.1:{}", udp_port))
 }
@@ -67,19 +81,36 @@ pub async fn process_init_p2p_request(p2p_init_msg: String) -> Result<String, St
 
 /// 发送视频帧数据-无缓存
 /// 直接发送视频帧到P2P连接
+/// 整个 payload 为二进制（前端 invoke 直接传 Uint8Array），target_uuid 从全局读取
 #[tauri::command]
-pub async fn send_p2p_video_frame(frame_data: Vec<u8>, target_uuid: String) -> Result<(), String> {
-    send_p2p_video_frame_service(frame_data, target_uuid).await.map_err(|e| e.to_string())?;
-
-    Ok(())
+pub async fn send_p2p_video_frame(request: Request<'_>) -> Result<(), String> {
+    let target_uuid = get_current_target_uuid().await?;
+    match request.body() {
+        InvokeBody::Raw(bytes) => send_p2p_video_frame_service(bytes.clone(), target_uuid)
+            .await
+            .map_err(|e| e.to_string()),
+        InvokeBody::Json(_) => Err("send_p2p_video_frame 需要原始字节payload".into()),
+    }
 }
 
 /// 发送音频帧数据
 /// 用于隐私模式视频聊天中的音频传输
+/// 整个 payload 为二进制（前端 invoke 直接传 Uint8Array），target_uuid 从全局读取
 #[tauri::command]
-pub async fn send_p2p_audio_frame(audio_data: Vec<u8>, target_uuid: String) -> Result<(), String> {
-    send_p2p_audio_frame_service(audio_data, target_uuid).await.map_err(|e| e.to_string())?;
-    Ok(())
+pub async fn send_p2p_audio_frame(request: Request<'_>) -> Result<(), String> {
+    let target_uuid = get_current_target_uuid().await?;
+    match request.body() {
+        InvokeBody::Raw(bytes) => send_p2p_audio_frame_service(bytes.clone(), target_uuid)
+            .await
+            .map_err(|e| e.to_string()),
+        InvokeBody::Json(_) => Err("send_p2p_audio_frame 需要原始字节payload".into()),
+    }
+}
+
+/// 获取当前 P2P 连接的目标 UUID（从全局状态读取）
+async fn get_current_target_uuid() -> Result<String, String> {
+    let guard = crate::GLOBAL_QUIC_USER_INFO.read().await;
+    guard.get("target_uuid").cloned().ok_or_else(|| "no target uuid".to_string())
 }
 
 /// 发送视频配置

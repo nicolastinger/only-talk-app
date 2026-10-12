@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -11,29 +12,36 @@ use tokio::time::timeout;
 
 use crate::cmd::api_controller::get_request;
 use crate::dao::chat_record_ack::{
-    insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
+    insert_chat_record_ack, query_ack_record_from_db, query_chat_record_by_send_id,
+    update_chat_record_ack_prev_id,
 };
 use crate::dao::chat_record_db::{
-    query_chat_record_by_type_from_db, query_chat_record_from_db, query_last_chat_record,
+    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
+    query_last_chat_record, query_single_recall_messages, recall_chat_record_db,
 };
 use crate::dao::chat_record_read::update_last_read_msg;
 use crate::dao::chat_record_send::{
-    insert_chat_record_send, query_chat_record_send_by_user, update_chat_record_send,
+    insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
+    update_chat_record_send, update_chat_record_send_status,
 };
-use crate::dao::group_chat_record_db::query_group_chat_record_from_db;
+use crate::dao::group_chat_record_db::{
+    query_group_chat_record_by_id, query_group_chat_record_from_db, query_group_recall_messages,
+    recall_group_chat_record_db,
+};
 use crate::dao::group_db::{query_group_by_id, upsert_group};
-use crate::dao::group_message_ack::insert_group_message_ack;
+use crate::dao::group_message_ack::{
+    insert_group_message_ack, query_group_message_ack_by_local_nano_id,
+};
 use crate::dao::group_message_read::update_group_message_read;
 use crate::dao::session_db::{
-    query_chat_session_by_user_db, query_chat_session_db, query_group_chat_session,
-    search_chat_session_db, update_chat_session_db, update_chat_session_local_db,
+    hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
+    query_group_chat_session, search_chat_session_db, update_chat_session_db,
+    update_chat_session_local_db,
 };
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::entity::chat_record_raw::{
-    ChatRecordRaw, FileRecord, ImageRecord, TextRecord, WebRTCSignalRecord,
-};
+use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
 use crate::entity::chat_record_read::ChatRecordRead;
 use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::chat_session::ChatSession;
@@ -42,10 +50,20 @@ use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
-use crate::service::api_service::upload_file;
+use crate::service::api_service::{upload_file_with_progress, UploadProgressFn};
+use crate::service::message_convert::normalize_for_target;
+use crate::service::recall::{build_recall_raw, parse_group_recall_target, parse_recall_target};
+use crate::service::send_queue;
 use crate::service::user_service::{get_user_info, get_user_map};
-use crate::utils::global_static_str::{PLATFORM, TALK_API, ZERO_UUID};
-use crate::utils::image_utils::compress_image_to_webp;
+use crate::utils::global_static_str::{
+    talk_api_base, MAX_FILE_UPLOAD_SIZE, MAX_IMAGE_UPLOAD_SIZE, PLATFORM, ZERO_UUID,
+};
+use crate::utils::image_utils::{compress_image_to_webp, should_skip_image_compression};
+use crate::utils::message_lifecycle::{CallControlLifecycle, MessageLifecycle};
+use crate::utils::message_types::{
+    MSG_TYPE_GROUP_TEXT, MSG_TYPE_P2P, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
+    MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_RECALL, MSG_TYPE_TEXT,
+};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::group_vo::GroupVo;
@@ -92,11 +110,30 @@ pub async fn search_chat_session_service(
     search_chat_session_db(&uuid, &keyword).await
 }
 
+/// 隐藏会话（is_show置0），新消息到达时会自动重新显示
+pub async fn hide_chat_session_service(
+    send_user: String,
+    recv_user: String,
+) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friend_id = if send_user == me { recv_user } else { send_user };
+    hide_chat_session_db(&me, &friend_id).await?;
+    Ok(())
+}
+
 /// 分页获取聊天记录
 pub async fn get_chat_record_service(
     text_quic_msg: TextQuicMsgVo,
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    // 首页加载时先做一次本地撤回核对（幂等）：修正离线同步/跨端撤回因时序或补拉导致的遗漏
+    if page.current <= 1 {
+        if let Err(e) =
+            reconcile_single_recalls(&text_quic_msg.send_user, &text_quic_msg.recv_user).await
+        {
+            error!("单聊撤回核对失败: {}", e);
+        }
+    }
     let limit = page.size;
     let offset = (page.current - 1) * page.size;
     query_chat_record_from_db(&text_quic_msg.send_user, &text_quic_msg.recv_user, limit, offset)
@@ -123,11 +160,16 @@ pub async fn get_chat_record_by_type_service(
 
 /// 本地清空已读消息计数
 pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow::Error> {
+    // 会话被读取时同步为显示状态，避免隐藏会话因读已读事件而滞留隐藏
+    let mut chat_session = chat_session;
+    chat_session.is_show = 1;
     update_chat_session_local_db(&chat_session).await?;
 
-    //发送会话消息给前端
+    // 清空/清理会话事件统一为规范方向（send_user=对方、recv_user=我），
+    // 避免 ack 等路径把方向写反、前端误判
+    let me = get_user_info("uuid").await?;
     let chat_session_event =
-        ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+        ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session.to_canonical(&me))? };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
@@ -141,7 +183,7 @@ pub async fn clear_all_unread_sessions_service() -> Result<(), anyhow::Error> {
     let sessions = crate::dao::session_db::query_chat_session_db(&uuid).await?;
     for session in sessions {
         if session.unread_count > 0 {
-            let mut chat_session = ChatSession {
+            let chat_session = ChatSession {
                 id: 0,
                 nano_id: session.nano_id,
                 timestamp: session.timestamp,
@@ -154,6 +196,8 @@ pub async fn clear_all_unread_sessions_service() -> Result<(), anyhow::Error> {
                 is_show: session.is_show,
                 is_top: session.is_top,
                 group_id: session.group_id,
+                session_uuid: session.session_uuid,
+                last_message_id: session.last_message_id,
             };
             clear_chat_session(chat_session).await?;
         }
@@ -195,10 +239,18 @@ pub async fn update_group_last_read_msg_service(
 
 /// 按需开流发送文本信息
 pub async fn send_msg(text_msg: Vec<u8>, conn: &Connection) -> Result<String, anyhow::Error> {
-    let mut send = conn.open_uni().await?;
-    send.write_all(&text_msg).await?;
-    send.finish().await?;
-    Ok("success".to_string())
+    // 整体 5 秒超时：断网/连接异常时 quinn 的 open_uni/write_all/finish 可能长时间挂起，
+    // 会卡住 GLOBAL_MSG_SEND_LOCK 导致其他命令（重发/忽略）获取锁超时
+    let send_future = async {
+        let mut send = conn.open_uni().await?;
+        send.write_all(&text_msg).await?;
+        send.finish().await?;
+        Ok("success".to_string())
+    };
+    match tokio::time::timeout(Duration::from_secs(5), send_future).await {
+        Ok(result) => result,
+        Err(_) => Err(anyhow!("发送消息超时")),
+    }
 }
 
 /// 已读目标用户的所有聊天消息
@@ -251,6 +303,8 @@ pub async fn update_last_read_msg_service(friend_uuid: String) -> Result<(), any
         is_show: last_chat_session.is_show,
         is_top: last_chat_session.is_top,
         group_id: last_chat_session.group_id,
+        session_uuid: last_chat_session.session_uuid,
+        last_message_id: last_chat_session.last_message_id,
     };
     clear_chat_session(chat_session).await?;
     Ok(())
@@ -287,6 +341,10 @@ pub async fn update_last_read_msg_from_db(
 
     // 遍历去重后的消息进行处理
     for (_, item) in unique_msgs {
+        // P2P 隐私握手(4)是瞬态信号：不写已读、不建/改会话，与好友聊天完全解耦
+        if item.text_type == MSG_TYPE_P2P {
+            continue;
+        }
         let chat_record_read = ChatRecordRead {
             id: 0,
             nano_id: item.nano_id.clone(),
@@ -313,6 +371,8 @@ pub async fn update_last_read_msg_from_db(
             is_show: 1,
             is_top: 0,
             group_id: None,
+            session_uuid: None,
+            last_message_id: 0,
         };
         clear_chat_session(chat_session).await?;
     }
@@ -352,6 +412,8 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
         is_show: 1,
         is_top: 0,
         group_id: None,
+        session_uuid: None,
+        last_message_id: 0,
     };
     // 创建会话窗口
     update_chat_session_db(&chat_session).await?;
@@ -364,7 +426,7 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
 
     let group = query_group_by_id(&group_id).await?;
     if group.is_none() {
-        let url = format!("{}/group/chat/info/{}", TALK_API, group_id);
+        let url = format!("{}/group/chat/info/{}", talk_api_base(), group_id);
         let result = get_request(url).await.map_err(|e| anyhow!(e))?;
         let response: HttpResult =
             serde_json::from_str(&result.body).map_err(|e| anyhow!("解析响应失败: {}", e))?;
@@ -394,7 +456,8 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
 
     let existing = query_group_chat_session(&me, &group_id).await?;
     if !existing.is_empty() {
-        let mut chat_session = existing.into_iter().next().unwrap();
+        let mut chat_session =
+            existing.into_iter().next().ok_or_else(|| anyhow::anyhow!("群聊会话不存在"))?;
         chat_session.is_show = 1;
         update_chat_session_local_db(&chat_session).await?;
         return Ok(());
@@ -413,6 +476,8 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
         is_show: 1,
         is_top: 0,
         group_id: Some(group_id),
+        session_uuid: None,
+        last_message_id: 0,
     };
     update_chat_session_db(&chat_session).await?;
     Ok(())
@@ -431,13 +496,32 @@ pub async fn get_group_chat_record_service(
     group_id: String,
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    // 首页加载时先做一次本地撤回核对（幂等）：修正离线同步/跨端撤回因时序或补拉导致的遗漏
+    if page.current <= 1 {
+        if let Err(e) = reconcile_group_recalls(&group_id).await {
+            error!("群聊撤回核对失败: {}", e);
+        }
+    }
     let limit = page.size;
     let offset = (page.current - 1) * page.size;
     query_group_chat_record_from_db(&group_id, limit, offset).await
 }
 
-/// 发送文本消息
+/// 发送文本/图片/文件消息（TextLifecycle）
+///
+/// 通话控制消息(12-15)请走 send_call_control_msg，WebRTC 信令(100)请走 send_webrtc_signal。
 pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
+    if CallControlLifecycle::matches(text_quic_msg.text_type) {
+        return Err(anyhow!("通话控制消息(12-15)请使用 send_call_control_msg 命令"));
+    }
+    send_persistent_text_msg(text_quic_msg).await
+}
+
+/// 持久化消息发送（TextLifecycle）：计算 prev_id、写 chat_record_send/ack、
+/// 直接发送或入队等待补发；失败自动重发（断连进入离线发送队列）。
+pub async fn send_persistent_text_msg(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<String, anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let now = get_now_time_stamp_as_millis()?;
 
@@ -520,6 +604,7 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
 
     // 如果没有，则直接发送消息
     let raw: Vec<u8> = Vec::from(chat_record_send.raw);
+    let send_id = chat_record_ack.send_id.clone();
     let test_msg = generate_text_msg_without_nano(
         text_quic_msg.text_type,
         raw,
@@ -529,7 +614,104 @@ pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<Strin
     )?;
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+        server_book.get("SERVER_TEXT").map(|c| c.conn.clone())
+    };
+    match conn {
+        Some(conn) => send_msg(test_msg, &conn).await,
+        None => {
+            // 重连期间: 进入全局离线发送队列, 上线后自动补发; 手动断开(Idle)则报错
+            if send_queue::should_queue_on_offline().await {
+                send_queue::enqueue(send_id.clone(), test_msg).await;
+                info!("[send_queue] QUIC 未连接，消息进入离线发送队列: {}", send_id);
+                Ok("已进入离线发送队列".to_string())
+            } else {
+                Err(anyhow!("QUIC连接未建立，请稍后重试"))
+            }
+        }
+    }
+}
+
+/// 通话控制消息(12-15) -> 文本历史记录文案（媒体区分语音/视频，默认视频）
+fn call_control_text(text_type: u16, raw: &str) -> Result<Option<String>, anyhow::Error> {
+    let media = serde_json::from_str::<serde_json::Value>(raw)
+        .ok()
+        .and_then(|v| v.get("media").and_then(|m| m.as_str()).map(|s| s.to_string()))
+        .unwrap_or_default();
+    let kind = if media == "audio" { "语音" } else { "视频" };
+    let text = match text_type {
+        MSG_TYPE_P2P_VIDEO_CALL_INVITE => format!("发起{}通话邀请", kind),
+        MSG_TYPE_P2P_VIDEO_CALL_ACCEPT => format!("已接听{}通话", kind),
+        MSG_TYPE_P2P_VIDEO_CALL_REJECT => format!("已拒绝{}通话", kind),
+        MSG_TYPE_P2P_VIDEO_CALL_END => format!("{}通话已结束", kind),
+        _ => return Ok(None),
+    };
+    Ok(Some(text))
+}
+
+/// 发送视频通话控制消息（CallControlLifecycle，12-15）
+///
+/// 1) 自动生成一条 type=1 文本记录（发起/已接听/已拒绝/已结束）走持久化文本管道
+///    （prev_id、A/B 本地 sqlite + 服务端三方存储、可重发）；
+/// 2) 控制命令本身直接经 SERVER_TEXT 上送：不进 send/ack 表、不落库、失败不重发，
+///    服务端只转发不存储。
+pub async fn send_call_control_msg_service(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<String, anyhow::Error> {
+    if !CallControlLifecycle::matches(text_quic_msg.text_type) {
+        return Err(anyhow!("send_call_control_msg 仅支持通话控制消息(12-15)"));
+    }
+    let sender = get_user_info("uuid").await?;
+
+    // 1. 自动生成文本历史记录（type=1）
+    if let Some(text) = call_control_text(text_quic_msg.text_type, &text_quic_msg.raw)? {
+        let text_msg = TextQuicMsgVo {
+            nano_id: nanoid::nanoid!(),
+            text_type: MSG_TYPE_TEXT,
+            raw: serde_json::json!({ "text": text, "prev_id": "", "platform": 0 }).to_string(),
+            recv_user: text_quic_msg.recv_user.clone(),
+            send_user: sender.clone(),
+            timestamp: text_quic_msg.timestamp,
+        };
+        send_persistent_text_msg(text_msg).await?;
+    }
+
+    // 2. 直接上送控制命令（不重发、不落库）
+    let raw = text_quic_msg.raw.as_bytes().to_vec();
+    let test_msg = generate_text_msg_without_nano(
+        text_quic_msg.text_type,
+        raw,
+        text_quic_msg.recv_user.clone(),
+        sender,
+        text_quic_msg.nano_id.clone(),
+    )?;
+    let conn = {
+        let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
+    };
+    send_msg(test_msg, &conn).await
+}
+
+/// 发送 WebRTC 信令消息（SignalLifecycle，独立通道）
+///
+/// 不走 send/ack 表、不设置 prev_id、不经发送锁，直接经 SERVER_TEXT 连接上送；
+/// 服务端只转发不存储，客户端不落库、失败不重发（纯实时信令）。
+pub async fn send_webrtc_signal_service(
+    text_quic_msg: TextQuicMsgVo,
+) -> Result<String, anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
+
+    let raw: Vec<u8> = Vec::from(text_quic_msg.raw);
+    let test_msg = generate_text_msg_without_nano(
+        text_quic_msg.text_type,
+        raw,
+        text_quic_msg.recv_user,
+        sender,
+        text_quic_msg.nano_id,
+    )?;
+
+    let conn = {
+        let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
+        server_book.get("SERVER_TEXT").ok_or(anyhow!("QUIC连接未建立，请稍后重试"))?.conn.clone()
     };
 
     send_msg(test_msg, &conn).await
@@ -573,6 +755,7 @@ pub async fn send_group_text_msg_service(
     .await?;
 
     let raw_bytes: Vec<u8> = Vec::from(raw);
+    let send_id = text_quic_msg.nano_id.clone();
     let test_msg = generate_text_msg_without_nano(
         text_quic_msg.text_type,
         raw_bytes,
@@ -583,10 +766,21 @@ pub async fn send_group_text_msg_service(
 
     let conn = {
         let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-        server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+        server_book.get("SERVER_TEXT").map(|c| c.conn.clone())
     };
-
-    send_msg(test_msg, &conn).await
+    match conn {
+        Some(conn) => send_msg(test_msg, &conn).await,
+        None => {
+            // 重连期间: 进入全局离线发送队列, 上线后自动补发; 手动断开(Idle)则报错
+            if send_queue::should_queue_on_offline().await {
+                send_queue::enqueue(send_id.clone(), test_msg).await;
+                info!("[send_queue] QUIC 未连接，群消息进入离线发送队列: {}", send_id);
+                Ok("已进入离线发送队列".to_string())
+            } else {
+                Err(anyhow!("QUIC连接未建立，请稍后重试"))
+            }
+        }
+    }
 }
 
 /// 发送群聊消息后更新会话列表
@@ -617,6 +811,8 @@ async fn update_group_session_after_send(
             is_show: 1,
             is_top: 0,
             group_id: Some(group_id.to_string()),
+            session_uuid: None,
+            last_message_id: 0,
         };
         update_chat_session_db(&chat_session).await?;
 
@@ -652,14 +848,28 @@ pub async fn send_group_image_msg_service(
 ) -> Result<(), anyhow::Error> {
     let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
+    let nano_id = text_quic_msg.nano_id.clone();
+    let file_name = Path::new(&file_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("image")
+        .to_string();
 
-    // 1、压缩图片到当月资源目录
-    let compressed_path = compress_image_to_webp(&Path::new(&file_path))?;
-    let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
+    // 0、大小校验
+    ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
 
-    // 2、上传图片到文件服务器（使用群聊专用接口）
+    // 1、GIF/WebP/已压缩产物跳过压缩(原图上传), 否则压缩到当月资源目录
+    let upload_path = if should_skip_image_compression(Path::new(&file_path)) {
+        info!("跳过群图片压缩(原图上传): {}", file_path);
+        file_path.clone()
+    } else {
+        emit_chat_send_progress(&nano_id, &file_name, "compressing", 0, 0);
+        compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
+    };
+
+    // 2、上传图片到文件服务器（使用群聊专用接口, 流式 + 进度）
     let upload_data =
-        upload_group_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+        upload_group_chat_file_server(&upload_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 3、获取图片尺寸信息
     let img = ImageReader::open(&file_path)?.decode()?;
@@ -667,7 +877,7 @@ pub async fn send_group_image_msg_service(
     let img_height = img.height() as i32;
 
     // 4、获取文件大小
-    let metadata = std::fs::metadata(compressed_path_str)?;
+    let metadata = std::fs::metadata(&upload_path)?;
     let img_size = metadata.len() as i32;
 
     // 5、获取第一个 file_info 的 biz_id
@@ -675,11 +885,6 @@ pub async fn send_group_image_msg_service(
     let biz_id = file_info.biz_id.clone();
 
     // 6、组装 GroupImageRecord
-    let file_name = std::path::Path::new(&file_path)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("image")
-        .to_string();
     let group_image_record = GroupImageRecord {
         biz_id,
         file_name,
@@ -708,6 +913,7 @@ pub async fn send_group_file_msg_service(
     let sender = get_user_info("uuid").await?;
     let file_path = text_quic_msg.raw.clone();
     let path = Path::new(&file_path);
+    let nano_id = text_quic_msg.nano_id.clone();
 
     // 1、获取文件名和文件扩展名
     let file_name =
@@ -715,12 +921,12 @@ pub async fn send_group_file_msg_service(
 
     let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
 
-    // 2、获取文件大小
-    let metadata = std::fs::metadata(&file_path)?;
-    let file_size = metadata.len() as i64;
+    // 2、获取文件大小(含大小限制校验)
+    let file_size = ensure_within_size_limit(&file_path, MAX_FILE_UPLOAD_SIZE, "文件")? as i64;
 
-    // 3、上传文件到文件服务器（使用群聊专用接口）
-    let upload_data = upload_group_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
+    // 3、上传文件到文件服务器（使用群聊专用接口, 流式 + 进度）
+    let upload_data =
+        upload_group_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 4、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
@@ -830,13 +1036,81 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         }
-        100 => {
-            let mut chat_record_raw = <WebRTCSignalRecord as ChatRecordRaw>::deserialize(raw)?;
-            chat_record_raw.set_prev_id(prev_id);
-            chat_record_raw.json_serialize()
-        }
+        // 视频通话控制消息（邀请/接受/拒绝/结束），不参与 prev_id 链
+        12..=15 => Ok(raw.to_string()),
+        // 消息撤回(伪撤回)控制消息不参与 prev_id 链
+        MSG_TYPE_RECALL => Ok(raw.to_string()),
         _ => Err(anyhow!("不支持的消息类型: {}", text_type)),
     }
+}
+
+/// 重算 prev_id 并持久化：更新 ack 表 prev_id、重写 send 表 raw/状态/时间
+/// 返回更新后的记录（含新 raw），供调用方直接发送
+pub async fn prepare_pending_msg_for_send(
+    item: &ChatRecordSend,
+    new_status: i16,
+    new_retry_count: i32,
+) -> Result<ChatRecordSend, anyhow::Error> {
+    let mut prev_id = ZERO_UUID.to_string();
+    let sender = &item.send_user;
+    let recv_user = &item.recv_user;
+    // 查询本地最新一条已发送成功的消息
+    let last_send_success_msg =
+        query_chat_record_send_by_user(sender, recv_user, vec![3], false).await?;
+    if !last_send_success_msg.is_empty() {
+        let send_id = &last_send_success_msg
+            .first()
+            .ok_or(anyhow!("last_send_success_msg is empty"))?
+            .send_id;
+        if let Some(prev_ack) = query_chat_record_by_send_id(send_id, recv_user).await? {
+            prev_id = prev_ack.msg_id;
+        }
+    }
+    // 更新ack的prev_id
+    update_chat_record_ack_prev_id(&item.send_id, &prev_id).await?;
+    let msg_raw = set_prev_id(&item.raw, item.text_type, prev_id)?;
+    let now = get_now_time_stamp_as_millis()?;
+    // 持久化：raw 同步写回（修复重发后落库 prev_id 与线上不一致的 bug）
+    update_chat_record_send(&item.send_id, "", new_status, new_retry_count, now, &msg_raw).await?;
+
+    let mut updated = item.clone();
+    updated.raw = msg_raw;
+    updated.send_status = new_status;
+    updated.retry_count = new_retry_count;
+    updated.timestamp = now;
+    Ok(updated)
+}
+
+/// 手动重发失败消息：重置为排队(0)，重算 prev_id/raw，触发补发
+/// 调用方需持有 GLOBAL_MSG_SEND_LOCK
+pub async fn retry_send_msg_service(send_id: &str) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let record = query_record_send_from_db(send_id).await?;
+    if record.send_user != me {
+        return Err(anyhow!("无权操作该消息"));
+    }
+    if record.send_status != 2 {
+        return Err(anyhow!("消息状态已变化，无法重发"));
+    }
+    // 重入队：status=0, retry_count 清零（重发后重试机会从满额重新计算），raw 同步写回
+    prepare_pending_msg_for_send(&record, 0, 0).await?;
+    // 触发补发（内部裁决：同一接收方仅一条在途；未被选中则由定时任务兜底补发）
+    process_no_send_success_msg().await?;
+    Ok(())
+}
+
+/// 忽略失败消息：状态置 -1（已忽略），查询 IN(0,1,2) 不再返回
+pub async fn ignore_send_msg_service(send_id: &str) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let record = query_record_send_from_db(send_id).await?;
+    if record.send_user != me {
+        return Err(anyhow!("无权操作该消息"));
+    }
+    if record.send_status != 2 {
+        return Err(anyhow!("消息状态已变化，无法忽略"));
+    }
+    update_chat_record_send_status(send_id, -1).await?;
+    Ok(())
 }
 
 // 处理本地未发送完成的消息
@@ -867,65 +1141,50 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
                     .ok_or(anyhow!("no_send_success_msg is empty"))?
                     .timestamp;
             }
-            if status == 0 && no_send_success_msg_option.is_none() {
-                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time {
-                    no_send_success_msg_option = Some(item);
-                    continue;
-                }
+            if status == 0
+                && no_send_success_msg_option.is_none()
+                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time)
+            {
+                no_send_success_msg_option = Some(item);
+                continue;
             }
             if status == 1
                 && no_send_success_msg_option.is_none()
                 && retry_count < 3
                 && diff_time > 8000
+                && (no_send_success_msg.is_empty() || timestamp <= no_send_success_time)
             {
-                if no_send_success_msg.is_empty() || timestamp <= no_send_success_time {
-                    no_send_success_msg_option = Some(item);
-                    continue;
-                }
+                no_send_success_msg_option = Some(item);
+                continue;
             }
             if status == 1 && retry_count >= 3 {
                 item.send_status = 2;
-                update_chat_record_send(&item.send_id, "", 2, 3, now).await?;
+                update_chat_record_send(&item.send_id, "", 2, 3, now, &item.raw).await?;
             }
         }
-        if let Some(mut item) = no_send_success_msg_option {
+        if let Some(item) = no_send_success_msg_option {
             info!("存在未发送完成的消息, 发送消息: {}", item.send_id);
             let retry_count = item.retry_count + 1;
-            let mut prev_id = ZERO_UUID.to_string();
-            let sender = &item.send_user;
-            let recv_user = &item.recv_user;
-            // 查询本地最新一条已发送成功的消息
-            let last_send_success_msg =
-                query_chat_record_send_by_user(&sender, &recv_user, vec![3], false).await?;
-            if !last_send_success_msg.is_empty() {
-                let send_id = &last_send_success_msg
-                    .first()
-                    .ok_or(anyhow!("last_send_success_msg is empty"))?
-                    .send_id;
-                if let Some(prev_ack) = query_chat_record_by_send_id(send_id, &recv_user).await? {
-                    prev_id = prev_ack.msg_id;
-                }
-            }
-            let raw = &item.raw;
-            let text_type = item.text_type;
-            // 更新ack的prev_id
-            update_chat_record_ack_prev_id(&item.send_id, &prev_id).await?;
-            let msg_raw = set_prev_id(&raw, text_type, prev_id)?;
-            item.raw = msg_raw;
-            // 更新消息状态为发送中
-            update_chat_record_send(&item.send_id, "", 1, retry_count, now).await?;
+            // 重算 prev_id、重写 raw 并持久化（raw 同步修复）
+            let updated = prepare_pending_msg_for_send(&item, 1, retry_count).await?;
 
-            let raw: Vec<u8> = Vec::from(item.raw);
+            let raw: Vec<u8> = Vec::from(updated.raw);
             let test_msg = generate_text_msg_without_nano(
-                item.text_type,
+                updated.text_type,
                 raw,
-                item.recv_user,
-                item.send_user,
-                item.send_id,
+                updated.recv_user,
+                updated.send_user,
+                updated.send_id,
             )?;
             let conn = {
                 let server_book = GLOBAL_QUIC_SERVER_LIST.read().await;
-                server_book.get("SERVER_TEXT").expect("SERVER_TEXT not found").conn.clone()
+                match server_book.get("SERVER_TEXT") {
+                    Some(c) => c.conn.clone(),
+                    None => {
+                        info!("QUIC 未连接，跳过补发，等待重连后下一轮");
+                        return Ok(());
+                    }
+                }
             };
 
             send_msg(test_msg, &conn).await?;
@@ -935,13 +1194,45 @@ pub async fn process_no_send_success_msg() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn upload_chat_file_server(
-    file_path: &str,
-    friend_uuid: &str,
-) -> Result<UploadData, anyhow::Error> {
-    let url = format!("{}/file_integrated/upload/user_chat/{}", TALK_API, friend_uuid);
-    let response = upload_file(&url, file_path, "file").await?;
+/// 发送进度事件负载(事件名 `chat_file_upload_progress`)。
+/// `phase`: reading(读取/准备) / compressing(压缩) / uploading(上传, 带字节进度)。
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChatFileUploadProgress {
+    nano_id: String,
+    file_name: String,
+    phase: String,
+    uploaded: u64,
+    total: u64,
+}
 
+/// 上报发送进度(前端按 nano_id 匹配对应消息; 无 AppHandle 时忽略)。
+fn emit_chat_send_progress(nano_id: &str, file_name: &str, phase: &str, uploaded: u64, total: u64) {
+    if let Some(handle) = APP_HANDLE.get() {
+        let _ = handle.emit(
+            "chat_file_upload_progress",
+            ChatFileUploadProgress {
+                nano_id: nano_id.to_string(),
+                file_name: file_name.to_string(),
+                phase: phase.to_string(),
+                uploaded,
+                total,
+            },
+        );
+    }
+}
+
+/// 构造以 nano_id 为键的上传进度回调(phase = uploading)。
+fn build_upload_progress(nano_id: &str, file_name: &str) -> UploadProgressFn {
+    let nano_id = nano_id.to_string();
+    let file_name = file_name.to_string();
+    Arc::new(move |uploaded, total| {
+        emit_chat_send_progress(&nano_id, &file_name, "uploading", uploaded, total);
+    })
+}
+
+/// 解析上传响应为 UploadData。
+async fn parse_upload_response(response: reqwest::Response) -> Result<UploadData, anyhow::Error> {
     let status = response.status();
     let response_text = response.text().await?;
 
@@ -959,42 +1250,71 @@ async fn upload_chat_file_server(
     Ok(upload_response.data)
 }
 
-/// 上传群聊文件到服务器（不检查好友关系）
+/// 上传单聊聊天文件(流式 + 进度上报)。
+async fn upload_chat_file_server(
+    file_path: &str,
+    friend_uuid: &str,
+    nano_id: &str,
+) -> Result<UploadData, anyhow::Error> {
+    let url = format!("{}/file_integrated/upload/user_chat/{}", talk_api_base(), friend_uuid);
+    let file_name = Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
+    let progress = build_upload_progress(nano_id, file_name);
+    let response = upload_file_with_progress(&url, file_path, "file", Some(progress)).await?;
+    parse_upload_response(response).await
+}
+
+/// 上传群聊文件到服务器（不检查好友关系, 流式 + 进度上报）。
 async fn upload_group_chat_file_server(
     file_path: &str,
     group_uuid: &str,
+    nano_id: &str,
 ) -> Result<UploadData, anyhow::Error> {
-    let url = format!("{}/file_integrated/upload/group_chat/{}", TALK_API, group_uuid);
-    let response = upload_file(&url, file_path, "file").await?;
+    let url = format!("{}/file_integrated/upload/group_chat/{}", talk_api_base(), group_uuid);
+    let file_name = Path::new(file_path).file_name().and_then(|n| n.to_str()).unwrap_or("file");
+    let progress = build_upload_progress(nano_id, file_name);
+    let response = upload_file_with_progress(&url, file_path, "file", Some(progress)).await?;
+    parse_upload_response(response).await
+}
 
-    let status = response.status();
-    let response_text = response.text().await?;
-
-    if !status.is_success() {
-        return Err(anyhow!("上传失败: {}, 响应: {}", status, response_text));
+/// 校验上传文件大小, 超限返回面向用户的错误。
+fn ensure_within_size_limit(
+    file_path: &str,
+    max_size: u64,
+    kind: &str,
+) -> Result<u64, anyhow::Error> {
+    let size = std::fs::metadata(file_path)?.len();
+    if size > max_size {
+        let limit_mb = max_size / (1024 * 1024);
+        return Err(anyhow!("{}大小超过限制（最大 {}MB）", kind, limit_mb));
     }
-
-    let upload_response: UploadResponse = serde_json::from_str(&response_text)
-        .map_err(|e| anyhow!("解析上传响应失败: {}, 响应内容: {}", e, response_text))?;
-
-    if upload_response.code != 200 {
-        return Err(anyhow!("上传失败: {}", upload_response.message));
-    }
-
-    Ok(upload_response.data)
+    Ok(size)
 }
 
 // 发送图片数据
 pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
+    let nano_id = text_quic_msg.nano_id.clone();
+    let file_name = Path::new(&file_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("image")
+        .to_string();
 
-    // 1、压缩图片到当月资源目录
-    let compressed_path = compress_image_to_webp(&Path::new(&file_path))?;
-    let compressed_path_str = compressed_path.to_str().ok_or(anyhow!("获取压缩文件路径失败"))?;
+    // 0、大小校验
+    ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
 
-    // 2、上传图片到文件服务器
+    // 1、GIF/WebP/已压缩产物跳过压缩(原图上传), 否则压缩到当月资源目录
+    let upload_path = if should_skip_image_compression(Path::new(&file_path)) {
+        info!("跳过图片压缩(原图上传): {}", file_path);
+        file_path.clone()
+    } else {
+        emit_chat_send_progress(&nano_id, &file_name, "compressing", 0, 0);
+        compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
+    };
+
+    // 2、上传图片到文件服务器(流式 + 进度)
     let upload_data =
-        upload_chat_file_server(compressed_path_str, &text_quic_msg.recv_user).await?;
+        upload_chat_file_server(&upload_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 3、获取图片尺寸信息
     let img = ImageReader::open(&file_path)?.decode()?;
@@ -1002,7 +1322,7 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     let img_height = img.height() as i32;
 
     // 4、获取文件大小
-    let metadata = std::fs::metadata(compressed_path_str)?;
+    let metadata = std::fs::metadata(&upload_path)?;
     let img_size = metadata.len() as i32;
 
     // 5、获取第一个 file_info 的 biz_id
@@ -1010,11 +1330,6 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
     let biz_id = file_info.biz_id.clone();
 
     // 6、组装 ImageRecord
-    let file_name = std::path::Path::new(&file_path)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("image")
-        .to_string();
     let image_record = ImageRecord {
         prev_id: ZERO_UUID.to_string(),
         biz_id,
@@ -1060,6 +1375,7 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
 pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
     let path = Path::new(&file_path);
+    let nano_id = text_quic_msg.nano_id.clone();
 
     // 1、获取文件名和文件扩展名
     let file_name =
@@ -1067,12 +1383,12 @@ pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), a
 
     let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
 
-    // 2、获取文件大小
-    let metadata = std::fs::metadata(&file_path)?;
-    let file_size = metadata.len() as i64;
+    // 2、获取文件大小(含大小限制校验)
+    let file_size = ensure_within_size_limit(&file_path, MAX_FILE_UPLOAD_SIZE, "文件")? as i64;
 
-    // 3、上传文件到文件服务器
-    let upload_data = upload_chat_file_server(&file_path, &text_quic_msg.recv_user).await?;
+    // 3、上传文件到文件服务器(流式 + 进度)
+    let upload_data =
+        upload_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
 
     // 4、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
@@ -1116,4 +1432,163 @@ pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), a
     }
 
     Ok(())
+}
+
+/// 逐条转发消息到目标会话（好友或群）。
+///
+/// 复用原始 raw 中的 `biz_id`，不重新上传图片/文件；每条消息生成新的 `nano_id`
+/// 与当前时间戳，按单聊/群聊格式互转后走既有发送管道。
+/// 私聊目标由调用方持有 `GLOBAL_MSG_SEND_LOCK`；群聊目标无锁依赖。
+pub async fn forward_chat_messages_service(
+    messages: Vec<TextQuicMsgVo>,
+    target_recv: &str,
+    target_group: bool,
+) -> Result<(), anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
+    for origin in messages {
+        let (text_type, raw) =
+            normalize_for_target(origin.text_type, &origin.raw, target_group, &sender)?;
+        let timestamp = get_now_time_stamp_as_millis()?;
+        let msg = TextQuicMsgVo {
+            nano_id: nanoid::nanoid!(),
+            text_type,
+            raw,
+            recv_user: target_recv.to_string(),
+            send_user: String::new(),
+            timestamp,
+        };
+        if target_group {
+            send_group_text_msg_service(msg).await?;
+        } else {
+            send_text_msg_service(msg).await?;
+        }
+    }
+    Ok(())
+}
+
+/// 本地撤回核对（单聊，幂等）。
+///
+/// 扫描会话内所有撤回控制消息并清除对应原消息，不依赖消息到达顺序，
+/// 用于离线同步/历史加载时兜底（如"撤回先于原消息到达"、跨端撤回）。
+/// 返回本次新命中并删除成功的条数。
+pub async fn reconcile_single_recalls(me: &str, peer: &str) -> Result<usize, anyhow::Error> {
+    let recalls = query_single_recall_messages(me, peer).await?;
+    let mut applied = 0usize;
+    for (raw, send_user) in recalls {
+        if let Some(target) = parse_recall_target(&raw) {
+            if recall_chat_record_db(&target, &send_user).await? {
+                applied += 1;
+            }
+        }
+    }
+    Ok(applied)
+}
+
+/// 本地撤回核对（群聊，幂等）。同 `reconcile_single_recalls`，用于群聊。
+pub async fn reconcile_group_recalls(group_id: &str) -> Result<usize, anyhow::Error> {
+    let recalls = query_group_recall_messages(group_id).await?;
+    let mut applied = 0usize;
+    for (raw, send_user) in recalls {
+        if let Some(target) = parse_group_recall_target(&raw) {
+            if recall_group_chat_record_db(&target, group_id, &send_user).await? {
+                applied += 1;
+            }
+        }
+    }
+    Ok(applied)
+}
+
+/// 解析单聊撤回目标为规范 nano_id。
+///
+/// 前端乐观消息持有本地 `nano_id`，ACK 后 `chat_record` 落库为服务端 `nano_id`；
+/// 映射存于 ack 表：`chat_record_ack.send_id(本地) -> msg_id(服务端)`，`ack_status=1`
+/// 表示已确认。历史/同步消息本就是服务端 id，查不到 ack 记录时原样返回。
+pub async fn resolve_single_recall_target(local_nano_id: &str) -> String {
+    if let Ok(ack) = query_ack_record_from_db(local_nano_id).await {
+        if ack.ack_status == 1 && !ack.msg_id.is_empty() {
+            return ack.msg_id;
+        }
+    }
+    local_nano_id.to_string()
+}
+
+/// 解析群聊撤回目标为规范 nano_id（映射来源：`group_message_ack.local_nano_id -> nano_id`）。
+pub async fn resolve_group_recall_target(local_nano_id: &str) -> String {
+    if let Ok(Some(ack)) = query_group_message_ack_by_local_nano_id(local_nano_id).await {
+        if ack.ack_status == 1 && !ack.nano_id.is_empty() {
+            return ack.nano_id;
+        }
+    }
+    local_nano_id.to_string()
+}
+
+/// 撤回单聊消息（伪撤回）。
+///
+/// 校验原消息为本人发送后，先发送一条携带目标 `nano_id` 的撤回控制消息
+/// （离线时入队），成功后再清除原消息内容并置 `deleted = 1`。返回构造出的
+/// 撤回消息(含本地 `nano_id`)，供前端乐观上屏；ACK 回执按 `nano_id` 归一。
+pub async fn recall_chat_message_service(
+    recv_user: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+
+    // 前端可能传本地 nano_id，先归一为服务端 nano_id（对端也以此 id 存储）
+    let target_nano_id = resolve_single_recall_target(&target_nano_id).await;
+
+    let original = query_chat_record_by_id_from_db(&target_nano_id, &me)
+        .await
+        .map_err(|_| anyhow!("撤回失败：原消息不存在或已撤回"))?;
+    if original.send_user != me {
+        return Err(anyhow!("撤回失败：只能撤回自己发送的消息"));
+    }
+
+    let recall_msg = TextQuicMsgVo {
+        nano_id: nanoid::nanoid!(),
+        text_type: MSG_TYPE_RECALL,
+        raw: build_recall_raw(&target_nano_id)?,
+        recv_user,
+        send_user: me,
+        timestamp: get_now_time_stamp_as_millis()?,
+    };
+    // 先发送撤回控制消息(离线时入队)，成功后再清除原消息，避免发送失败导致原消息丢失
+    send_text_msg_service(recall_msg.clone()).await?;
+    recall_chat_record_db(&target_nano_id, &recall_msg.send_user).await?;
+    Ok(recall_msg)
+}
+
+/// 撤回群聊消息（伪撤回）。
+///
+/// 群聊撤回以 `MSG_TYPE_GROUP_TEXT(2001)` 承载(服务端仅识别 2001/2004 为群类型)，
+/// 撤回载荷作为内层文本；先发送撤回控制消息(离线时入队)，成功后再清除原消息内容
+/// 并置 `deleted = 1`。
+pub async fn recall_group_chat_message_service(
+    group_id: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+
+    // 前端可能传本地 nano_id，先归一为服务端 nano_id（对端也以此 id 存储）
+    let target_nano_id = resolve_group_recall_target(&target_nano_id).await;
+
+    let original = query_group_chat_record_by_id(&target_nano_id, &group_id)
+        .await?
+        .ok_or_else(|| anyhow!("撤回失败：原消息不存在或已撤回"))?;
+    if original.send_user != me {
+        return Err(anyhow!("撤回失败：只能撤回自己发送的消息"));
+    }
+
+    let recall_msg = TextQuicMsgVo {
+        nano_id: nanoid::nanoid!(),
+        text_type: MSG_TYPE_GROUP_TEXT,
+        raw: build_recall_raw(&target_nano_id)?,
+        recv_user: group_id,
+        send_user: me,
+        timestamp: get_now_time_stamp_as_millis()?,
+    };
+    // 先发送撤回控制消息(离线时入队)，成功后再清除原消息，避免发送失败导致原消息丢失
+    send_group_text_msg_service(recall_msg.clone()).await?;
+    recall_group_chat_record_db(&target_nano_id, &recall_msg.recv_user, &recall_msg.send_user)
+        .await?;
+    Ok(recall_msg)
 }

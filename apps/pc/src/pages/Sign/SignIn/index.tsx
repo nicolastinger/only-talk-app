@@ -1,19 +1,22 @@
 import LanguageSwitcher from '@/components/LanguageSwitch';
 import LocalImage from '@/components/LocalImage';
-import MarkdownRenderer from '@/components/MarkdownRenderer';
+import LoginSettingsModal from '@/components/LoginSettingsModal';
 import { openNewWindow } from '@/components/Window/OpenWindow';
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { DEFAULT_ICON } from '@/constants';
 import { FormattedMessage } from '@@/exports';
-import { CloseOutlined, LockOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined, LeftOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons';
+import { CloseOutlined, LockOutlined, UserOutlined, EyeOutlined, EyeInvisibleOutlined, LeftOutlined, RightOutlined, DeleteOutlined, SettingOutlined, GithubOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
 import { history, useIntl } from '@umijs/max';
-import { getFiles } from '@workspace/services';
+import { getApiBase, getFiles, isBackendSuccess } from '@workspace/services';
 import { HttpResponse, ResponseData } from '@workspace/types';
-import { Avatar, Button, Checkbox, message, Modal } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { Avatar, Button, Checkbox, message, Modal, Spin } from 'antd';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import styles from './index.less';
+
+// 懒加载 markdown 渲染器（react-markdown 体积较大），仅在打开隐私协议弹窗时加载
+const MarkdownRenderer = lazy(() => import('@/components/MarkdownRenderer'));
 
 interface QuickLoginUser {
   user_id: string;
@@ -33,6 +36,7 @@ const LoginPage: React.FC = () => {
   const [isPrivacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [privacyContent, setPrivacyContent] = useState('');
   const [loading, setLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
   const [userCodeError, setUserCodeError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string>('');
@@ -42,6 +46,7 @@ const LoginPage: React.FC = () => {
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const [quickLoginLoading, setQuickLoginLoading] = useState(false);
   const [showQuickLogin, setShowQuickLogin] = useState(true);
+const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     loadQuickUsers();
@@ -120,11 +125,11 @@ const LoginPage: React.FC = () => {
     try {
       const response: HttpResponse = await invoke('quick_login', {
         refreshToken: user.refresh_token,
-        url: TALK_API,
+        url: getApiBase(),
       });
 
       const data: ResponseData = JSON.parse(response.body);
-      if (data.code === 200) {
+      if (isBackendSuccess(data.code)) {
         messageApi.open({
           type: 'success',
           content: <FormattedMessage id="signIn.success" />,
@@ -221,12 +226,12 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       const response: HttpResponse = await invoke('sign_in', {
-        url: TALK_API + '/user/sign_in',
+        url: getApiBase() + '/user/sign_in',
         body: { account, password, platform: 'PC' },
       });
 
       const data: ResponseData = JSON.parse(response.body);
-      if (data.code === 200) {
+      if (isBackendSuccess(data.code)) {
         messageApi.open({
           type: 'success',
           content: <FormattedMessage id="signIn.success" />,
@@ -271,6 +276,54 @@ const LoginPage: React.FC = () => {
     fetchData(userCode, password);
   };
 
+  const handleGithubLogin = async () => {
+    if (!agreed) {
+      messageApi.warning(intl.formatMessage({ id: 'signIn.errors.pleaseAgree' }));
+      return;
+    }
+    setGithubLoading(true);
+    try {
+      const response: HttpResponse = await invoke('github_login', {
+        url: getApiBase(),
+      });
+
+      const data: ResponseData = JSON.parse(response.body);
+      if (isBackendSuccess(data.code)) {
+        messageApi.open({
+          type: 'success',
+          content: <FormattedMessage id="signIn.success" />,
+        });
+        const webviewOptions: WebviewOptions = {
+          url: '/home/chats',
+          height: 600,
+          width: 800,
+          x: 200,
+          y: 200,
+        };
+        await openNewWindow('home', webviewOptions, Window.getCurrent(), 'Only Talk');
+      } else {
+        messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+      }
+    } catch (error: unknown) {
+      if (error != null && typeof error === 'string') {
+        try {
+          const result = JSON.parse(error);
+          if (result.message) {
+            messageApi.error(result.message);
+          } else if (result.code === 500) {
+            messageApi.error(<FormattedMessage id="signIn.errors.invalidCredentials" />);
+          }
+        } catch {
+          messageApi.error(error);
+        }
+      } else {
+        messageApi.error(<FormattedMessage id="signIn.errors.networkError" />);
+      }
+    } finally {
+      setGithubLoading(false);
+    }
+  };
+
   const loadPrivacyMd = async () => {
     const res = await fetch('/markdown/privacy.md');
     const text = await res.text();
@@ -300,11 +353,19 @@ const LoginPage: React.FC = () => {
   return (
     <div className={styles.container}>
       {contextHolder}
+      <LoginSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <div className={styles.titleBar}>
         <div className={styles.logo}>
           <span className={styles.appName}>Only Talk</span>
         </div>
         <div className={styles.windowControls}>
+          <div
+            onClick={() => setSettingsOpen(true)}
+            className={styles.settingsBtn}
+            title="设置"
+          >
+            <SettingOutlined />
+          </div>
           <LanguageSwitcher />
           <div onClick={closeWindow} className={styles.closeBtn}>
             <CloseOutlined />
@@ -429,6 +490,11 @@ const LoginPage: React.FC = () => {
                 {loading ? <span className={styles.loadingDot}>...</span> : intl.formatMessage({ id: 'signIn.submit' })}
               </button>
 
+              <button className={styles.githubBtn} onClick={handleGithubLogin} disabled={githubLoading}>
+                <GithubOutlined className={styles.githubIcon} />
+                {githubLoading ? <span className={styles.loadingDot}>...</span> : '使用 GitHub 登录'}
+              </button>
+
               <div className={styles.footerLinks}>
                 {hasQuickUsers && (
                   <>
@@ -469,7 +535,9 @@ const LoginPage: React.FC = () => {
         width={'100%'}
         height={'60vh'}
       >
-        <MarkdownRenderer content={privacyContent} />
+        <Suspense fallback={<Spin style={{ display: 'block', margin: '24px auto' }} />}>
+          <MarkdownRenderer content={privacyContent} />
+        </Suspense>
       </Modal>
     </div>
   );

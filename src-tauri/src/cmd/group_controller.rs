@@ -5,6 +5,7 @@ use crate::service::group_service::{
     accept_group_invitation, create_group, decline_group_invitation, get_group_info,
     get_local_group_list, get_local_group_members, invite_group_members, join_group, leave_group,
     remove_group_member_service, search_local_group_list, sync_group_list, sync_group_members,
+    update_local_group_profile,
 };
 use crate::vo::group_vo::{CreateGroupRequest, GroupMemberVo, GroupVo};
 
@@ -75,6 +76,28 @@ pub async fn remove_group_member_command(group_id: String, user_id: String) -> R
 #[tauri::command]
 pub async fn sync_group_list_command() -> Result<(), String> {
     sync_group_list().await.map_err(|e| e.to_string())
+}
+
+/// 用已从 HTTP 拉取到的群信息定向回写本地群组表(sqlite 单条 upsert)
+#[tauri::command]
+pub async fn update_group_profile_command(
+    group_id: String,
+    group_name: String,
+    avatar: String,
+    owner_uuid: String,
+    member_count: i64,
+    created_at: i64,
+) -> Result<(), String> {
+    update_local_group_profile(
+        &group_id,
+        &group_name,
+        &avatar,
+        &owner_uuid,
+        member_count,
+        created_at,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// 从服务器同步群成员列表

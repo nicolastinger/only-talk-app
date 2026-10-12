@@ -1,13 +1,41 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useBearStore } from '@/store/store';
+import {
+  CalendarOutlined,
+  IdcardOutlined,
+  MessageOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl, useSearchParams } from '@umijs/max';
-import { get_group_info, get_group_members, getFiles, create_group_chat_session } from '@workspace/services';
-import { GroupVo, GroupMemberVo } from '@workspace/types';
+import {
+  create_group_chat_session,
+  get_group_info,
+  get_group_members,
+  getFiles,
+  openImagePreviewWindow,
+} from '@workspace/services';
+import { GroupInfoVo, GroupMemberVo, GroupVo } from '@workspace/types';
 import { Avatar, Button, Collapse, List, message, Spin } from 'antd';
-import { UserOutlined, TeamOutlined, MessageOutlined } from '@ant-design/icons';
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from './styles/GroupInfo.less';
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}
+
+const InfoRow = ({ icon, label, value }: InfoRowProps) => (
+  <div className={styles.infoItem}>
+    <span className={styles.iconChip}>{icon}</span>
+    <span className={styles.label}>{label}</span>
+    <span className={styles.value}>{value}</span>
+  </div>
+);
 
 const GroupInfoPage = () => {
   const intl = useIntl();
@@ -15,7 +43,7 @@ const GroupInfoPage = () => {
   const groupId = searchParams.get('groupId') || '';
   const { userInfo } = useBearStore();
 
-  const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
+  const [groupInfo, setGroupInfo] = useState<GroupInfoVo | null>(null);
   const [members, setMembers] = useState<GroupMemberVo[]>([]);
   const [groupIcon, setGroupIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -29,13 +57,40 @@ const GroupInfoPage = () => {
 
   const loadGroupInfo = async () => {
     setLoading(true);
+    // 1) 先用本地 sqlite 群组行秒开资料卡, 再 HTTP 拉权威数据覆盖
+    try {
+      const localGroups: GroupVo[] = await invoke('get_group_list');
+      const local = localGroups.find((g) => g.group_uuid === groupId);
+      if (local) {
+        setGroupInfo(local as unknown as GroupInfoVo);
+        if (local.avatar) {
+          const files = await getFiles(local.avatar).catch(() => []);
+          if (files?.[0]?.tauri_file_path) {
+            setGroupIcon(files[0].tauri_file_path);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('读取本地群组信息失败', error);
+    }
+    // 2) HTTP 获取最新群信息, 并按群 uuid 定向回写本地 sqlite 群组表
     try {
       const info = await get_group_info(groupId);
       setGroupInfo(info);
       if (info.avatar) {
         const files = await getFiles(info.avatar);
-        setGroupIcon(files?.[0]?.tauri_file_path || '');
+        if (files?.[0]?.tauri_file_path) {
+          setGroupIcon(files[0].tauri_file_path);
+        }
       }
+      invoke('update_group_profile_command', {
+        groupId: info.group_uuid,
+        groupName: info.group_name,
+        avatar: info.avatar || '',
+        ownerUuid: info.owner_uuid,
+        memberCount: info.member_count,
+        createdAt: info.created_at,
+      }).catch((err) => console.log('回写群资料到本地失败', err));
     } catch (error) {
       console.error('获取群组信息失败', error);
       message.error(intl.formatMessage({ id: 'groupInfo.loadError' }));
@@ -87,7 +142,8 @@ const GroupInfoPage = () => {
     }
   };
 
-  if (loading) {
+  // 本地 sqlite 已能秒开渲染时不再整页转圈, 等待 HTTP 期间先展示本地数据
+  if (loading && !groupInfo) {
     return (
       <div className={styles.loadingContainer}>
         <Spin size="large" />
@@ -98,66 +154,86 @@ const GroupInfoPage = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
+        <div className={styles.cover} />
+
         <div className={styles.header}>
-          <img
-            className={styles.icon}
-            src={groupIcon || DEFAULT_ICON}
-            alt="group avatar"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = DEFAULT_ICON;
-            }}
-          />
-          <div className={styles.name}>{groupInfo?.group_name || intl.formatMessage({ id: 'groupInfo.group' })}</div>
-          <div className={styles.memberCount}>
-            <TeamOutlined style={{ marginRight: 6 }} />
-            {groupInfo?.member_count || 0} {intl.formatMessage({ id: 'groupInfo.members' })}
+          <div className={styles.avatarWrap}>
+            <img
+              className={styles.icon}
+              src={groupIcon || DEFAULT_ICON}
+              alt="group avatar"
+              onClick={() => {
+                if (groupIcon) openImagePreviewWindow([groupIcon], 0);
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = DEFAULT_ICON;
+              }}
+            />
+          </div>
+          <div className={styles.name}>
+            {groupInfo?.group_name ||
+              intl.formatMessage({ id: 'groupInfo.group' })}
+          </div>
+          <div className={styles.metaChips}>
+            <span className={styles.chip}>
+              <TeamOutlined />
+              {groupInfo?.member_count || 0}{' '}
+              {intl.formatMessage({ id: 'groupInfo.members' })}
+            </span>
           </div>
         </div>
 
         <div className={styles.infoSection}>
-          <div className={styles.infoItem}>
-            <span className={styles.label}>{intl.formatMessage({ id: 'groupInfo.groupId' })}</span>
-            <span className={styles.value}>{groupInfo?.group_uuid || '-'}</span>
-          </div>
+          <InfoRow
+            icon={<IdcardOutlined />}
+            label={intl.formatMessage({ id: 'groupInfo.groupId' })}
+            value={groupInfo?.group_uuid || '-'}
+          />
 
-          <div className={styles.infoItem}>
-            <span className={styles.label}>{intl.formatMessage({ id: 'groupInfo.createdAt' })}</span>
-            <span className={styles.value}>
-              {groupInfo?.created_at ? formatDate(groupInfo.created_at) : '-'}
-            </span>
-          </div>
+          <InfoRow
+            icon={<CalendarOutlined />}
+            label={intl.formatMessage({ id: 'groupInfo.createdAt' })}
+            value={
+              groupInfo?.created_at ? formatDate(groupInfo.created_at) : '-'
+            }
+          />
 
           <Collapse
             className={styles.collapse}
             ghost
+            expandIconPosition="end"
             items={[
               {
                 key: 'members',
-                label: `${intl.formatMessage({ id: 'groupSettings.groupMembers' })} (${members.length})`,
+                label: `${intl.formatMessage({
+                  id: 'groupSettings.groupMembers',
+                })} (${members.length})`,
                 children: (
                   <List
                     dataSource={members}
                     renderItem={(member) => {
                       const info = memberInfoMap.get(member.user_uuid);
-                      const displayName = info?.username || member.nickname || member.username;
+                      const displayName =
+                        info?.username || member.nickname || member.user_uuid;
                       return (
-                      <List.Item className={styles.memberItem}>
-                        <div className={styles.memberInfo}>
-                          <Avatar
-                            size={32}
-                            icon={<UserOutlined />}
-                            src={info?.icon || member.icon}
-                          />
-                          <div className={styles.memberDetail}>
-                            <span className={styles.memberName}>
-                              {displayName}
-                            </span>
-                            <span className={styles.memberRole}>
-                              {getRoleName(member.role)}
-                            </span>
+                        <List.Item className={styles.memberItem}>
+                          <div className={styles.memberInfo}>
+                            <Avatar
+                              size={32}
+                              icon={<UserOutlined />}
+                              src={info?.icon}
+                            />
+                            <div className={styles.memberDetail}>
+                              <span className={styles.memberName}>
+                                {displayName}
+                                <UserTypeTag type={info?.user_type} />
+                              </span>
+                              <span className={styles.memberRole}>
+                                {getRoleName(member.role)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </List.Item>
+                        </List.Item>
                       );
                     }}
                   />
@@ -168,22 +244,26 @@ const GroupInfoPage = () => {
         </div>
 
         <div className={styles.footer}>
-          <div className={styles.button}>
-            <Button
-              type="primary"
-              icon={<MessageOutlined />}
-              onClick={routeToChat}
-              block
-            >
-              {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
-            </Button>
-          </div>
+          <Button
+            className={styles.primaryBtn}
+            color="primary"
+            variant="solid"
+            icon={<MessageOutlined />}
+            onClick={routeToChat}
+          >
+            {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
+          </Button>
           {isOwner && (
-            <div className={styles.button}>
-              <Button variant="outlined" color="default" block onClick={() => history.push(`/home/chats/group-settings?groupId=${groupId}`)}>
-                {intl.formatMessage({ id: 'groupSettings.groupSettings' })}
-              </Button>
-            </div>
+            <Button
+              className={styles.secondaryBtn}
+              color="default"
+              variant="outlined"
+              onClick={() =>
+                history.push(`/home/chats/group-settings?groupId=${groupId}`)
+              }
+            >
+              {intl.formatMessage({ id: 'groupSettings.title' })}
+            </Button>
           )}
         </div>
       </div>

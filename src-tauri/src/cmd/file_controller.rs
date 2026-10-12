@@ -2,12 +2,18 @@ use std::fs;
 use std::path::Path;
 
 use log::{error, info, warn};
-use tauri::{path::BaseDirectory, Manager, Runtime};
+use tauri::path::BaseDirectory;
+use tauri::{Manager, Runtime};
+#[cfg(not(target_os = "android"))]
+use tauri_plugin_opener::OpenerExt;
 
 use crate::config::get_config;
-use crate::service::file_service::get_file_by_biz_id_service;
-use crate::utils::global_static_str::{DEFAULT_IMAGE, RESOURCE_PATH, TALK_API};
-use crate::vo::file_vo::FileVo;
+use crate::service::file_service::{
+    delete_local_file_service, get_file_by_biz_id_service, get_local_file_list_service,
+    has_local_chat_file_service,
+};
+use crate::utils::global_static_str::{talk_api_base, DEFAULT_IMAGE, RESOURCE_PATH};
+use crate::vo::file_vo::{FileVo, LocalFileVo};
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件
 #[tauri::command]
@@ -36,7 +42,7 @@ pub async fn get_local_file<R: Runtime>(app_handle: tauri::AppHandle<R>) -> Resu
 
         let packed_resource_path = match app_handle
             .path()
-            .resolve(&format!("{}/{}", RESOURCE_PATH, DEFAULT_IMAGE), BaseDirectory::Resource)
+            .resolve(format!("{}/{}", RESOURCE_PATH, DEFAULT_IMAGE), BaseDirectory::Resource)
         {
             Ok(path) => {
                 info!("解析到的打包资源路径: {:?}", path);
@@ -162,7 +168,7 @@ pub async fn get_file_by_biz_id(
         warn!("业务id不能为空");
         return Err("业务id不能为空".to_string());
     }
-    let url = format!("{}/file/download_link/pub_biz/{}", TALK_API, biz_id);
+    let url = format!("{}/file/download_link/pub_biz/{}", talk_api_base(), biz_id);
     let res = get_file_by_biz_id_service(biz_id, url, nano_id).await;
     match res {
         Ok(file_vo) => Ok(file_vo),
@@ -184,7 +190,7 @@ pub async fn get_chat_file_by_biz_id(
         warn!("业务id不能为空");
         return Err("业务id不能为空".to_string());
     }
-    let url = format!("{}/file/download_link/chat_biz/{}/1", TALK_API, biz_id);
+    let url = format!("{}/file/download_link/chat_biz/{}/1", talk_api_base(), biz_id);
     let res = get_file_by_biz_id_service(biz_id, url, nano_id).await;
     match res {
         Ok(file_vo) => Ok(file_vo),
@@ -193,6 +199,106 @@ pub async fn get_chat_file_by_biz_id(
             Err(e.to_string())
         }
     }
+}
+
+/// 判断本地是否已存在该聊天文件（只查本地，不触发下载）
+#[tauri::command]
+pub async fn has_local_chat_file(biz_id: String) -> Result<bool, String> {
+    if biz_id.is_empty() {
+        warn!("业务id不能为空");
+        return Err("业务id不能为空".to_string());
+    }
+    has_local_chat_file_service(&biz_id).await.map_err(|e| {
+        error!("判断本地文件失败 {}", e);
+        e.to_string()
+    })
+}
+
+/// 获取本地文件大小(字节), 用于前端上传前大小预校验
+#[tauri::command]
+pub async fn get_local_file_size(path: String) -> Result<u64, String> {
+    if path.is_empty() {
+        return Err("文件路径不能为空".to_string());
+    }
+    let metadata = fs::metadata(&path).map_err(|e| format!("读取文件失败: {}", e))?;
+    Ok(metadata.len())
+}
+
+/// 打开本地文件（跨平台）
+/// - 桌面: 直接交给系统默认程序打开
+/// - Android: 复制到 cache 目录后交给 tauri-plugin-view，
+///   由插件经 FileProvider 生成 content:// URI 并带 FLAG_GRANT_READ_URI_PERMISSION
+///   打开（opener 插件移动端不支持打开文件且缺 URI 授权）
+#[tauri::command]
+pub async fn open_local_file<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    path: String,
+) -> Result<(), String> {
+    if path.is_empty() {
+        return Err("文件路径不能为空".to_string());
+    }
+    let file_path = Path::new(&path);
+    if !file_path.is_file() {
+        warn!("文件不存在: {}", path);
+        return Err(format!("文件不存在: {}", path));
+    }
+
+    #[cfg(target_os = "android")]
+    {
+        // Android: 复制到 cache/open 目录后交给 view 插件打开,
+        // 复用 manifest 声明的 ${applicationId}.fileprovider + file_paths.xml 的 cache-path
+        let cache_dir = app.path().cache_dir().map_err(|e| format!("获取缓存目录失败: {}", e))?;
+        let open_dir = cache_dir.join("open");
+        fs::create_dir_all(&open_dir).map_err(|e| format!("创建打开目录失败: {}", e))?;
+
+        let file_name = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| "无法获取文件名".to_string())?;
+
+        // 目标文件已存在则跳过复制(同名文件复用)
+        let dest = open_dir.join(file_name);
+        if !dest.is_file() {
+            fs::copy(file_path, &dest).map_err(|e| format!("复制文件到缓存失败: {}", e))?;
+        }
+
+        info!("Android 打开文件: {:?}", dest);
+        use tauri_plugin_view::ViewExt;
+        app.view()
+            .view(tauri_plugin_view::ViewRequest {
+                path: Some(dest.to_string_lossy().into_owned()),
+            })
+            .map_err(|e| {
+                error!("Android 打开文件失败: {}", e);
+                e.to_string()
+            })?;
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        info!("打开本地文件: {}", path);
+        app.opener().open_path(path, None::<String>).map_err(|e| {
+            error!("打开文件失败: {}", e);
+            e.to_string()
+        })
+    }
+}
+
+/// 获取本地文件列表（文件管理: 分类筛选 + 名称/日期排序）
+#[tauri::command]
+pub async fn get_local_file_list(
+    file_type: Option<String>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
+) -> Result<Vec<LocalFileVo>, String> {
+    get_local_file_list_service(file_type, sort_by, sort_order).await.map_err(|e| e.to_string())
+}
+
+/// 删除本地文件（删物理文件 + 记录）
+#[tauri::command]
+pub async fn delete_local_file(id: i64) -> Result<(), String> {
+    delete_local_file_service(id).await.map_err(|e| e.to_string())
 }
 
 /// 调试命令：列出所有资源路径和文件
@@ -219,7 +325,7 @@ pub async fn debug_resource_paths<R: Runtime>(
                 }
             }
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // 2. 打包的资源路径
@@ -237,7 +343,7 @@ pub async fn debug_resource_paths<R: Runtime>(
                     }
                 }
             }
-            output.push_str("\n");
+            output.push('\n');
             Some(path)
         }
         Err(e) => {

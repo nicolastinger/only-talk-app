@@ -1,17 +1,26 @@
 import { openWebRTCChatHandler } from '@/hooks/useWebRTCSignalApi';
-import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
 import { useBearStore } from '@/store/store';
 import {
   ApiOutlined,
-  FileOutlined,
   LockOutlined,
+  PaperClipOutlined,
   PictureOutlined,
   SmileOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
-import { selectFile } from '@workspace/services';
-import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
+import {
+  getAllFileExtensions,
+  getImageExtensions,
+  getLocalFileSize,
+  selectFile,
+} from '@workspace/services';
+import {
+  ChatMessage,
+  MessageFrom,
+  TextQuicMsgVo,
+  UPLOAD_LIMITS,
+} from '@workspace/types';
 import { message } from 'antd';
 import { nanoid } from 'nanoid';
 import React, { useEffect, useRef, useState } from 'react';
@@ -120,12 +129,23 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
   const sendImage = async () => {
     try {
       const filePaths = await selectFile(false, false, [
-        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+        { name: 'Images', extensions: await getImageExtensions() },
       ]);
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
         console.log('Selected image path:', filePath);
+
+        const size = await getLocalFileSize(filePath);
+        if (size > UPLOAD_LIMITS.image) {
+          message.error(
+            intl.formatMessage(
+              { id: 'chat.imageTooLarge' },
+              { limit: Math.floor(UPLOAD_LIMITS.image / (1024 * 1024)) },
+            ),
+          );
+          return;
+        }
 
         let text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
@@ -142,10 +162,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
           ack: false,
         };
 
+        // 先上屏(展示气泡与上传进度)，再执行发送
+        onMessageSent?.(JSON.stringify(temp));
         onUploadStart?.();
         try {
           await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
-          onMessageSent?.(JSON.stringify(temp));
         } finally {
           onUploadEnd?.();
         }
@@ -158,11 +179,24 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
 
   const sendFile = async () => {
     try {
-      const filePaths = await selectFile(false, false);
+      const filePaths = await selectFile(false, false, [
+        { name: 'Files', extensions: await getAllFileExtensions() },
+      ]);
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
         console.log('Selected file path:', filePath);
+
+        const size = await getLocalFileSize(filePath);
+        if (size > UPLOAD_LIMITS.file) {
+          message.error(
+            intl.formatMessage(
+              { id: 'chat.fileTooLarge' },
+              { limit: Math.floor(UPLOAD_LIMITS.file / (1024 * 1024)) },
+            ),
+          );
+          return;
+        }
 
         let text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
@@ -179,10 +213,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
           ack: false,
         };
 
+        // 先上屏(展示气泡与上传进度)，再执行发送
+        onMessageSent?.(JSON.stringify(temp));
         onUploadStart?.();
         try {
           await invoke('send_file_msg', { textQuicMsg: text_msg_raw });
-          onMessageSent?.(JSON.stringify(temp));
         } finally {
           onUploadEnd?.();
         }
@@ -214,14 +249,20 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
         return;
       }
 
-      let service = getWebRTCService();
-      if (!service) {
-        service = initWebRTCService(localUserId);
-      }
-
-      await openWebRTCChatHandler(friendUuid, localUserId, true);
+      // 完全解耦：点击即打开发起方 WebRTC 窗口，邀请/接受/拒绝都在窗口内处理
+      const sessionId = nanoid();
+      await openWebRTCChatHandler(
+        friendUuid,
+        localUserId,
+        true,
+        undefined,
+        sessionId,
+      );
+      console.log(
+        `[WebRTC] 已打开发起方 WebRTC 窗口 - friendId: ${friendUuid}, sessionId: ${sessionId}`,
+      );
     } catch (e) {
-      console.error('发起 WebRTC 聊天失败:', e);
+      console.error('发起 WebRTC 失败:', e);
       message.error(intl.formatMessage({ id: 'chat.footer.webRTCFailed' }));
     }
   };
@@ -257,11 +298,19 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
           </div>
         )}
       </div>
-      <div className={styles.footerBtn} onClick={sendImage} title={intl.formatMessage({ id: 'chat.footer.sendImage' })}>
+      <div
+        className={styles.footerBtn}
+        onClick={sendImage}
+        title={intl.formatMessage({ id: 'chat.footer.sendImage' })}
+      >
         <PictureOutlined />
       </div>
-      <div className={styles.footerBtn} onClick={sendFile} title={intl.formatMessage({ id: 'chat.footer.sendFile' })}>
-        <FileOutlined />
+      <div
+        className={styles.footerBtn}
+        onClick={sendFile}
+        title={intl.formatMessage({ id: 'chat.footer.sendFile' })}
+      >
+        <PaperClipOutlined />
       </div>
       <div
         className={styles.footerBtn}

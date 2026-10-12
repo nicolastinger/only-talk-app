@@ -2,16 +2,17 @@
 
 use app_lib::utils::image_utils::compress_image_to_webp;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::PathBuf;
 
 #[test]
+#[ignore = "依赖作者本机照片路径(D:\\漫展\\P1002642.JPG)与 Tauri app 初始化, 不可在 CI 运行; 本地用 cargo test -- --ignored 验证"]
 fn test_compress_real_image_p1017533() {
     let input_path = PathBuf::from(r"D:\漫展\P1002642.JPG");
 
     assert!(input_path.exists(), "Input file should exist");
 
-    let input_size = fs::metadata(&input_path).unwrap().len();
+    let input_size = fs::metadata(&input_path).expect("读取输入文件元数据失败").len();
     println!(
         "Input file size: {} bytes ({:.2} MB)",
         input_size,
@@ -21,10 +22,10 @@ fn test_compress_real_image_p1017533() {
     let result = compress_image_to_webp(&input_path);
 
     match result {
-        Ok(file) => {
+        Ok(_) => {
             println!("Compression succeeded!");
             let output_path = input_path.with_extension("webp");
-            let output_size = fs::metadata(&output_path).unwrap().len();
+            let output_size = fs::metadata(&output_path).expect("读取输出文件元数据失败").len();
             println!(
                 "Output file size: {} bytes ({:.2} KB)",
                 output_size,
@@ -37,9 +38,9 @@ fn test_compress_real_image_p1017533() {
                 output_size
             );
 
-            let mut file_handle = fs::File::open(&output_path).unwrap();
+            let mut file_handle = fs::File::open(&output_path).expect("打开输出文件失败");
             let mut header = [0u8; 4];
-            file_handle.read_exact(&mut header).unwrap();
+            file_handle.read_exact(&mut header).expect("读取文件头失败");
             assert_eq!(&header, b"RIFF", "WebP file should start with RIFF");
 
             fs::remove_file(&output_path).ok();

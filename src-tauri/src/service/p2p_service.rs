@@ -1,12 +1,15 @@
 use std::io;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::anyhow;
 use log::{info, warn};
 use nanoid::nanoid;
+use serde::Deserialize;
 use tauri::Emitter;
 
+use crate::cmd::api_controller::get_request;
 use crate::entity::p2p_models::{
     MediaFrameType, P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse,
     P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMsg, P2pVideoConfig, UserAddressInfo,
@@ -19,8 +22,8 @@ use crate::quic_service::p2p_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward, udp_port_forward_ipv6,
 };
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::{DOMAIN_NAME, UDP_PORT, UDP_PORT_2, UDP_PORT_V6, UDP_PORT_V6_2};
 use crate::utils::dns::{resolve_ipv4, resolve_ipv6};
+use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
 use crate::utils::message_types::{
     MSG_TYPE_P2P, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
     MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE, MSG_TYPE_P2P_MEDIA_CONFIG, MSG_TYPE_P2P_MEDIA_CONTROL,
@@ -59,10 +62,6 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
         let request_token = nanoid!();
         (sender, request_token)
     };
-
-    //插入token到服务器，供连接端验证
-    // let url = format!("{}/user/add_p2p_token/{}/{}", TALK_API, accept_user, request_token);
-    // post_with_body(url, HashMap::new()).await?;
 
     // 本机作为服务端
 
@@ -154,8 +153,73 @@ pub async fn access_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
     Ok(())
 }
 
+/// NAT UDP 端口配置(需登录后从 API 动态获取)
+#[derive(Clone, Copy, Deserialize)]
+pub struct NatUdpPorts {
+    pub v4_port_1: u16,
+    pub v6_port_1: u16,
+    pub v4_port_2: u16,
+    pub v6_port_2: u16,
+}
+
+static NAT_UDP_PORTS_CACHE: OnceLock<NatUdpPorts> = OnceLock::new();
+
+/// 获取 NAT UDP 端口配置：优先进程内缓存，登录后从 API 获取。
+/// 获取失败直接报错(彻底依赖动态端口，无硬编码回退)。
+pub async fn get_nat_udp_ports() -> Result<NatUdpPorts, anyhow::Error> {
+    if let Some(ports) = NAT_UDP_PORTS_CACHE.get() {
+        return Ok(*ports);
+    }
+
+    #[derive(Deserialize)]
+    struct ApiResp {
+        #[allow(dead_code)]
+        code: u16,
+        data: NatUdpPorts,
+    }
+
+    let url = format!("{}/integrated/nat_udp_ports", talk_api_base());
+    let resp = get_request(url).await.map_err(|e| anyhow!("获取NAT UDP端口失败: {}", e))?;
+    let parsed: ApiResp =
+        serde_json::from_str(&resp.body).map_err(|e| anyhow!("解析NAT UDP端口失败: {}", e))?;
+    let _ = NAT_UDP_PORTS_CACHE.set(parsed.data);
+    Ok(parsed.data)
+}
+
+/// 检测本机 IPv6 支持(NAT 发送自检)，登录成功后调用。
+/// 需要动态端口，因此不依赖硬编码；失败仅记录日志，不阻断。
+pub async fn check_ipv6_support() {
+    let ports = match get_nat_udp_ports().await {
+        Ok(p) => p,
+        Err(e) => {
+            info!("获取NAT UDP端口失败, 跳过IPv6检测: {}", e);
+            return;
+        }
+    };
+    let addr_v6 = "[::]:10086";
+    let addr_v6_socket = match addr_v6.parse::<SocketAddrV6>() {
+        Ok(addr) => addr,
+        Err(e) => {
+            warn!("解析ipv6地址失败: {}", e);
+            return;
+        }
+    };
+    let udp_socket_v6 = match resolve_ipv6(&talk_api_domain(), ports.v6_port_1).await {
+        Ok(addr) => addr,
+        Err(e) => {
+            info!("域名无IPv6记录，跳过IPv6检测 {}", e);
+            return;
+        }
+    };
+    let addr_json: Vec<u8> = Vec::new();
+    if let Err(e) = udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await {
+        warn!("本机不支持ipv6传输: {}", e);
+    }
+}
+
 /// 检测用户的IP类型
 pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
+    let nat_ports = get_nat_udp_ports().await?;
     // ipv4连接
     let udp_port = find_available_udp_port(10024).ok_or(anyhow!("no available UDP port"))?;
     let port = udp_port;
@@ -179,8 +243,8 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     let addr_json = serde_json::to_vec(&result)?;
     let addr_socket: SocketAddr = addr.parse()?;
     // 发送udp消息给服务器（通过DNS动态解析域名）
-    let udp_socket = resolve_ipv4(DOMAIN_NAME, UDP_PORT).await?;
-    let udp_socket_2 = resolve_ipv4(DOMAIN_NAME, UDP_PORT_2).await?;
+    let udp_socket = resolve_ipv4(&talk_api_domain(), nat_ports.v4_port_1).await?;
+    let udp_socket_2 = resolve_ipv4(&talk_api_domain(), nat_ports.v4_port_2).await?;
     udp_port_forward(addr_socket, udp_socket.into(), &addr_json).await?;
     udp_port_forward(addr_socket, udp_socket_2.into(), &addr_json).await?;
 
@@ -192,19 +256,19 @@ pub async fn check_user_ip_type() -> Result<(), anyhow::Error> {
     let addr_v6_socket: SocketAddrV6 = addr_v6.parse::<SocketAddrV6>()?;
     // 尝试通过DNS解析IPv6地址，域名无AAAA记录时跳过（正常情况）
     if let (Ok(udp_socket_v6), Ok(udp_socket_v6_2)) = (
-        resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6).await,
-        resolve_ipv6(DOMAIN_NAME, UDP_PORT_V6_2).await,
+        resolve_ipv6(&talk_api_domain(), nat_ports.v6_port_1).await,
+        resolve_ipv6(&talk_api_domain(), nat_ports.v6_port_2).await,
     ) {
-        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json)
-            .await
-            .unwrap_or_else(|x| {
+        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6, &addr_json).await.unwrap_or_else(
+            |x| {
                 warn!("本机不支持ipv6传输 {}", x);
-            });
-        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json)
-            .await
-            .unwrap_or_else(|x| {
+            },
+        );
+        udp_port_forward_ipv6(addr_v6_socket, udp_socket_v6_2, &addr_json).await.unwrap_or_else(
+            |x| {
                 warn!("本机不支持ipv6传输 {}", x);
-            });
+            },
+        );
     } else {
         info!("域名无IPv6记录，跳过IPv6连接");
     }
@@ -218,7 +282,8 @@ pub async fn send_p2p_video_frame_service(
     frame_data: Vec<u8>,
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
-    info!("帧大小 {}", frame_data.len());
+    // 热路径：每帧日志降级为 trace，避免高频打印拖慢编码线程
+    log::trace!("帧大小 {}", frame_data.len());
     // 使用轻量级帧格式：5字节头部 + 原始数据，避免bincode序列化
     send_media_frame(MediaFrameType::Video, frame_data, target_uuid).await
 }
@@ -373,6 +438,20 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
         }
     }
 
+    // 清理 P2P 媒体接收 Channel（前端窗口关闭后不再需要）
+    {
+        if crate::P2P_MEDIA_CHANNELS.remove(&target_uuid).is_some() {
+            info!("已移除用户 {} 的P2P媒体接收Channel", target_uuid);
+        }
+    }
+
+    // 清理 P2P 媒体发送队列（触发消费者任务退出）
+    {
+        if crate::P2P_MEDIA_SEND_QUEUES.remove(&target_uuid).is_some() {
+            info!("已移除用户 {} 的P2P媒体发送队列", target_uuid);
+        }
+    }
+
     // 清理GLOBAL_QUIC_USER_INFO中的相关数据
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
@@ -411,7 +490,8 @@ pub async fn send_p2p_audio_frame_service(
     audio_data: Vec<u8>,
     target_uuid: String,
 ) -> Result<(), anyhow::Error> {
-    info!("音频帧大小 {}", audio_data.len());
+    // 热路径：每帧日志降级为 trace，避免高频打印拖慢编码线程
+    log::trace!("音频帧大小 {}", audio_data.len());
     // 使用轻量级帧格式：5字节头部 + 原始数据，避免bincode序列化
     send_media_frame(MediaFrameType::Audio, audio_data, target_uuid).await
 }
@@ -489,10 +569,8 @@ pub async fn send_p2p_media_control_service(
     let control = crate::entity::p2p_models::P2pMediaControl {
         control_type: control_type_enum,
         enabled,
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
     };
 
     let control_vec = serde_json::to_vec(&control)?;
@@ -551,10 +629,8 @@ pub async fn send_p2p_media_info_service(
     let media_info = P2pMediaInfo {
         info_type: info_type_enum,
         data,
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
     };
 
     let info_vec = serde_json::to_vec(&media_info)?;
@@ -610,10 +686,8 @@ pub async fn send_p2p_video_call_invite_service(
     let invite = crate::entity::p2p_models::P2pVideoCallInvite {
         from_uuid: from_uuid.clone(),
         to_uuid: target_uuid.clone(),
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
         media_config: Some(crate::entity::p2p_models::P2pMediaConfig::default()),
         from_name,
     };
@@ -682,10 +756,8 @@ pub async fn send_p2p_video_call_response_service(
         from_uuid: from_uuid.clone(),
         to_uuid: target_uuid.clone(),
         accept,
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64,
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
+            as u64,
         media_config,
         reject_reason,
     };

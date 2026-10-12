@@ -1,6 +1,70 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { FileVo, Page, TextQuicMsgVo } from "@workspace/types";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+
+/**
+ * 本地文件记录 + 前端运行时追加的 tauri 路径。
+ * tauri_file_path/blob_url 为客户端缓存字段, 非后端返回, 仅用于本地文件访问。
+ */
+interface FileVoLocal extends FileVo {
+  tauri_file_path?: string;
+  blob_url?: string;
+}
+
+/** 聊天文件下载进度(来自后端 `chat_file_download_progress` 事件) */
+export interface ChatFileDownloadProgress {
+  /** 业务ID(前端按此匹配对应消息) */
+  bizId: string;
+  /** 文件名 */
+  fileName: string;
+  /** 已下载字节数 */
+  downloaded: number;
+  /** 总字节数(total 为 0 表示大小未知, 前端可用消息元数据 file_size 兜底) */
+  total: number;
+}
+
+/** 发送阶段: reading(读取/准备) / compressing(压缩) / uploading(上传) */
+export type ChatSendPhase = "reading" | "compressing" | "uploading";
+
+/** 聊天文件发送进度(来自后端 `chat_file_upload_progress` 事件) */
+export interface ChatFileUploadProgress {
+  /** 消息 nano_id(前端按此匹配对应消息) */
+  nanoId: string;
+  /** 文件名 */
+  fileName: string;
+  /** 当前阶段 */
+  phase: ChatSendPhase;
+  /** 已上传字节数(phase=uploading 时有效) */
+  uploaded: number;
+  /** 总字节数(phase=uploading 时有效) */
+  total: number;
+}
+
+/**
+ * 订阅聊天文件上传进度事件
+ * @param onProgress 进度回调
+ * @returns 取消订阅函数
+ */
+export const listenChatFileUploadProgress = (
+  onProgress: (progress: ChatFileUploadProgress) => void
+): Promise<UnlistenFn> =>
+  listen<ChatFileUploadProgress>("chat_file_upload_progress", (event) => {
+    onProgress(event.payload);
+  });
+
+/**
+ * 读取本地文件大小(字节), 用于上传前大小预校验。
+ * @param path 本地绝对路径
+ */
+export const getLocalFileSize = async (path: string): Promise<number> => {
+  try {
+    return (await invoke<number>("get_local_file_size", { path })) as number;
+  } catch (error) {
+    console.error("get_local_file_size failed:", error);
+    return 0;
+  }
+};
 
 /**
  * 选择文件
@@ -44,7 +108,28 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
 };
 
 /**
- * 获取文件列表
+ * 判断本地是否已存在该聊天文件（只查本地 file_record，不触发下载）
+ * @param bizId 业务ID
+ */
+export const hasLocalChatFile = async (bizId: string): Promise<boolean> => {
+  try {
+    return (await invoke("has_local_chat_file", { bizId })) as boolean;
+  } catch (error) {
+    console.error("has_local_chat_file failed:", error);
+    return false;
+  }
+};
+
+/**
+ * 打开本地文件（跨平台：桌面走系统默认程序，Android 经 FileProvider content:// URI）
+ * @param path 本地绝对路径
+ */
+export const openLocalFile = async (path: string): Promise<void> => {
+  await invoke("open_local_file", { path });
+};
+
+/**
+ * 获取本地文件列表
  * @param bizId 业务ID
  * @param nanoId 可选的消息nano_id，如果提供且raw中有文件名，则优先使用raw中的文件名
  * @returns 文件列表
@@ -52,13 +137,13 @@ export const convertPathToTauriUrl = (absolutePath: string): string | null => {
 export const getFiles = async (
   bizId: string,
   nanoId?: string
-): Promise<FileVo[] | null> => {
+): Promise<FileVoLocal[] | null> => {
   try {
-    let files = [] as FileVo[];
-    const FileVos: FileVo[] = await invoke("get_file_by_biz_id", {
+    let files = [] as FileVoLocal[];
+    const FileVos: FileVoLocal[] = (await invoke("get_file_by_biz_id", {
       bizId,
       nanoId,
-    });
+    })) as FileVoLocal[];
 
     if (FileVos.length > 0) {
       FileVos.forEach((file) => {
@@ -72,28 +157,39 @@ export const getFiles = async (
       });
     }
     return files;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get files failed:", error);
     return null;
   }
 };
 
 /**
- * 获取聊天文件
+ * 获取聊天文件(本地无记录时后端会下载并落库)
  * @param bizId 业务ID
  * @param nanoId 可选的消息nano_id，如果提供且raw中有文件名，则优先使用raw中的文件名
+ * @param onProgress 可选下载进度回调(经 `chat_file_download_progress` 事件, 按 bizId 过滤)
  * @returns 文件列表
  */
 export const getChatFileByBizId = async (
   bizId: string,
-  nanoId?: string
-): Promise<FileVo[] | null> => {
+  nanoId?: string,
+  onProgress?: (progress: ChatFileDownloadProgress) => void
+): Promise<FileVoLocal[] | null> => {
+  let unlisten: (() => void) | undefined;
+  if (onProgress) {
+    unlisten = await listen<ChatFileDownloadProgress>(
+      "chat_file_download_progress",
+      (event) => {
+        if (event.payload.bizId === bizId) onProgress(event.payload);
+      }
+    );
+  }
   try {
-    let files = [] as FileVo[];
-    const FileVos: FileVo[] = await invoke("get_chat_file_by_biz_id", {
+    let files = [] as FileVoLocal[];
+    const FileVos: FileVoLocal[] = (await invoke("get_chat_file_by_biz_id", {
       bizId,
       nanoId,
-    });
+    })) as FileVoLocal[];
 
     console.log("get_chat_file_by_biz_id result:", FileVos);
 
@@ -117,9 +213,11 @@ export const getChatFileByBizId = async (
     }
     console.log("Final files:", files);
     return files;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get chat file failed:", error);
     return null;
+  } finally {
+    unlisten?.();
   }
 };
 
@@ -154,7 +252,7 @@ export const getChatRecordByType = async (
     });
 
     return data || [];
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get chat record by type failed:", error);
     return [];
   }
@@ -202,8 +300,64 @@ export const getFriendImageMessages = async (
     }
 
     return { imageUrls, currentIndex };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Get friend image messages failed:", error);
+    return { imageUrls: [], currentIndex: 0 };
+  }
+};
+
+/**
+ * 获取群聊的所有图片消息并转换为可预览的URL列表
+ * 群聊图片消息 raw 是双层 JSON: {"text":"{...GroupImageRecord...}","send_user":"..."}
+ * @param groupUuid 群UUID
+ * @param currentBizId 当前点击的图片bizId
+ * @param currentNanoId 可选的当前消息nano_id，用于获取原始文件名
+ * @returns 图片URL列表和当前索引
+ */
+export const getGroupImageMessages = async (
+  groupUuid: string,
+  currentBizId: string,
+  currentNanoId?: string
+): Promise<{ imageUrls: string[]; currentIndex: number }> => {
+  try {
+    const page: Page = { size: 1000, current: 1, total: 0 };
+    // 群聊记录接口返回所有类型，需要在前端过滤 text_type === 2002
+    const allRecords: TextQuicMsgVo[] = await invoke(
+      "get_group_chat_record_from_store",
+      { groupId: groupUuid, page }
+    );
+
+    const imageUrls: string[] = [];
+    let currentIndex = 0;
+
+    for (const record of allRecords) {
+      if (record.text_type !== 2002) continue;
+      try {
+        // 群聊图片消息需要双层解析
+        let parsed = JSON.parse(record.raw);
+        if (parsed.text) {
+          parsed = JSON.parse(parsed.text);
+        }
+        const bizId = parsed.biz_id;
+        if (!bizId) continue;
+
+        if (bizId === currentBizId) {
+          currentIndex = imageUrls.length;
+        }
+
+        const nanoId = bizId === currentBizId ? currentNanoId : record.nano_id;
+        const files = await getChatFileByBizId(bizId, nanoId);
+        if (files && files.length > 0 && files[0].tauri_file_path) {
+          imageUrls.push(files[0].tauri_file_path);
+        }
+      } catch (e) {
+        console.error("Failed to parse group image record:", e);
+      }
+    }
+
+    return { imageUrls, currentIndex };
+  } catch (error) {
+    console.error("Get group image messages failed:", error);
     return { imageUrls: [], currentIndex: 0 };
   }
 };

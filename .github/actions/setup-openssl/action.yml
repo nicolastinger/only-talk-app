@@ -1,0 +1,16 @@
+name: setup-openssl
+description: 安装 Windows 静态 OpenSSL 并设置 OPENSSL_DIR(libsqlite3-sys bundled-sqlcipher 构建依赖)
+runs:
+  using: composite
+  steps:
+    - name: 安装静态 OpenSSL (vcpkg x64-windows-static)
+      shell: pwsh
+      run: |
+        $vcpkgRoot = "$env:RUNNER_TEMP\vcpkg"
+        if (-not (Test-Path "$vcpkgRoot\vcpkg.exe")) {
+          git clone --depth 1 https://github.com/microsoft/vcpkg $vcpkgRoot
+          & "$vcpkgRoot\bootstrap-vcpkg.bat" -disableMetrics
+        }
+        & "$vcpkgRoot\vcpkg.exe" install openssl:x64-windows-static --disable-metrics --clean-after-build
+        $opensslDir = "$vcpkgRoot\installed\x64-windows-static"
+        Write-Output "OPENSSL_DIR=$opensslDir" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8

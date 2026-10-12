@@ -1,3 +1,6 @@
+import { getMessageDisplayText } from "@/chat/messageParse";
+import { t } from "@/i18n";
+
 export function formatMessageTime(timestamp: number): string {
   const now = new Date();
   const date = new Date(timestamp);
@@ -26,7 +29,7 @@ export function formatMessageTime(timestamp: number): string {
 
   if (isToday) return timeStr;
 
-  if (isYesterday) return "昨天";
+  if (isYesterday) return t("time.yesterday");
 
   if (nowYear === msgYear) {
     return `${String(msgMonth + 1).padStart(2, "0")}/${String(msgDay).padStart(
@@ -44,30 +47,57 @@ export function getMessagePreview(
   text_type: number,
   lastMessage: string
 ): string {
-  switch (text_type) {
-    case 1:
-      try {
-        const parsed = JSON.parse(lastMessage);
-        return parsed.text || lastMessage;
-      } catch {
-        return lastMessage;
-      }
-    case 2:
-      return "[图片]";
-    case 3:
-      return "[文件]";
-    case 4:
-      return "[隐私模式]";
-    case 5:
-      return "[视频通话]";
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-      return "[通话]";
-    case 100:
-      return "[WebRTC信令]";
-    default:
-      return lastMessage || "";
+  return getMessageDisplayText(text_type, lastMessage);
+}
+
+/** 动态/广场时间展示（入参为秒时间戳） */
+export function formatMomentTime(timestampSeconds?: number): string {
+  if (!timestampSeconds) return "";
+  const date = new Date(timestampSeconds * 1000);
+  const now = new Date();
+
+  const startToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
+  const startDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  ).getTime();
+  const dayDiff = Math.floor((startToday - startDate) / (24 * 60 * 60 * 1000));
+  const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
+
+  if (diffMin < 1) return t("time.justNow");
+  if (diffMin < 60) return t("time.minutesAgo", { minutes: diffMin });
+  if (dayDiff === 0) {
+    const diffHour = Math.floor(diffMin / 60);
+    return t("time.hoursAgo", { hours: diffHour });
   }
+  if (dayDiff === 1) return t("time.yesterday");
+  if (dayDiff > 1 && dayDiff < 7) return t("time.daysAgo", { days: dayDiff });
+
+  const sameYear = now.getFullYear() === date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  if (sameYear) return `${mm}-${dd}`;
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
+/**
+ * 由生日(unix 秒)计算当前周岁年龄。生日未设置(<=0)返回 null。
+ * 服务端不再存储 age, 年龄一律按生日实时推算。
+ */
+export function calcAgeFromBirthday(birthday?: number): number | null {
+  if (!birthday || birthday <= 0) return null;
+  const now = new Date();
+  const birth = new Date(birthday * 1000);
+  if (Number.isNaN(birth.getTime())) return null;
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  return age;
 }

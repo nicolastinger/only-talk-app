@@ -1,17 +1,22 @@
-import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
-import { BellOutlined, CheckOutlined, UserOutlined } from '@ant-design/icons';
+import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
-import { clearUnreadByLevel, getFiles, get_user_info_with_cache, getUnreadNotificationCounts } from '@workspace/services';
-import { SystemNotification, UserInfo } from '@workspace/types';
-import { Avatar, Badge, Button, Empty, Modal, Tabs, Tag } from 'antd';
+import {
+  clearUnreadByLevel,
+  getUnreadNotificationCounts,
+} from '@workspace/services';
+import { NotificationCategoryKey, SystemNotification } from '@workspace/types';
+import { Badge, Button, Empty, Modal, Tabs, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 
 interface NotificationPanelProps {
   visible: boolean;
   onClose: () => void;
+  /** 传入时只展示该分类的通知(单类型模式), 不传则为通知中心全量模式 */
+  type?: NotificationCategoryKey;
 }
 
 const NOTIFICATION_TYPE_COLORS: Record<string, string> = {
@@ -21,47 +26,113 @@ const NOTIFICATION_TYPE_COLORS: Record<string, string> = {
   '1-3-2': 'cyan',
   '1-3-3': 'purple',
   '1-3-4': 'volcano',
+  '1-4-1': 'magenta',
+  '1-4-2': 'red',
+  '1-5-1': 'gold',
+  '1-5-2': 'geekblue',
 };
 
-const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
+const NotificationPanel = ({
+  visible,
+  onClose,
+  type,
+}: NotificationPanelProps) => {
   const intl = useIntl();
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
-  const menuUnread = useBearStore((state) => state.menuUnread);
   const setMenuUnread = useBearStore((state) => state.setMenuUnread);
-
-  useEffect(() => {
-    if (visible) {
-      loadNotifications();
-    }
-  }, [visible]);
 
   const loadNotifications = async () => {
     try {
-      const list = await invoke<SystemNotification[]>('get_system_notification', {
-        isRead: null,
-      });
+      const list = await invoke<SystemNotification[]>(
+        'get_system_notification',
+        {
+          isRead: null,
+        },
+      );
       setNotifications(list || []);
     } catch (e) {
       console.log('获取通知列表失败', e);
     }
   };
 
-  const handleClearUnread = async (level1: number, level2: number) => {
-    await clearUnreadByLevel(level1, level2, -1, -1);
+  const refreshUnreadCounts = async () => {
     const counts = await getUnreadNotificationCounts();
+    const current = useBearStore.getState().menuUnread;
     setMenuUnread({
-      ...menuUnread,
+      ...current,
       contacts: counts.contacts,
       groups: counts.groups,
-      total: counts.contacts + counts.groups,
+      plaza: counts.plaza,
+      moments: counts.moments,
+      total: counts.contacts + counts.groups + counts.plaza + counts.moments,
     });
+  };
+
+  useEffect(() => {
+    if (!visible) return;
+    loadNotifications();
+    refreshUnreadCounts();
+    // 面板打开期间实时刷新列表与未读角标
+    const unlisteners: Array<() => void> = [];
+    const setup = async () => {
+      unlisteners.push(
+        await listen('listen_notify_msg', () => {
+          loadNotifications();
+          refreshUnreadCounts();
+        }),
+      );
+      unlisteners.push(
+        await listen('listen_notify_read', () => {
+          loadNotifications();
+          refreshUnreadCounts();
+        }),
+      );
+    };
+    setup().catch((e) => console.log('监听通知事件失败', e));
+    return () => {
+      unlisteners.forEach((fn) => fn());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const handleClearUnread = async (level1: number, level2: number) => {
+    await clearUnreadByLevel(level1, level2, -1, -1);
+    await refreshUnreadCounts();
     loadNotifications();
   };
 
-  const handleMarkRead = async (id: string) => {
+  // 单类型模式: 只构建该分类的 tab, 清除按钮只清该 level
+  const typeTabItems = () => {
+    if (!type) return null;
+    const map: Record<
+      NotificationCategoryKey,
+      { level2: number; labelKey: string }
+    > = {
+      friend: { level2: 1, labelKey: 'notification.tab.friend' },
+      group: { level2: 3, labelKey: 'notification.tab.group' },
+      plaza: { level2: 4, labelKey: 'notification.tab.plaza' },
+      moments: { level2: 5, labelKey: 'notification.tab.moments' },
+    };
+    const meta = map[type];
+    if (!meta) return null;
+    return [
+      {
+        key: type,
+        label: intl.formatMessage({ id: meta.labelKey }),
+        children: renderTabContent(1, meta.level2, meta.level2),
+      },
+    ];
+  };
+
+  const handleMarkRead = async (id: string, isUnread: boolean) => {
     try {
-      await invoke<number>('batch_read_system_notification', { readIds: [id] });
+      if (isUnread) {
+        await invoke<number>('batch_read_system_notification', {
+          readIds: [id],
+        });
+      }
+      await refreshUnreadCounts();
       loadNotifications();
     } catch (e) {
       console.log('标记已读失败', e);
@@ -94,10 +165,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
         const minutes = Math.floor(diff / (1000 * 60));
         return minutes <= 1
           ? intl.formatMessage({ id: 'notification.justNow' })
-          : intl.formatMessage(
-              { id: 'notification.minutesAgo' },
-              { minutes },
-            );
+          : intl.formatMessage({ id: 'notification.minutesAgo' }, { minutes });
       }
       return intl.formatMessage({ id: 'notification.hoursAgo' }, { hours });
     } else if (days === 1) {
@@ -118,6 +186,10 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       '1-3-2': 'notification.type.groupInfoUpdate',
       '1-3-3': 'notification.type.groupMemberChange',
       '1-3-4': 'notification.type.inviteResult',
+      '1-4-1': 'notification.type.plazaLike',
+      '1-4-2': 'notification.type.plazaMatch',
+      '1-5-1': 'notification.type.momentLike',
+      '1-5-2': 'notification.type.momentComment',
     };
     const textKey = typeKeyMap[key] || 'notification.type.system';
     return { text: intl.formatMessage({ id: textKey }), color };
@@ -131,7 +203,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       <div
         key={n.id}
         className={`${styles.notifyItem} ${isUnread ? styles.unread : ''}`}
-        onClick={() => isUnread && handleMarkRead(n.id)}
+        onClick={() => n.id && handleMarkRead(n.id, isUnread)}
       >
         <div className={styles.notifyHeader}>
           <Tag color={type.color}>{type.text}</Tag>
@@ -144,37 +216,49 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
     );
   };
 
-  const renderTabContent = (level1: number, level2?: number, clearLevel2?: number) => {
+  const renderTabContent = (
+    level1: number,
+    level2?: number,
+    clearLevel2?: number,
+  ) => {
     const list = getFilteredNotifications(level1, level2);
-    const unreadCount = list.filter(
-      (n) => n.is_read === false,
-    ).length;
-
-    if (list.length === 0) {
-      return <Empty description={intl.formatMessage({ id: 'notification.noNotifications' })} image={Empty.PRESENTED_IMAGE_SIMPLE} />;
-    }
+    const unreadCount = list.filter((n) => n.is_read === false).length;
 
     return (
       <div>
-        {unreadCount > 0 && (
-          <div className={styles.clearBar}>
-            <span className={styles.unreadCount}>
-              <Badge count={unreadCount} size="small" />
-              <span>{intl.formatMessage({ id: 'notification.unreadCount' })}</span>
-            </span>
-            <Button
-              type="link"
-              size="small"
-              icon={<CheckOutlined />}
-              onClick={() => handleClearUnread(1, clearLevel2 ?? level2 ?? 0)}
-            >
-              {intl.formatMessage({ id: 'notification.clearUnread' })}
-            </Button>
+        {/* 清空按钮始终显示：即使未读数异常/为 0，也能手动全部标记为已读 */}
+        <div className={styles.clearBar}>
+          <span className={styles.unreadCount}>
+            {unreadCount > 0 && (
+              <>
+                <Badge count={unreadCount} size="small" />
+                <span>
+                  {intl.formatMessage({ id: 'notification.unreadCount' })}
+                </span>
+              </>
+            )}
+          </span>
+          <Button
+            type="link"
+            size="small"
+            icon={<CheckOutlined />}
+            onClick={() => handleClearUnread(1, clearLevel2 ?? level2 ?? 0)}
+          >
+            {intl.formatMessage({ id: 'notification.clearUnread' })}
+          </Button>
+        </div>
+        {list.length === 0 ? (
+          <Empty
+            description={intl.formatMessage({
+              id: 'notification.noNotifications',
+            })}
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        ) : (
+          <div className={styles.notifyList}>
+            {list.map(renderNotificationItem)}
           </div>
         )}
-        <div className={styles.notifyList}>
-          {list.map(renderNotificationItem)}
-        </div>
       </div>
     );
   };
@@ -183,11 +267,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
     {
       key: 'all',
       label: intl.formatMessage({ id: 'notification.tab.all' }),
-      children: (
-        <div>
-          {renderTabContent(1, undefined, -1)}
-        </div>
-      ),
+      children: <div>{renderTabContent(1, undefined, -1)}</div>,
     },
     {
       key: 'friend',
@@ -199,18 +279,47 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
       label: intl.formatMessage({ id: 'notification.tab.group' }),
       children: renderTabContent(1, 3, 3),
     },
+    {
+      key: 'plaza',
+      label: intl.formatMessage({ id: 'notification.tab.plaza' }),
+      children: renderTabContent(1, 4, 4),
+    },
+    {
+      key: 'moments',
+      label: intl.formatMessage({ id: 'notification.tab.moments' }),
+      children: renderTabContent(1, 5, 5),
+    },
   ];
 
-  return (
-    <Modal
-      title={
+  const renderTitle = () => {
+    if (!type) {
+      return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <BellOutlined />
           <span>{intl.formatMessage({ id: 'notification.title' })}</span>
         </div>
-      }
+      );
+    }
+    const typeLabelMap: Record<NotificationCategoryKey, string> = {
+      friend: 'notification.tab.friend',
+      group: 'notification.tab.group',
+      plaza: 'notification.tab.plaza',
+      moments: 'notification.tab.moments',
+    };
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <BellOutlined />
+        <span>{intl.formatMessage({ id: typeLabelMap[type] })}</span>
+      </div>
+    );
+  };
+
+  return (
+    <Modal
+      title={renderTitle()}
       open={visible}
       onCancel={onClose}
+      closable={false}
       footer={null}
       width={560}
       className={styles.notificationPanel}
@@ -239,7 +348,7 @@ const NotificationPanel = ({ visible, onClose }: NotificationPanelProps) => {
           {intl.formatMessage({ id: 'notification.filter.read' })}
         </Button>
       </div>
-      <Tabs items={tabItems} className={styles.tabs} />
+      <Tabs items={typeTabItems() || tabItems} className={styles.tabs} />
     </Modal>
   );
 };

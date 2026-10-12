@@ -1,10 +1,16 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
-import { useMessageApi } from '@/hooks/useMessageApi';
 import { useGroupMessageAckApi } from '@/hooks/useGroupMessageAckApi';
+import { useMessageApi } from '@/hooks/useMessageApi';
+import {
+  isMessageSelectable,
+  useMessageSelection,
+} from '@/hooks/useMessageSelection';
 import { useBearStore } from '@/store/store';
+import { isRecallChatMessage, isRecallMessage } from '@/utils/recall';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
+import { listenChatFileUploadProgress } from '@workspace/services';
 import {
   ChatMessage,
   GroupVo,
@@ -12,13 +18,33 @@ import {
   Page,
   TextQuicMsgVo,
 } from '@workspace/types';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import GroupMessageList from './components/GroupMessageList';
-import GroupChatFooter from './components/GroupChatFooter';
+import { message, Modal } from 'antd';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import ForwardModal, { ForwardTarget } from '../components/ForwardModal';
 import GroupTopBar from '../components/GroupTopBar';
+import MessageActionMenu, {
+  MessageAction,
+} from '../components/MessageActionMenu';
+import MessageSelectionBar from '../components/MessageSelectionBar';
+import GroupChatFooter from './components/GroupChatFooter';
+import GroupMessageList from './components/GroupMessageList';
 import styles from './index.less';
 
 const PAGE_SIZE = 20;
+
+/** 瞬态消息(通话控制 12-15 / WebRTC 信令 100)：新生命周期下不入聊天历史，仅过滤历史遗留旧数据 */
+const isTransientType = (textType: number): boolean =>
+  textType === 12 ||
+  textType === 13 ||
+  textType === 14 ||
+  textType === 15 ||
+  textType === 100;
 
 const GroupChatPage: React.FC = () => {
   const intl = useIntl();
@@ -35,6 +61,10 @@ const GroupChatPage: React.FC = () => {
     new Set(),
   );
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadProgressMap, setUploadProgressMap] = useState<
+    Record<string, { percent: number; phase: string }>
+  >({});
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -42,18 +72,222 @@ const GroupChatPage: React.FC = () => {
   const groupId = params.get('groupId') || '';
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
-  const { textMessage } = useMessageApi(null as any, groupId);
+  const { textMessage } = useMessageApi(null, groupId);
   const { groupAckMessage } = useGroupMessageAckApi(groupId);
 
-  const uniqueSenderUuids = useMemo(
-    () =>
-      [
-        ...new Set(
-          messageList
-            .map((msg) => msg.sender_uuid || msg.text_msg_raw.send_user)
-            .filter((uuid) => uuid && uuid !== meUuid && uuid !== SYSTEM_ACCOUNT),
+  /* ===== 多选 / 删除 / 转发 ===== */
+  const {
+    selectMode,
+    selectedIds,
+    selectedMessages,
+    allSelected,
+    enterSelect,
+    exitSelect,
+    toggle,
+    toggleAll,
+  } = useMessageSelection(messageList);
+  const [actionMenu, setActionMenu] = useState<{
+    x: number;
+    y: number;
+    msg: ChatMessage;
+  } | null>(null);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardMessages, setForwardMessages] = useState<ChatMessage[]>([]);
+
+  const handleMessageContext = useCallback(
+    (msg: ChatMessage, e: React.MouseEvent) => {
+      if (!isMessageSelectable(msg)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setActionMenu({ x: e.clientX, y: e.clientY, msg });
+    },
+    [],
+  );
+
+  const handleToggleSelect = useCallback(
+    (msg: ChatMessage) => toggle(msg),
+    [toggle],
+  );
+
+  const copyMessage = useCallback(
+    async (msg: ChatMessage) => {
+      if (msg.text_msg_raw.text_type !== 2001) return;
+      try {
+        let text = msg.text_msg_raw.raw;
+        try {
+          const outer = JSON.parse(text);
+          if (outer && outer.text !== undefined) {
+            text = String(outer.text);
+            const nested = JSON.parse(text);
+            if (nested && typeof nested.text === 'string') text = nested.text;
+          }
+        } catch {
+          // 纯文本
+        }
+        if (!text) return;
+        await navigator.clipboard.writeText(text);
+        message.success(
+          intl.formatMessage({ id: 'chat.messageActions.copied' }),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [intl],
+  );
+
+  const deleteMessages = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await invoke('delete_group_chat_record', { nanoIdList: ids, groupId });
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.deleteConfirm.failed' }));
+        return;
+      }
+      setMessageList((prev) =>
+        prev.filter((m) => !ids.includes(m.text_msg_raw.nano_id)),
+      );
+      exitSelect();
+    },
+    [groupId, intl, exitSelect],
+  );
+
+  const confirmDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.deleteConfirm.title' }),
+        content: intl.formatMessage(
+          { id: 'chat.deleteConfirm.content' },
+          { count: ids.length },
         ),
-      ],
+        okText: intl.formatMessage({ id: 'chat.messageActions.delete' }),
+        okButtonProps: { danger: true },
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => deleteMessages(ids),
+      });
+    },
+    [deleteMessages, intl],
+  );
+
+  const openForward = useCallback((msgs: ChatMessage[]) => {
+    if (msgs.length === 0) return;
+    setForwardMessages(msgs);
+    setForwardOpen(true);
+  }, []);
+
+  const recallMessage = useCallback(
+    async (msg: ChatMessage) => {
+      let recalled: TextQuicMsgVo;
+      try {
+        recalled = (await invoke('recall_group_chat_message', {
+          groupId,
+          targetNanoId: msg.text_msg_raw.nano_id,
+        })) as TextQuicMsgVo;
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.recall.failed' }));
+        return;
+      }
+      setMessageList((prev) => {
+        const filtered = prev.filter(
+          (m) => m.text_msg_raw.nano_id !== msg.text_msg_raw.nano_id,
+        );
+        const temp: ChatMessage = {
+          from: MessageFrom.Mine,
+          text_msg_raw: recalled,
+          ack: false,
+          sender_uuid: meUuid,
+        };
+        return [...filtered, temp];
+      });
+      setTimeout(() => scrollToBottom(), 100);
+    },
+    [groupId, meUuid, intl],
+  );
+
+  const confirmRecall = useCallback(
+    (msg: ChatMessage) => {
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        content: intl.formatMessage({ id: 'chat.recall.confirm' }),
+        okText: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => recallMessage(msg),
+      });
+    },
+    [intl, recallMessage],
+  );
+
+  const handleForwardConfirm = useCallback(
+    async (target: ForwardTarget) => {
+      const list = forwardMessages.map((m) => m.text_msg_raw);
+      setForwardOpen(false);
+      if (list.length === 0) return;
+      try {
+        await invoke('forward_chat_messages', {
+          messages: list,
+          targetRecv: target.recv,
+          targetGroup: target.isGroup,
+        });
+        message.success(
+          intl.formatMessage(
+            { id: 'chat.forward.success' },
+            { name: target.name },
+          ),
+        );
+        if (target.isGroup && target.recv === groupId) {
+          setCurrentPage(1);
+          setHasMore(true);
+          setIsInitialLoad(true);
+          loadChatRecord(groupId, 1, true);
+        }
+        exitSelect();
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.forward.failed' }));
+      }
+    },
+    [forwardMessages, groupId, intl, exitSelect],
+  );
+
+  const handleActionMenuSelect = useCallback(
+    (action: MessageAction) => {
+      const msg = actionMenu?.msg;
+      setActionMenu(null);
+      if (!msg) return;
+      if (action === 'multi') {
+        enterSelect(msg);
+      } else if (action === 'forward') {
+        openForward([msg]);
+      } else if (action === 'recall') {
+        confirmRecall(msg);
+      } else if (action === 'delete') {
+        confirmDelete([msg.text_msg_raw.nano_id]);
+      } else if (action === 'copy') {
+        copyMessage(msg);
+      }
+    },
+    [
+      actionMenu,
+      enterSelect,
+      openForward,
+      confirmRecall,
+      confirmDelete,
+      copyMessage,
+    ],
+  );
+
+  const uniqueSenderUuids = useMemo(
+    () => [
+      ...new Set(
+        messageList
+          .map((msg) => msg.sender_uuid || msg.text_msg_raw.send_user)
+          .filter((uuid) => uuid && uuid !== meUuid && uuid !== SYSTEM_ACCOUNT),
+      ),
+    ],
     [messageList, meUuid],
   );
   const { memberInfoMap } = useGroupMemberInfo(uniqueSenderUuids);
@@ -82,16 +316,43 @@ const GroupChatPage: React.FC = () => {
     getGroupInfo(groupId);
     setCurrentGroupSession(groupId);
 
-    const handleUploadStartEvent = () => setIsUploading(true);
-    const handleUploadEndEvent = () => setIsUploading(false);
+    const handleUploadStartEvent = () => {
+      setIsUploading(true);
+      setUploadPercent(0);
+    };
+    const handleUploadEndEvent = () => {
+      setUploadPercent(100);
+      setIsUploading(false);
+    };
 
     window.addEventListener('uploadStart', handleUploadStartEvent);
     window.addEventListener('uploadEnd', handleUploadEndEvent);
 
+    let unlistenUpload: (() => void) | undefined;
+    let disposed = false;
+    listenChatFileUploadProgress((p) => {
+      const pct =
+        p.total > 0
+          ? Math.min(99, Math.floor((p.uploaded / p.total) * 100))
+          : 0;
+      setUploadPercent(pct);
+      setUploadProgressMap((prev) => ({
+        ...prev,
+        [p.nanoId]: { percent: pct, phase: p.phase },
+      }));
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlistenUpload = fn;
+      })
+      .catch(() => {});
+
     return () => {
+      disposed = true;
       setCurrentGroupSession('');
       window.removeEventListener('uploadStart', handleUploadStartEvent);
       window.removeEventListener('uploadEnd', handleUploadEndEvent);
+      unlistenUpload?.();
     };
   }, [groupId]);
 
@@ -150,27 +411,32 @@ const GroupChatPage: React.FC = () => {
         current: page,
         total: 0,
       };
-      const data: TextQuicMsgVo[] = await invoke('get_group_chat_record_from_store', {
-        groupId,
-        page: pageParam,
-      });
+      const data: TextQuicMsgVo[] = await invoke(
+        'get_group_chat_record_from_store',
+        {
+          groupId,
+          page: pageParam,
+        },
+      );
 
       if (data.length === 0) {
         setHasMore(false);
         return;
       }
 
-      const chatMessages: ChatMessage[] = data.map((item) => {
-        const from =
-          item.send_user === meUuid ? MessageFrom.Mine : MessageFrom.Customer;
-        const temp: ChatMessage = {
-          from,
-          text_msg_raw: item,
-          ack: undefined,
-          sender_uuid: item.send_user,
-        };
-        return temp;
-      });
+      const chatMessages: ChatMessage[] = data
+        .filter((item) => !isTransientType(item.text_type))
+        .map((item) => {
+          const from =
+            item.send_user === meUuid ? MessageFrom.Mine : MessageFrom.Customer;
+          const temp: ChatMessage = {
+            from,
+            text_msg_raw: item,
+            ack: undefined,
+            sender_uuid: item.send_user,
+          };
+          return temp;
+        });
 
       if (isInitial) {
         setMessageList(chatMessages);
@@ -184,7 +450,10 @@ const GroupChatPage: React.FC = () => {
               ? latest
               : current,
           );
-          markRead(last_read_msg.text_msg_raw.nano_id, last_read_msg.text_msg_raw.timestamp);
+          markRead(
+            last_read_msg.text_msg_raw.nano_id,
+            last_read_msg.text_msg_raw.timestamp,
+          );
         }
       } else {
         const container = messageContainerRef.current;
@@ -242,6 +511,14 @@ const GroupChatPage: React.FC = () => {
 
   useEffect(() => {
     if (textMessage) {
+      // 群内撤回消息：被撤回的原消息已在本地库删除，重拉聊天记录以移除原消息并显示撤回提示
+      if (isRecallMessage(textMessage.text_type, textMessage.raw)) {
+        setCurrentPage(1);
+        setHasMore(true);
+        setIsInitialLoad(true);
+        loadChatRecord(groupId, 1, true);
+        return;
+      }
       let from = MessageFrom.Customer;
       if (textMessage.send_user === SYSTEM_ACCOUNT) {
         from = MessageFrom.System;
@@ -297,6 +574,11 @@ const GroupChatPage: React.FC = () => {
         );
         if (index !== -1) {
           prevState[index].ack = true;
+          // 用服务端返回的 nano_id 归一本地乐观消息的 nano_id，
+          // 否则后续撤回/删除会因本地 id 在 group_chat_record 中不存在而失败
+          if (groupAckMessage.nano_id) {
+            prevState[index].text_msg_raw.nano_id = groupAckMessage.nano_id;
+          }
         }
         return [...prevState];
       });
@@ -327,9 +609,11 @@ const GroupChatPage: React.FC = () => {
 
   const handleUploadStart = () => {
     setIsUploading(true);
+    setUploadPercent(0);
   };
 
   const handleUploadEnd = () => {
+    setUploadPercent(100);
     setIsUploading(false);
   };
 
@@ -343,7 +627,14 @@ const GroupChatPage: React.FC = () => {
         />
         {isUploading && (
           <div className={styles.uploadLoadingBar}>
-            <div className={styles.uploadLoadingProgress} />
+            {uploadPercent === 0 ? (
+              <div className={styles.uploadLoadingIndeterminate} />
+            ) : (
+              <div
+                className={styles.uploadLoadingProgress}
+                style={{ width: `${uploadPercent}%` }}
+              />
+            )}
           </div>
         )}
       </div>
@@ -351,7 +642,11 @@ const GroupChatPage: React.FC = () => {
         <div
           ref={messageContainerRef}
           className={styles.messageContainer}
-          style={{ height: `calc(100% - ${realFootHeight}px)` }}
+          style={{
+            height: selectMode
+              ? 'calc(100% - 50px)'
+              : `calc(100% - ${realFootHeight}px)`,
+          }}
         >
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
@@ -360,7 +655,9 @@ const GroupChatPage: React.FC = () => {
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'groupChat.noMoreMessages' })}</div>
+            <div className={styles.noMoreIndicator}>
+              {intl.formatMessage({ id: 'groupChat.noMoreMessages' })}
+            </div>
           )}
           <GroupMessageList
             messages={messageList}
@@ -368,17 +665,52 @@ const GroupChatPage: React.FC = () => {
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
             memberInfoMap={memberInfoMap}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+            onMessageContext={handleMessageContext}
+            onToggleSelect={handleToggleSelect}
+            uploadProgressMap={uploadProgressMap}
           />
         </div>
-        <div style={{ height: `${footerHeight}px` }}>
-          <GroupChatFooter
-            groupUuid={groupId}
-            onMessageSent={handleMessageSent}
-            onUploadStart={handleUploadStart}
-            onUploadEnd={handleUploadEnd}
+        {selectMode ? (
+          <MessageSelectionBar
+            count={selectedIds.size}
+            allSelected={allSelected}
+            onToggleAll={toggleAll}
+            onCancel={exitSelect}
+            onForward={() => openForward(selectedMessages)}
+            onDelete={() => confirmDelete([...selectedIds])}
           />
-        </div>
+        ) : (
+          <div style={{ height: `${footerHeight}px` }}>
+            <GroupChatFooter
+              groupUuid={groupId}
+              onMessageSent={handleMessageSent}
+              onUploadStart={handleUploadStart}
+              onUploadEnd={handleUploadEnd}
+            />
+          </div>
+        )}
       </div>
+      {actionMenu && (
+        <MessageActionMenu
+          x={actionMenu.x}
+          y={actionMenu.y}
+          canCopy={actionMenu.msg.text_msg_raw.text_type === 2001}
+          canRecall={
+            actionMenu.msg.from === MessageFrom.Mine &&
+            !isRecallChatMessage(actionMenu.msg)
+          }
+          onSelect={handleActionMenuSelect}
+          onClose={() => setActionMenu(null)}
+        />
+      )}
+      <ForwardModal
+        open={forwardOpen}
+        count={forwardMessages.length}
+        onCancel={() => setForwardOpen(false)}
+        onConfirm={handleForwardConfirm}
+      />
     </div>
   );
 };

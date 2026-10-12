@@ -1,0 +1,385 @@
+.pendingBar {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  padding: 0 8px;
+  box-sizing: border-box;
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), var(--glass-bg));
+  backdrop-filter: var(--glass-blur);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  animation: pendingBarIn 0.25s ease;
+  transition: height 0.2s ease;
+
+  // 拖拽拉伸中关闭高度动画，跟手
+  &.dragging {
+    transition: none;
+    user-select: none;
+  }
+
+  // 顶部蓝色渐变装饰线，与页面各处分隔线呼应
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(64, 150, 255, 0.35),
+      transparent
+    );
+  }
+}
+
+// 顶部拖拽手柄
+.dragHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  z-index: 2;
+
+  &::before {
+    content: '';
+    width: 36px;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(64, 150, 255, 0.5),
+      transparent
+    );
+    opacity: 0.6;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  &:hover::before {
+    opacity: 1;
+    transform: scaleY(1.3);
+  }
+
+  &:active::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--color-primary),
+      transparent
+    );
+  }
+}
+
+.pane {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 10px 8px 3px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+
+  // 左右两块的分隔竖线
+  & + .pane {
+    border-left: 1px solid rgba(64, 150, 255, 0.08);
+  }
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      rgba(64, 150, 255, 0.3),
+      rgba(64, 150, 255, 0.15)
+    );
+    border-radius: 2px;
+  }
+}
+
+.paneTitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--color-gray-text);
+  flex-shrink: 0;
+
+  // 状态色小圆点
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+}
+
+.paneSending .paneTitle::before {
+  background: var(--color-primary);
+  box-shadow: 0 0 4px rgba(64, 150, 255, 0.6);
+  animation: pulseDot 1.6s ease-in-out infinite;
+}
+
+.paneFailed .paneTitle::before {
+  background: var(--color-error);
+  box-shadow: 0 0 4px rgba(255, 77, 79, 0.5);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-gray-text-dark);
+  line-height: 18px;
+  min-width: 0;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.sendingItem:hover {
+  background: rgba(64, 150, 255, 0.05);
+}
+
+.failedItem:hover {
+  background: rgba(255, 77, 79, 0.06);
+}
+
+// 操作中（重发/忽略进行时）的条目
+.actingItem {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.itemIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.queuedLabel {
+  color: var(--color-gray-text);
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.itemText {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actionBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+    transform: none;
+  }
+}
+
+.resendBtn {
+  &:hover {
+    background: var(--glass-icon-hover-bg);
+  }
+
+  // 重发图标常态中性灰，hover 时泛主色蓝光
+  img {
+    transition: filter 0.2s ease;
+  }
+
+  &:hover img {
+    filter: drop-shadow(0 0 3px rgba(64, 150, 255, 0.6));
+  }
+}
+
+.ignoreBtn {
+  color: var(--color-gray-text);
+
+  &:hover {
+    color: var(--color-error);
+    background: rgba(255, 77, 79, 0.08);
+  }
+}
+
+.actionIcon {
+  width: 13px;
+  height: 13px;
+  font-size: 11px;
+}
+
+// 展开态右侧收起按钮
+.collapseBtn {
+  flex: 0 0 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--color-gray-text);
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--color-primary);
+    background: var(--glass-icon-hover-bg);
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.collapseIcon {
+  font-size: 11px;
+}
+
+// 折叠态窄条
+.collapsedBar {
+  width: 100%;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), var(--glass-bg));
+  backdrop-filter: var(--glass-blur);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+  cursor: pointer;
+  animation: pendingBarIn 0.25s ease;
+  transition: background 0.2s ease;
+
+  // 顶部蓝色渐变装饰线
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(64, 150, 255, 0.35),
+      transparent
+    );
+  }
+
+  &:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.97),
+      var(--glass-bg)
+    );
+
+    .collapsedExpand {
+      color: var(--color-primary);
+      background: var(--glass-icon-hover-bg);
+    }
+  }
+}
+
+.collapsedInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-gray-text-dark);
+}
+
+.collapsedDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-error);
+  box-shadow: 0 0 4px rgba(255, 77, 79, 0.5);
+}
+
+.collapsedBadge {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--color-error);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.collapsedExpand {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-gray-text);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+@keyframes pendingBarIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

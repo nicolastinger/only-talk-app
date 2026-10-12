@@ -1,0 +1,236 @@
+import type {
+  FileRecord,
+  GroupFileRecord,
+  GroupImageRecord,
+  ImageRecord,
+  TextQuicMsgVo,
+} from "@workspace/types";
+import {
+  MSG_TYPE_FILE,
+  MSG_TYPE_GROUP_FILE,
+  MSG_TYPE_GROUP_IMAGE,
+  MSG_TYPE_GROUP_NOTIFICATION,
+  MSG_TYPE_GROUP_TEXT,
+  MSG_TYPE_IMAGE,
+  MSG_TYPE_P2P,
+  MSG_TYPE_P2P_VIDEO_CALL,
+  MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
+  MSG_TYPE_P2P_VIDEO_CALL_END,
+  MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+  MSG_TYPE_P2P_VIDEO_CALL_REJECT,
+  MSG_TYPE_RECALL,
+  MSG_TYPE_TEXT,
+  MSG_TYPE_WEBRTC_SIGNAL,
+} from "./messageTypes";
+import { t } from "@/i18n";
+
+/**
+ * 聊天消息 raw 解析层。
+ * 与 PC 端 (Chats/components/*ChatBox.tsx 及 GroupChat/*ChatBox.tsx) 逻辑一一对应：
+ *  - 单聊：raw 是单层 JSON / 或发送中的本地文件路径
+ *  - 群聊：raw 是双层 JSON {"text":"<内层>","send_user":"..."} / 或发送中的本地路径
+ */
+
+/** 判断 raw 是否为本地文件路径（发送中的临时消息） */
+export const isLocalFilePath = (raw: string): boolean => {
+  if (raw.startsWith("{") || raw.startsWith("[")) return false;
+  return (
+    raw.includes(":\\") || raw.startsWith("/") || raw.startsWith("file://")
+  );
+};
+
+/** 安全 JSON 解析 */
+const tryParseJson = <T>(raw: string): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+};
+
+/** 从绝对路径提取文件名 */
+export const basename = (path: string): string => {
+  const parts = path.split(/[/\\]/);
+  return parts[parts.length - 1] || "unknown";
+};
+
+/** 从文件名提取扩展名 */
+export const extensionOf = (fileName: string): string => {
+  const dot = fileName.lastIndexOf(".");
+  return dot >= 0 ? fileName.slice(dot + 1) : "";
+};
+
+/* ==================== 单聊（text_type 1/2/3） ==================== */
+
+/** 单聊文本：raw = {"text":"...","prev_id":"","platform":0} */
+export const parsePrivateText = (raw: string): string => {
+  const parsed = tryParseJson<{ text?: string; content?: string }>(raw);
+  const text = parsed?.text || parsed?.content || raw;
+  return text || t("chat.typeEmpty");
+};
+
+/** 单聊图片 biz_id：raw = ImageRecord JSON */
+export const parsePrivateImageBizId = (raw: string): string | null => {
+  if (isLocalFilePath(raw)) return null;
+  return tryParseJson<ImageRecord>(raw)?.biz_id || null;
+};
+
+/** 单聊文件：raw = FileRecord JSON */
+export const parsePrivateFileRecord = (raw: string): FileRecord | null => {
+  if (isLocalFilePath(raw)) return null;
+  return tryParseJson<FileRecord>(raw);
+};
+
+/* ==================== 群聊（text_type 2001/2002/2003） ==================== */
+
+/**
+ * 解一层群聊外层 JSON：{"text":"<内容字符串>","send_user":"..."}
+ */
+export const unwrapGroupOuter = (raw: string): { text?: string; send_user?: string } | null => {
+  if (isLocalFilePath(raw)) return null;
+  const outer = tryParseJson<{ text?: unknown; send_user?: string }>(raw);
+  if (!outer || outer.text === undefined) return null;
+  return { text: String(outer.text), send_user: outer.send_user };
+};
+
+/** 群聊文本内容：纯文本或双层 JSON 均兼容 */
+export const parseGroupText = (raw: string): string => {
+  if (isLocalFilePath(raw)) return raw;
+  const outer = unwrapGroupOuter(raw);
+  const inner = outer ? outer.text : raw;
+  if (!inner) return raw || t("chat.typeEmpty");
+  const nested = tryParseJson<{ text?: string }>(inner);
+  if (nested && typeof nested.text === "string")
+    return nested.text || t("chat.typeEmpty");
+  return inner;
+};
+
+/** 群聊图片内层：raw 双层 JSON → GroupImageRecord */
+export const parseGroupImageRecord = (raw: string): GroupImageRecord | null => {
+  if (isLocalFilePath(raw)) return null;
+  const outer = unwrapGroupOuter(raw);
+  const inner = outer?.text ?? raw;
+  return tryParseJson<GroupImageRecord>(inner);
+};
+
+export const parseGroupImageBizId = (raw: string): string | null => {
+  return parseGroupImageRecord(raw)?.biz_id || null;
+};
+
+/** 群聊文件内层：raw 双层 JSON → GroupFileRecord */
+export const parseGroupFileRecord = (raw: string): GroupFileRecord | null => {
+  if (isLocalFilePath(raw)) return null;
+  const outer = unwrapGroupOuter(raw);
+  const inner = outer?.text ?? raw;
+  return tryParseJson<GroupFileRecord>(inner);
+};
+
+/* ==================== 通知/系统 ==================== */
+
+/** 群通知 / 系统消息内容：通常 raw 是 {"text":"...","content":"..."} 或纯文本 */
+export const parseSystemContent = (raw: string): string => {
+  const parsed = tryParseJson<{ text?: string; content?: string }>(raw);
+  const text = parsed?.text || parsed?.content || raw;
+  return text || t("chat.typeNotice");
+};
+
+/* ==================== 消息撤回（伪撤回） ==================== */
+
+/** 撤回载荷标记 key（与后端 service::recall 保持一致） */
+const RECALL_MARKER = "ot_recall";
+
+/** 解析撤回载荷 JSON，返回目标 nano_id；非撤回载荷返回 null */
+const parseRecallJson = (s: string): string | null => {
+  const parsed = tryParseJson<Record<string, unknown>>(s);
+  if (
+    parsed &&
+    parsed[RECALL_MARKER] === 1 &&
+    typeof parsed.target_nano_id === "string"
+  ) {
+    return parsed.target_nano_id;
+  }
+  return null;
+};
+
+/**
+ * 判断是否为撤回控制消息并返回目标 nano_id。
+ * - 单聊：type=3001，raw 即撤回载荷；
+ * - 群聊：type=2001，raw 为外层 GroupTextRecord，内层 text 为撤回载荷。
+ */
+export const parseRecallTarget = (
+  textType: number,
+  raw: string
+): string | null => {
+  if (textType === MSG_TYPE_RECALL) return parseRecallJson(raw);
+  if (textType === MSG_TYPE_GROUP_TEXT) {
+    // 乐观上屏时 raw 为内层载荷；落库/接收后为外层 GroupTextRecord
+    const direct = parseRecallJson(raw);
+    if (direct) return direct;
+    const outer = unwrapGroupOuter(raw);
+    if (!outer || !outer.text) return null;
+    return parseRecallJson(outer.text);
+  }
+  return null;
+};
+
+/** 是否为撤回控制消息 */
+export const isRecallMessage = (textType: number, raw: string): boolean =>
+  parseRecallTarget(textType, raw) !== null;
+
+/* ==================== 预览/兜底文案 ==================== */
+
+/** 会话列表 / 未知类型 的兜底文案（对齐 PC Search.formatMessage） */
+export const getMessageDisplayText = (
+  text_type: number,
+  raw: string
+): string => {
+  if (isRecallMessage(text_type, raw)) return t("chat.recalled");
+  switch (text_type) {
+    case MSG_TYPE_TEXT:
+      return parsePrivateText(raw);
+    case MSG_TYPE_GROUP_TEXT:
+      return parseGroupText(raw);
+    case MSG_TYPE_IMAGE:
+    case MSG_TYPE_GROUP_IMAGE:
+      return t("chat.typeImage");
+    case MSG_TYPE_FILE:
+    case MSG_TYPE_GROUP_FILE:
+      return t("chat.typeFile");
+    case MSG_TYPE_P2P:
+      return t("chat.typePrivate");
+    case MSG_TYPE_P2P_VIDEO_CALL:
+      return t("chat.typeVideoCall");
+    case MSG_TYPE_GROUP_NOTIFICATION:
+      return parseSystemContent(raw);
+    default:
+      return raw || t("chat.typeUnknown");
+  }
+};
+
+/** 时间分隔判断：与上一条相隔 > 10 分钟 则展示时间 */
+export const needTimeDivider = (
+  prevTimestamp: number,
+  currentTimestamp: number
+): boolean => {
+  if (!prevTimestamp) return true;
+  return Math.abs(currentTimestamp - prevTimestamp) >= 10 * 60 * 1000;
+};
+
+/** 判断某条消息是否需要按“自己发送/回执状态”渲染（mine 判定复用） */
+export const isMineMessage = (
+  msg: TextQuicMsgVo,
+  meUuid: string
+): boolean => msg.send_user === meUuid;
+
+/**
+ * 瞬态消息（通话控制 12-15 / WebRTC 信令 100）：
+ * 新生命周期下不应出现在聊天历史（控制命令只转发不存储，历史由自动生成的 type=1 文本记录承担）。
+ * 仅历史遗留的旧数据可能出现，加载时过滤，避免与文本记录重复渲染。
+ */
+export const isTransientMessageType = (textType: number): boolean =>
+  textType === MSG_TYPE_P2P_VIDEO_CALL_INVITE ||
+  textType === MSG_TYPE_P2P_VIDEO_CALL_ACCEPT ||
+  textType === MSG_TYPE_P2P_VIDEO_CALL_REJECT ||
+  textType === MSG_TYPE_P2P_VIDEO_CALL_END ||
+  textType === MSG_TYPE_WEBRTC_SIGNAL;

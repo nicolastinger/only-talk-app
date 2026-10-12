@@ -1,11 +1,13 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
-import { ChatMessage, MessageFrom, UserInfo } from '@workspace/types';
+import { isRecallMessage } from '@/utils/recall';
 import { useIntl } from '@umijs/max';
+import { ChatMessage, MessageFrom, UserInfo } from '@workspace/types';
 import React from 'react';
-import GroupCustomerChatBox from './GroupCustomerChatBox';
-import GroupMineChatBox from './GroupMineChatBox';
 import MessageTimestamp from '../../components/MessageTimestamp';
+import boxStyles from '../../components/styles/MessageBox.less';
+import GroupCustomerChatBox from './GroupCustomerChatBox';
 import styles from './GroupMessageList.less';
+import GroupMineChatBox from './GroupMineChatBox';
 
 interface GroupMessageListProps {
   messages: ChatMessage[];
@@ -13,6 +15,12 @@ interface GroupMessageListProps {
   newMessageIds?: Set<string>;
   loadedMessageIds?: Set<string>;
   memberInfoMap: Map<string, UserInfo>;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onMessageContext?: (msg: ChatMessage, e: React.MouseEvent) => void;
+  onToggleSelect?: (msg: ChatMessage) => void;
+  /** 发送进度：nano_id -> { percent, phase } */
+  uploadProgressMap?: Record<string, { percent: number; phase: string }>;
 }
 
 const MSG_TYPE_GROUP_TEXT = 2001;
@@ -28,6 +36,11 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
   newMessageIds,
   loadedMessageIds,
   memberInfoMap,
+  selectMode,
+  selectedIds,
+  onMessageContext,
+  onToggleSelect,
+  uploadProgressMap,
 }) => {
   const intl = useIntl();
   const getMessageAnimationClass = (nanoId: string): string => {
@@ -57,11 +70,38 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
 
         const animationClass = getMessageAnimationClass(message.nano_id);
         const isMine = msg.from === MessageFrom.Mine;
-        const isSystem = msg.from === MessageFrom.System || message.send_user === SYSTEM_ACCOUNT || message.text_type === MSG_TYPE_GROUP_NOTIFICATION;
+        const isSystem =
+          msg.from === MessageFrom.System ||
+          message.send_user === SYSTEM_ACCOUNT ||
+          message.text_type === MSG_TYPE_GROUP_NOTIFICATION;
 
-        const memberInfo = memberInfoMap.get(msg.sender_uuid || message.send_user || '');
-        const senderName = memberInfo?.username || msg.sender_name || (isMine ? intl.formatMessage({ id: 'groupChat.me' }) : intl.formatMessage({ id: 'groupChat.groupMember' }));
+        const memberInfo = memberInfoMap.get(
+          msg.sender_uuid || message.send_user || '',
+        );
+        const senderName =
+          memberInfo?.username ||
+          msg.sender_name ||
+          (isMine
+            ? intl.formatMessage({ id: 'groupChat.me' })
+            : intl.formatMessage({ id: 'groupChat.groupMember' }));
         const senderIcon = memberInfo?.icon || msg.sender_icon || msg.img || '';
+
+        // 撤回提示：居中灰条
+        if (isRecallMessage(message.text_type, message.raw)) {
+          const name = isMine
+            ? intl.formatMessage({ id: 'chat.recall.you' })
+            : senderName;
+          return (
+            <React.Fragment key={message.nano_id}>
+              {shouldShowTimestamp && (
+                <MessageTimestamp timestamp={currentTimestamp} />
+              )}
+              <div className={styles.groupMessageSystem}>
+                {intl.formatMessage({ id: 'chat.recall.notice' }, { name })}
+              </div>
+            </React.Fragment>
+          );
+        }
 
         if (isSystem || message.text_type === MSG_TYPE_GROUP_NOTIFICATION) {
           let systemContent = message.raw;
@@ -69,37 +109,58 @@ const GroupMessageList: React.FC<GroupMessageListProps> = ({
             const sysMsg = JSON.parse(message.raw);
             systemContent = sysMsg.text || sysMsg.content || message.raw;
           } catch {}
-          
+
           return (
             <React.Fragment key={message.nano_id}>
               {shouldShowTimestamp && (
                 <MessageTimestamp timestamp={currentTimestamp} />
               )}
-              <div className={styles.groupMessageSystem}>
-                {systemContent}
-              </div>
+              <div className={styles.groupMessageSystem}>{systemContent}</div>
             </React.Fragment>
           );
         }
+
+        const selected = !!selectedIds?.has(message.nano_id);
 
         return (
           <React.Fragment key={message.nano_id}>
             {shouldShowTimestamp && (
               <MessageTimestamp timestamp={currentTimestamp} />
             )}
-            <div className={animationClass}>
+            <div
+              className={`${animationClass} ${boxStyles.rowWrapper} ${
+                selectMode ? boxStyles.selectRow : ''
+              } ${selected ? boxStyles.selectedRow : ''}`}
+              onContextMenu={(e) => onMessageContext?.(msg, e)}
+              onClickCapture={(e) => {
+                if (!selectMode) return;
+                e.stopPropagation();
+                e.preventDefault();
+                onToggleSelect?.(msg);
+              }}
+            >
+              {selectMode && (
+                <span
+                  className={`${boxStyles.selectMark} ${
+                    selected ? boxStyles.checked : ''
+                  }`}
+                />
+              )}
               {isMine ? (
                 <GroupMineChatBox
                   msg={msg}
                   isAck={msg.ack}
                   icon={senderIcon}
                   groupUuid={groupUuid}
+                  uploadProgress={uploadProgressMap?.[message.nano_id]?.percent}
+                  sendPhase={uploadProgressMap?.[message.nano_id]?.phase}
                 />
               ) : (
                 <GroupCustomerChatBox
                   msg={msg}
                   icon={senderIcon}
                   senderName={senderName}
+                  senderUserType={memberInfo?.user_type}
                   groupUuid={groupUuid}
                 />
               )}
@@ -137,6 +198,16 @@ export default React.memo(GroupMessageList, (prevProps, nextProps) => {
   }
 
   if (prevProps.memberInfoMap.size !== nextProps.memberInfoMap.size) {
+    return false;
+  }
+
+  if (
+    prevProps.uploadProgressMap !== nextProps.uploadProgressMap ||
+    prevProps.selectMode !== nextProps.selectMode ||
+    prevProps.selectedIds !== nextProps.selectedIds ||
+    prevProps.onMessageContext !== nextProps.onMessageContext ||
+    prevProps.onToggleSelect !== nextProps.onToggleSelect
+  ) {
     return false;
   }
 

@@ -14,28 +14,39 @@
  *   isInitiator={true} // 是否为发起方
  *   onClose={() => {}} // 通话结束回调
  * />
+ *
+ * 结构说明（Stage2 去上帝类后）：
+ * - 组件仅负责编排：状态机、事件接线、UI 渲染
+ * - 可变媒体/编解码状态集中在 `session`（lib/mediaSession.ts）
+ * - 编解码逻辑拆分到 codec/videoEncoder|videoDecoder|audioEncoder|audioDecoder
+ * - IPC 传输封装到 transport/p2pTransport，事件监听封装到 events/p2pEvents
  */
-import {
-  AudioMutedOutlined,
-  AudioOutlined,
-  LogoutOutlined,
-  PhoneOutlined,
-  ReloadOutlined,
-  VideoCameraOutlined,
-} from '@ant-design/icons';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { window } from '@tauri-apps/api';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { get_user_info_with_cache } from '@workspace/services';
 import {
-  MediaConfig,
   MediaControl,
   MediaControlState,
   MediaInfo,
+  UserInfo,
   VideoCallInvite,
 } from '@workspace/types';
-import { Button, message, Spin, Tooltip } from 'antd';
+import { message, Spin } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './index.module.less';
+
+import * as audioDecoder from './codec/audioDecoder';
+import * as audioEncoder from './codec/audioEncoder';
+import * as videoDecoder from './codec/videoDecoder';
+import * as videoEncoder from './codec/videoEncoder';
+import CallControls from './components/CallControls';
+import RingOverlay from './components/RingOverlay';
+import VideoPanel from './components/VideoPanel';
+import { registerP2pMediaChannels, registerP2pMediaEvents } from './events/p2pEvents';
+import { CallPhase } from './lib/callState';
+import { defaultMediaConfig, dlog, IS_WEBCODECS_SUPPORTED } from './lib/config';
+import { createMediaSession, MediaSession } from './lib/mediaSession';
+import * as transport from './transport/p2pTransport';
 
 // ==================== 组件属性接口 ====================
 
@@ -72,85 +83,47 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 远程音频元素引用 - 用于播放对方音频 */
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
-  // ==================== 媒体录制器引用 ====================
+  // ==================== 媒体/编解码状态（MediaSession 集中承载） ====================
 
-  /** 视频录制器 - 录制本地摄像头视频 */
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-
-  /** 音频录制器 - 录制本地麦克风音频 */
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
-
-  /** 本地媒体流 - 包含视频和音频轨道 */
-  const localStreamRef = useRef<MediaStream | null>(null);
-
-  // ==================== 远程媒体接收引用 ====================
-
-  /** MediaSource - 用于接收远程视频流 */
-  const mediaSourceRef = useRef<MediaSource | null>(null);
-
-  /** SourceBuffer - 用于缓冲远程视频数据 */
-  const sourceBufferRef = useRef<SourceBuffer | null>(null);
-
-  /** AudioMediaSource - 用于接收远程音频流 */
-  const audioMediaSourceRef = useRef<MediaSource | null>(null);
-
-  /** AudioSourceBuffer - 用于缓冲远程音频数据 */
-  const audioSourceBufferRef = useRef<SourceBuffer | null>(null);
-
-  // ==================== 缓冲队列引用 ====================
-
-  /** 视频缓冲队列 - 存储待处理的视频帧 */
-  const videoBufferQueueRef = useRef<Uint8Array[]>([]);
-
-  /** 音频缓冲队列 - 存储待处理的音频帧 */
-  const audioBufferQueueRef = useRef<Uint8Array[]>([]);
-
-  /** 视频SourceBuffer更新状态标记 - 防止并发写入 */
-  const isVideoSourceBufferUpdatingRef = useRef<boolean>(false);
-
-  /** 音频SourceBuffer更新状态标记 - 防止并发写入 */
-  const isAudioSourceBufferUpdatingRef = useRef<boolean>(false);
+  /** 所有可变媒体/编解码状态槽位（编解码模块经此读写，见 lib/mediaSession.ts） */
+  const sessionRef = useRef<MediaSession>(createMediaSession());
+  const session = sessionRef.current;
 
   // ==================== 事件监听器清理引用 ====================
 
   /** 存储所有事件监听器的取消函数，用于组件卸载时清理 */
   const unlistenRef = useRef<(() => void)[]>([]);
 
-  // ==================== 媒体信息通道引用 ====================
-
-  /** 媒体信息统计 - 用于跟踪和发送媒体状态 */
-  const mediaInfoStatsRef = useRef<{
-    /** 视频帧率 */
-    frameRate: number;
-    /** 视频码率 (bps) */
-    videoBitrate: number;
-    /** 音频码率 (bps) */
-    audioBitrate: number;
-    /** 网络延迟 (ms) */
-    latency: number;
-    /** 丢帧数 */
-    droppedFrames: number;
-  }>({
-    frameRate: 0,
-    videoBitrate: 0,
-    audioBitrate: 0,
-    latency: 0,
-    droppedFrames: 0,
-  });
-
-  /** 媒体信息发送定时器 */
-  const mediaInfoIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   // ==================== 组件状态 ====================
 
-  /** 加载状态 - 显示加载动画 */
-  const [isLoading, setIsLoading] = useState(true);
+  /**
+   * 通话生命周期状态机
+   * 统一管理此前分散的 isLoading / isConnected / isWaitingResponse /
+   * isInCall / isRestarting / isCallEndedRef 等布尔状态，提升可读性与合法性
+   */
+  const [callPhase, setCallPhase] = useState<CallPhase>(
+    isInitiator ? 'Idle' : 'Ringing',
+  );
 
-  /** 连接状态 - 是否已建立连接 */
-  const [isConnected, setIsConnected] = useState(false);
+  /** 同步 ref，供事件监听器读取最新状态，避免闭包陷阱 */
+  const callPhaseRef = useRef<CallPhase>(callPhase);
 
-  /** 等待响应状态 - 发起方等待对方接受 */
-  const [isWaitingResponse, setIsWaitingResponse] = useState(isInitiator);
+  /**
+   * 状态机转换动作
+   * 更新 React 状态并同步 ref，供事件监听器读取最新值
+   *
+   * @param next - 目标状态
+   */
+  const transition = useCallback((next: CallPhase) => {
+    setCallPhase(next);
+    callPhaseRef.current = next;
+  }, []);
+
+  /** 派生：发起方是否在呼叫中（等待对方接受） */
+  const isWaitingResponse = callPhase === 'Calling';
+
+  /** 派生：是否处于通话中（含重启） */
+  const isInCall = callPhase === 'InCall' || callPhase === 'Restarting';
 
   /** 媒体控制状态 - 视频/音频开关状态 */
   const [mediaState, setMediaState] = useState<MediaControlState>({
@@ -163,14 +136,40 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 对方媒体接收器是否准备好 - 收到对方的media_ready信号后为true */
   const [isRemoteReceiverReady, setIsRemoteReceiverReady] = useState(false);
 
-  /** 本地媒体接收器是否准备好 - 用于判断是否可以发送media_ready信号 */
-  const isLocalReceiverReadyRef = useRef<boolean>(false);
+  // ==================== 好友信息（用于响铃/呼叫界面展示） ====================
 
-  /** 等待本地接收器就绪的Promise resolve函数 */
-  const localReceiverReadyResolveRef = useRef<(() => void) | null>(null);
+  /** 对方用户信息（昵称、头像等） */
+  const [friendUserInfo, setFriendUserInfo] = useState<UserInfo | null>(null);
 
-  /** 重启媒体按钮的状态 */
-  const [isRestarting, setIsRestarting] = useState(false);
+  /** 加载对方用户信息（优先本地缓存，未命中再请求接口） */
+  useEffect(() => {
+    let cancelled = false;
+    if (!friendId) return;
+    (async () => {
+      try {
+        const result = await get_user_info_with_cache(friendId);
+        if (!cancelled) {
+          setFriendUserInfo(result.user_info);
+        }
+      } catch (error) {
+        console.error('[PrivacyVideoCall] 获取对方用户信息失败:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [friendId]);
+
+  /** 对方头像地址（通过 avatarMap 将 icon bizId 转换为可显示的本地文件路径） */
+  const { avatarMap } = useAvatarMap([friendUserInfo?.icon]);
+  const friendAvatar = avatarMap.get(friendUserInfo?.icon || '') || '';
+
+  /** 对方显示名称：优先邀请信息里的名字，其次用户信息昵称，最后兜底 */
+  const friendName =
+    inviteInfo?.from_name || friendUserInfo?.username || '对方';
+
+  /** 派生：是否正在重启媒体接收器 */
+  const isRestarting = callPhase === 'Restarting';
 
   /** 跟踪组件是否真正挂载（用于避免 useEffect cleanup 在依赖变化时误触发） */
   const isMountedRef = useRef<boolean>(false);
@@ -184,44 +183,6 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   /** 使用 ref 保存最新的 startSendingMedia，避免事件监听 useEffect 因依赖变化而重新注册 */
   const startSendingMediaRef = useRef<() => void>(() => {});
 
-  // ==================== 默认媒体配置 ====================
-
-  /**
-   * 默认媒体配置
-   * - 视频分辨率: 640x480 (低画质)
-   * - 帧率: 15fps
-   * - 编码: VP8
-   * - 码率: 500kbps
-   * - 音频采样率: 48kHz
-   * - 音频编码: Opus
-   */
-  const defaultMediaConfig: MediaConfig = {
-    video_config: {
-      width: 640,
-      height: 480,
-      fps: 15,
-      audio: true,
-      video: true,
-      encode: 'video/webm;codecs=vp8',
-      bitrate: 500000,
-    },
-    audio_config: {
-      sample_rate: 48000,
-      channels: 1,
-      encode: 'audio/webm;codecs=opus',
-      bitrate: 32000,
-      echo_cancellation: true,
-      noise_suppression: true,
-      auto_gain_control: true,
-    },
-    buffer_config: {
-      video_buffer_size: 5,
-      audio_buffer_size: 10,
-      adaptive_buffer: true,
-      max_latency_ms: 200,
-    },
-  };
-
   // ==================== 发送媒体就绪信号 ====================
 
   /**
@@ -230,10 +191,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    */
   const sendMediaReady = useCallback(async () => {
     try {
-      console.log('[PrivacyVideoCall] 发送媒体接收就绪信号');
-      await invoke('send_p2p_media_ready', {
-        targetUuid: friendId,
-      });
+      dlog('发送媒体接收就绪信号 ->', friendId);
+      await transport.sendP2pMediaReady(friendId);
+      dlog('媒体接收就绪信号已发送');
     } catch (error) {
       console.error('发送媒体就绪信号失败:', error);
     }
@@ -255,6 +215,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    */
   const initLocalMedia = useCallback(async () => {
     try {
+      dlog('初始化本地媒体: 请求摄像头/麦克风权限');
       // 请求媒体设备权限
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -271,6 +232,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
           channelCount: defaultMediaConfig.audio_config.channels,
         },
       });
+      dlog(
+        `获取媒体流成功: 视频轨道=${stream.getVideoTracks().length}, 音频轨道=${
+          stream.getAudioTracks().length
+        }`,
+      );
 
       // 关键：如果组件已卸载或通话已结束，立即释放媒体流，防止摄像头/麦克风泄漏
       if (!isMountedRef.current || isCallEndedRef.current) {
@@ -282,7 +248,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       }
 
       // 保存媒体流引用
-      localStreamRef.current = stream;
+      session.localStream = stream;
 
       // 将媒体流绑定到本地视频元素
       if (localVideoRef.current) {
@@ -290,16 +256,15 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       }
 
       // 发送媒体配置给对方
-      await invoke('send_p2p_media_config', {
-        mediaConfig: JSON.stringify(defaultMediaConfig),
-        uuid: friendId,
-      });
+      await transport.sendP2pMediaConfig(
+        friendId,
+        JSON.stringify(defaultMediaConfig),
+      );
+      dlog('媒体配置已发送');
 
-      // 更新状态
-      setIsConnected(true);
+      // 更新状态：进入通话阶段
+      transition('InCall');
       setMediaState((prev) => ({ ...prev, isInCall: true }));
-      setIsLoading(false);
-      setIsWaitingResponse(false);
 
       // 重要：发送媒体接收就绪信号，通知对方可以开始发送媒体数据
       // 这是解决视频黑屏问题的关键：确保双方都准备好后再开始传输
@@ -307,18 +272,19 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
       // 检查对方是否已经准备好，如果是，则开始录制
       if (isRemoteReceiverReady) {
-        console.log('[PrivacyVideoCall] 对方已准备好，立即开始媒体录制');
-        startMediaRecording(stream);
-        startMediaInfoReporting();
+        dlog('对方已准备好，1s 后开始媒体录制');
+        // 统一走 startSendingMedia（含 1s 延迟），确保对端 receiver/decoder 完全就绪
+        // 再开始编码发送，避免首条 config/keyframe 在对端未就绪时丢失导致黑屏
+        startSendingMedia();
       } else {
-        console.log('[PrivacyVideoCall] 等待对方媒体接收器就绪后再开始录制...');
+        dlog('等待对方媒体接收器就绪后再开始录制...');
       }
     } catch (error) {
       console.error('初始化本地媒体失败:', error);
       message.error('无法访问摄像头或麦克风');
-      setIsLoading(false);
+      transition('Ended');
     }
-  }, [friendId, isRemoteReceiverReady, sendMediaReady]);
+  }, [friendId, isRemoteReceiverReady, sendMediaReady, transition]);
 
   // 同步 ref，确保事件监听器始终调用最新版本
   initLocalMediaRef.current = initLocalMedia;
@@ -328,11 +294,19 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 只有在对方媒体接收器准备好后才能调用
    */
   const startSendingMedia = useCallback(() => {
-    if (localStreamRef.current) {
-      console.log('[PrivacyVideoCall] 开始发送媒体数据');
-      startMediaRecording(localStreamRef.current);
-      startMediaInfoReporting();
+    if (!session.localStream) return;
+
+    // 建立通话后延迟 1s 再开始采集发送视频/音频数据，
+    // 确保对端媒体接收器已充分就绪（接收器注册、解码器配置等），
+    // 避免首帧/配置帧在对端未就绪时丢失导致黑屏。
+    if (session.mediaSendDelayTimer) {
+      clearTimeout(session.mediaSendDelayTimer);
     }
+    session.mediaSendDelayTimer = setTimeout(() => {
+      console.log('[PrivacyVideoCall] 开始发送媒体数据');
+      startMediaRecording(session.localStream!);
+      startMediaInfoReporting();
+    }, 1000);
   }, []);
 
   // 同步 ref
@@ -345,72 +319,48 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    *
    * 流程:
    * 1. 分别获取视频轨道和音频轨道
-   * 2. 创建视频录制器和音频录制器
-   * 3. 设置数据可用回调，将数据发送给对方
-   * 4. 开始录制
+   * 2. 根据 WebCodecs 可用性选择编码器（WebCodecs / MediaRecorder 回退）
+   * 3. 开始录制
    *
    * @param stream - 本地媒体流
    */
   const startMediaRecording = (stream: MediaStream) => {
+    // 防止重复启动（initLocalMedia 与 media_receiver_ready 可能都会触发）
+    if (session.isMediaSending) {
+      dlog('媒体发送已启动，跳过重复启动');
+      return;
+    }
+    session.isMediaSending = true;
+    dlog(
+      `开始媒体发送: WebCodecs可用=${IS_WEBCODECS_SUPPORTED} 视频轨=${
+        stream.getVideoTracks().length > 0
+      } 音频轨=${stream.getAudioTracks().length > 0}`,
+    );
+
     // 获取视频轨道
     const videoTrack = stream.getVideoTracks()[0];
     // 获取音频轨道
     const audioTrack = stream.getAudioTracks()[0];
 
-    // 创建视频录制器
-    if (videoTrack) {
-      const videoStream = new MediaStream([videoTrack]);
-      const videoRecorder = new MediaRecorder(videoStream, {
-        mimeType: defaultMediaConfig.video_config.encode,
-        videoBitsPerSecond: defaultMediaConfig.video_config.bitrate,
-      });
-
-      // 视频数据可用时发送给对方
-      videoRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          try {
-            const buffer = await event.data.arrayBuffer();
-            await invoke('send_p2p_video_frame', {
-              frameData: Array.from(new Uint8Array(buffer)),
-              targetUuid: friendId,
-            });
-          } catch (error) {
-            console.error('发送视频帧失败:', error);
-          }
-        }
-      };
-
-      // 每50毫秒触发一次数据可用事件
-      videoRecorder.start(50);
-      mediaRecorderRef.current = videoRecorder;
+    // 视频：优先使用 WebCodecs 实时编码（裸帧、无 WebM 容器，低延迟）
+    // 浏览器不支持 WebCodecs 时回退到 MediaRecorder
+    if (videoTrack && IS_WEBCODECS_SUPPORTED) {
+      videoEncoder.startVideoWebCodecs(session, friendId, stream);
+    } else if (videoTrack) {
+      dlog('WebCodecs 不可用，视频回退到 MediaRecorder');
+      videoEncoder.startVideoRecorder(session, friendId, stream);
+    } else {
+      dlog('无视频轨道，跳过视频发送');
     }
 
-    // 创建音频录制器
-    if (audioTrack) {
-      const audioStream = new MediaStream([audioTrack]);
-      const audioRecorder = new MediaRecorder(audioStream, {
-        mimeType: defaultMediaConfig.audio_config.encode,
-        audioBitsPerSecond: defaultMediaConfig.audio_config.bitrate,
-      });
-
-      // 音频数据可用时发送给对方
-      audioRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          try {
-            const buffer = await event.data.arrayBuffer();
-            await invoke('send_p2p_audio_frame', {
-              audioData: Array.from(new Uint8Array(buffer)),
-              targetUuid: friendId,
-            });
-          } catch (error) {
-            console.error('发送音频帧失败:', error);
-          }
-        }
-      };
-
-      // 每20毫秒触发一次数据可用事件
-      audioRecorder.start(20);
-      audioRecorderRef.current = audioRecorder;
+    // 音频：优先使用 WebCodecs Opus 实时编码，不支持时回退到 MediaRecorder
+    if (audioTrack && IS_WEBCODECS_SUPPORTED) {
+      audioEncoder.startAudioWebCodecs(session, friendId, stream);
+    } else if (audioTrack) {
+      dlog('WebCodecs 不可用，音频回退到 MediaRecorder');
+      audioEncoder.startAudioRecorder(session, friendId, stream);
+    } else {
+      dlog('无音频轨道，跳过音频发送');
     }
   };
 
@@ -418,171 +368,17 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
   /**
    * 初始化远程媒体接收器
-   *
-   * 流程:
-   * 1. 创建 MediaSource 对象用于接收视频流
-   * 2. 创建 SourceBuffer 用于缓冲视频数据
-   * 3. 创建 MediaSource 对象用于接收音频流
-   * 4. 创建 SourceBuffer 用于缓冲音频数据
+   * 视频走 WebCodecs 解码到画布 / MediaSource 回退，音频走 AudioContext / MediaSource 回退
    */
   const initRemoteMediaReceiver = useCallback(async () => {
-    if (mediaSourceRef.current) {
-      if (mediaSourceRef.current.readyState === 'open') {
-        mediaSourceRef.current.endOfStream();
-      }
-      mediaSourceRef.current = null;
-    }
-    if (audioMediaSourceRef.current) {
-      if (audioMediaSourceRef.current.readyState === 'open') {
-        audioMediaSourceRef.current.endOfStream();
-      }
-      audioMediaSourceRef.current = null;
-    }
-    sourceBufferRef.current = null;
-    audioSourceBufferRef.current = null;
-    videoBufferQueueRef.current = [];
-    audioBufferQueueRef.current = [];
-    isVideoSourceBufferUpdatingRef.current = false;
-    isAudioSourceBufferUpdatingRef.current = false;
-
-    const mediaSource = new MediaSource();
-    mediaSourceRef.current = mediaSource;
-
-    // 将 MediaSource 绑定到远程视频元素
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.src = URL.createObjectURL(mediaSource);
-    }
-
-    // 监听 sourceopen 事件
-    mediaSource.addEventListener('sourceopen', () => {
-      try {
-        // 创建视频 SourceBuffer
-        const buffer = mediaSource.addSourceBuffer(
-          defaultMediaConfig.video_config.encode,
-        );
-        sourceBufferRef.current = buffer;
-
-        // 监听 updateend 事件，处理缓冲队列
-        buffer.addEventListener('updateend', () => {
-          isVideoSourceBufferUpdatingRef.current = false;
-          processVideoBufferQueue();
-        });
-
-        // 监听 error 事件
-        buffer.addEventListener('error', (e) => {
-          console.error('视频 SourceBuffer 错误:', e);
-          isVideoSourceBufferUpdatingRef.current = false;
-        });
-      } catch (error) {
-        console.error('创建视频 SourceBuffer 失败:', error);
-      }
-    });
-
-    // 创建 MediaSource 用于音频流
-    const audioMediaSource = new MediaSource();
-    audioMediaSourceRef.current = audioMediaSource;
-
-    // 将 MediaSource 绑定到远程音频元素
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.src = URL.createObjectURL(audioMediaSource);
-    }
-
-    // 监听 sourceopen 事件
-    audioMediaSource.addEventListener('sourceopen', () => {
-      try {
-        // 创建音频 SourceBuffer
-        const audioBuffer = audioMediaSource.addSourceBuffer(
-          defaultMediaConfig.audio_config.encode,
-        );
-        audioSourceBufferRef.current = audioBuffer;
-
-        // 监听 updateend 事件，处理缓冲队列
-        audioBuffer.addEventListener('updateend', () => {
-          isAudioSourceBufferUpdatingRef.current = false;
-          processAudioBufferQueue();
-        });
-
-        // 监听 error 事件
-        audioBuffer.addEventListener('error', (e) => {
-          console.error('音频 SourceBuffer 错误:', e);
-          isAudioSourceBufferUpdatingRef.current = false;
-        });
-      } catch (error) {
-        console.error('创建音频 SourceBuffer 失败:', error);
-      }
-    });
-  }, []);
-
-  // ==================== 处理视频缓冲队列 ====================
-
-  /**
-   * 处理视频缓冲队列
-   *
-   * 说明:
-   * SourceBuffer 一次只能处理一个缓冲区，
-   * 所以需要使用队列来管理待处理的数据。
-   * 当 SourceBuffer 完成当前操作后，从队列中取出下一个数据处理。
-   */
-  const processVideoBufferQueue = useCallback(() => {
-    if (
-      !sourceBufferRef.current ||
-      !mediaSourceRef.current ||
-      mediaSourceRef.current.readyState !== 'open' ||
-      isVideoSourceBufferUpdatingRef.current ||
-      videoBufferQueueRef.current.length === 0
-    ) {
-      return;
-    }
-
-    const data = videoBufferQueueRef.current.shift();
-    if (data) {
-      try {
-        isVideoSourceBufferUpdatingRef.current = true;
-        const newBuffer = new ArrayBuffer(data.byteLength);
-        new Uint8Array(newBuffer).set(data);
-        sourceBufferRef.current.appendBuffer(newBuffer);
-      } catch (error) {
-        console.error('追加视频缓冲失败:', error);
-        isVideoSourceBufferUpdatingRef.current = false;
-        processVideoBufferQueue();
-      }
-    }
-  }, []);
-
-  // ==================== 处理音频缓冲队列 ====================
-
-  /**
-   * 处理音频缓冲队列
-   *
-   * 说明:
-   * SourceBuffer 一次只能处理一个缓冲区，
-   * 所以需要使用队列来管理待处理的数据。
-   * 当 SourceBuffer 完成当前操作后，从队列中取出下一个数据处理。
-   */
-  const processAudioBufferQueue = useCallback(() => {
-    if (
-      !audioSourceBufferRef.current ||
-      !audioMediaSourceRef.current ||
-      audioMediaSourceRef.current.readyState !== 'open' ||
-      isAudioSourceBufferUpdatingRef.current ||
-      audioBufferQueueRef.current.length === 0
-    ) {
-      return;
-    }
-
-    const data = audioBufferQueueRef.current.shift();
-    if (data) {
-      try {
-        isAudioSourceBufferUpdatingRef.current = true;
-        const newBuffer = new ArrayBuffer(data.byteLength);
-        new Uint8Array(newBuffer).set(data);
-        audioSourceBufferRef.current.appendBuffer(newBuffer);
-      } catch (error) {
-        console.error('追加音频缓冲失败:', error);
-        isAudioSourceBufferUpdatingRef.current = false;
-        processAudioBufferQueue();
-      }
-    }
+    dlog(
+      `初始化远程媒体接收器: 模式=${
+        IS_WEBCODECS_SUPPORTED ? 'WebCodecs' : 'MediaSource(旧)'
+      }`,
+    );
+    videoDecoder.initVideoReceiver(session, remoteVideoRef.current);
+    audioDecoder.initAudioReceiver(session, remoteAudioRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ==================== 设置事件监听器 + 组件初始化 ====================
@@ -604,116 +400,83 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    */
   useEffect(() => {
     const setup = async () => {
-      // ==================== 第一步：注册所有事件监听器 ====================
-      // 必须在任何信令之前完成，避免视频帧到达时监听器未就绪
-
-      // 监听视频帧数据
-      const unlistenVideo = await listen<number[]>('video_frame', (event) => {
-        if (event.payload.length > 0) {
-          const data = new Uint8Array(event.payload);
-          // 将数据添加到队列
-          videoBufferQueueRef.current.push(data);
-          // 尝试处理队列
-          processVideoBufferQueue();
-        }
-      });
-
-      // 监听音频帧数据
-      const unlistenAudio = await listen<number[]>('audio_frame', (event) => {
-        if (event.payload.length > 0) {
-          const data = new Uint8Array(event.payload);
-          audioBufferQueueRef.current.push(data);
-          processAudioBufferQueue();
-        }
-      });
-
-      // 监听媒体控制命令
-      const unlistenControl = await listen<string>('media_control', (event) => {
-        try {
-          // 兼容处理：payload可能是string或object（Tauri序列化差异）
-          let controlStr: string;
-          if (typeof event.payload === 'string') {
-            controlStr = event.payload;
+      // ==================== 第一步：注册媒体 Channel 与事件监听器 ====================
+      // 视频/音频帧通过 Channel 二进制直传（避免 JSON number[] 序列化），
+      // 其他信令（媒体控制/接受/拒绝/结束/媒体信息/就绪）继续走事件监听。
+      // 必须在任何信令之前完成，避免视频帧到达时监听器未就绪。
+      const channelUnlisten = await registerP2pMediaChannels(friendId, {
+        onVideoFrame: (frameData) => {
+          if (IS_WEBCODECS_SUPPORTED) {
+            videoDecoder.handleWebCodecsVideoFrame(session, friendId, frameData);
           } else {
-            controlStr = JSON.stringify(event.payload);
+            session.videoBufferQueue.push(frameData);
+            videoDecoder.processVideoBufferQueue(session);
           }
-          const control: MediaControl = JSON.parse(controlStr);
-          handleMediaControl(control);
-        } catch (error) {
-          console.error('处理媒体控制失败:', error);
-        }
+        },
+        onAudioFrame: (frameData) => {
+          if (session.audioWebCodecsActive) {
+            audioDecoder.handleWebCodecsAudioFrame(session, frameData);
+          } else {
+            session.audioBufferQueue.push(frameData);
+            audioDecoder.processAudioBufferQueue(session);
+          }
+        },
       });
 
-      // 监听对方接受通话
-      const unlistenAccept = await listen<string>(
-        'video_call_accept',
-        (event) => {
-          console.log('对方接受了视频通话:', event.payload);
-          setIsWaitingResponse(false);
+      unlistenRef.current = await registerP2pMediaEvents({
+        onMediaControl: handleMediaControl,
+        onVideoCallAccept: (payload) => {
+          console.log('对方接受了视频通话:', payload);
+          transition('Connecting');
           message.success('对方已接受视频通话');
           // 通过 ref 调用最新版本的 initLocalMedia，避免闭包陷阱
           initLocalMediaRef.current();
         },
-      );
-
-      // 监听对方拒绝通话
-      const unlistenReject = await listen<string>(
-        'video_call_reject',
-        (event) => {
-          console.log('对方拒绝了视频通话:', event.payload);
-          setIsWaitingResponse(false);
+        onVideoCallReject: (payload) => {
+          console.log('对方拒绝了视频通话:', payload);
           message.info('对方拒绝了视频通话');
           // 关闭视频通话（本方主动结束，通知对方）
           handleEndCall(true);
         },
-      );
-
-      // 监听对方结束通话
-      const unlistenEnd = await listen<string>('video_call_end', (event) => {
-        console.log('对方结束了视频通话:', event.payload);
-        message.info('对方已结束视频通话');
-        // 对方已结束，本方不需要再发送结束通知，仅做本地清理
-        handleEndCall(false);
-      });
-
-      // 监听媒体信息（通过MediaInfo通道传输）
-      const unlistenMediaInfo = await listen<string>('media_info', (event) => {
-        try {
-          const mediaInfo: MediaInfo = JSON.parse(event.payload);
-          handleMediaInfo(mediaInfo);
-        } catch (error) {
-          console.error('处理媒体信息失败:', error);
-        }
-      });
-
-      // 监听对方媒体接收器就绪信号
-      // 这是解决视频黑屏问题的关键：只有收到此信号后才开始发送媒体数据
-      const unlistenMediaReady = await listen<string>(
-        'media_receiver_ready',
-        (event) => {
-          console.log(
-            '[PrivacyVideoCall] 对方媒体接收器已就绪:',
-            event.payload,
-          );
+        onVideoCallEnd: (payload) => {
+          console.log('对方结束了视频通话:', payload);
+          message.info('对方已结束视频通话');
+          // 对方已结束，本方不需要再发送结束通知，仅做本地清理
+          handleEndCall(false);
+        },
+        onMediaInfo: handleMediaInfo,
+        onMediaReady: (payload) => {
+          dlog('对方媒体接收器已就绪:', payload);
           setIsRemoteReceiverReady(true);
+          // 对方可能刚重启了接收器，立即请求关键帧并重发解码器配置，加速恢复
+          if (IS_WEBCODECS_SUPPORTED) {
+            session.requestKeyframe = true;
+            if (session.lastSentVideoConfig) {
+              dlog('对方已就绪，重发视频解码器配置');
+              videoEncoder.sendVideoDecoderConfig(
+                session,
+                friendId,
+                session.lastSentVideoConfig,
+              );
+            }
+            if (session.lastSentAudioConfig) {
+              dlog('对方已就绪，重发音频解码器配置');
+              audioEncoder.sendAudioDecoderConfig(
+                session,
+                friendId,
+                session.lastSentAudioConfig,
+              );
+            }
+          }
           // 通过 ref 调用最新版本的 startSendingMedia
           startSendingMediaRef.current();
         },
-      );
+      });
 
-      // 保存所有取消监听函数
-      unlistenRef.current = [
-        unlistenVideo,
-        unlistenAudio,
-        unlistenControl,
-        unlistenAccept,
-        unlistenReject,
-        unlistenEnd,
-        unlistenMediaInfo,
-        unlistenMediaReady,
-      ];
+      // 合并 Channel 取消函数与事件监听取消函数
+      unlistenRef.current = [...channelUnlisten, ...unlistenRef.current];
 
-      console.log('[PrivacyVideoCall] 所有事件监听器已注册完成');
+      console.log('[PrivacyVideoCall] 所有媒体Channel与事件监听器已注册完成');
     };
 
     setup();
@@ -726,7 +489,9 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     // 改用 ref 调用（见上方 initLocalMediaRef / startSendingMediaRef），
     // 避免因 isRemoteReceiverReady 变化导致 initLocalMedia 引用变化，
     // 从而触发此 useEffect 重新执行 → 注销再注册所有监听器 → 丢失事件
-  }, [processVideoBufferQueue, processAudioBufferQueue]);
+    // codec 处理函数已收敛到模块（稳定引用），因此依赖为空数组。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ==================== 处理媒体控制命令 ====================
 
@@ -816,11 +581,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   const sendMediaInfo = useCallback(
     async (infoType: string, data: Record<string, unknown>) => {
       try {
-        await invoke('send_p2p_media_info', {
+        await transport.sendP2pMediaInfo(
+          friendId,
           infoType,
-          data: JSON.stringify(data),
-          targetUuid: friendId,
-        });
+          JSON.stringify(data),
+        );
       } catch (error) {
         console.error('发送媒体信息失败:', error);
       }
@@ -833,30 +598,76 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    * 每隔2秒通过MediaInfo通道发送一次帧率统计信息
    */
   const startMediaInfoReporting = useCallback(() => {
-    if (mediaInfoIntervalRef.current) {
-      clearInterval(mediaInfoIntervalRef.current);
+    if (session.mediaInfoInterval) {
+      clearInterval(session.mediaInfoInterval);
     }
+    session.mediaStartTime = Date.now();
 
-    mediaInfoIntervalRef.current = setInterval(() => {
+    session.mediaInfoInterval = setInterval(() => {
       if (mediaState.isInCall) {
         sendMediaInfo('FrameRateStats', {
-          frameRate: mediaInfoStatsRef.current.frameRate,
-          videoBitrate: mediaInfoStatsRef.current.videoBitrate,
-          audioBitrate: mediaInfoStatsRef.current.audioBitrate,
-          latency: mediaInfoStatsRef.current.latency,
-          droppedFrames: mediaInfoStatsRef.current.droppedFrames,
+          frameRate: session.mediaInfoStats.frameRate,
+          videoBitrate: session.mediaInfoStats.videoBitrate,
+          audioBitrate: session.mediaInfoStats.audioBitrate,
+          latency: session.mediaInfoStats.latency,
+          droppedFrames: session.mediaInfoStats.droppedFrames,
         });
+
+        // 周期性状态诊断
+        dlog(
+          `状态: 视频编码器=${session.videoEncoder?.state ?? 'none'}(${
+            session.videoEncoder?.encodeQueueSize ?? 0
+          }) 视频解码器=${session.videoDecoder?.state ?? 'none'}(${
+            session.videoDecoder?.decodeQueueSize ?? 0
+          }) 音频编码器=${session.audioEncoder?.state ?? 'none'}(${
+            session.audioEncoder?.encodeQueueSize ?? 0
+          }) 音频解码器=${session.audioDecoder?.state ?? 'none'}(${
+            session.audioDecoder?.decodeQueueSize ?? 0
+          }) 对方就绪=${isRemoteReceiverReady} AudioContext=${
+            session.audioContext?.state ?? 'none'
+          } 已收首关键帧=${session.videoFirstKeyframeReceived} 缓冲帧=${
+            session.pendingVideoFrames.length
+          }`,
+        );
+
+        // 黑屏看门狗：通话进行超过 4 秒仍未收到首个关键帧，
+        // 说明配置帧/关键帧可能丢失。向对端重新发送 media_ready 信号，
+        // 让对端的 media_receiver_ready 监听器重发解码器配置并请求关键帧恢复。
+        // 去掉 videoDecoderRef 非空的限制：收不到 config 时解码器恰好为 null，
+        // 更需要在此时反向触发恢复。限速 3s，避免每 2s 刷屏。
+        if (
+          IS_WEBCODECS_SUPPORTED &&
+          Date.now() - session.mediaStartTime > 4000 &&
+          !session.videoFirstKeyframeReceived
+        ) {
+          const now = Date.now();
+          if (
+            !session.lastRecoverySignal ||
+            now - session.lastRecoverySignal > 3000
+          ) {
+            session.lastRecoverySignal = now;
+            dlog(
+              '⚠️ 4秒未收到视频关键帧，向对端重新发送 media_ready 请求补发 config + 关键帧',
+            );
+            sendMediaReady();
+          }
+        }
       }
     }, 2000);
-  }, [mediaState.isInCall, sendMediaInfo]);
+  }, [
+    mediaState.isInCall,
+    sendMediaInfo,
+    isRemoteReceiverReady,
+    sendMediaReady,
+  ]);
 
   /**
    * 停止媒体信息定时发送
    */
   const stopMediaInfoReporting = useCallback(() => {
-    if (mediaInfoIntervalRef.current) {
-      clearInterval(mediaInfoIntervalRef.current);
-      mediaInfoIntervalRef.current = null;
+    if (session.mediaInfoInterval) {
+      clearInterval(session.mediaInfoInterval);
+      session.mediaInfoInterval = null;
     }
   }, []);
 
@@ -875,19 +686,15 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     setMediaState((prev) => ({ ...prev, videoEnabled: newState }));
 
     // 启用/禁用视频轨道
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+    if (session.localStream) {
+      const videoTrack = session.localStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = newState;
       }
     }
 
     // 发送控制命令给对方
-    await invoke('send_p2p_media_control', {
-      controlType: 'VideoToggle',
-      enabled: newState,
-      targetUuid: friendId,
-    });
+    await transport.sendP2pMediaControl(friendId, 'VideoToggle', newState);
   };
 
   // ==================== 切换音频 ====================
@@ -905,19 +712,15 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     setMediaState((prev) => ({ ...prev, audioEnabled: newState }));
 
     // 启用/禁用音频轨道
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+    if (session.localStream) {
+      const audioTrack = session.localStream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = newState;
       }
     }
 
     // 发送控制命令给对方
-    await invoke('send_p2p_media_control', {
-      controlType: 'AudioToggle',
-      enabled: newState,
-      targetUuid: friendId,
-    });
+    await transport.sendP2pMediaControl(friendId, 'AudioToggle', newState);
   };
 
   // ==================== 结束通话 ====================
@@ -939,63 +742,164 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
         return;
       }
       isCallEndedRef.current = true;
+      // 状态机：进入结束阶段（终结态，不再接受其他转换）
+      transition('Ended');
+      dlog(
+        `结束通话: 通知对方=${notifyOtherParty} 视频编码器=${
+          session.videoEncoder ? '运行中' : '无'
+        } 视频解码器=${session.videoDecoder ? '运行中' : '无'} 音频编码器=${
+          session.audioEncoder ? '运行中' : '无'
+        } 音频解码器=${session.audioDecoder ? '运行中' : '无'}`,
+      );
 
       // 停止媒体信息定时发送
       stopMediaInfoReporting();
 
       // 停止视频录制器
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== 'inactive'
-      ) {
-        mediaRecorderRef.current.stop();
+      if (session.mediaRecorder && session.mediaRecorder.state !== 'inactive') {
+        session.mediaRecorder.stop();
       }
-      mediaRecorderRef.current = null;
+      session.mediaRecorder = null;
 
       // 停止音频录制器
-      if (
-        audioRecorderRef.current &&
-        audioRecorderRef.current.state !== 'inactive'
-      ) {
-        audioRecorderRef.current.stop();
+      if (session.audioRecorder && session.audioRecorder.state !== 'inactive') {
+        session.audioRecorder.stop();
       }
-      audioRecorderRef.current = null;
+      session.audioRecorder = null;
+
+      // 停止 WebCodecs 视频编码器
+      if (session.videoEncoder) {
+        try {
+          session.videoEncoder.close();
+        } catch (e) {
+          console.error('关闭视频编码器失败:', e);
+        }
+        session.videoEncoder = null;
+      }
+
+      // 停止视频轨道处理器（读取循环随之结束）
+      if (session.videoReader) {
+        try {
+          // 取消 reader 会打断挂起的 read() 并使流解锁，避免 "Cannot cancel a locked stream"
+          await session.videoReader.cancel();
+        } catch (e) {
+          console.error('取消视频轨道读取失败:', e);
+        }
+        session.videoReader = null;
+      }
+      session.videoTrackProcessor = null;
+
+      // 停止 WebCodecs 音频编码器
+      if (session.audioEncoder) {
+        try {
+          session.audioEncoder.close();
+        } catch (e) {
+          console.error('关闭音频编码器失败:', e);
+        }
+        session.audioEncoder = null;
+      }
+
+      // 停止音频轨道处理器
+      if (session.audioReader) {
+        try {
+          await session.audioReader.cancel();
+        } catch (e) {
+          console.error('取消音频轨道读取失败:', e);
+        }
+        session.audioReader = null;
+      }
+      session.audioTrackProcessor = null;
+      session.lastSentAudioConfig = null;
+
+      // 停止周期关键帧定时器
+      if (session.keyframeTimer) {
+        clearInterval(session.keyframeTimer);
+        session.keyframeTimer = null;
+      }
+      session.requestKeyframe = false;
+
+      // 清除媒体延迟发送定时器（通话已结束，不再延迟启动）
+      if (session.mediaSendDelayTimer) {
+        clearTimeout(session.mediaSendDelayTimer);
+        session.mediaSendDelayTimer = null;
+      }
 
       // 停止所有媒体轨道并释放硬件设备（摄像头/麦克风）
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = null;
+      if (session.localStream) {
+        session.localStream.getTracks().forEach((track) => track.stop());
+        session.localStream = null;
       }
+
+      // 关闭 WebCodecs 视频解码器
+      if (session.videoDecoder) {
+        try {
+          session.videoDecoder.close();
+        } catch (e) {
+          console.error('关闭视频解码器失败:', e);
+        }
+        session.videoDecoder = null;
+      }
+      session.decodedVideoConfig = null;
+      session.pendingVideoFrames = [];
+      session.videoFirstKeyframeReceived = false;
+
+      // 关闭 WebCodecs 音频解码器
+      if (session.audioDecoder) {
+        try {
+          session.audioDecoder.close();
+        } catch (e) {
+          console.error('关闭音频解码器失败:', e);
+        }
+        session.audioDecoder = null;
+      }
+      session.decodedAudioConfig = null;
+
+      // 关闭音频输出 AudioContext
+      if (session.audioContext) {
+        try {
+          session.audioContext.close();
+        } catch (e) {
+          console.error('关闭 AudioContext 失败:', e);
+        }
+        session.audioContext = null;
+      }
+      session.audioPlayTime = 0;
+      session.audioWebCodecsActive = false;
+
+      // 释放远程视频画布捕获流
+      if (session.remoteCanvasStream) {
+        session.remoteCanvasStream.getTracks().forEach((track) => track.stop());
+        session.remoteCanvasStream = null;
+      }
+      session.videoCanvasCtx = null;
 
       // 关闭视频 MediaSource 并清理引用
-      if (mediaSourceRef.current) {
-        if (mediaSourceRef.current.readyState === 'open') {
-          mediaSourceRef.current.endOfStream();
+      if (session.mediaSource) {
+        if (session.mediaSource.readyState === 'open') {
+          session.mediaSource.endOfStream();
         }
-        mediaSourceRef.current = null;
+        session.mediaSource = null;
       }
-      sourceBufferRef.current = null;
-      videoBufferQueueRef.current = [];
-      isVideoSourceBufferUpdatingRef.current = false;
+      session.sourceBuffer = null;
+      session.videoBufferQueue = [];
+      session.isVideoSourceBufferUpdating = false;
 
       // 关闭音频 MediaSource 并清理引用
-      if (audioMediaSourceRef.current) {
-        if (audioMediaSourceRef.current.readyState === 'open') {
-          audioMediaSourceRef.current.endOfStream();
+      if (session.audioMediaSource) {
+        if (session.audioMediaSource.readyState === 'open') {
+          session.audioMediaSource.endOfStream();
         }
-        audioMediaSourceRef.current = null;
+        session.audioMediaSource = null;
       }
-      audioSourceBufferRef.current = null;
-      audioBufferQueueRef.current = [];
-      isAudioSourceBufferUpdatingRef.current = false;
+      session.audioSourceBuffer = null;
+      session.audioBufferQueue = [];
+      session.isAudioSourceBufferUpdating = false;
 
       // 仅当本方主动结束时才发送结束通知给对方
       // 收到对方结束消息时不需要再回复，避免互相发送结束消息
       if (notifyOtherParty) {
         try {
-          await invoke('send_p2p_video_call_end', {
-            targetUuid: friendId,
-          });
+          await transport.sendP2pVideoCallEnd(friendId);
         } catch (error) {
           console.error('发送结束通知失败:', error);
         }
@@ -1004,10 +908,13 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       // 更新状态
       setMediaState((prev) => ({ ...prev, isInCall: false }));
 
+      // 重置媒体发送标记，允许下次通话重新启动
+      session.isMediaSending = false;
+
       // 调用关闭回调
       onClose?.();
     },
-    [friendId, onClose, stopMediaInfoReporting],
+    [friendId, onClose, stopMediaInfoReporting, transition],
   );
 
   // ==================== 退出隐私聊天 ====================
@@ -1026,9 +933,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
     try {
       // 关闭P2P连接
-      await invoke('close_p2p_connection', {
-        targetUuid: friendId,
-      });
+      await transport.closeP2pConnection(friendId);
     } catch (error) {
       console.error('关闭P2P连接失败:', error);
     }
@@ -1060,45 +965,123 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       return;
     }
 
-    setIsRestarting(true);
+    transition('Restarting');
     console.log('[PrivacyVideoCall] 开始重启媒体接收器...');
+    dlog('开始重启媒体接收器');
 
     try {
       // 1. 停止当前的媒体录制器
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== 'inactive'
-      ) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
+      if (session.mediaRecorder && session.mediaRecorder.state !== 'inactive') {
+        session.mediaRecorder.stop();
+        session.mediaRecorder = null;
       }
-      if (
-        audioRecorderRef.current &&
-        audioRecorderRef.current.state !== 'inactive'
-      ) {
-        audioRecorderRef.current.stop();
-        audioRecorderRef.current = null;
+      if (session.audioRecorder && session.audioRecorder.state !== 'inactive') {
+        session.audioRecorder.stop();
+        session.audioRecorder = null;
       }
 
+      // 1.1 停止 WebCodecs 视频编码器
+      if (session.videoEncoder) {
+        try {
+          session.videoEncoder.close();
+        } catch (e) {
+          console.error('关闭视频编码器失败:', e);
+        }
+        session.videoEncoder = null;
+      }
+      if (session.videoReader) {
+        try {
+          await session.videoReader.cancel();
+        } catch (e) {
+          console.error('取消视频轨道读取失败:', e);
+        }
+        session.videoReader = null;
+      }
+      session.videoTrackProcessor = null;
+      if (session.keyframeTimer) {
+        clearInterval(session.keyframeTimer);
+        session.keyframeTimer = null;
+      }
+      // 清除媒体延迟发送定时器（重启后会重新设置）
+      if (session.mediaSendDelayTimer) {
+        clearTimeout(session.mediaSendDelayTimer);
+        session.mediaSendDelayTimer = null;
+      }
+
+      // 1.2 停止 WebCodecs 音频编码器
+      if (session.audioEncoder) {
+        try {
+          session.audioEncoder.close();
+        } catch (e) {
+          console.error('关闭音频编码器失败:', e);
+        }
+        session.audioEncoder = null;
+      }
+      if (session.audioReader) {
+        try {
+          await session.audioReader.cancel();
+        } catch (e) {
+          console.error('取消音频轨道读取失败:', e);
+        }
+        session.audioReader = null;
+      }
+      session.audioTrackProcessor = null;
+      session.lastSentAudioConfig = null;
+
       // 2. 重置远程媒体接收器
-      if (mediaSourceRef.current) {
-        if (mediaSourceRef.current.readyState === 'open') {
-          mediaSourceRef.current.endOfStream();
+      if (IS_WEBCODECS_SUPPORTED) {
+        // 重置 WebCodecs 视频解码器与画布捕获流
+        if (session.videoDecoder) {
+          try {
+            session.videoDecoder.close();
+          } catch (e) {
+            console.error('关闭视频解码器失败:', e);
+          }
+          session.videoDecoder = null;
         }
-        mediaSourceRef.current = null;
-      }
-      if (audioMediaSourceRef.current) {
-        if (audioMediaSourceRef.current.readyState === 'open') {
-          audioMediaSourceRef.current.endOfStream();
+        session.decodedVideoConfig = null;
+        session.pendingVideoFrames = [];
+        session.videoFirstKeyframeReceived = false;
+        // 重置 WebCodecs 音频解码器
+        if (session.audioDecoder) {
+          try {
+            session.audioDecoder.close();
+          } catch (e) {
+            console.error('关闭音频解码器失败:', e);
+          }
+          session.audioDecoder = null;
         }
-        audioMediaSourceRef.current = null;
+        session.decodedAudioConfig = null;
+        session.audioPlayTime = 0;
+        if (session.remoteCanvasStream) {
+          session.remoteCanvasStream
+            .getTracks()
+            .forEach((track) => track.stop());
+          session.remoteCanvasStream = null;
+        }
+        session.videoCanvas = null;
+        session.videoCanvasCtx = null;
+      } else {
+        if (session.mediaSource) {
+          if (session.mediaSource.readyState === 'open') {
+            session.mediaSource.endOfStream();
+          }
+          session.mediaSource = null;
+        }
+        session.sourceBuffer = null;
+        session.videoBufferQueue = [];
+        session.isVideoSourceBufferUpdating = false;
       }
-      sourceBufferRef.current = null;
-      audioSourceBufferRef.current = null;
-      videoBufferQueueRef.current = [];
-      audioBufferQueueRef.current = [];
-      isVideoSourceBufferUpdatingRef.current = false;
-      isAudioSourceBufferUpdatingRef.current = false;
+
+      if (session.audioMediaSource) {
+        if (session.audioMediaSource.readyState === 'open') {
+          session.audioMediaSource.endOfStream();
+        }
+        session.audioMediaSource = null;
+      }
+      session.audioSourceBuffer = null;
+      session.audioBufferQueue = [];
+      session.isAudioSourceBufferUpdating = false;
 
       // 3. 重新初始化远程媒体接收器
       await initRemoteMediaReceiver();
@@ -1109,8 +1092,11 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       // 5. 重置状态
       setIsRemoteReceiverReady(false);
 
+      // 允许重新启动媒体发送
+      session.isMediaSending = false;
+
       // 6. 如果本地媒体流存在，重新开始发送
-      if (localStreamRef.current && isRemoteReceiverReady) {
+      if (session.localStream && isRemoteReceiverReady) {
         startSendingMedia();
       }
 
@@ -1120,7 +1106,10 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
       console.error('重启媒体接收器失败:', error);
       message.error('重启媒体接收器失败');
     } finally {
-      setIsRestarting(false);
+      // 状态机：恢复通话阶段（仅当未结束通话时）
+      if (!isCallEndedRef.current) {
+        transition('InCall');
+      }
     }
   }, [
     isRestarting,
@@ -1128,6 +1117,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
     sendMediaReady,
     isRemoteReceiverReady,
     startSendingMedia,
+    transition,
   ]);
 
   // ==================== 发送视频通话邀请 ====================
@@ -1138,17 +1128,14 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
    */
   const sendVideoCallInvite = useCallback(async () => {
     try {
-      await invoke('send_p2p_video_call_invite', {
-        targetUuid: friendId,
-        fromName: null, // 可以传入当前用户昵称
-      });
-      setIsWaitingResponse(true);
+      await transport.sendP2pVideoCallInvite(friendId, null);
+      transition('Calling');
     } catch (error) {
       console.error('发送视频通话邀请失败:', error);
       message.error('发送视频通话邀请失败');
       handleEndCall(true);
     }
-  }, [friendId, handleEndCall]);
+  }, [friendId, handleEndCall, transition]);
 
   // ==================== 发送视频通话响应 ====================
 
@@ -1161,8 +1148,7 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
   const sendVideoCallResponse = useCallback(
     async (accept: boolean) => {
       try {
-        await invoke('send_p2p_video_call_response', {
-          targetUuid: friendId,
+        await transport.sendP2pVideoCallResponse(friendId, {
           accept,
           mediaConfig: accept ? JSON.stringify(defaultMediaConfig) : null,
           rejectReason: accept ? null : '用户拒绝',
@@ -1256,127 +1242,44 @@ const PrivacyVideoCall: React.FC<PrivacyVideoCallProps> = ({
 
   return (
     <div className={styles.videoCallContainer}>
-      {/* 加载状态遮罩 */}
-      {isLoading && (
+      {/* 响铃/呼叫遮罩 - 等待对方接听 */}
+      {(callPhase === 'Calling' || callPhase === 'Ringing') && (
+        <RingOverlay
+          friendAvatar={friendAvatar}
+          friendName={friendName}
+          isWaitingResponse={isWaitingResponse}
+          onCancel={() => handleEndCall(true)}
+        />
+      )}
+
+      {/* 加载状态遮罩 - 建立连接中 */}
+      {callPhase === 'Connecting' && (
         <div className={styles.loadingOverlay}>
-          <Spin
-            size="large"
-            tip={isWaitingResponse ? '等待对方接受...' : '正在建立视频连接...'}
-          />
+          <Spin size="large" tip="正在建立视频连接..." />
         </div>
       )}
 
       {/* 视频区域 */}
-      <div className={styles.videoWrapper}>
-        {/* 远程视频 - 对方视频 */}
-        <div className={styles.remoteVideo}>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className={styles.video}
-          />
-          {/* 远程音频 - 对方音频 */}
-          <audio ref={remoteAudioRef} autoPlay />
-          {/* 等待连接提示 */}
-          {!isConnected && (
-            <div className={styles.waitingOverlay}>
-              <span>
-                {isWaitingResponse ? '等待对方接受...' : '等待对方连接...'}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* 本地视频 - 自己的视频 */}
-        <div className={styles.localVideo}>
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className={styles.video}
-          />
-          {/* 视频关闭遮罩 */}
-          {!mediaState.videoEnabled && (
-            <div className={styles.videoOffOverlay}>
-              <VideoCameraOutlined style={{ fontSize: 32 }} />
-            </div>
-          )}
-        </div>
-      </div>
+      <VideoPanel
+        remoteVideoRef={remoteVideoRef}
+        remoteAudioRef={remoteAudioRef}
+        localVideoRef={localVideoRef}
+        isInCall={isInCall}
+        callPhase={callPhase}
+        videoEnabled={mediaState.videoEnabled}
+      />
 
       {/* 控制按钮区域 */}
-      <div className={styles.controls}>
-        {/* 音频开关按钮 */}
-        <Tooltip title={mediaState.audioEnabled ? '关闭麦克风' : '开启麦克风'}>
-          <Button
-            type={mediaState.audioEnabled ? 'primary' : 'default'}
-            shape="circle"
-            size="large"
-            icon={
-              mediaState.audioEnabled ? (
-                <AudioOutlined />
-              ) : (
-                <AudioMutedOutlined />
-              )
-            }
-            onClick={toggleAudio}
-            className={styles.controlButton}
-          />
-        </Tooltip>
-
-        {/* 视频开关按钮 */}
-        <Tooltip title={mediaState.videoEnabled ? '关闭摄像头' : '开启摄像头'}>
-          <Button
-            type={mediaState.videoEnabled ? 'primary' : 'default'}
-            shape="circle"
-            size="large"
-            icon={<VideoCameraOutlined />}
-            onClick={toggleVideo}
-            className={styles.controlButton}
-          />
-        </Tooltip>
-
-        {/* 重启媒体按钮 - 作为黑屏问题的兜底方案 */}
-        <Tooltip title="重启视频/音频 (解决黑屏问题)">
-          <Button
-            type="default"
-            shape="circle"
-            size="large"
-            icon={<ReloadOutlined spin={isRestarting} />}
-            onClick={handleRestartMedia}
-            disabled={isRestarting || !isConnected}
-            className={styles.controlButton}
-          />
-        </Tooltip>
-
-        {/* 结束通话按钮 */}
-        <Tooltip title="结束通话">
-          <Button
-            type="primary"
-            danger
-            shape="circle"
-            size="large"
-            icon={<PhoneOutlined />}
-            onClick={() => handleEndCall(true)}
-            className={styles.endCallButton}
-          />
-        </Tooltip>
-
-        {/* 退出按钮 */}
-        <Tooltip title="退出隐私聊天">
-          <Button
-            type="default"
-            danger
-            shape="circle"
-            size="large"
-            icon={<LogoutOutlined />}
-            onClick={handleExit}
-            className={styles.exitButton}
-          />
-        </Tooltip>
-      </div>
+      <CallControls
+        mediaState={mediaState}
+        isRestarting={isRestarting}
+        isInCall={isInCall}
+        onToggleAudio={toggleAudio}
+        onToggleVideo={toggleVideo}
+        onRestart={handleRestartMedia}
+        onEnd={() => handleEndCall(true)}
+        onExit={handleExit}
+      />
     </div>
   );
 };

@@ -1,10 +1,27 @@
+import { useTheme } from '@/hooks/useTheme';
 import {
   DownloadOutlined,
   FontSizeOutlined,
   GlobalOutlined,
+  PoweroffOutlined,
 } from '@ant-design/icons';
+import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { getLocale, setLocale, useIntl } from '@umijs/max';
-import { Card, Checkbox, Divider, Select, Typography } from 'antd';
+import {
+  getAutoDownloadOnWifi,
+  setAppLanguage,
+  setAutoDownloadOnWifi,
+} from '@workspace/services';
+import {
+  Card,
+  Checkbox,
+  Divider,
+  Select,
+  Switch,
+  Typography,
+  message,
+} from 'antd';
+import { useEffect, useState } from 'react';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
@@ -13,9 +30,55 @@ const { Option } = Select;
 const GeneralSettings = () => {
   const intl = useIntl();
   const currentLocale = getLocale();
+  const { mode, fontSize, setMode, setFontSize } = useTheme();
+  const [autoStartEnabled, setAutoStartEnabled] = useState(false);
+  const [autoStartLoading, setAutoStartLoading] = useState(false);
+  const [autoDownloadWifi, setAutoDownloadWifi] = useState(true);
+
+  // 读取当前系统注册的开机自启状态，默认不启用
+  useEffect(() => {
+    isEnabled()
+      .then(setAutoStartEnabled)
+      .catch((e) => {
+        console.log('获取开机自启状态失败', e);
+        setAutoStartEnabled(false);
+      });
+  }, []);
+
+  // 读取「WiFi 下自动下载图片和视频」开关，默认开启
+  useEffect(() => {
+    getAutoDownloadOnWifi()
+      .then(setAutoDownloadWifi)
+      .catch(() => {});
+  }, []);
+
+  const handleAutoDownloadChange = (checked: boolean) => {
+    setAutoDownloadWifi(checked);
+    setAutoDownloadOnWifi(checked).catch(() => {});
+  };
+
+  const handleAutoStartChange = async (checked: boolean) => {
+    setAutoStartLoading(true);
+    try {
+      if (checked) {
+        await enable();
+      } else {
+        await disable();
+      }
+      setAutoStartEnabled(checked);
+    } catch (e) {
+      console.log('修改开机自启设置失败', e);
+      message.error(
+        intl.formatMessage({ id: 'settings.generalSettings.autoStartFailed' }),
+      );
+    } finally {
+      setAutoStartLoading(false);
+    }
+  };
 
   const handleLanguageChange = (value: string) => {
     setLocale(value, false);
+    setAppLanguage(value).catch(() => {});
   };
 
   return (
@@ -23,6 +86,25 @@ const GeneralSettings = () => {
       <Title level={3} className={styles.sectionTitle}>
         {intl.formatMessage({ id: 'settings.generalSettings.title' })}
       </Title>
+
+      <Card className={styles.settingCard}>
+        <div className={styles.cardHeader}>
+          <PoweroffOutlined className={styles.cardIcon} />
+          <Text strong>
+            {intl.formatMessage({ id: 'settings.generalSettings.autoStart' })}
+          </Text>
+        </div>
+        <Divider className={styles.divider} />
+        <Switch
+          checked={autoStartEnabled}
+          loading={autoStartLoading}
+          onChange={handleAutoStartChange}
+          className={styles.settingSwitch}
+        />
+        <Text type="secondary" className={styles.description}>
+          {intl.formatMessage({ id: 'settings.generalSettings.autoStartDesc' })}
+        </Text>
+      </Card>
 
       <Card className={styles.settingCard}>
         <div className={styles.cardHeader}>
@@ -58,7 +140,11 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Select defaultValue="light" className={styles.select}>
+        <Select
+          value={mode}
+          onChange={(value) => setMode(value)}
+          className={styles.select}
+        >
           <Option value="light">
             {intl.formatMessage({
               id: 'settings.generalSettings.themeModes.light',
@@ -88,7 +174,11 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Select defaultValue="medium" className={styles.select}>
+        <Select
+          value={fontSize}
+          onChange={setFontSize}
+          className={styles.select}
+        >
           <Option value="small">
             {intl.formatMessage({
               id: 'settings.generalSettings.fontSizes.small',
@@ -120,7 +210,11 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Checkbox defaultChecked className={styles.settingCheckbox}>
+        <Checkbox
+          checked={autoDownloadWifi}
+          onChange={(e) => handleAutoDownloadChange(e.target.checked)}
+          className={styles.settingCheckbox}
+        >
           {intl.formatMessage({
             id: 'settings.generalSettings.autoDownloadWifi',
           })}

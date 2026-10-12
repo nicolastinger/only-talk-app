@@ -1,8 +1,18 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
-import { getChatFileByBizId, getFiles } from '@workspace/services';
-import { ChatMessage, GroupFileRecord, GroupImageRecord } from '@workspace/types';
+import { openUserProfile } from '@/utils/userProfile';
+import {
+  getChatFileByBizId,
+  getFiles,
+  shouldAutoDownloadImage,
+} from '@workspace/services';
+import {
+  ChatMessage,
+  GroupFileRecord,
+  GroupImageRecord,
+} from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import ChatFile from '../../components/ChatFile';
 import ChatImage from '../../components/ChatImage';
@@ -15,6 +25,7 @@ interface GroupCustomerChatBoxProps {
   msg: ChatMessage;
   icon?: string;
   senderName?: string;
+  senderUserType?: number;
   groupUuid: string;
   currentBizId?: string;
 }
@@ -79,6 +90,7 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
     },
     icon,
     senderName,
+    senderUserType,
     groupUuid,
     currentBizId,
   } = props;
@@ -88,6 +100,8 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<GroupFileRecord | null>(null);
+  const [imageBizId, setImageBizId] = useState<string>('');
+  const [autoDownload, setAutoDownload] = useState(true);
 
   // 加载发送者头像
   useEffect(() => {
@@ -115,50 +129,63 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
 
   // 处理图片消息
   useEffect(() => {
-    if (text_type === MSG_TYPE_GROUP_IMAGE) {
-      let bizId = currentBizId;
-
-      // 如果没有传入 currentBizId，从 raw 解析
-      if (!bizId) {
-        const record = parseGroupImageRecord(raw);
-        bizId = record?.biz_id || null;
+    if (text_type !== MSG_TYPE_GROUP_IMAGE) {
+      // 处理文件消息
+      if (text_type === MSG_TYPE_GROUP_FILE) {
+        const record = parseGroupFileRecord(raw);
+        if (record) {
+          setFileRecord(record);
+        }
       }
+      return;
+    }
 
-      if (!bizId) {
-        console.error('GroupCustomerChatBox - No bizId found');
+    let bizId = currentBizId;
+    // 如果没有传入 currentBizId，从 raw 解析
+    if (!bizId) {
+      const record = parseGroupImageRecord(raw);
+      bizId = record?.biz_id || undefined;
+    }
+    if (!bizId) {
+      console.error('GroupCustomerChatBox - No bizId found');
+      return;
+    }
+
+    setImageBizId(bizId);
+    if (imageCache.has(bizId)) {
+      setImageUrl(imageCache.get(bizId)!);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      // 非计量网络且开关开启才自动下载，否则交给 ChatImage 点击下载
+      const allow = await shouldAutoDownloadImage();
+      if (cancelled) return;
+      setAutoDownload(allow);
+      if (!allow) {
+        setLoading(false);
         return;
       }
-
-      if (imageCache.has(bizId)) {
-        setImageUrl(imageCache.get(bizId)!);
-        return;
-      }
-
       setLoading(true);
-      getChatFileByBizId(bizId, nano_id)
-        .then((files) => {
-          if (files && files.length > 0) {
-            const tauriFilePath = files[0].tauri_file_path;
-            if (tauriFilePath) {
-              imageCache.set(bizId, tauriFilePath);
-              setImageUrl(tauriFilePath);
-            }
-          }
-          setLoading(false);
-        })
-        .catch((error) => {
-          console.error('GroupCustomerChatBox - Error loading image:', error);
-          setLoading(false);
-        });
-    }
-
-    // 处理文件消息
-    if (text_type === MSG_TYPE_GROUP_FILE) {
-      const record = parseGroupFileRecord(raw);
-      if (record) {
-        setFileRecord(record);
+      try {
+        const files = await getChatFileByBizId(bizId, nano_id);
+        if (cancelled) return;
+        const tauriFilePath = files?.[0]?.tauri_file_path;
+        if (tauriFilePath) {
+          imageCache.set(bizId, tauriFilePath);
+          setImageUrl(tauriFilePath);
+        }
+      } catch (error) {
+        console.error('GroupCustomerChatBox - Error loading image:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [raw, text_type, currentBizId, nano_id]);
 
   const renderMessage = () => {
@@ -171,8 +198,12 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
           src={imageUrl}
           loading={loading}
           friendUuid={groupUuid}
-          currentBizId={currentBizId || ''}
+          currentBizId={imageBizId || currentBizId || ''}
+          bizId={imageBizId}
+          autoDownload={autoDownload}
           meUuid={userInfo?.uuid || ''}
+          isGroup={true}
+          nanoId={nano_id}
         />
       );
     }
@@ -207,6 +238,11 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
           className={styles.imgItem}
           alt="avatar"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() =>
+            openUserProfile(
+              props.msg.sender_uuid || props.msg.text_msg_raw.send_user || '',
+            )
+          }
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}
@@ -214,7 +250,10 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
       </div>
       <div className={styles.chatContainerWrapper}>
         {senderName && (
-          <div className={styles.senderName}>{senderName}</div>
+          <div className={styles.senderName}>
+            {senderName}
+            <UserTypeTag type={senderUserType} />
+          </div>
         )}
         <div
           className={`${styles.chatContainer} ${

@@ -3,13 +3,18 @@ use std::time::Duration;
 use log::error;
 use tokio::time::timeout;
 
-use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
+use crate::dao::chat_record_db::{delete_chat_record_db, query_chat_record_by_id_from_db};
+use crate::dao::chat_record_send::query_chat_record_send_by_user;
+use crate::dao::group_chat_record_db::delete_group_chat_record_db;
+use crate::entity::chat_record_send::ChatRecordSend;
 use crate::entity::Page;
 use crate::service::chat_service::{
-    get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
+    forward_chat_messages_service, get_chat_record_by_type_service, get_chat_record_service,
+    get_group_chat_record_service, ignore_send_msg_service, recall_chat_message_service,
+    recall_group_chat_message_service, retry_send_msg_service, send_call_control_msg_service,
     send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
     send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
-    update_group_last_read_msg_service, update_last_read_msg_from_db,
+    send_webrtc_signal_service, update_group_last_read_msg_service, update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
@@ -29,6 +34,36 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
         Ok(Ok(_)) => Ok("success".to_string()),
         Ok(Err(e)) => {
             error!("获取锁时发生意外错误,{}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("超时：10秒内未能获取锁 {}", elapsed);
+            Err("获取锁超时".to_string())
+        }
+    }
+}
+
+/// 发送 WebRTC 信令消息（独立通道，不走 send/ack 表）
+#[tauri::command]
+pub async fn send_webrtc_signal(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
+    send_webrtc_signal_service(text_quic_msg).await.map_err(|e| e.to_string())
+}
+
+/// 发送视频通话控制消息（12-15，独立通道）
+///
+/// 自动生成一条 type=1 文本历史记录（prev_id 链、三方存储），
+/// 控制命令本身只转发不存储、失败不重发。
+#[tauri::command]
+pub async fn send_call_control_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        send_call_control_msg_service(text_quic_msg).await
+    })
+    .await;
+    match result {
+        Ok(Ok(_)) => Ok("success".to_string()),
+        Ok(Err(e)) => {
+            error!("发送通话控制消息失败,{}", e);
             Err(e.to_string())
         }
         Err(elapsed) => {
@@ -121,4 +156,129 @@ pub async fn mark_group_read(
     update_group_last_read_msg_service(group_uuid, nano_id, timestamp)
         .await
         .map_err(|e| e.to_string())
+}
+
+/// 获取某好友的待发送记录（0-排队中，1-发送中，2-发送失败）
+#[tauri::command]
+pub async fn get_pending_send_records(recv_user: String) -> Result<Vec<ChatRecordSend>, String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    query_chat_record_send_by_user(&me, &recv_user, vec![0, 1, 2], true)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 手动重发失败消息（重置为排队并触发补发，加锁防并发）
+#[tauri::command]
+pub async fn retry_send_msg(send_id: String) -> Result<(), String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        retry_send_msg_service(&send_id).await
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            error!("重发消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("重发消息超时：10秒内未能获取锁 {}", elapsed);
+            Err("获取锁超时".to_string())
+        }
+    }
+}
+
+/// 忽略失败消息（状态置 -1，查询 IN(0,1,2) 不再返回，加锁防并发）
+#[tauri::command]
+pub async fn ignore_send_msg(send_id: String) -> Result<(), String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        ignore_send_msg_service(&send_id).await
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            error!("忽略消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("忽略消息超时：10秒内未能获取锁 {}", elapsed);
+            Err("获取锁超时".to_string())
+        }
+    }
+}
+
+/// 本机软删除单聊聊天记录（deleted 置 1，不通知服务端）
+#[tauri::command]
+pub async fn delete_chat_record(nano_id_list: Vec<String>) -> Result<(), String> {
+    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
+    delete_chat_record_db(&nano_id_list, &me).await.map_err(|e| e.to_string())
+}
+
+/// 本机软删除群聊聊天记录（deleted 置 1，不通知服务端）
+#[tauri::command]
+pub async fn delete_group_chat_record(
+    nano_id_list: Vec<String>,
+    group_id: String,
+) -> Result<(), String> {
+    delete_group_chat_record_db(&nano_id_list, &group_id).await.map_err(|e| e.to_string())
+}
+
+/// 逐条转发消息到目标（好友或群），复用原始 biz_id，不重新上传
+#[tauri::command]
+pub async fn forward_chat_messages(
+    messages: Vec<TextQuicMsgVo>,
+    target_recv: String,
+    target_group: bool,
+) -> Result<(), String> {
+    let result = timeout(Duration::from_secs(30), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        forward_chat_messages_service(messages, &target_recv, target_group).await
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            error!("转发消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("转发消息超时：30秒内未完成 {}", elapsed);
+            Err("转发超时".to_string())
+        }
+    }
+}
+
+/// 撤回单聊消息（伪撤回）：清除本机原消息并发送撤回控制消息
+#[tauri::command]
+pub async fn recall_chat_message(
+    recv_user: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, String> {
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        recall_chat_message_service(recv_user, target_nano_id).await
+    })
+    .await;
+    match result {
+        Ok(Ok(msg)) => Ok(msg),
+        Ok(Err(e)) => {
+            error!("撤回单聊消息失败: {}", e);
+            Err(e.to_string())
+        }
+        Err(elapsed) => {
+            error!("撤回单聊消息超时：10秒内未完成 {}", elapsed);
+            Err("撤回超时".to_string())
+        }
+    }
+}
+
+/// 撤回群聊消息（伪撤回）：清除本机原消息并发送撤回控制消息
+#[tauri::command]
+pub async fn recall_group_chat_message(
+    group_id: String,
+    target_nano_id: String,
+) -> Result<TextQuicMsgVo, String> {
+    recall_group_chat_message_service(group_id, target_nano_id).await.map_err(|e| e.to_string())
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { showToast, showConfirmDialog, Empty } from "vant";
 import { invoke } from "@tauri-apps/api/core";
@@ -7,13 +7,20 @@ import {
   get_friend_info,
   get_cached_user_info,
   delete_friend,
+  refresh_user_info,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import { calcAgeFromBirthday } from "@/utils/time";
 import type { FriendVo, UserInfo } from "@workspace/types";
+import { ReportTargetType } from "@workspace/types";
+import ReportSheet from "@/components/ReportSheet.vue";
+import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const friendId = route.params.friendId as string;
 const { getAvatarUrl } = useAvatar();
 
@@ -25,29 +32,65 @@ const detail = ref<FriendDetail>({ friendVo: null, userInfo: null });
 const loading = ref(true);
 const loadError = ref(false);
 const avatarUrl = ref<string | null>(null);
+const showReport = ref(false);
+const showAvatarPreview = ref(false);
+
+/** 是否为自己的好友（非好友时只展示资料卡，不显示删除好友） */
+const isFriend = computed(() => !!detail.value.friendVo);
 
 const loadDetail = async () => {
   loading.value = true;
   loadError.value = false;
+  // 1) 先用本地 sqlite 数据秒开页面
+  let userInfo: UserInfo | null = null;
+  let friendVo: FriendVo | null = null;
   try {
-    let userInfo: UserInfo | null = null;
     try {
       userInfo = await get_cached_user_info(friendId);
     } catch {}
-    let friendVo: FriendVo | null = null;
     try {
       friendVo = (await get_friend_info(friendId)) as FriendVo | null;
     } catch {}
-    detail.value = { friendVo, userInfo };
-
-    const icon = friendVo?.friend_icon || userInfo?.icon;
-    if (icon) {
-      avatarUrl.value = await getAvatarUrl(icon);
-    }
-  } catch (e) {
+  } catch {
     loadError.value = true;
-  } finally {
+  }
+  if (!userInfo && !friendVo) {
+    loadError.value = true;
     loading.value = false;
+    return;
+  }
+  detail.value = { friendVo, userInfo };
+
+  const icon = friendVo?.friend_icon || userInfo?.icon;
+  if (icon) {
+    avatarUrl.value = await getAvatarUrl(icon);
+  }
+  loading.value = false;
+
+  // 2) 后台从 HTTP 拉取最新信息, 防止本地缓存过期
+  try {
+    const fresh = await refresh_user_info(friendId);
+    if (fresh) {
+      detail.value.userInfo = fresh;
+      const freshIcon = fresh.icon || detail.value.friendVo?.friend_icon;
+      if (freshIcon) {
+        avatarUrl.value = await getAvatarUrl(freshIcon);
+      }
+      // HTTP 拿到新数据后按 uuid 定向回写本地好友表(sqlite), 保证列表等处下次不显示旧信息
+      try {
+        await invoke("update_friend_profile_command", {
+          friendUuid: friendId,
+          account: fresh.account || detail.value.friendVo?.friend_account || "",
+          name: fresh.username || detail.value.friendVo?.friend_name || "",
+          icon: fresh.icon || detail.value.friendVo?.friend_icon || "",
+          info: fresh.info || "",
+        });
+      } catch {
+        /* 本地回写失败可忽略 */
+      }
+    }
+  } catch {
+    /* 离线或接口失败时保留本地数据 */
   }
 };
 
@@ -61,23 +104,30 @@ const getAccount = () =>
   detail.value.friendVo?.friend_account || detail.value.userInfo?.account || "";
 const getBio = () => detail.value.userInfo?.info || "";
 const getGenderText = (g?: number) =>
-  ({ 0: "未知", 1: "保密", 2: "男", 3: "女", 4: "机器人", 5: "其他" }[g ?? 0] ||
-  "");
+  ({
+    0: t("userInfo.genderTypes.unknown"),
+    1: t("userInfo.genderTypes.secret"),
+    2: t("userInfo.genderTypes.male"),
+    3: t("userInfo.genderTypes.female"),
+    4: t("userInfo.genderTypes.robot"),
+    5: t("userInfo.genderTypes.other"),
+  }[g ?? 0] || "");
 
 const onDeleteFriend = async () => {
   try {
     await showConfirmDialog({
-      title: "删除好友",
-      message: `确定删除「${getDisplayName()}」吗？`,
-      confirmButtonText: "删除",
+      title: t("friends.deleteTitle"),
+      message: t("friends.deleteConfirm", { name: getDisplayName() }),
+      confirmButtonText: t("common.delete"),
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "取消",
+      cancelButtonText: t("common.cancel"),
     });
     await delete_friend(friendId);
-    showToast({ message: "已删除", icon: "success" });
+    showToast({ message: t("friends.deleted"), icon: "success" });
     router.back();
   } catch (e) {
-    if (e !== "cancel") showToast({ message: "操作失败", icon: "fail" });
+    if (e !== "cancel")
+      showToast({ message: t("common.operationFailed"), icon: "fail" });
   }
 };
 
@@ -103,12 +153,16 @@ onMounted(loadDetail);
           />
         </svg>
       </button>
-      <h1 class="title">好友详情</h1>
+      <h1 class="title">
+        {{ isFriend ? t("friends.detailTitle") : t("friends.profileTitle") }}
+      </h1>
     </div>
 
-    <div v-if="loading" class="loading-state"><p>加载中...</p></div>
+    <div v-if="loading" class="loading-state">
+      <p>{{ t("common.loadingDots") }}</p>
+    </div>
     <div v-else-if="loadError" class="error-state">
-      <Empty description="加载失败，请返回重试" />
+      <Empty :description="t('friendInfo.loadError')" />
     </div>
 
     <template v-else>
@@ -118,9 +172,13 @@ onMounted(loadDetail);
           <img
             :src="getAvatar()"
             class="profile-avatar"
+            @click="showAvatarPreview = true"
             @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
           />
-          <h2 class="profile-name">{{ getDisplayName() }}</h2>
+          <h2 class="profile-name">
+            {{ getDisplayName() }}
+            <UserTypeTag :type="detail.userInfo?.user_type" />
+          </h2>
           <p class="profile-account">@{{ getAccount() }}</p>
           <p v-if="getBio()" class="profile-bio">{{ getBio() }}</p>
         </div>
@@ -128,25 +186,30 @@ onMounted(loadDetail);
 
       <div class="info-section" v-if="detail.userInfo">
         <div class="info-item" v-if="getGenderText(detail.userInfo.gender)">
-          <span class="info-label">性别</span
+          <span class="info-label">{{ t("userInfo.gender") }}</span
           ><span class="info-value">{{
             getGenderText(detail.userInfo.gender)
           }}</span>
         </div>
-        <div class="info-item" v-if="detail.userInfo.age">
-          <span class="info-label">年龄</span
-          ><span class="info-value">{{ detail.userInfo.age }}</span>
+        <div
+          class="info-item"
+          v-if="calcAgeFromBirthday(detail.userInfo?.birthday)"
+        >
+          <span class="info-label">{{ t("userInfo.age") }}</span
+          ><span class="info-value">{{
+            calcAgeFromBirthday(detail.userInfo?.birthday)
+          }}</span>
         </div>
         <div class="info-item" v-if="detail.userInfo.email">
-          <span class="info-label">邮箱</span
+          <span class="info-label">{{ t("userInfo.email") }}</span
           ><span class="info-value">{{ detail.userInfo.email }}</span>
         </div>
         <div class="info-item" v-if="detail.userInfo.phone">
-          <span class="info-label">手机</span
+          <span class="info-label">{{ t("userInfo.phone") }}</span
           ><span class="info-value">{{ detail.userInfo.phone }}</span>
         </div>
         <div class="info-item" v-if="detail.userInfo.address">
-          <span class="info-label">地址</span
+          <span class="info-label">{{ t("userInfo.address") }}</span
           ><span class="info-value">{{ detail.userInfo.address }}</span>
         </div>
       </div>
@@ -158,17 +221,39 @@ onMounted(loadDetail);
               d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
             />
           </svg>
-          <span>发消息</span>
+          <span>{{ t("friends.sendMessage") }}</span>
         </button>
-        <button class="action-btn danger" @click="onDeleteFriend">
+        <button
+          class="action-btn danger"
+          v-if="isFriend"
+          @click="onDeleteFriend"
+        >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
             />
           </svg>
-          <span>删除好友</span>
+          <span>{{ t("friends.deleteTitle") }}</span>
         </button>
       </div>
+
+      <button class="report-action" @click="showReport = true">
+        {{ t("friends.reportUser") }}
+      </button>
+
+      <ReportSheet
+        v-model="showReport"
+        :target-type="ReportTargetType.USER"
+        :target-uuid="friendId"
+        :target-name="getDisplayName()"
+      />
+
+      <ImagePreviewer
+        v-if="showAvatarPreview && getAvatar()"
+        :urls="[getAvatar()]"
+        :initial-index="0"
+        @close="showAvatarPreview = false"
+      />
     </template>
   </div>
 </template>
@@ -183,7 +268,7 @@ onMounted(loadDetail);
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: max(16px, env(safe-area-inset-top)) 20px;
   background: var(--header-bg);
   backdrop-filter: blur(20px);
   position: sticky;
@@ -241,7 +326,7 @@ onMounted(loadDetail);
 .profile-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--blue-100), var(--blue-50));
+  background: var(--profile-hero-grad);
 }
 
 .profile-content {
@@ -356,5 +441,18 @@ onMounted(loadDetail);
 }
 :deep(.van-empty__description) {
   color: var(--text-tertiary);
+}
+
+.report-action {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 24px;
+  height: 46px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
 }
 </style>

@@ -2,25 +2,28 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 use anyhow::anyhow;
 use log::{error, info};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use tauri::Emitter;
 
 use crate::config::get_config;
 use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
 use crate::dao::file_record_db::{
-    delete_file_record_by_id, increment_download_retry_count, insert_failed_file_record,
-    insert_file_record, MAX_DOWNLOAD_RETRY_COUNT,
+    delete_file_record_by_id, delete_file_record_by_pk, increment_download_retry_count,
+    insert_failed_file_record, insert_file_record, list_all_files, query_file_record_by_id,
+    MAX_DOWNLOAD_RETRY_COUNT,
 };
 use crate::dto::http_result::HttpResult;
 use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord as ChatFileRecord};
 use crate::entity::file_record::FileRecord;
-use crate::service::api_service::{get_with_token, get_without_token, post_with_body};
-use crate::utils::global_static_str::{MONTHLY_RESOURCE_PATH, TALK_API};
+use crate::service::api_service::{get_without_token, post_with_body};
+use crate::utils::global_static_str::MONTHLY_RESOURCE_PATH;
 use crate::utils::uuid_utils;
-use crate::vo::file_vo::FileVo;
+use crate::vo::file_vo::{FileVo, LocalFileVo};
 
 /// 从nano_id获取聊天记录中的文件名
 async fn get_file_name_from_nano_id(nano_id: Option<&str>) -> Option<String> {
@@ -104,7 +107,7 @@ pub async fn get_file_by_biz_id_service(
                 } else {
                     // 首次下载就失败，没有记录，插入一条失败记录用于追踪重试次数
                     let uuid = uuid::Uuid::new_v4().to_string();
-                    let now = chrono::Local::now().timestamp();
+                    let now = crate::utils::time::get_now_time_stamp_as_millis().unwrap_or(0);
                     insert_failed_file_record(&biz_id, &uuid, now).await?;
                     increment_download_retry_count(&biz_id, &uuid).await?;
                 }
@@ -121,11 +124,11 @@ pub async fn get_file_by_biz_id_service(
     // 3、转换成VO
     let mut result = Vec::<FileVo>::new();
     for file in file_list.into_iter() {
-        // 添加文件数据读取
+        // 校验物理文件存在(仅检查, 不读取整个文件字节——大文件会撑爆移动端 IPC)
         let path = file.file_path.ok_or(anyhow::anyhow!("文件不存在"))?;
         let file_path = Path::new(&path);
-        let raw = fs::read(file_path);
-        if raw.is_err() {
+        let meta = fs::metadata(file_path);
+        if meta.is_err() || !meta.is_ok_and(|m| m.is_file()) {
             // 文件不存在
             error!("文件不存在: {:?}", file_path);
             // 递增下载重试次数
@@ -159,7 +162,7 @@ pub async fn get_file_by_biz_id_service(
             original_file_name: Some(final_file_name),
             original_file_path: None,
             absolute_file_path: Some(file_path.to_string_lossy().to_string()),
-            raw: Some(raw?),
+            raw: None,
             size: file.file_size,
             is_del: Some(0),
         };
@@ -168,6 +171,49 @@ pub async fn get_file_by_biz_id_service(
     }
 
     Ok(result)
+}
+
+/**
+ * 判断本地是否已存在该业务文件（只查本地记录 + 物理文件，不触发远程下载）
+ */
+pub async fn has_local_chat_file_service(biz_id: &str) -> Result<bool, anyhow::Error> {
+    if biz_id.is_empty() {
+        return Ok(false);
+    }
+    let file_list = FileRecord::get_by_biz_id(biz_id).await?;
+    for file in file_list.into_iter() {
+        if let Some(path) = file.file_path {
+            if Path::new(&path).is_file() {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
+/// 聊天文件下载进度事件负载(事件名 `chat_file_download_progress`)。
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChatFileDownloadProgress {
+    biz_id: String,
+    file_name: String,
+    downloaded: u64,
+    total: u64,
+}
+
+/// 上报聊天文件下载进度(前端按 bizId 匹配对应消息; 无 AppHandle 时忽略)。
+fn emit_chat_file_progress(biz_id: &str, file_name: &str, downloaded: u64, total: u64) {
+    if let Some(handle) = crate::APP_HANDLE.get() {
+        let _ = handle.emit(
+            "chat_file_download_progress",
+            ChatFileDownloadProgress {
+                biz_id: biz_id.to_string(),
+                file_name: file_name.to_string(),
+                downloaded,
+                total,
+            },
+        );
+    }
 }
 
 /**
@@ -197,31 +243,51 @@ pub async fn download_file_by_biz_service(
     // 2、提取下载url
     let result: HttpResult = response.json().await?;
     // 获取下载url数组
-    if let Value::Array(file_urls) = result.data {
-        info!("获取到文件URL列表: {:?}", file_urls);
+    if let Value::Array(items) = result.data {
+        info!("获取到文件URL列表: {:?}", items);
         // 3、遍历文件ID列表，下载每个文件
-        for file_url in file_urls.into_iter() {
-            if let Value::String(file_url_str) = file_url {
-                let file_url_str = format!("{}", file_url_str);
+        for item in items.into_iter() {
+            // 兼容旧版(URL 字符串)与新版({ url, file_name, mime_type })
+            let (file_url_str, server_file_name, server_mime) = match item {
+                Value::String(url) => (url, None, None),
+                Value::Object(map) => {
+                    let url = match map.get("url").and_then(|v| v.as_str()) {
+                        Some(u) => u.to_string(),
+                        None => continue,
+                    };
+                    let name = map.get("file_name").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    let mime = map.get("mime_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    (url, name, mime)
+                }
+                _ => continue,
+            };
+            {
                 info!("下载文件URL: {}", file_url_str);
+                // 对象 key 形如 `<uuid>.<ext>`, 先从 URL 路径取出扩展名备用(get_without_token 会消费 url)
+                let url_ext = extract_ext_from_url(&file_url_str);
 
-                let is_public_bucket = file_url_str.contains("/user-avatar/")
-                    || file_url_str.contains("/group-avatar/");
+                let response = get_without_token(file_url_str).await?;
 
-                let response = if is_public_bucket {
-                    info!("公开桶文件，不带token下载");
-                    get_without_token(file_url_str).await?
-                } else {
-                    get_with_token(file_url_str).await?
-                };
+                if !response.status().is_success() {
+                    return Err(anyhow!("文件下载失败: HTTP {}", response.status()));
+                }
 
-                // 首先提取必要的header值，因为一旦使用bytes()方法后就无法再访问headers
-                let content_type = response
+                // 总大小: 优先响应头 Content-Length(预签名 URL 通常带), 未知则为 0
+                let total = response.content_length().unwrap_or(0);
+
+                // 首先提取必要的header值，因为一旦开始流式读取后就无法再访问headers
+                let mut content_type = response
                     .headers()
                     .get("content-type")
                     .and_then(|ct| ct.to_str().ok())
                     .unwrap_or("")
                     .to_string();
+                // 响应头缺失时回退服务端返回的 mime
+                if content_type.is_empty() {
+                    if let Some(mime) = server_mime.as_ref() {
+                        content_type = mime.clone();
+                    }
+                }
 
                 // 提取Content-Disposition头信息
                 let content_disposition = response
@@ -231,34 +297,38 @@ pub async fn download_file_by_biz_service(
                     .unwrap_or("")
                     .to_string();
 
-                // 处理二进制响应
-                let binary_data = response.bytes().await?;
-                info!("获取到二进制数据，大小: {} bytes", binary_data.len());
-
-                // 计算文件哈希值
-                let mut hasher = Sha256::new();
-                hasher.update(&binary_data);
-                let hash_result = hasher.finalize();
-                let file_hash = format!("{:x}", hash_result);
-
-                // 获取原始文件名（优先级：1.raw中的文件名 2.Content-Disposition头）
-                let original_file_name = original_file_name_from_raw
+                // 获取原始文件名（优先级：1.服务端返回 2.raw中的文件名 3.Content-Disposition头）
+                let original_file_name = server_file_name
                     .clone()
-                    .or_else(|| extract_filename_from_content_disposition(&content_disposition))
-                    .unwrap_or_else(|| format!("file_{}.tmp", biz_id));
+                    .filter(|n| !n.trim().is_empty())
+                    .or_else(|| original_file_name_from_raw.clone())
+                    .or_else(|| extract_filename_from_content_disposition(&content_disposition));
 
-                // 提取原始文件的扩展名
-                let ext = std::path::Path::new(&original_file_name)
-                    .extension()
-                    .map(|ext| ext.to_string_lossy().to_string())
+                // 扩展名来源优先级: 原始文件名 > 下载URL路径 > 响应 Content-Type
+                // (头像等 biz 文件既无 raw 名也无 Content-Disposition, 不能再用兜底名推断, 否则会误落 .tmp)
+                let mut ext = original_file_name
+                    .as_deref()
+                    .and_then(|name| Path::new(name).extension())
+                    .map(|e| e.to_string_lossy().to_lowercase())
                     .unwrap_or_default();
+                if ext.is_empty() {
+                    ext = url_ext.clone().unwrap_or_default();
+                }
+                if ext.is_empty() {
+                    ext = extract_ext_from_mime(&content_type).unwrap_or_default();
+                }
+
+                // 进度事件/展示用名称(raw 缺失时用业务id兜底)
+                let display_name = original_file_name.clone().unwrap_or_else(|| {
+                    format!("file_{}.{}", biz_id, if ext.is_empty() { "tmp" } else { &ext })
+                });
 
                 // 创建uuid_v4作为文件名，但保留扩展名
                 let uuid = uuid::Uuid::new_v4().to_string();
                 let file_name = if !ext.is_empty() {
                     format!("{}.{}", uuid, ext)
                 } else {
-                    // 如果没有扩展名，使用.tmp作为默认扩展名
+                    // 仍无法确定扩展名时兜底 .tmp
                     format!("{}.tmp", uuid)
                 };
                 let resource_path =
@@ -268,10 +338,30 @@ pub async fn download_file_by_biz_service(
                 let file_path = format!("{}/{}", resource_path, file_name);
                 info!("文件保存路径: {}", file_path);
 
-                // 保存文件到本地
+                // 流式下载: 边写盘边增量计算 SHA-256, 并按需上报进度
                 let mut file = fs::File::create(&file_path)?;
-                file.write_all(&binary_data)?;
-                info!("文件已保存到: {}", file_path);
+                let mut hasher = Sha256::new();
+                let mut downloaded: u64 = 0;
+                let mut last_emit = Instant::now();
+                let mut response = response;
+
+                while let Some(chunk) = response.chunk().await? {
+                    file.write_all(&chunk)?;
+                    hasher.update(&chunk);
+                    downloaded += chunk.len() as u64;
+                    // 节流: 最快每 100ms 上报一次, 避免高频事件
+                    if last_emit.elapsed() >= Duration::from_millis(100) {
+                        emit_chat_file_progress(biz_id, &display_name, downloaded, total);
+                        last_emit = Instant::now();
+                    }
+                }
+                file.flush()?;
+                // 完成时补发最终进度
+                emit_chat_file_progress(biz_id, &display_name, downloaded, total);
+
+                // 计算文件哈希值
+                let file_hash = format!("{:x}", hasher.finalize());
+                info!("文件已保存到: {}, 大小: {} bytes", file_path, downloaded);
 
                 // 插入文件记录到数据库
                 insert_file_record(
@@ -279,7 +369,7 @@ pub async fn download_file_by_biz_service(
                     &uuid,
                     &file_name,
                     &file_path,
-                    binary_data.len() as i64,
+                    downloaded as i64,
                     &content_type,
                     &file_hash,
                 )
@@ -310,4 +400,144 @@ fn extract_filename_from_content_disposition(content_disposition: &str) -> Optio
     };
 
     Some(filename)
+}
+
+/// 从下载 URL 的路径段推断扩展名(对象 key 形如 `<uuid>.<ext>`, 可能带预签名查询串)
+fn extract_ext_from_url(url: &str) -> Option<String> {
+    let no_query = url.split(['?', '#']).next().unwrap_or(url);
+    let last_segment = no_query.rsplit('/').next().unwrap_or("");
+    let ext = last_segment.rsplit_once('.').map(|(_, ext)| ext)?;
+    if ext.is_empty() || ext.contains('=') {
+        None
+    } else {
+        Some(ext.to_lowercase())
+    }
+}
+
+/// 由响应 Content-Type 推断扩展名(兜底, 仅覆盖常见图片类型)
+fn extract_ext_from_mime(mime: &str) -> Option<String> {
+    let essence = mime.split(';').next().unwrap_or("").trim().to_lowercase();
+    let ext = match essence.as_str() {
+        "image/webp" => "webp",
+        "image/jpeg" | "image/jpg" => "jpg",
+        "image/png" => "png",
+        "image/gif" => "gif",
+        "image/bmp" => "bmp",
+        "image/svg+xml" => "svg",
+        "image/x-icon" | "image/vnd.microsoft.icon" => "ico",
+        "image/tiff" => "tiff",
+        "image/avif" => "avif",
+        "image/heic" => "heic",
+        _ => return None,
+    };
+    Some(ext.to_string())
+}
+
+// ===== 文件管理（本地 file_record 列表 / 筛选 / 排序 / 删除）=====
+
+/// 文件分类: image / video / audio / document / archive / other
+pub fn classify_file_type(file_name: &str, mime_type: &str) -> &'static str {
+    let ext =
+        Path::new(file_name).extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    match ext.as_str() {
+        "jpg" | "jpeg" | "png" | "gif" | "webp" | "bmp" | "svg" | "ico" | "heic" | "heif"
+        | "avif" => "image",
+        "mp4" | "mov" | "avi" | "mkv" | "webm" | "flv" | "wmv" | "m4v" | "ts" | "3gp" => "video",
+        "mp3" | "wav" | "m4a" | "aac" | "ogg" | "flac" | "opus" | "wma" | "amr" => "audio",
+        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx" | "txt" | "md" | "csv" | "rtf"
+        | "epub" => "document",
+        "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" | "iso" | "cab" => "archive",
+        _ => {
+            // 扩展名无法识别时按 MIME 兜底
+            let mime = mime_type.to_lowercase();
+            if mime.starts_with("image/") {
+                "image"
+            } else if mime.starts_with("video/") {
+                "video"
+            } else if mime.starts_with("audio/") {
+                "audio"
+            } else {
+                "other"
+            }
+        }
+    }
+}
+
+/// 获取本地文件列表（仅 status=0 且物理文件存在的记录）
+/// - `file_type`: 分类过滤, 空/全部不过滤
+/// - `sort_by`: "name"(文件名) 或 "date"(创建时间), 默认 date
+/// - `sort_order`: "asc" / "desc", 默认 desc
+pub async fn get_local_file_list_service(
+    file_type: Option<String>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
+) -> Result<Vec<LocalFileVo>, anyhow::Error> {
+    let records = list_all_files().await?;
+    let mut list = Vec::<LocalFileVo>::new();
+
+    for record in records {
+        let Some(file_name) = record.file_name else { continue };
+        if file_name.is_empty() {
+            continue; // 下载失败占位记录无文件名, 跳过
+        }
+        let Some(file_path) = record.file_path else { continue };
+        // 仅管理仍存在的物理文件（文件被外部删除时不再展示）
+        if !Path::new(&file_path).is_file() {
+            continue;
+        }
+        let category = classify_file_type(&file_name, record.mime_type.as_deref().unwrap_or(""));
+        if let Some(filter) = file_type.as_deref() {
+            if !filter.is_empty() && filter != category {
+                continue;
+            }
+        }
+        let ext =
+            Path::new(&file_name).extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+        list.push(LocalFileVo {
+            id: record.id.unwrap_or(0),
+            biz_id: record.biz_id.unwrap_or_default(),
+            uuid: record.uuid.unwrap_or_default(),
+            file_name,
+            file_path,
+            file_size: record.file_size.unwrap_or(0),
+            mime_type: record.mime_type.unwrap_or_default(),
+            created_at: record.created_at.unwrap_or(0),
+            file_type: category.to_string(),
+            ext,
+        });
+    }
+
+    match sort_by.as_deref() {
+        Some("name") => {
+            list.sort_by(|a, b| a.file_name.to_lowercase().cmp(&b.file_name.to_lowercase()))
+        }
+        _ => list.sort_by(|a, b| a.created_at.cmp(&b.created_at)),
+    }
+    // 默认降序；显式传 asc 才升序
+    if sort_order.as_deref() != Some("asc") {
+        list.reverse();
+    }
+
+    Ok(list)
+}
+
+/// 删除本地文件（删物理文件 + 删 file_record 记录）
+pub async fn delete_local_file_service(id: i64) -> Result<(), anyhow::Error> {
+    let record = query_file_record_by_id(id).await?.ok_or_else(|| anyhow!("文件记录不存在"))?;
+
+    if let Some(path) = record.file_path {
+        if !path.trim().is_empty() {
+            let path_ref = Path::new(&path);
+            if path_ref.is_file() {
+                if let Err(e) = std::fs::remove_file(path_ref) {
+                    error!("删除物理文件失败: {} err={}", path, e);
+                    return Err(anyhow!("删除物理文件失败: {}", e));
+                }
+                info!("物理文件已删除: {}", path);
+            }
+        }
+    }
+
+    delete_file_record_by_pk(id).await?;
+    Ok(())
 }

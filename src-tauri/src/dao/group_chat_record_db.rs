@@ -1,9 +1,10 @@
 use crate::dao::get_private_db_client;
 use crate::entity::group_chat_record::GroupChatRecord;
+use crate::utils::message_types::MSG_TYPE_GROUP_TEXT;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 pub async fn insert_group_chat_record(record: &GroupChatRecord) -> Result<(), anyhow::Error> {
-    GroupChatRecord::insert(record).await
+    GroupChatRecord::insert(record).await.map(|_| ())
 }
 
 pub async fn query_group_chat_record_from_db(
@@ -13,7 +14,7 @@ pub async fn query_group_chat_record_from_db(
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let records = sqlx::query_as::<_, TextQuicMsgVo>(
-        r#"SELECT * from(SELECT nano_id, text_type, raw, group_id as recv_user, send_user, timestamp FROM group_chat_record WHERE group_id = ?1 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
+        r#"SELECT * from(SELECT nano_id, text_type, raw, group_id as recv_user, send_user, timestamp FROM group_chat_record WHERE group_id = ?1 AND deleted = 0 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#
     )
     .bind(group_id)
     .bind(limit)
@@ -27,4 +28,115 @@ pub async fn query_last_group_chat_record(
     group_id: &str,
 ) -> Result<Option<GroupChatRecord>, anyhow::Error> {
     GroupChatRecord::query_last_record(group_id).await
+}
+
+/// 本机软删除群聊消息：deleted 置 1
+pub async fn delete_group_chat_record_db(
+    nano_ids: &[String],
+    group_id: &str,
+) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let mut tx = pool_sqlite.begin().await?;
+    for nano_id in nano_ids {
+        sqlx::query(
+            r#"UPDATE group_chat_record SET deleted = 1 WHERE nano_id = ?1 AND group_id = ?2"#,
+        )
+        .bind(nano_id)
+        .bind(group_id)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// 任务07: 同步落库后回填服务端消息 id。
+pub async fn set_group_server_id(nano_id: &str, server_id: i64) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query("UPDATE group_chat_record SET server_id = ?1 WHERE nano_id = ?2")
+        .bind(server_id)
+        .bind(nano_id)
+        .execute(&pool_sqlite)
+        .await?;
+    Ok(())
+}
+
+/// 根据 nano_id 查询未删除的群聊消息（撤回校验用）。
+pub async fn query_group_chat_record_by_id(
+    nano_id: &str,
+    group_id: &str,
+) -> Result<Option<GroupChatRecord>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let record = sqlx::query_as::<_, GroupChatRecord>(
+        r#"SELECT * FROM group_chat_record WHERE nano_id = ?1 AND group_id = ?2 AND deleted = 0"#,
+    )
+    .bind(nano_id)
+    .bind(group_id)
+    .fetch_optional(&pool_sqlite)
+    .await?;
+    Ok(record)
+}
+
+/// 撤回群聊消息：清除内容并置 `deleted = 1`（仅限发送者本人）。
+///
+/// 返回是否命中(命中要求消息存在、未删除且 `send_user` 与撤回消息发送者一致)。
+pub async fn recall_group_chat_record_db(
+    nano_id: &str,
+    group_id: &str,
+    send_user: &str,
+) -> Result<bool, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let res = sqlx::query(
+        r#"UPDATE group_chat_record SET raw = '', deleted = 1 WHERE nano_id = ?1 AND group_id = ?2 AND send_user = ?3 AND deleted = 0"#,
+    )
+    .bind(nano_id)
+    .bind(group_id)
+    .bind(send_user)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(res.rows_affected() > 0)
+}
+
+/// 查询群内所有撤回控制消息 `(raw, send_user)`，用于本地撤回核对。
+///
+/// 群撤回以 `MSG_TYPE_GROUP_TEXT(2001)` 承载，故用 `raw LIKE '%ot_recall%'` 预筛。
+pub async fn query_group_recall_messages(
+    group_id: &str,
+) -> Result<Vec<(String, String)>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let rows = sqlx::query_as::<_, (String, String)>(
+        r#"SELECT raw, send_user FROM group_chat_record WHERE text_type = ?1 AND group_id = ?2 AND raw LIKE '%ot_recall%'"#,
+    )
+    .bind(MSG_TYPE_GROUP_TEXT)
+    .bind(group_id)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(rows)
+}
+
+/// 已读上报推进校验: 按 nano_id 查本地聊天记录表中该消息的时间戳。
+///
+/// 推进是否合法以**聊天记录表的时间戳**为准(而非水位表记录), 跨端回填等场景下
+/// 水位可能被推到历史位置, 只有聊天记录表里的消息时间戳才是消息本身的先后顺序。
+pub async fn group_chat_record_timestamp_by_nano_id(
+    nano_id: &str,
+) -> Result<Option<i64>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let row: Option<(i64,)> =
+        sqlx::query_as(r#"SELECT timestamp FROM group_chat_record WHERE nano_id = ?1"#)
+            .bind(nano_id)
+            .fetch_optional(&pool_sqlite)
+            .await?;
+    Ok(row.map(|r| r.0))
+}
+
+/// 任务07: 群会话本地已同步的最大服务端 id(已读上报用); 无则 None。
+pub async fn local_max_group_server_id(group_id: &str) -> Result<Option<i64>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let (max,): (Option<i64>,) =
+        sqlx::query_as("SELECT MAX(server_id) FROM group_chat_record WHERE group_id = ?1")
+            .bind(group_id)
+            .fetch_one(&pool_sqlite)
+            .await?;
+    Ok(max)
 }

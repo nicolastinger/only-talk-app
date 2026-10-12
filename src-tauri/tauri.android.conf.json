@@ -1,0 +1,14 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "build": {
+    "frontendDist": "../apps/mobile/dist",
+    "devUrl": "http://localhost:5713",
+    "beforeDevCommand": "pnpm --filter @workspace/app-mobile dev",
+    "beforeBuildCommand": "pnpm --filter @workspace/app-mobile build"
+  },
+  "app": {
+    "security": {
+      "capabilities": ["mobile-default"]
+    }
+  }
+}

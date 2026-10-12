@@ -1,4 +1,6 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { SearchOutlined } from '@ant-design/icons';
+import { isRecallMessage } from '@/utils/recall';
 import { useIntl } from '@umijs/max';
 import { invoke } from '@tauri-apps/api/core';
 import { ChatSessionVo } from '@workspace/types';
@@ -35,32 +37,17 @@ const HighlightText: React.FC<{ text: string; keyword: string }> = ({ text, keyw
 
 // 格式化消息内容
 const formatMessage = (message: string, textType: number): string => {
+  if (isRecallMessage(textType, message)) {
+    return '撤回了一条消息';
+  }
   if (textType === 2 || textType === 2002) {
     return '[图片]';
   }
   if (textType === 3 || textType === 2003) {
     return '[文件]';
   }
-  if (textType === 4) {
-    return '[隐私模式]';
-  }
   if (textType === 5) {
     return '[视频通话]';
-  }
-  if (textType === 12) {
-    return '[视频通话邀请]';
-  }
-  if (textType === 13) {
-    return '[已接听]';
-  }
-  if (textType === 14) {
-    return '[已拒绝]';
-  }
-  if (textType === 15) {
-    return '[通话结束]';
-  }
-  if (textType === 100) {
-    return '[WebRTC信令]';
   }
   if (textType === 2004) {
     return '[群通知]';
@@ -188,6 +175,9 @@ const Search: React.FC<SearchProps> = ({ onSelect }) => {
                     <div className={styles.itemInfo}>
                       <div className={styles.itemName}>
                         <HighlightText text={item.friend_name} keyword={value} />
+                        {item.session_type !== 2 && (
+                          <UserTypeTag type={item.friend_user_type} />
+                        )}
                         {item.session_type === 2 && (
                           <span className={styles.groupTag}>
                             {intl.formatMessage({ id: 'search.groupTag' })}

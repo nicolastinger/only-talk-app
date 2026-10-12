@@ -8,7 +8,6 @@ use image::imageops::FilterType;
 use image::{DynamicImage, ImageBuffer, ImageReader, Luma, Rgb, Rgba};
 
 const MAX_INPUT_SIZE: u64 = 100 * 1024 * 1024;
-const MAX_OUTPUT_SIZE: u64 = 200 * 1024;
 const TARGET_QUALITY: u8 = 80;
 const MAX_DIMENSION: u32 = 800;
 
@@ -22,7 +21,7 @@ fn main() {
         return;
     }
 
-    let metadata = std::fs::metadata(input_path).unwrap();
+    let metadata = std::fs::metadata(input_path).expect("读取文件元数据失败");
     println!("输入文件: {}", input_path.display());
     println!(
         "文件大小: {} bytes ({:.2} MB)\n",

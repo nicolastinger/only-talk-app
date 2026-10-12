@@ -1,7 +1,9 @@
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import { DEFAULT_ICON } from '@/constants';
+import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper';
+import { getApiBase } from '@workspace/services';
 import { GroupVo } from '@workspace/types';
 import { update_group } from '@workspace/services';
-import { convertPathToTauriUrl, getFiles, selectFile } from '@workspace/services';
+import { convertPathToTauriUrl, getFiles, isBackendSuccess, isHttpSuccess, selectFile, openImagePreviewWindow } from '@workspace/services';
 import { Avatar, Button, Form, Input, message, Spin } from 'antd';
 import { UserOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -18,6 +20,7 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { startCrop, cropModalElement } = useAvatarCropper();
 
   const handleAvatarUpload = async () => {
     if (avatarUploading) return;
@@ -26,26 +29,25 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
       if (!files || files.length === 0) return;
 
       const filePath = files[0];
+
+      const croppedPath = await startCrop(filePath);
+
       setAvatarUploading(true);
 
-      const compressedResult = await invoke<string>('compress_image_to_webp_command', {
-        inputPath: filePath,
-      });
-
-      const preview = convertPathToTauriUrl(compressedResult);
+      const preview = convertPathToTauriUrl(croppedPath);
       if (preview) {
         setAvatarUrl(preview);
       }
 
       const uploadResult = await invoke<{ status: number; body: string }>('upload_file_request', {
-        url: `${TALK_API}/file_integrated/upload/group_avatar/${groupInfo.group_uuid}`,
-        filePath: compressedResult,
+        url: `${getApiBase()}/file_integrated/upload/group_avatar/${groupInfo.group_uuid}`,
+        filePath: croppedPath,
         fieldName: 'file',
       });
 
-      if (uploadResult.status === 200) {
-        const responseBody = JSON.parse(uploadResult.body);
-        if (responseBody.code === 200 && responseBody.data) {
+      if (isHttpSuccess(uploadResult.status)) {
+        const responseBody = uploadResult.body ? JSON.parse(uploadResult.body) : null;
+        if (responseBody && isBackendSuccess(responseBody.code) && responseBody.data) {
           const bizId = responseBody.data;
           const FileVos = await getFiles(bizId);
           const tauriFilePath = FileVos?.[0]?.tauri_file_path || null;
@@ -58,14 +60,19 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
             message.error('获取群头像文件失败');
           }
         } else {
-          message.error(responseBody.msg || '群头像上传失败');
+          message.error(responseBody?.msg || '群头像上传失败');
         }
       } else {
         message.error('群头像上传失败');
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (error instanceof Error && error.message === CROP_CANCELLED_ERROR) {
+        return;
+      }
       console.error('群头像更新失败:', error);
-      message.error(error.message || '群头像更新失败');
+      message.error(
+        (error instanceof Error ? error.message : String(error)) || '群头像更新失败',
+      );
     } finally {
       setAvatarUploading(false);
     }
@@ -93,7 +100,9 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
       <div className={styles.avatarSection}>
         <div
           className={styles.avatarWrapper}
-          onClick={handleAvatarUpload}
+          onClick={() => {
+            if (avatarUrl) openImagePreviewWindow([avatarUrl], 0);
+          }}
           style={{ cursor: 'pointer' }}
         >
           <Spin
@@ -110,7 +119,13 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
             />
           </Spin>
           {!avatarUploading && (
-            <div className={styles.avatarOverlay}>
+            <div
+              className={styles.avatarOverlay}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAvatarUpload();
+              }}
+            >
               <CameraOutlined style={{ fontSize: 20, color: '#fff' }} />
             </div>
           )}
@@ -166,6 +181,7 @@ const BasicSettings: React.FC<Props> = ({ groupInfo, onUpdate }) => {
           {groupInfo.created_at ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN') : '-'}
         </div>
       </div>
+      {cropModalElement}
     </div>
   );
 };

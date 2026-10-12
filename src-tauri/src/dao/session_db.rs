@@ -13,8 +13,9 @@ pub async fn update_chat_session_db(chat_session: &ChatSession) -> Result<(), an
         true => chat_session.recv_user.clone(),
         false => chat_session.send_user.clone(),
     };
-    // 执行更新
-    let res = sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = unread_count + ?4, last_message = ?5 WHERE send_user = ?6 and recv_user = ?7"#)
+    // 执行更新。任何会话内容更新都视为有新消息，is_show 强制置1，
+    // 确保被隐藏的会话（is_show=0）在新消息到达时自动重新显示
+    let res = sqlx::query(r#"UPDATE chat_session SET nano_id = ?1, timestamp = ?2, text_type = ?3, unread_count = unread_count + ?4, last_message = ?5, is_show = 1 WHERE send_user = ?6 and recv_user = ?7"#)
         .bind(&chat_session.nano_id)
         .bind(chat_session.timestamp)
         .bind(chat_session.text_type)
@@ -78,9 +79,10 @@ pub async fn query_chat_session_db(uuid: &str) -> Result<Vec<ChatSessionVo>, any
     let record = sqlx::query_as::<_, ChatSessionVo>(
         r#"select cs.*,
         COALESCE(fr.friend_icon, gr.group_icon, '') as friend_icon,
-        COALESCE(fr.friend_name, gr.group_name, '') as friend_name
+        COALESCE(fr.friend_name, gr.group_name, '') as friend_name,
+        fr.friend_user_type
         from chat_session cs
-        left join (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
+        left join (SELECT friend_id, friend_name, friend_icon, friend_user_type FROM friend WHERE me = ?1 and is_block = 0) fr
         on cs.send_user = fr.friend_id and cs.session_type != 2
         left join group_info gr on cs.group_id = gr.group_id and cs.session_type = 2
         where cs.recv_user = ?1 and cs.is_show = 1"#,
@@ -120,6 +122,19 @@ pub async fn hide_chat_session_db(me: &str, friend_id: &str) -> Result<(), anyho
     Ok(())
 }
 
+/// 显示会话（设置is_show为1）
+pub async fn show_chat_session_db(me: &str, friend_id: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    sqlx::query(
+        r#"UPDATE chat_session SET is_show = 1 WHERE (send_user = ?1 AND recv_user = ?2) OR (send_user = ?2 AND recv_user = ?1)"#,
+    )
+    .bind(friend_id)
+    .bind(me)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(())
+}
+
 /// 查询群聊会话
 pub async fn query_group_chat_session(
     me: &str,
@@ -146,9 +161,10 @@ pub async fn search_chat_session_db(
     let record = sqlx::query_as::<_, ChatSessionVo>(
         r#"select cs.*,
         COALESCE(fr.friend_icon, gr.group_icon, '') as friend_icon,
-        COALESCE(fr.friend_name, gr.group_name, '') as friend_name
+        COALESCE(fr.friend_name, gr.group_name, '') as friend_name,
+        fr.friend_user_type
         from chat_session cs
-        left join (SELECT friend_id, friend_name, friend_icon FROM friend WHERE me = ?1 and is_block = 0) fr
+        left join (SELECT friend_id, friend_name, friend_icon, friend_user_type FROM friend WHERE me = ?1 and is_block = 0) fr
         on cs.send_user = fr.friend_id and cs.session_type != 2
         left join group_info gr on cs.group_id = gr.group_id and cs.session_type = 2
         where cs.recv_user = ?1 and cs.is_show = 1

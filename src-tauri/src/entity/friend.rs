@@ -14,6 +14,8 @@ pub struct Friend {
     pub friend_name: String,
     pub friend_icon: String,
     pub friend_info: String,
+    /// 好友用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
+    pub friend_user_type: Option<i16>,
     pub friend_status: i32,
     pub me: String,
     pub is_del: bool,
@@ -36,6 +38,7 @@ impl SqliteStore for Friend {
             friend_name TEXT NOT NULL,
             friend_icon TEXT NOT NULL,
             friend_info TEXT NOT NULL,
+            friend_user_type INTEGER,
             friend_status INTEGER NOT NULL DEFAULT 0,
             me TEXT NOT NULL,
             is_del INTEGER NOT NULL DEFAULT 0,
@@ -52,7 +55,13 @@ impl SqliteStore for Friend {
         Ok(())
     }
 
-    async fn update_table(_pool_sqlite: &SqlitePool) -> Result<(), Error> {
+    async fn update_table(pool_sqlite: &SqlitePool) -> Result<(), Error> {
+        // 迁移：补充 friend_user_type 列（老库无此列，SQLite 不支持 ADD COLUMN IF NOT EXISTS）
+        let add_user_type =
+            sqlx::query(r#"ALTER TABLE friend ADD COLUMN friend_user_type INTEGER"#)
+                .execute(pool_sqlite)
+                .await;
+        let _ = add_user_type; // 列已存在，忽略
         Ok(())
     }
 

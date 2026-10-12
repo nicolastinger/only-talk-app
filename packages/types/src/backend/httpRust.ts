@@ -9,15 +9,25 @@ interface HttpResponse {
   body: string;
 }
 
-interface ResponseData {
+/**
+ * 后端统一成功/失败信封 (CommonResponse<T>):
+ * { code, data, message } (data 在无返回时为 null 或 0)
+ * T 为业务载荷 VO; 业务成功码为 200(带数据) 或 204(无数据)，其余视为失败
+ */
+interface BackendResponse<T> {
   code: number;
-  data: never;
+  data: T;
   message: string;
 }
 
-interface QuicServerInfo {
-  index: number;
-  address: string;
+/**
+ * 旧版直接 JSON.parse(res.body) 得到的原始信封。
+ * data 形状由调用方按载荷指定(如 ResponseData<UserInfo>)；新代码应使用 BackendResponse<T>。
+ */
+interface ResponseData<T = unknown> {
+  code: number;
+  data: T;
+  message: string;
 }
 
-export type { HttpResponse, ResponseData, RustResponse, QuicServerInfo };
+export type { BackendResponse, HttpResponse, ResponseData, RustResponse };

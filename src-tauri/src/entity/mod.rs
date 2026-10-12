@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+pub mod app_log;
 pub mod chat_record;
 pub mod chat_record_ack;
 pub mod chat_record_raw;
 pub mod chat_record_read;
 pub mod chat_record_send;
 pub mod chat_session;
+pub mod client_config;
 pub mod file_record;
 pub mod friend;
 pub mod group;
@@ -13,12 +15,14 @@ pub mod group_chat_record;
 pub mod group_member;
 pub mod group_message_ack;
 pub mod group_message_read;
-pub(crate) mod p2p_models;
+pub mod p2p_models;
 pub mod quic_connection;
+pub mod sync_task;
 pub mod system_notification;
 pub mod text_msg;
 pub mod user_info;
 pub mod user_token;
+pub mod webrtc_signal;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Page {

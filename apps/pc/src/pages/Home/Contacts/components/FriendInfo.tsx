@@ -1,15 +1,46 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
+import { calcAgeFromBirthday } from '@/utils/format';
+import {
+  CalendarOutlined,
+  EnvironmentOutlined,
+  GiftOutlined,
+  IdcardOutlined,
+  MailOutlined,
+  ManOutlined,
+  PhoneOutlined,
+  UserOutlined,
+  WomanOutlined,
+} from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import {
+  block_friend,
+  get_friend_info,
   get_user_info_with_cache,
-  refresh_user_info,
   getFiles,
+  refresh_user_info,
+  unblock_friend,
 } from '@workspace/services';
+import { openImagePreviewWindow } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
-import { Button, Collapse, message } from 'antd';
-import { useEffect, useState } from 'react';
+import { Button, Collapse, message, Spin } from 'antd';
+import React, { useEffect, useState } from 'react';
 import styles from './styles/FriendInfo.less';
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}
+
+const InfoRow = ({ icon, label, value }: InfoRowProps) => (
+  <div className={styles.infoItem}>
+    <span className={styles.iconChip}>{icon}</span>
+    <span className={styles.label}>{label}</span>
+    <span className={styles.value}>{value}</span>
+  </div>
+);
 
 const FriendInfo = (props: { uuid: string }) => {
   const { uuid } = props;
@@ -18,6 +49,9 @@ const FriendInfo = (props: { uuid: string }) => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [friendIcon, setFriendIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  /** 是否为自己的好友（非好友时只展示资料卡，不显示拉黑） */
+  const [isFriend, setIsFriend] = useState(false);
 
   const genderMap: { [key: number]: string } = {
     0: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }),
@@ -36,12 +70,20 @@ const FriendInfo = (props: { uuid: string }) => {
   const initUserData = async (uuid: string) => {
     setLoading(true);
     try {
+      // 判断是否为自己的好友：非好友（如群成员）只展示资料卡
+      try {
+        const friend = await get_friend_info(uuid);
+        setIsFriend(!!friend);
+      } catch {
+        setIsFriend(false);
+      }
+
       const result = await get_user_info_with_cache(uuid);
       console.log('get_user_info_with_cache result:', result);
-      
+
       const user = result.user_info;
       setUserInfo(user);
-      
+
       const friendVo: FriendVo = {
         timestamp: 0,
         friend_id: user.uuid,
@@ -56,19 +98,40 @@ const FriendInfo = (props: { uuid: string }) => {
         is_show: 1,
       };
       setCurrentFriend(friendVo);
-      
+
       const icon = await getUserIcon(user.icon || '');
       setFriendIcon(icon);
-      
+
       if (result.from_cache) {
         console.log('用户信息来自缓存，后台刷新中...');
         refreshUserInfo(uuid);
+      } else {
+        // HTTP 拿到的是最新资料, 顺手按 uuid 定向回写本地好友表, 防列表/会话显示旧信息
+        writebackFriendProfile(uuid, user);
       }
     } catch (err) {
       console.error('获取用户信息失败', err);
-      message.error(intl.formatMessage({ id: 'friendInfo.loadError' }) || '获取用户信息失败');
+      message.error(
+        intl.formatMessage({ id: 'friendInfo.loadError' }) ||
+          '获取用户信息失败',
+      );
     } finally {
       setLoading(false);
+    }
+  };
+
+  // HTTP 新资料到手后, 定向回写本地好友表(sqlite 单条), 失败静默
+  const writebackFriendProfile = async (friendUuid: string, u: UserInfo) => {
+    try {
+      await invoke('update_friend_profile_command', {
+        friendUuid,
+        account: u.account || '',
+        name: u.username || '',
+        icon: u.icon || '',
+        info: u.info || '',
+      });
+    } catch (e) {
+      console.log('回写好友资料到本地失败', e);
     }
   };
 
@@ -77,7 +140,7 @@ const FriendInfo = (props: { uuid: string }) => {
       const freshUser = await refresh_user_info(uuid);
       console.log('用户信息已刷新:', freshUser);
       setUserInfo(freshUser);
-      
+
       const friendVo: FriendVo = {
         timestamp: 0,
         friend_id: freshUser.uuid,
@@ -92,9 +155,11 @@ const FriendInfo = (props: { uuid: string }) => {
         is_show: 1,
       };
       setCurrentFriend(friendVo);
-      
+
       const icon = await getUserIcon(freshUser.icon || '');
       setFriendIcon(icon);
+
+      writebackFriendProfile(uuid, freshUser);
     } catch (err) {
       console.log('后台刷新用户信息失败', err);
     }
@@ -127,104 +192,136 @@ const FriendInfo = (props: { uuid: string }) => {
     return date.toLocaleDateString('zh-CN');
   };
 
-  const renderBtn = () => {
-    return (
-      <Button color="default" variant="solid" onClick={routeToChat}>
-        {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
-      </Button>
-    );
+  const handleToggleBlock = async () => {
+    try {
+      if (isBlocked) {
+        await unblock_friend(uuid);
+        message.success(
+          intl.formatMessage({ id: 'friendInfo.unblockedSuccess' }),
+        );
+        setIsBlocked(false);
+      } else {
+        await block_friend(uuid);
+        message.success(
+          intl.formatMessage({ id: 'friendInfo.blockedSuccess' }),
+        );
+        setIsBlocked(true);
+      }
+    } catch (error) {
+      message.error(
+        intl.formatMessage({
+          id: isBlocked
+            ? 'friendInfo.unblockedFailed'
+            : 'friendInfo.blockedFailed',
+        }),
+      );
+      console.error('拉黑操作失败:', error);
+    }
   };
+
+  const renderGenderIcon = () => {
+    if (userInfo?.gender === 2) return <ManOutlined />;
+    if (userInfo?.gender === 3) return <WomanOutlined />;
+    return <UserOutlined />;
+  };
+
+  if (loading && !userInfo) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.content}>
+          <div className={styles.loadingState}>
+            <Spin size="large" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const displayName = userInfo?.username || currentFriend?.friend_name || '-';
+  const displayAccount =
+    userInfo?.account || currentFriend?.friend_account || '-';
+  const friendAge = calcAgeFromBirthday(userInfo?.birthday);
 
   return (
     <div className={styles.container}>
       <div className={styles.content}>
+        <div className={styles.cover} />
+
         <div className={styles.header}>
-          <img
-            className={styles.icon}
-            src={friendIcon || DEFAULT_ICON}
-            alt="avatar"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = DEFAULT_ICON;
-            }}
-          />
+          <div className={styles.avatarWrap}>
+            <img
+              className={styles.icon}
+              src={friendIcon || DEFAULT_ICON}
+              alt="avatar"
+              onClick={() => {
+                if (friendIcon) openImagePreviewWindow([friendIcon], 0);
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = DEFAULT_ICON;
+              }}
+            />
+          </div>
           <div className={styles.name}>
-            {userInfo?.username || currentFriend?.friend_name}
+            {displayName}
+            <UserTypeTag type={userInfo?.user_type} />
           </div>
           {userInfo?.info && <div className={styles.bio}>{userInfo.info}</div>}
-        </div>
-
-        <div className={styles.infoSection}>
-          <div className={styles.infoItem}>
-            <span className={styles.label}>
-              {intl.formatMessage({ id: 'friendInfo.account' })}
-            </span>
-            <span className={styles.value}>
-              {userInfo?.account || currentFriend?.friend_account || '-'}
-            </span>
-          </div>
-
-          <div className={styles.infoItem}>
-            <span className={styles.label}>
-              {intl.formatMessage({ id: 'friendInfo.gender' })}
-            </span>
-            <span className={styles.value}>
+          <div className={styles.metaChips}>
+            <span className={styles.chip}>
+              {renderGenderIcon()}
               {userInfo?.gender !== undefined
                 ? genderMap[userInfo.gender]
                 : '-'}
             </span>
+            {friendAge ? (
+              <span className={styles.chip}>
+                <CalendarOutlined />
+                {friendAge}
+              </span>
+            ) : null}
           </div>
+        </div>
 
-          <div className={styles.infoItem}>
-            <span className={styles.label}>
-              {intl.formatMessage({ id: 'friendInfo.age' })}
-            </span>
-            <span className={styles.value}>{userInfo?.age || '-'}</span>
-          </div>
+        <div className={styles.infoSection}>
+          <InfoRow
+            icon={<IdcardOutlined />}
+            label={intl.formatMessage({ id: 'friendInfo.account' })}
+            value={displayAccount}
+          />
 
           <Collapse
             className={styles.collapse}
             ghost
+            expandIconPosition="end"
             items={[
               {
                 key: '1',
                 label: intl.formatMessage({ id: 'friendInfo.moreInfo' }),
                 children: (
                   <>
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.birthday' })}
-                      </span>
-                      <span className={styles.value}>
-                        {formatBirthday(userInfo?.birthday)}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<GiftOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.birthday' })}
+                      value={formatBirthday(userInfo?.birthday)}
+                    />
 
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.phone' })}
-                      </span>
-                      <span className={styles.value}>
-                        {userInfo?.phone || '-'}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<PhoneOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.phone' })}
+                      value={userInfo?.phone || '-'}
+                    />
 
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.email' })}
-                      </span>
-                      <span className={styles.value}>
-                        {userInfo?.email || '-'}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<MailOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.email' })}
+                      value={userInfo?.email || '-'}
+                    />
 
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>
-                        {intl.formatMessage({ id: 'friendInfo.address' })}
-                      </span>
-                      <span className={styles.value}>
-                        {userInfo?.address || '-'}
-                      </span>
-                    </div>
+                    <InfoRow
+                      icon={<EnvironmentOutlined />}
+                      label={intl.formatMessage({ id: 'friendInfo.address' })}
+                      value={userInfo?.address || '-'}
+                    />
                   </>
                 ),
               },
@@ -233,7 +330,27 @@ const FriendInfo = (props: { uuid: string }) => {
         </div>
 
         <div className={styles.footer}>
-          <div className={styles.button}>{renderBtn()}</div>
+          <Button
+            className={styles.primaryBtn}
+            color="primary"
+            variant="solid"
+            onClick={routeToChat}
+          >
+            {intl.formatMessage({ id: 'friendInfo.sendMessage' })}
+          </Button>
+          {isFriend && (
+            <Button
+              className={styles.blockBtn}
+              danger={!isBlocked}
+              color={isBlocked ? 'default' : 'danger'}
+              variant="solid"
+              onClick={handleToggleBlock}
+            >
+              {intl.formatMessage({
+                id: isBlocked ? 'friendInfo.unblock' : 'friendInfo.block',
+              })}
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ import type { WindowOptions } from '@tauri-apps/api/window';
 const openNewWindow = async (
   label: string,
   window: WebviewOptions | WindowOptions,
-  oldWindow: any,
+  oldWindow: { close: () => Promise<void> },
   title?: string,
 ) => {
   const newWindow = new WebviewWindow(label, {
@@ -19,7 +19,7 @@ const openNewWindow = async (
     console.log('New window created successfully!');
     if (oldWindow) {
       setTimeout(() => {
-        oldWindow.close().catch((err: any) => {
+        oldWindow.close().catch((err) => {
           console.error('Failed to close the current window:', err);
         });
       }, 500);

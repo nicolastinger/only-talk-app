@@ -1,61 +1,325 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick, watch } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  onUnmounted,
+  nextTick,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { showToast, showLoadingToast, closeToast } from "vant";
-import { readFile, writeFile } from "@tauri-apps/plugin-fs";
+import { showToast, showConfirmDialog } from "vant";
 import { useMessageApi } from "@/hooks/useMessageApi";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useMyAvatar } from "@/hooks/useMyAvatar";
+import { useCallManager } from "@/webrtc/callManager";
 import { getMyUuid } from "@/utils/api";
-import { formatMessageTime } from "@/utils/time";
+import { attachViewportHeight } from "@/utils/viewport";
+import { resolveContentToTempFile } from "@/utils/tempImage";
 import {
-  getChatFileByBizId,
-  selectFile,
   convertPathToTauriUrl,
+  getAllFileExtensions,
+  getImageExtensions,
+  getLocalFileSize,
+  listenChatFileUploadProgress,
+  selectFile,
+  shouldAutoDownloadImage,
 } from "@workspace/services";
 import { DEFAULT_AVATAR } from "@/stores/user";
-import { useUserStore } from "@/stores/user";
-import type { TextQuicMsgVo, ChatSessionVo } from "@workspace/types";
+import { UPLOAD_LIMITS } from "@workspace/types";
+import type { TextQuicMsgVo, ChatSessionVo, FriendVo } from "@workspace/types";
+import type { UiChatMessage } from "@/chat/types";
+import {
+  MSG_TYPE_FILE,
+  MSG_TYPE_IMAGE,
+  MSG_TYPE_RECALL_FAILURE,
+  MSG_TYPE_RECALL_SUCCESS,
+  RELOAD_ON_ACK_TYPES,
+} from "@/chat/messageTypes";
+import {
+  isRecallMessage,
+  isTransientMessageType,
+  needTimeDivider,
+  parsePrivateImageBizId,
+} from "@/chat/messageParse";
+import { loadImageUrl } from "@/chat/media";
+import { genNanoId } from "@/chat/id";
+import { useMessageSelection } from "@/chat/useMessageSelection";
+import MessageList from "@/components/chat/MessageList.vue";
+import MessageInputBar from "@/components/chat/MessageInputBar.vue";
+import type { InputTool } from "@/components/chat/MessageInputBar.vue";
+import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
+import PendingSendBar from "@/components/chat/PendingSendBar.vue";
+import MessageSelectionBar from "@/components/chat/MessageSelectionBar.vue";
+import ForwardPicker from "@/components/chat/ForwardPicker.vue";
+import { useI18n } from "@/i18n";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const friendId = route.params.friendId as string;
 
-interface ChatMessage {
-  from: "mine" | "friend" | "system";
-  textMsg: TextQuicMsgVo;
-  ack: boolean | undefined;
-  showTime: boolean;
-  imageUrl?: string | null;
-  sendingImage?: boolean;
-}
-
-const messages = ref<ChatMessage[]>([]);
+const messages = ref<UiChatMessage[]>([]);
 const inputText = ref("");
 const loading = ref(true);
 const loadingMore = ref(false);
 const currentPage = ref(1);
 const hasMore = ref(true);
 const pageSize = 20;
-const friendInfo = reactive({ name: "", icon: "" });
+const friendInfo = reactive({
+  name: "",
+  icon: "",
+  user_type: undefined as number | undefined,
+});
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
 const meUuid = ref("");
 
+let allowInfiniteScroll = false;
+
 const { textMessage } = useMessageApi(() => meUuid.value, friendId);
 const { getAvatarUrl } = useAvatar();
-const { userInfo } = useUserStore();
+const { myAvatar, ensureMyAvatar } = useMyAvatar(() => meUuid.value);
 
 const chatAvatar = ref<string | null>(null);
-const myAvatar = ref<string | null>(null);
+const isSelf = computed(() => !!meUuid.value && friendId === meUuid.value);
+/** 当前是否允许自动下载对方发来的图片（开关开启且处于非计量网络） */
+const allowImageAutoDownload = ref(false);
 
-const imageCache = new Map<string, string>();
+/** 顶部全局上传进度条：是否有正在上传的消息 */
+const globalUploading = computed(() =>
+  messages.value.some(
+    (m) => (m.sendingImage || m.sendingFile) && m.ack === false && !m.failed
+  )
+);
+const globalUploadPercent = computed(() => {
+  let max = 0;
+  for (const m of messages.value) {
+    if ((m.sendingImage || m.sendingFile) && m.ack === false && !m.failed) {
+      max = Math.max(max, m.uploadProgress ?? 0);
+    }
+  }
+  return max;
+});
+/** 读取/压缩阶段(无字节进度)时顶栏展示不确定动画 */
+const globalUploadIndeterminate = computed(() =>
+  messages.value.some(
+    (m) =>
+      (m.sendingImage || m.sendingFile) &&
+      m.ack === false &&
+      !m.failed &&
+      m.sendPhase !== "uploading"
+  )
+);
+
+const ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
+let viewportCleanup: (() => void) | null = null;
+let uploadUnlisten: (() => void) | null = null;
+
+/** 发送进度事件：按 nano_id 更新对应消息的阶段与上传进度 */
+const applyUploadProgress = (payload: {
+  nanoId: string;
+  phase: UiChatMessage["sendPhase"];
+  uploaded: number;
+  total: number;
+}) => {
+  const idx = messages.value.findIndex(
+    (m) => m.textMsg.nano_id === payload.nanoId
+  );
+  if (idx === -1) return;
+  messages.value[idx].sendPhase = payload.phase;
+  const percent =
+    payload.total > 0
+      ? Math.min(100, Math.floor((payload.uploaded / payload.total) * 100))
+      : 0;
+  messages.value[idx].uploadProgress = percent;
+};
+
+/** 待发送/发送失败面板的刷新信号（消息入队 / 收到 ACK 后自增触发重拉） */
+const pendingRefreshSignal = ref(0);
+const bumpPendingRefresh = () => void (pendingRefreshSignal.value += 1);
+
+/* ============ 多选 / 删除 / 转发 ============ */
+const {
+  selectMode,
+  selectedIds,
+  selectedMessages,
+  allSelected,
+  enterSelect,
+  exitSelect,
+  toggle,
+  toggleAll,
+  removeIds,
+} = useMessageSelection(messages);
+
+const showActionSheet = ref(false);
+const actionTarget = ref<UiChatMessage | null>(null);
+/** 长按操作项：自己的普通消息额外提供"撤回" */
+const actionActions = computed(() => {
+  const msg = actionTarget.value;
+  const actions: { key: string; name: string }[] = [
+    { key: "multiSelect", name: t("chat.actions.multiSelect") },
+    { key: "forward", name: t("chat.actions.forward") },
+  ];
+  if (
+    msg &&
+    msg.from === "mine" &&
+    !msg.failed &&
+    !isRecallMessage(msg.textMsg.text_type, msg.textMsg.raw)
+  ) {
+    actions.push({ key: "recall", name: t("chat.actions.recall") });
+  }
+  actions.push({ key: "delete", name: t("chat.actions.delete") });
+  return actions;
+});
+
+const onLongPress = (msg: UiChatMessage) => {
+  actionTarget.value = msg;
+  showActionSheet.value = true;
+};
+
+/** 撤回消息：确认后清除本机原消息并发送撤回控制消息 */
+const recallMessage = async (msg: UiChatMessage) => {
+  try {
+    await showConfirmDialog({
+      title: t("chat.recallTitle"),
+      message: t("chat.recallConfirm"),
+      confirmButtonText: t("common.confirm"),
+      cancelButtonText: t("common.cancel"),
+    });
+  } catch {
+    return;
+  }
+  let recalled: TextQuicMsgVo;
+  try {
+    recalled = (await invoke("recall_chat_message", {
+      recvUser: friendId,
+      targetNanoId: msg.textMsg.nano_id,
+    })) as TextQuicMsgVo;
+  } catch (e) {
+    console.error("撤回消息失败:", e);
+    showToast({ message: t("chat.recallFailed"), icon: "fail" });
+    return;
+  }
+  // 本地移除原消息并乐观上屏撤回提示（ACK 按本地 nano_id 归一）
+  messages.value = messages.value.filter(
+    (m) => m.textMsg.nano_id !== msg.textMsg.nano_id
+  );
+  const prevTs = messages.value.length
+    ? messages.value[messages.value.length - 1].textMsg.timestamp
+    : 0;
+  messages.value.push({
+    from: "mine",
+    textMsg: recalled,
+    ack: false,
+    failed: false,
+    showTime: needTimeDivider(prevTs, recalled.timestamp),
+    senderUuid: meUuid.value,
+  });
+  nextTick(() => scrollToBottom(true));
+};
+
+const deleteSelected = async () => {
+  const ids = [...selectedIds.value];
+  if (ids.length === 0) return;
+  try {
+    await showConfirmDialog({
+      title: t("chat.deleteTitle"),
+      message: t("chat.deleteConfirm", { count: ids.length }),
+      confirmButtonText: t("common.confirm"),
+      cancelButtonText: t("common.cancel"),
+    });
+  } catch {
+    return;
+  }
+  try {
+    await invoke("delete_chat_record", { nanoIdList: ids });
+  } catch (e) {
+    console.error("删除消息失败:", e);
+    showToast({ message: t("chat.deleteFailed"), icon: "fail" });
+    return;
+  }
+  messages.value = messages.value.filter(
+    (m) => !ids.includes(m.textMsg.nano_id)
+  );
+  removeIds(ids);
+  exitSelect();
+};
+
+const showForward = ref(false);
+const openForward = () => {
+  if (selectedMessages.value.length === 0) return;
+  showForward.value = true;
+};
+
+const onActionSelect = (action: { key?: string; name: string }) => {
+  const msg = actionTarget.value;
+  showActionSheet.value = false;
+  if (!msg) return;
+  if (action.key === "multiSelect") {
+    enterSelect(msg);
+  } else if (action.key === "forward") {
+    enterSelect(msg);
+    openForward();
+  } else if (action.key === "recall") {
+    recallMessage(msg);
+  } else if (action.key === "delete") {
+    enterSelect(msg);
+    deleteSelected();
+  }
+};
+
+const onForwardConfirm = async (payload: {
+  recv: string;
+  isGroup: boolean;
+  name: string;
+}) => {
+  const list = selectedMessages.value.map((m) => m.textMsg);
+  if (list.length === 0) return;
+  try {
+    await invoke("forward_chat_messages", {
+      messages: list,
+      targetRecv: payload.recv,
+      targetGroup: payload.isGroup,
+    });
+    showToast({
+      message: t("chat.forwardSuccess", { name: payload.name }),
+      icon: "success",
+    });
+    if (!payload.isGroup && payload.recv === friendId) reloadFirstPage();
+    exitSelect();
+  } catch (e) {
+    console.error("转发消息失败:", e);
+    showToast({ message: t("chat.forwardFailed"), icon: "fail" });
+  }
+};
+
+const isImageType = (t: number) => t === MSG_TYPE_IMAGE;
+
+const startAckTimer = (nanoId: string) => {
+  clearAckTimer(nanoId);
+  const timer = setTimeout(() => {
+    const idx = messages.value.findIndex((m) => m.textMsg.nano_id === nanoId);
+    if (idx !== -1 && messages.value[idx].ack === false) {
+      messages.value[idx].failed = true;
+    }
+    ackTimers.delete(nanoId);
+  }, 10000);
+  ackTimers.set(nanoId, timer);
+};
+
+const clearAckTimer = (nanoId: string) => {
+  const timer = ackTimers.get(nanoId);
+  if (timer) {
+    clearTimeout(timer);
+    ackTimers.delete(nanoId);
+  }
+};
 
 const loadAvatars = async () => {
-  if (userInfo.value?.icon) {
-    const url = await getAvatarUrl(userInfo.value.icon);
-    if (url) myAvatar.value = url;
-  }
+  await ensureMyAvatar();
   if (friendInfo.icon) {
     const url = await getAvatarUrl(friendInfo.icon);
     if (url) chatAvatar.value = url;
@@ -64,48 +328,71 @@ const loadAvatars = async () => {
 
 const loadFriendInfo = async () => {
   try {
-    const sessions: ChatSessionVo[] = await invoke(
+    const data = (await invoke("get_friend_info", {
+      friendUuid: friendId,
+    })) as FriendVo;
+    friendInfo.name = data.friend_name || "";
+    friendInfo.icon = data.friend_icon || "";
+    friendInfo.user_type = data.friend_user_type ?? undefined;
+    return;
+  } catch {
+    // fallthrough to local session
+  }
+  try {
+    const sessions = (await invoke(
       "get_chat_session_from_store"
-    );
+    )) as ChatSessionVo[];
     const session = sessions.find(
       (s) => s.send_user === friendId || s.recv_user === friendId
     );
     if (session) {
-      friendInfo.name = session.friend_name || friendId;
+      friendInfo.name = session.friend_name || "";
       friendInfo.icon = session.friend_icon || "";
-    } else {
-      friendInfo.name = friendId;
+      friendInfo.user_type = session.friend_user_type ?? undefined;
     }
   } catch {
-    friendInfo.name = friendId;
+    // ignore
   }
 };
 
-const loadImageMessage = async (msg: TextQuicMsgVo): Promise<string | null> => {
-  try {
-    const parsed = JSON.parse(msg.raw);
-    const bizId = parsed.biz_id;
-    if (!bizId) return null;
-    if (imageCache.has(bizId)) return imageCache.get(bizId)!;
-    const files = await getChatFileByBizId(bizId, msg.nano_id);
-    if (files && files.length > 0) {
-      const url = files[0].tauri_file_path;
-      if (url) {
-        imageCache.set(bizId, url);
-        return url;
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
+/** 解析图片 bizId，并按需自动下载（发送方本地图片恒解析；对方图片受网络/开关控制） */
+const resolveImageUrl = async (
+  msg: TextQuicMsgVo,
+  isMine: boolean
+): Promise<string | null> => {
+  const bizId = parsePrivateImageBizId(msg.raw);
+  if (!bizId) return null;
+  if (!isMine && !allowImageAutoDownload.value) return null;
+  return loadImageUrl(bizId, msg.nano_id);
 };
 
-const loadMessages = async (page: number = 1, prepend: boolean = false) => {
+const imageBizIdOf = (msg: TextQuicMsgVo): string | undefined =>
+  parsePrivateImageBizId(msg.raw) || undefined;
+
+const makeUiMessage = (
+  msg: TextQuicMsgVo,
+  index: number,
+  arr: TextQuicMsgVo[]
+): UiChatMessage => {
+  const mine = msg.send_user === meUuid.value;
+  const system = msg.send_user === "system";
+  return {
+    from: mine ? "mine" : system ? "system" : "friend",
+    textMsg: msg,
+    ack: undefined,
+    failed: false,
+    showTime:
+      index === 0 || needTimeDivider(arr[index - 1].timestamp, msg.timestamp),
+    senderUuid: msg.send_user,
+  };
+};
+
+const loadMessages = async (page = 1, prepend = false) => {
   if (page === 1) loading.value = true;
   else loadingMore.value = true;
+  if (!prepend && page === 1) allowInfiniteScroll = false;
   try {
-    const textQuicMsg = {
+    const textQuicMsg: TextQuicMsgVo = {
       nano_id: "",
       raw: "",
       recv_user: meUuid.value,
@@ -113,207 +400,402 @@ const loadMessages = async (page: number = 1, prepend: boolean = false) => {
       text_type: 0,
       timestamp: 0,
     };
-    const data: TextQuicMsgVo[] = await invoke("get_chat_record_from_store", {
+    const data = (await invoke("get_chat_record_from_store", {
       textQuicMsg,
       page: { size: pageSize, current: page, total: 0 },
-    });
+    })) as TextQuicMsgVo[];
     if (data.length < pageSize) hasMore.value = false;
 
-    const chatMessages: ChatMessage[] = await Promise.all(
-      data
-        .filter((m) => m.text_type !== 201)
-        .map(async (item, index, arr) => {
-          const msg: ChatMessage = {
-            from: (item.send_user === meUuid.value
-              ? "mine"
-              : item.send_user === "system"
-              ? "system"
-              : "friend") as ChatMessage["from"],
-            textMsg: item,
-            ack: undefined,
-            showTime:
-              index === 0 ||
-              item.timestamp - arr[index - 1].timestamp > 10 * 60 * 1000,
-          };
-          if (item.text_type === 2) {
-            msg.imageUrl = await loadImageMessage(item);
-          }
-          return msg;
-        })
+    const list = data.filter(
+      (m) =>
+        m.text_type !== MSG_TYPE_RECALL_SUCCESS &&
+        m.text_type !== MSG_TYPE_RECALL_FAILURE &&
+        !isTransientMessageType(m.text_type)
+    );
+    const chatMessages: UiChatMessage[] = await Promise.all(
+      list.map(async (item, index, arr) => {
+        const msg = makeUiMessage(item, index, arr);
+        if (isImageType(item.text_type)) {
+          msg.imageBizId = imageBizIdOf(item);
+          msg.imageUrl = await resolveImageUrl(item, msg.from === "mine");
+        }
+        return msg;
+      })
     );
 
-    if (prepend) messages.value = [...chatMessages, ...messages.value];
-    else {
+    if (prepend) {
+      // 对齐 PC：向上加载历史时保持当前滚动位置，避免视口跳动
+      const prevScrollHeight = containerRef.value?.scrollHeight || 0;
+      messages.value = [...chatMessages, ...messages.value];
+      await nextTick();
+      const el = containerRef.value;
+      if (el) {
+        const newScrollHeight = el.scrollHeight;
+        el.scrollTop = newScrollHeight - prevScrollHeight;
+      }
+    } else {
       messages.value = chatMessages;
       currentPage.value = 1;
       await nextTick();
-      scrollToBottom(false);
     }
   } catch (e) {
     console.error("加载消息失败:", e);
   } finally {
     loading.value = false;
     loadingMore.value = false;
+    if (!prepend) {
+      // 容器在 loading=false 后才挂载，需在渲染完成后滚动到最新消息
+      await nextTick();
+      scrollToBottom(false);
+      setTimeout(() => scrollToBottom(false), 120);
+      setTimeout(() => {
+        allowInfiniteScroll = true;
+      }, 200);
+    }
   }
+};
+
+const reloadFirstPage = () => {
+  hasMore.value = true;
+  loadMessages(1, false).catch(() => {});
 };
 
 const onScroll = () => {
   const el = containerRef.value;
-  if (!el || loadingMore.value || !hasMore.value) return;
+  if (
+    !el ||
+    !allowInfiniteScroll ||
+    loading.value ||
+    loadingMore.value ||
+    !hasMore.value
+  )
+    return;
   if (el.scrollTop <= 80) {
     const nextPage = currentPage.value + 1;
     currentPage.value = nextPage;
-    loadMessages(nextPage, true);
+    loadMessages(nextPage, true).catch(() => {});
   }
 };
 
-const sendMessage = async () => {
+const scrollToBottom = (smooth: boolean) => {
+  const el = containerRef.value;
+  if (!el) return;
+  el.scrollTo({
+    top: el.scrollHeight,
+    behavior: smooth ? "smooth" : ("instant" as ScrollBehavior),
+  });
+};
+
+const pushMessage = async (msg: TextQuicMsgVo) => {
+  if (messages.value.find((m) => m.textMsg.nano_id === msg.nano_id)) return;
+  const prev = messages.value[messages.value.length - 1];
+  const mine = msg.send_user === meUuid.value;
+  const system = msg.send_user === "system";
+  const ui: UiChatMessage = {
+    from: mine ? "mine" : system ? "system" : "friend",
+    textMsg: msg,
+    ack: undefined,
+    failed: false,
+    showTime: !prev || needTimeDivider(prev.textMsg.timestamp, msg.timestamp),
+    senderUuid: msg.send_user,
+  };
+  if (isImageType(msg.text_type)) {
+    ui.imageBizId = imageBizIdOf(msg);
+    ui.imageUrl = await resolveImageUrl(msg, ui.from === "mine");
+  }
+  messages.value.push(ui);
+};
+
+/* ============ 发送 ============ */
+
+const sendText = async () => {
   const text = inputText.value.trim();
   if (!text) return;
-  const nanoId = [...Array(21)]
-    .map(
-      () =>
-        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-"[
-          Math.floor(Math.random() * 64)
-        ]
-    )
-    .join("");
   const textMsg: TextQuicMsgVo = {
-    nano_id: nanoId,
+    nano_id: genNanoId(),
     text_type: 1,
     raw: JSON.stringify({ text, prev_id: "", platform: 0 }),
     recv_user: friendId,
     send_user: "",
     timestamp: Date.now(),
   };
-  const tempMsg: ChatMessage = {
+  const ui: UiChatMessage = {
     from: "mine",
     textMsg,
     ack: false,
+    failed: false,
     showTime:
       messages.value.length === 0 ||
-      Date.now() - messages.value[messages.value.length - 1].textMsg.timestamp >
-        10 * 60 * 1000,
+      needTimeDivider(
+        messages.value[messages.value.length - 1].textMsg.timestamp,
+        Date.now()
+      ),
+    senderUuid: meUuid.value,
   };
-  messages.value.push(tempMsg);
+  messages.value.push(ui);
   inputText.value = "";
   await nextTick();
   scrollToBottom(true);
+  startAckTimer(textMsg.nano_id);
   try {
     await invoke("send_text_msg", { textQuicMsg: textMsg });
   } catch (e) {
-    tempMsg.ack = undefined;
-    showToast({ message: "发送失败", icon: "fail" });
+    console.error("发送失败:", e);
+    const idx = messages.value.findIndex(
+      (m) => m.textMsg.nano_id === textMsg.nano_id
+    );
+    if (idx !== -1) messages.value[idx].failed = true;
+    showToast({ message: t("chat.sendFailed"), icon: "fail" });
+  } finally {
+    bumpPendingRefresh();
   }
 };
 
-const sendImage = async () => {
+const selectAndSend = async (
+  media: "image" | "file",
+  type: number,
+  command: string
+) => {
   try {
-    const filePaths = await selectFile(false, false, [
-      { name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] },
-    ]);
+    const filters = [
+      {
+        name: media === "image" ? "Images" : "Files",
+        extensions:
+          media === "image"
+            ? await getImageExtensions()
+            : await getAllFileExtensions(),
+      },
+    ];
+    const filePaths = await selectFile(false, false, filters);
     if (!filePaths || filePaths.length === 0) return;
 
     let filePath = filePaths[0];
-    
-    // 处理 Android content:// URI
-    if (filePath.startsWith("content://")) {
-      try {
-        const fileData = await readFile(filePath);
-        const timestamp = Date.now();
-        const tempPath = `umi_gitee_temp/image_${timestamp}.jpg`;
-        
-        await writeFile(tempPath, fileData);
-        filePath = tempPath;
-        console.log("Content URI resolved to:", filePath);
-      } catch (e) {
-        showToast({ message: "读取图片失败", icon: "fail" });
-        return;
-      }
-    }
 
-    const nanoId = [...Array(21)]
-      .map(
-        () =>
-          "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-"[
-            Math.floor(Math.random() * 64)
-          ]
-      )
-      .join("");
+    // 先上屏：选择后立即展示气泡与进度(读取/压缩/上传阶段均有反馈)
     const textMsg: TextQuicMsgVo = {
-      nano_id: nanoId,
-      text_type: 2,
+      nano_id: genNanoId(),
+      text_type: type,
       raw: filePath,
       recv_user: friendId,
       send_user: "",
       timestamp: Date.now(),
     };
-    const previewUrl = convertPathToTauriUrl(filePath);
-    const tempMsg: ChatMessage = {
+    const ui: UiChatMessage = {
       from: "mine",
       textMsg,
       ack: false,
+      failed: false,
       showTime:
         messages.value.length === 0 ||
-        Date.now() -
-          messages.value[messages.value.length - 1].textMsg.timestamp >
-          10 * 60 * 1000,
-      imageUrl: previewUrl,
-      sendingImage: true,
+        needTimeDivider(
+          messages.value[messages.value.length - 1].textMsg.timestamp,
+          Date.now()
+        ),
+      senderUuid: meUuid.value,
+      uploadProgress: 0,
+      sendPhase: "reading",
     };
-    messages.value.push(tempMsg);
+    if (media === "image") {
+      ui.sendingImage = true;
+      if (!filePath.startsWith("content://")) {
+        ui.imageUrl = convertPathToTauriUrl(filePath);
+      }
+    } else {
+      ui.sendingFile = true;
+    }
+    messages.value.push(ui);
     await nextTick();
     scrollToBottom(true);
+    startAckTimer(textMsg.nano_id);
 
-    showLoadingToast({
-      message: "发送图片中...",
-      forbidClick: true,
-      duration: 0,
-    });
+    const patch = (p: Partial<UiChatMessage>) => {
+      const i = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
+      if (i !== -1) Object.assign(messages.value[i], p);
+    };
+
+    // 读取 content:// → 临时文件(此阶段气泡/顶栏展示 reading 动画)
+    if (filePath.startsWith("content://")) {
+      try {
+        const { tempPath, preview } = await resolveContentToTempFile(filePath);
+        filePath = tempPath;
+        textMsg.raw = tempPath;
+        if (media === "image" && preview) patch({ imageUrl: preview });
+      } catch (e) {
+        console.error("读取文件失败:", e);
+        patch({
+          failed: true,
+          sendingImage: false,
+          sendingFile: false,
+          sendPhase: undefined,
+          uploadProgress: undefined,
+        });
+        showToast({ message: t("chat.readFileFailed"), icon: "fail" });
+        return;
+      }
+    }
+
+    // 大小预校验：超限移除气泡并提示
+    const limit = media === "image" ? UPLOAD_LIMITS.image : UPLOAD_LIMITS.file;
+    const size = await getLocalFileSize(filePath);
+    if (size > limit) {
+      const i = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
+      if (i !== -1) messages.value.splice(i, 1);
+      showToast({
+        message: t(
+          media === "image" ? "chat.imageTooLarge" : "chat.fileTooLarge",
+          { limit: Math.floor(limit / (1024 * 1024)) }
+        ),
+        icon: "fail",
+      });
+      return;
+    }
+
     try {
-      await invoke("send_image_msg", { textQuicMsg: textMsg });
-    } catch {
-      tempMsg.ack = undefined;
-      tempMsg.sendingImage = false;
-      showToast({ message: "图片发送失败", icon: "fail" });
+      await invoke(command, { textQuicMsg: textMsg });
+    } catch (e) {
+      console.error("发送媒体失败:", e);
+      patch({
+        failed: true,
+        sendingImage: false,
+        sendingFile: false,
+        sendPhase: undefined,
+        uploadProgress: undefined,
+      });
+      const errText = typeof e === "string" ? e : (e as Error)?.message;
+      showToast({
+        message:
+          errText ||
+          (media === "image"
+            ? t("chat.sendImageFailed")
+            : t("chat.sendFileFailed")),
+        icon: "fail",
+      });
     } finally {
-      closeToast();
+      bumpPendingRefresh();
     }
   } catch (e) {
-    console.error("选择图片失败:", e);
+    console.error("选择文件失败:", e);
   }
 };
 
+const sendImage = () =>
+  selectAndSend("image", MSG_TYPE_IMAGE, "send_image_msg");
+const sendFile = () => selectAndSend("file", 3, "send_file_msg");
+
+/** 失败消息重发：优先走 Rust 补发，若不存在发送记录则直接重发 */
+const handleRetry = async (msg: UiChatMessage) => {
+  const idx = messages.value.findIndex(
+    (m) => m.textMsg.nano_id === msg.textMsg.nano_id
+  );
+  const update = (failed: boolean, ack?: boolean | undefined) => {
+    if (idx !== -1) {
+      messages.value[idx].failed = failed;
+      if (ack !== undefined) messages.value[idx].ack = ack;
+    }
+  };
+  update(false, false);
+  if (msg.textMsg.text_type === MSG_TYPE_FILE && idx !== -1) {
+    messages.value[idx].sendingFile = true;
+  }
+  startAckTimer(msg.textMsg.nano_id);
+  try {
+    await invoke("retry_send_msg", { sendId: msg.textMsg.nano_id });
+    bumpPendingRefresh();
+    return;
+  } catch {
+    // 本地无发送记录 → 直接重发
+  }
+  const commandMap: Record<number, string> = {
+    1: "send_text_msg",
+    2: "send_image_msg",
+    3: "send_file_msg",
+  };
+  const command = commandMap[msg.textMsg.text_type];
+  try {
+    if (command) await invoke(command, { textQuicMsg: msg.textMsg });
+    else throw new Error("不支持的类型");
+  } catch (e) {
+    console.error("重发失败:", e);
+    update(true, undefined);
+    showToast({ message: t("chat.resendFailed"), icon: "fail" });
+  } finally {
+    bumpPendingRefresh();
+  }
+};
+
+/* ============ 实时消息 ============ */
+
 watch(textMessage, async (msg) => {
   if (!msg) return;
-  if (msg.text_type === 201) {
+  if (msg.text_type === MSG_TYPE_RECALL_SUCCESS) {
+    bumpPendingRefresh();
     const idx = messages.value.findIndex((m) => m.textMsg.nano_id === msg.raw);
-    if (idx !== -1) messages.value[idx].ack = true;
-  } else {
-    if (messages.value.find((m) => m.textMsg.nano_id === msg.nano_id)) return;
-    const from = (
-      msg.send_user === meUuid.value
-        ? "mine"
-        : msg.send_user === "system"
-        ? "system"
-        : "friend"
-    ) as ChatMessage["from"];
-    const prev = messages.value[messages.value.length - 1];
-    const newMsg: ChatMessage = {
-      from,
-      textMsg: msg,
-      ack: undefined,
-      showTime:
-        !prev || msg.timestamp - prev.textMsg.timestamp > 10 * 60 * 1000,
-    };
-    if (msg.text_type === 2) {
-      newMsg.imageUrl = await loadImageMessage(msg);
+    if (idx !== -1) {
+      clearAckTimer(msg.raw);
+      messages.value[idx].ack = true;
+      messages.value[idx].failed = false;
+      // 服务端返回的 nano_id 归一，避免后续撤回/删除/已读用本地 id 查不到
+      if (msg.nano_id) messages.value[idx].textMsg.nano_id = msg.nano_id;
+      if (RELOAD_ON_ACK_TYPES.includes(messages.value[idx].textMsg.text_type)) {
+        reloadFirstPage();
+      }
+    } else {
+      // 重发/补发的消息此前从未渲染，直接刷新
+      reloadFirstPage();
     }
-    messages.value.push(newMsg);
-    nextTick(() => scrollToBottom(true));
+    return;
   }
+  if (msg.text_type === MSG_TYPE_RECALL_FAILURE) {
+    bumpPendingRefresh();
+    const idx = messages.value.findIndex((m) => m.textMsg.nano_id === msg.raw);
+    if (idx !== -1) messages.value[idx].failed = true;
+    return;
+  }
+  // 自己其他端发送的消息(self-echo)：send_user=我, recv_user=好友。
+  // 与移动端自己发送后 ACK 刷新的路径一致——直接重拉本地 sqlite
+  // (双向查询已包含 self-echo 消息)，避免依赖实时 push 的时序问题。
+  if (msg.send_user === meUuid.value && msg.recv_user === friendId) {
+    reloadFirstPage();
+    nextTick(() => scrollToBottom(true));
+    return;
+  }
+  // 对端撤回消息：被撤回的原消息已在本地库删除，重拉聊天记录以移除原消息并显示撤回提示
+  if (isRecallMessage(msg.text_type, msg.raw)) {
+    reloadFirstPage();
+    nextTick(() => scrollToBottom(true));
+    invoke("mark_read_chat_session", { friendUuid: friendId }).catch(() => {});
+    return;
+  }
+  // 瞬态消息(12-15/100)走独立事件 call_control/webrtc_signal，不应经 text_message 进入列表
+  if (isTransientMessageType(msg.text_type)) return;
+  await pushMessage(msg);
+  nextTick(() => scrollToBottom(true));
   invoke("mark_read_chat_session", { friendUuid: friendId }).catch(() => {});
 });
+
+// 对齐 PC：列表末尾消息变化且无 ack 时打已读标记
+watch(
+  messages,
+  (list) => {
+    if (list.length > 1) {
+      const last = list[list.length - 1];
+      if (last.textMsg.nano_id && last.ack === undefined) {
+        invoke("mark_read", { textQuicMsgVec: [last.textMsg.nano_id] }).catch(
+          () => {}
+        );
+      }
+    }
+  },
+  { deep: false }
+);
+
+const markReadSession = () => {
+  invoke("mark_read_chat_session", { friendUuid: friendId }).catch(() => {});
+};
 
 onMounted(async () => {
   meUuid.value = await getMyUuid();
@@ -323,52 +805,81 @@ onMounted(async () => {
   }
   await loadFriendInfo();
   await loadAvatars();
+  allowImageAutoDownload.value = await shouldAutoDownloadImage();
   await loadMessages(1);
-  invoke("mark_read_chat_session", { friendUuid: friendId }).catch(() => {});
+  markReadSession();
+  invoke("add_user_map", {
+    map: { current_session_friend: friendId },
+  }).catch(() => {});
 
-  if (window.visualViewport) {
-    const vv = window.visualViewport;
-    const handleViewportChange = () => {
-      if (chatPageRef.value) {
-        chatPageRef.value.style.height = `${vv.height}px`;
-      }
-    };
-    vv.addEventListener("resize", handleViewportChange);
-  }
+  viewportCleanup = attachViewportHeight(() => chatPageRef.value);
+  listenChatFileUploadProgress(applyUploadProgress)
+    .then((fn) => {
+      uploadUnlisten = fn;
+    })
+    .catch(() => {});
 });
 
-const scrollToBottom = (smooth: boolean) => {
-  const el = containerRef.value;
-  if (!el) return;
-  el.scrollTo({
-    top: el.scrollHeight,
-    behavior: smooth ? "smooth" : ("instant" as any),
-  });
-};
+onUnmounted(() => {
+  ackTimers.forEach((t) => clearTimeout(t));
+  ackTimers.clear();
+  viewportCleanup?.();
+  uploadUnlisten?.();
+  uploadUnlisten = null;
+  invoke("add_user_map", {
+    map: { current_session_friend: "-1" },
+  }).catch(() => {});
+});
 
-const getMessageText = (msg: TextQuicMsgVo): string => {
-  switch (msg.text_type) {
-    case 1:
-      try {
-        return JSON.parse(msg.raw).text || "";
-      } catch {
-        return msg.raw || "";
-      }
-    case 3:
-      return "[文件]";
-    case 4:
-      return "[隐私模式]";
-    case 5:
-      return "[视频通话]";
-    case 100:
-      return "[WebRTC信令]";
-    default:
-      return msg.raw || "";
+const goBack = () => router.back();
+
+/* ============ 图片预览 ============ */
+const preview = ref<{ urls: string[]; index: number } | null>(null);
+
+const handlePreview = async (msg: UiChatMessage) => {
+  if (preview.value) return;
+  const bizId = parsePrivateImageBizId(msg.textMsg.raw);
+  if (!bizId) return;
+  try {
+    const { getFriendImageMessages } = await import("@workspace/services");
+    const result = await getFriendImageMessages(
+      meUuid.value,
+      friendId,
+      bizId,
+      msg.textMsg.nano_id
+    );
+    if (result.imageUrls.length > 0) {
+      preview.value = { urls: result.imageUrls, index: result.currentIndex };
+    }
+  } catch (e) {
+    console.error("获取图片列表失败:", e);
   }
 };
 
-const getFriendAvatar = () => chatAvatar.value || DEFAULT_AVATAR;
-const goBack = () => router.back();
+/* ============ 通话 ============ */
+const { startCall } = useCallManager();
+const handleStartCall = async (media: "audio" | "video") => {
+  await startCall(friendId, media);
+};
+
+const friendTools: InputTool[] = ["emoji", "image", "file", "audio", "video"];
+const selfTools: InputTool[] = ["emoji", "image"];
+
+/** 点击消息头像：自己→我的资料，对方→好友资料卡 */
+const handleAvatarClick = ({
+  uuid,
+  isMine,
+}: {
+  uuid: string;
+  isMine: boolean;
+}) => {
+  if (!uuid) return;
+  if (isMine || uuid === meUuid.value) {
+    router.push("/profile");
+  } else {
+    router.push(`/friends/detail/${uuid}`);
+  }
+};
 </script>
 
 <template>
@@ -382,131 +893,126 @@ const goBack = () => router.back();
         </svg>
       </button>
       <img
-        :src="getFriendAvatar()"
+        :src="chatAvatar || DEFAULT_AVATAR"
         class="header-avatar"
+        :alt="t('chat.avatar')"
         @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
       />
       <div class="header-info">
-        <span class="header-name">{{ friendInfo.name || friendId }}</span>
+        <span class="header-name">{{
+          isSelf ? t("chats.selfChatName") : friendInfo.name || friendId
+        }}</span>
+        <UserTypeTag v-if="!isSelf" :type="friendInfo.user_type" />
       </div>
+      <div class="header-actions">
+        <button
+          v-if="!isSelf"
+          class="header-more"
+          :aria-label="t('chat.friendSettings')"
+          @click="router.push(`/friends/detail/${friendId}`)"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div v-if="globalUploading" class="global-upload-bar">
+      <div
+        v-if="globalUploadIndeterminate"
+        class="global-upload-indeterminate"
+      ></div>
+      <div
+        v-else
+        class="global-upload-progress"
+        :style="{ width: globalUploadPercent + '%' }"
+      ></div>
     </div>
 
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>加载中...</p>
+      <p>{{ t("common.loadingDots") }}</p>
     </div>
 
     <div v-else ref="containerRef" class="message-container" @scroll="onScroll">
       <div v-if="loadingMore" class="loading-more">
         <div class="loading-spinner small"></div>
       </div>
-      <div class="message-list">
-        <template v-for="msg in messages" :key="msg.textMsg.nano_id">
-          <div v-if="msg.showTime" class="time-divider">
-            <span>{{ formatMessageTime(msg.textMsg.timestamp) }}</span>
-          </div>
-          <div v-if="msg.from === 'system'" class="system-msg">
-            {{ getMessageText(msg.textMsg) }}
-          </div>
-
-          <!-- Friend message: avatar on left -->
-          <div v-else-if="msg.from === 'friend'" class="msg-row msg-friend">
-            <img
-              :src="getFriendAvatar()"
-              class="msg-avatar"
-              @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
-            />
-            <div class="msg-content">
-              <template v-if="msg.textMsg.text_type === 2 && msg.imageUrl">
-                <img :src="msg.imageUrl" class="msg-image" alt="图片消息" />
-              </template>
-              <template v-else>
-                <div class="bubble bubble-friend">
-                  {{ getMessageText(msg.textMsg) }}
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- My message: avatar on right, sent badge inside bubble -->
-          <div v-else class="msg-row msg-mine">
-            <img
-              :src="myAvatar || DEFAULT_AVATAR"
-              class="msg-avatar"
-              @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
-            />
-            <div class="msg-content">
-              <template
-                v-if="
-                  msg.textMsg.text_type === 2 &&
-                  (msg.imageUrl || msg.sendingImage)
-                "
-              >
-                <div class="msg-image-wrapper">
-                  <img
-                    v-if="msg.imageUrl"
-                    :src="msg.imageUrl"
-                    class="msg-image"
-                    alt="图片消息"
-                  />
-                  <div v-else class="msg-image-placeholder">发送中...</div>
-                </div>
-              </template>
-              <template v-else>
-                <div
-                  class="bubble bubble-mine"
-                  :class="{ 'has-ack': msg.ack === true }"
-                >
-                  {{ getMessageText(msg.textMsg) }}
-                  <span v-if="msg.ack === true" class="sent-badge">
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path
-                        d="M1 4L3.5 6.5L9 1"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </div>
-              </template>
-              <span
-                v-if="msg.ack === false && !msg.sendingImage"
-                class="ack-label ack-pending"
-                >发送中</span
-              >
-            </div>
-          </div>
-        </template>
+      <div v-if="!hasMore && messages.length > 0" class="no-more">
+        {{ t("chat.noMoreMessages") }}
       </div>
+      <MessageList
+        mode="single"
+        :messages="messages"
+        :my-avatar="myAvatar || DEFAULT_AVATAR"
+        :peer-avatar="chatAvatar || DEFAULT_AVATAR"
+        :peer-name="
+          isSelf ? t('chats.selfChatName') : friendInfo.name || friendId
+        "
+        :fallback-avatar="DEFAULT_AVATAR"
+        :my-uuid="meUuid"
+        :select-mode="selectMode"
+        :selected-ids="selectedIds"
+        :auto-download="allowImageAutoDownload"
+        @preview="handlePreview"
+        @retry="handleRetry"
+        @avatar-click="handleAvatarClick"
+        @long-press="onLongPress"
+        @toggle-select="toggle"
+      />
     </div>
 
-    <div class="input-bar" v-if="!loading">
-      <button class="img-btn" @click="sendImage">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
-          />
-        </svg>
-      </button>
-      <input
-        ref="inputRef"
-        v-model="inputText"
-        class="text-input"
-        placeholder="输入消息..."
-        @keyup.enter="sendMessage"
+    <template v-if="selectMode">
+      <MessageSelectionBar
+        :count="selectedIds.length"
+        :all-selected="allSelected"
+        @cancel="exitSelect"
+        @toggle-all="toggleAll"
+        @forward="openForward"
+        @delete="deleteSelected"
       />
-      <button
-        class="send-btn"
-        :disabled="!inputText.trim()"
-        @click="sendMessage"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-        </svg>
-      </button>
-    </div>
+    </template>
+    <template v-else>
+      <PendingSendBar
+        v-if="!loading"
+        :friend-uuid="friendId"
+        :refresh-signal="pendingRefreshSignal"
+      />
+
+      <MessageInputBar
+        v-if="!loading"
+        v-model="inputText"
+        :tools="isSelf ? selfTools : friendTools"
+        :placeholder="t('chat.inputPlaceholder')"
+        @send="sendText"
+        @pick-image="sendImage"
+        @pick-file="sendFile"
+        @call="handleStartCall"
+      />
+    </template>
+
+    <van-action-sheet
+      v-model:show="showActionSheet"
+      :actions="actionActions"
+      :cancel-text="t('common.cancel')"
+      @select="onActionSelect"
+    />
+
+    <ForwardPicker
+      v-model:show="showForward"
+      :count="selectedIds.length"
+      @confirm="onForwardConfirm"
+    />
+
+    <ImagePreviewer
+      v-if="preview"
+      :urls="preview.urls"
+      :initial-index="preview.index"
+      @close="preview = null"
+    />
   </div>
 </template>
 
@@ -562,10 +1068,40 @@ const goBack = () => router.back();
   flex: 1;
   min-width: 0;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.header-more {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+  &:active {
+    background: var(--surface-hover);
+    color: var(--brand-blue);
+  }
+}
 .header-name {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .loading-state {
   flex: 1;
@@ -607,213 +1143,51 @@ const goBack = () => router.back();
 .loading-more {
   display: flex;
   justify-content: center;
-  padding: 12px;
+  padding: 8px;
 }
-.message-list {
-  padding: 0 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.time-divider {
+.no-more {
   display: flex;
   justify-content: center;
-  padding: 12px 0;
-  span {
-    font-size: 11px;
-    color: var(--text-placeholder);
-    background: var(--surface);
-    padding: 4px 12px;
-    border-radius: var(--radius-full);
-    box-shadow: var(--shadow-xs);
-  }
-}
-.system-msg {
-  text-align: center;
+  padding: 8px;
   font-size: 12px;
   color: var(--text-placeholder);
-  padding: 6px 0;
 }
-
-// ===== Message rows with avatars =====
-.msg-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.msg-friend {
-  flex-direction: row;
-}
-.msg-mine {
-  flex-direction: row-reverse;
-}
-
-.msg-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  box-shadow: var(--shadow-xs);
-}
-
-.msg-content {
-  max-width: calc(100% - 50px);
-  display: flex;
-  flex-direction: column;
-}
-
-// ===== Bubbles =====
-.bubble {
-  padding: 10px 14px;
-  border-radius: 18px;
-  word-break: break-word;
-  line-height: 1.5;
-  font-size: 15px;
-  position: relative;
-}
-.bubble-friend {
-  background: var(--surface);
-  border-bottom-left-radius: 6px;
-  box-shadow: var(--shadow-xs);
-  border: 1px solid var(--border-light);
-  color: var(--text-primary);
-}
-.bubble-mine {
-  background: var(--gradient-primary);
-  border-bottom-right-radius: 6px;
-  box-shadow: var(--shadow-sm);
-  color: #fff;
-  &.has-ack {
-    padding-right: 26px;
-  }
-}
-
-// ===== Ack sent badge (inside bubble, bottom-right) =====
-.sent-badge {
-  position: absolute;
-  bottom: 4px;
-  right: 6px;
-  width: 14px;
-  height: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.55);
-  pointer-events: none;
-}
-
-// ===== Ack label outside bubble =====
-.ack-label {
-  font-size: 11px;
-  margin-top: 2px;
-  align-self: flex-end;
-}
-.ack-pending {
-  color: var(--text-placeholder);
-}
-
-// ===== Image messages =====
-.msg-image {
-  max-width: 240px;
-  max-height: 320px;
-  border-radius: 10px;
-  box-shadow: var(--shadow-md);
-  object-fit: cover;
-  display: block;
-}
-.msg-image-wrapper {
-  position: relative;
-}
-.msg-image-placeholder {
-  width: 160px;
-  height: 120px;
-  border-radius: 10px;
-  background: var(--surface-alt);
-  border: 1px dashed var(--border-medium);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: var(--text-placeholder);
-}
-
-.input-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
-  background: var(--header-bg);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border-light);
+.global-upload-bar {
+  height: 3px;
+  width: 100%;
+  background: rgba(64, 150, 255, 0.15);
+  overflow: hidden;
   flex-shrink: 0;
 }
-.img-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface);
-  border: 1px solid var(--border-medium);
-  border-radius: 50%;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  box-shadow: var(--shadow-xs);
-  flex-shrink: 0;
-  svg {
-    width: 22px;
-    height: 22px;
+.global-upload-progress {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #4096ff, #69b1ff, #4096ff);
+  background-size: 200% 100%;
+  transition: width 0.25s ease;
+  animation: global-upload-shimmer 1.2s linear infinite;
+}
+.global-upload-indeterminate {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #4096ff, #69b1ff, #4096ff);
+  border-radius: 2px;
+  animation: global-upload-slide 1.1s ease-in-out infinite;
+}
+@keyframes global-upload-slide {
+  0% {
+    transform: translateX(-110%);
   }
-  &:active {
-    background: var(--surface-hover);
-    color: var(--brand-blue);
+  100% {
+    transform: translateX(260%);
   }
 }
-.text-input {
-  flex: 1;
-  height: 40px;
-  padding: 0 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-medium);
-  border-radius: 20px;
-  outline: none;
-  font-size: 15px;
-  color: var(--text-primary);
-  box-shadow: var(--shadow-xs);
-  &::placeholder {
-    color: var(--text-placeholder);
+@keyframes global-upload-shimmer {
+  0% {
+    background-position: 0 0;
   }
-  &:focus {
-    border-color: var(--brand-blue);
-    box-shadow: var(--shadow-glow-sm);
-  }
-}
-.send-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--gradient-primary);
-  border: none;
-  border-radius: 50%;
-  color: #fff;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  flex-shrink: 0;
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  &:active:not(:disabled) {
-    transform: scale(0.95);
+  100% {
+    background-position: -200% 0;
   }
 }
 </style>

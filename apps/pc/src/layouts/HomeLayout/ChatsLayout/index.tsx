@@ -2,16 +2,13 @@ import { useChatSession } from '@/hooks/useChatSession';
 import Message from '@/pages/Home/Chats/components/MessageBox';
 import Search from '@/pages/Home/Chats/components/Search';
 import { useBearStore } from '@/store/store';
-import { clearAllUnreadSessions } from '@workspace/services';
 import { invoke } from '@tauri-apps/api/core';
-import { history, Outlet, useLocation, useIntl } from '@umijs/max';
+import { history, Outlet, useIntl, useLocation } from '@umijs/max';
+import { clearAllUnreadSessions } from '@workspace/services';
 import { ChatSessionVo } from '@workspace/types';
-import { Button, Segmented, Splitter, Popconfirm } from 'antd';
-import { MessageOutlined, TeamOutlined } from '@ant-design/icons';
-import React, { useEffect, useState, useMemo } from 'react';
+import { Button, Popconfirm, Splitter } from 'antd';
+import React, { useEffect, useState } from 'react';
 import styles from './index.less';
-
-type ChatTabType = 'private' | 'group';
 
 const ClearIcon = () => (
   <svg
@@ -30,13 +27,32 @@ const ClearIcon = () => (
   </svg>
 );
 
+const DeleteIcon = () => (
+  <svg
+    className={styles.deleteIcon}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z" />
+    <path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+  </svg>
+);
+
 const ChatsLayout = () => {
   const intl = useIntl();
   const [chatSessionList, setChatSessionList] = React.useState<ChatSessionVo[]>(
     [],
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<ChatTabType>('private');
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    item: ChatSessionVo;
+  } | null>(null);
 
   const { userInfo } = useBearStore();
   const refreshFlag = useBearStore((state) => state.refreshFlag);
@@ -51,13 +67,10 @@ const ChatsLayout = () => {
 
     if (currentFriend) {
       setSelectedSessionKey(currentFriend);
-      setActiveTab('private');
     } else if (selfUuid) {
       setSelectedSessionKey(selfUuid);
-      setActiveTab('private');
     } else if (groupId) {
       setSelectedSessionKey(groupId);
-      setActiveTab('group');
     }
   }, [location.search]);
 
@@ -150,6 +163,22 @@ const ChatsLayout = () => {
   }, [refreshFlag]);
 
   useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [contextMenu]);
+
+  useEffect(() => {
     console.log('chatSessionList', chatSessionList);
   }, [chatSessionList]);
 
@@ -169,109 +198,131 @@ const ChatsLayout = () => {
 
   const handleClearAllUnread = async () => {
     await clearAllUnreadSessions();
+    await get_chat_session();
   };
 
-  const privateChatList = useMemo(() => {
-    return chatSessionList.filter((item) => item.session_type !== 2);
-  }, [chatSessionList]);
+  const handleHideSession = async (item: ChatSessionVo) => {
+    try {
+      await invoke('hide_chat_session', {
+        sendUser: item.send_user,
+        recvUser: item.recv_user,
+      });
+      setChatSessionList((prev) =>
+        prev.filter(
+          (s) =>
+            !(s.send_user === item.send_user && s.recv_user === item.recv_user),
+        ),
+      );
+      const sessionKey =
+        item.send_user === item.recv_user
+          ? item.send_user
+          : item.send_user === userInfo?.uuid
+          ? item.recv_user
+          : item.send_user;
+      if (sessionKey === selectedSessionKey) {
+        setSelectedSessionKey('');
+      }
+    } catch (e) {
+      console.error('隐藏会话失败:', e);
+    }
+  };
 
-  const groupChatList = useMemo(() => {
-    return chatSessionList.filter((item) => item.session_type === 2);
-  }, [chatSessionList]);
-
-  const currentList = useMemo(() => {
-    return activeTab === 'private' ? privateChatList : groupChatList;
-  }, [activeTab, privateChatList, groupChatList]);
-
-  const tabOptions = [
-    {
-      value: 'private',
-      label: (
-        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <MessageOutlined />
-          <span>{intl.formatMessage({ id: 'chatsLayout.privateChat' })}</span>
-        </div>
-      ),
-    },
-    {
-      value: 'group',
-      label: (
-        <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <TeamOutlined />
-          <span>{intl.formatMessage({ id: 'chatsLayout.groupChat' })}</span>
-        </div>
-      ),
-    },
-  ];
+  const currentList = chatSessionList;
 
   return (
-    <Splitter>
-      <Splitter.Panel
-        min="20%"
-        max="50%"
-        defaultSize="32%"
-        className={styles.left}
-      >
+    <>
+      <Splitter>
+        <Splitter.Panel
+          min="20%"
+          max="50%"
+          defaultSize="32%"
+          className={styles.left}
+        >
         <div style={{ height: '100%' }}>
-        <div className={styles.header}>
-          <Search onSelect={(item) => routeToChat(item)} />
-          <Popconfirm
-            title={intl.formatMessage({ id: 'chatsLayout.clearUnreadConfirm' })}
-            onConfirm={handleClearAllUnread}
-            okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
-            cancelText={intl.formatMessage({ id: 'chatsLayout.cancel' })}
-          >
-            <Button
-              type="text"
-              icon={<ClearIcon />}
-              className={styles.clearBtn}
-              title={intl.formatMessage({ id: 'chatsLayout.clearUnread' })}
-            />
-          </Popconfirm>
-        </div>
-        <div className={styles.tabContainer}>
-          <Segmented
-            value={activeTab}
-            onChange={(value) => setActiveTab(value as ChatTabType)}
-            options={tabOptions}
-            block
-          />
-        </div>
-        <div className={styles.item} key="chat">
-          {currentList.map((item: ChatSessionVo) => {
-            const sessionKey =
-              item.send_user === item.recv_user
-                ? item.send_user
-                : item.send_user === userInfo?.uuid
-                ? item.recv_user
-                : item.send_user;
+          <div className={styles.header}>
+            <Search onSelect={(item) => routeToChat(item)} />
+            <Popconfirm
+              title={intl.formatMessage({
+                id: 'chatsLayout.clearUnreadConfirm',
+              })}
+              onConfirm={handleClearAllUnread}
+              okText={intl.formatMessage({ id: 'chatsLayout.confirm' })}
+              cancelText={intl.formatMessage({ id: 'chatsLayout.cancel' })}
+            >
+              <Button
+                type="text"
+                icon={<ClearIcon />}
+                className={styles.clearBtn}
+                title={intl.formatMessage({ id: 'chatsLayout.clearUnread' })}
+              />
+            </Popconfirm>
+          </div>
+          <div className={styles.item} key="chat">
+            {currentList.map((item: ChatSessionVo) => {
+              const sessionKey =
+                item.send_user === item.recv_user
+                  ? item.send_user
+                  : item.send_user === userInfo?.uuid
+                  ? item.recv_user
+                  : item.send_user;
 
-            const isSelected = selectedSessionKey === sessionKey;
+              const isSelected = selectedSessionKey === sessionKey;
 
-            return (
-              <div key={item.nano_id} onClick={() => routeToChat(item)}>
-                <Message
-                  message={item.last_message}
-                  img={item.friend_icon}
+              return (
+                <div
                   key={item.nano_id}
-                  time={item.timestamp}
-                  title={item.friend_name}
-                  count={item.unread_count}
-                  text_type={item.text_type}
-                  send_user={item.send_user}
-                  recv_user={item.recv_user}
-                  isSelected={isSelected}
-                />
-              </div>
-            );
-          })}
-        </div>
+                  className={styles.sessionItem}
+                  onClick={() => routeToChat(item)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, item });
+                  }}
+                >
+                  <Message
+                    message={item.last_message}
+                    img={item.friend_icon}
+                    key={item.nano_id}
+                    time={item.timestamp}
+                    title={item.friend_name}
+                    userType={item.friend_user_type}
+                    isGroup={item.session_type === 2}
+                    count={item.unread_count}
+                    text_type={item.text_type}
+                    send_user={item.send_user}
+                    recv_user={item.recv_user}
+                    isSelected={isSelected}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </Splitter.Panel>
       <Splitter.Panel className={styles.right}>
         <Outlet />
       </Splitter.Panel>
-    </Splitter>
+      </Splitter>
+      {contextMenu && (
+        <div
+          className={styles.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className={styles.contextMenuItem}
+            onClick={(e) => {
+              e.stopPropagation();
+              const item = contextMenu.item;
+              setContextMenu(null);
+              handleHideSession(item);
+            }}
+          >
+            <DeleteIcon />
+            <span>{intl.formatMessage({ id: 'chatsLayout.hideSession' })}</span>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

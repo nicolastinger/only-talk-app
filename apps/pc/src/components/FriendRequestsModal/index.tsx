@@ -1,31 +1,33 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import {
   CheckOutlined,
+  ClearOutlined,
   ClockCircleOutlined,
   CloseOutlined,
   UserOutlined,
-  ClearOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
 import {
+  clearUnreadByLevel,
   get_accept_friend_request_list,
-  get_user_info_with_cache,
   get_friend_request_list,
+  get_user_info_with_cache,
   getFiles,
+  getUnreadNotificationCounts,
+  isHttpSuccess,
   process_friend_request,
   readContactsNotification,
-  clearUnreadByLevel,
-  getUnreadNotificationCounts,
 } from '@workspace/services';
 import {
   FriendRequestInfo,
   FriendRequestInfoDTO,
   UserInfo,
 } from '@workspace/types';
-import { Avatar, Button, Modal, Tabs, Popconfirm } from 'antd';
+import { Avatar, Button, Modal, Popconfirm, Tabs } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './index.less';
 
@@ -52,12 +54,14 @@ const FriendRequestsModal = ({
   const refreshUnreadCounts = async () => {
     try {
       const counts = await getUnreadNotificationCounts();
+      const current = useBearStore.getState().menuUnread;
       setMenuUnread({
+        ...current,
         contacts: counts.contacts,
         groups: counts.groups,
-        system: 0,
-        settings: 0,
-        total: counts.contacts + counts.groups,
+        plaza: counts.plaza,
+        moments: counts.moments,
+        total: counts.contacts + counts.groups + counts.plaza + counts.moments,
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);
@@ -133,7 +137,7 @@ const FriendRequestsModal = ({
     let friendRequestInfoDTO: FriendRequestInfoDTO = {};
     try {
       const res = await get_friend_request_list(friendRequestInfoDTO);
-      if (res.netSuccess && res.res.status === 200) {
+      if (res.netSuccess && isHttpSuccess(res.res.status)) {
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
         const enrichedData = await Promise.all(
           data.map((item) => enrichRequestWithUserInfo(item, false)),
@@ -155,7 +159,7 @@ const FriendRequestsModal = ({
     let friendRequestInfoDTO: FriendRequestInfoDTO = {};
     try {
       const res = await get_accept_friend_request_list(friendRequestInfoDTO);
-      if (res.netSuccess && res.res.status === 200) {
+      if (res.netSuccess && isHttpSuccess(res.res.status)) {
         const data = JSON.parse(res.res.body).data as FriendRequestInfo[];
         const enrichedData = await Promise.all(
           data.map((item) => enrichRequestWithUserInfo(item, true)),
@@ -218,7 +222,7 @@ const FriendRequestsModal = ({
       accept_status: 1,
     };
     const res = await process_friend_request(friendRequestInfoDTO);
-    if (res.netSuccess && res.res.status === 200) {
+    if (res.netSuccess && isHttpSuccess(res.res.status)) {
       await update_local_friend_list();
       await getAcceptFriendRequestList();
     }
@@ -242,7 +246,7 @@ const FriendRequestsModal = ({
       accept_status: 2,
     };
     const res = await process_friend_request(friendRequestInfoDTO);
-    if (res.netSuccess && res.res.status === 204) {
+    if (res.netSuccess && isHttpSuccess(res.res.status)) {
       await update_local_friend_list();
       await getAcceptFriendRequestList();
     }
@@ -299,7 +303,10 @@ const FriendRequestsModal = ({
         <div className={styles.contentSection}>
           <div className={styles.header}>
             <div className={styles.userInfo}>
-              <span className={styles.username}>{displayName}</span>
+              <span className={styles.username}>
+                {displayName}
+                <UserTypeTag type={request.userInfo?.user_type} />
+              </span>
               {displayAccount && (
                 <span className={styles.account}>@{displayAccount}</span>
               )}
@@ -400,7 +407,13 @@ const FriendRequestsModal = ({
   return (
     <Modal
       title={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <span className={styles.modalTitle}>
             {intl.formatMessage({ id: 'friendRequest.title' })}
           </span>
@@ -418,6 +431,7 @@ const FriendRequestsModal = ({
       }
       open={visible}
       onCancel={onClose}
+      closable={false}
       footer={null}
       width={560}
       className={styles.friendRequestsModal}

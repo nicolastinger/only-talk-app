@@ -1,5 +1,8 @@
-import { DEFAULT_ICON, TALK_API } from '@/constants';
+import UserTypeTag from '@/components/UserTypeTag';
+import { DEFAULT_ICON } from '@/constants';
+import { CROP_CANCELLED_ERROR, useAvatarCropper } from '@/hooks/useAvatarCropper';
 import { useBearStore } from '@/store/store';
+import { calcAgeFromBirthday } from '@/utils/format';
 import {
   CameraOutlined,
   CheckOutlined,
@@ -14,10 +17,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { useIntl } from '@umijs/max';
 import {
   convertPathToTauriUrl,
+  getApiBase,
   getFiles,
+  isBackendSuccess,
+  isHttpSuccess,
+  refresh_user_info,
   selectFile,
   update_user_info,
-  refresh_user_info,
 } from '@workspace/services';
 import { UpdateUserDTO } from '@workspace/types';
 import {
@@ -27,7 +33,6 @@ import {
   DatePicker,
   Form,
   Input,
-  InputNumber,
   message,
   Modal,
   Select,
@@ -50,6 +55,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
   const intl = useIntl();
   const userInfo = useBearStore((state) => state.userInfo);
   const setUserInfo = useBearStore((state) => state.setUserInfo);
+  const { startCrop, cropModalElement } = useAvatarCropper();
   const [loading, setLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -110,26 +116,12 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       }
 
       const filePath = files[0];
+
+      const croppedPath = await startCrop(filePath);
+
       setLoading(true);
 
-      const compressedResult = await Promise.race([
-        invoke<string>('compress_image_to_webp_command', {
-          inputPath: filePath,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  intl.formatMessage({ id: 'userInfo.avatar.compressTimeout' }),
-                ),
-              ),
-            TIMEOUT_MS,
-          ),
-        ),
-      ]);
-
-      const preview = convertPathToTauriUrl(compressedResult);
+      const preview = convertPathToTauriUrl(croppedPath);
       if (preview) {
         setPreviewUrl(preview);
       }
@@ -138,8 +130,8 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       const uploadResult = await Promise.race([
         invoke<{ status: number; body: string }>('upload_file_request', {
-          url: `${TALK_API}/file_integrated/upload/user_avatar`,
-          filePath: compressedResult,
+          url: `${getApiBase()}/file_integrated/upload/user_avatar`,
+          filePath: croppedPath,
           fieldName: 'file',
         }),
         new Promise<never>((_, reject) =>
@@ -157,9 +149,15 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       window.dispatchEvent(new CustomEvent('uploadEnd'));
 
-      if (uploadResult.status === 200) {
-        const responseBody = JSON.parse(uploadResult.body);
-        if (responseBody.code === 200 && responseBody.data) {
+      if (isHttpSuccess(uploadResult.status)) {
+        const responseBody = uploadResult.body
+          ? JSON.parse(uploadResult.body)
+          : null;
+        if (
+          responseBody &&
+          isBackendSuccess(responseBody.code) &&
+          responseBody.data
+        ) {
           const bizId = responseBody.data;
 
           const FileVos = await getFiles(bizId);
@@ -179,7 +177,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           }
         } else {
           message.error(
-            responseBody.msg ||
+            responseBody?.msg ||
               intl.formatMessage({ id: 'userInfo.avatar.uploadFailed' }),
           );
         }
@@ -188,10 +186,13 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           intl.formatMessage({ id: 'userInfo.avatar.uploadFailed' }),
         );
       }
-    } catch (error: any) {
+    } catch (error) {
+      if (error instanceof Error && error.message === CROP_CANCELLED_ERROR) {
+        return;
+      }
       console.error('头像更新失败:', error);
       message.error(
-        error.message ||
+        (error instanceof Error ? error.message : String(error)) ||
           intl.formatMessage({ id: 'userInfo.avatar.updateFailed' }),
       );
       window.dispatchEvent(new CustomEvent('uploadEnd'));
@@ -218,7 +219,6 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       username: userInfo?.username,
       info: userInfo?.info,
       gender: userInfo?.gender,
-      age: userInfo?.age,
       birthday: userInfo?.birthday ? dayjs.unix(userInfo.birthday) : null,
       phone: userInfo?.phone,
       email: userInfo?.email,
@@ -246,9 +246,6 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
       if (values.gender !== userInfo?.gender) {
         updateData.gender = Number(values.gender);
       }
-      if (values.age !== userInfo?.age) {
-        updateData.age = Number(values.age);
-      }
       if (values.birthday) {
         const birthdayTimestamp = values.birthday.unix();
         if (birthdayTimestamp !== userInfo?.birthday) {
@@ -273,31 +270,27 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
 
       const response = await update_user_info(updateData);
 
-      if (response.netSuccess && response.res.status === 200) {
-        const data = JSON.parse(response.res.body);
-        if (data.code === 200 || data.code === 204) {
+      if (response.netSuccess && isHttpSuccess(response.res.status)) {
+        const data = response.res.body ? JSON.parse(response.res.body) : null;
+        if (data && isBackendSuccess(data.code)) {
           const updatedUserInfo = await refresh_user_info(userInfo.uuid);
           setUserInfo(updatedUserInfo);
           message.success(
             intl.formatMessage({ id: 'userInfo.edit.updateSuccess' }),
           );
           setIsEditing(false);
-        } else {
-          message.error(
-            data.message ||
-              intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
-          );
         }
+        // 业务失败时由 httpService 中间层统一展示(604 逐条/500 业务信息)
       } else {
         message.error(
           response.error ||
             intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('更新用户信息失败:', error);
       message.error(
-        error.message ||
+        (error instanceof Error ? error.message : String(error)) ||
           intl.formatMessage({ id: 'userInfo.edit.updateFailed' }),
       );
     } finally {
@@ -309,6 +302,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
     <Modal
       open={visible}
       onCancel={onClose}
+      closable={false}
       footer={null}
       centered
       width={420}
@@ -410,20 +404,6 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
               </Form.Item>
 
               <Form.Item
-                name="age"
-                label={intl.formatMessage({ id: 'userInfo.age' })}
-              >
-                <InputNumber
-                  min={0}
-                  max={150}
-                  style={{ width: '100%' }}
-                  placeholder={intl.formatMessage({
-                    id: 'userInfo.edit.agePlaceholder',
-                  })}
-                />
-              </Form.Item>
-
-              <Form.Item
                 name="birthday"
                 label={intl.formatMessage({ id: 'userInfo.birthday' })}
               >
@@ -497,6 +477,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
               <Title level={4} className={styles.username}>
                 {userInfo?.username ||
                   intl.formatMessage({ id: 'userInfo.unknown' })}
+                <UserTypeTag type={userInfo?.user_type} />
               </Title>
               {userInfo?.info && (
                 <Text type="secondary" className={styles.bio}>
@@ -542,7 +523,9 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
               <span className={styles.label}>
                 {intl.formatMessage({ id: 'userInfo.age' })}
               </span>
-              <span className={styles.value}>{userInfo?.age || '-'}</span>
+              <span className={styles.value}>
+                {calcAgeFromBirthday(userInfo?.birthday) ?? '-'}
+              </span>
             </div>
 
             <Collapse
@@ -631,6 +614,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           )}
         </div>
       </div>
+      {cropModalElement}
     </Modal>
   );
 };

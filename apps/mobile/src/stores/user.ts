@@ -1,8 +1,12 @@
 import { reactive, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { UserInfo, HttpResponse, ResponseData } from "@workspace/types";
-import { TALK_API } from "@workspace/types";
-import { get_cached_user_info, cache_user_info } from "@workspace/services";
+import {
+  getApiBase,
+  get_cached_user_info,
+  cache_user_info,
+  isBackendSuccess,
+} from "@workspace/services";
 import { getMyUuid } from "@/utils/api";
 
 interface UserState {
@@ -15,17 +19,16 @@ const state = reactive<UserState>({
   loading: false,
 });
 
-export const DEFAULT_AVATAR =
-  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiNFNUU3RUIiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjM2IiByPSIxNiIgZmlsbD0iIzlDQTNBRiIvPjxwYXRoIGQ9Ik0xOCA4MmMwLTE3LjY3MyAxNC4zMjctMzIgMzItMzJzMzIgMTQuMzI3IDMyIDMyIiBmaWxsPSIjOUNBM0FGIi8+PC9zdmc+";
+export const DEFAULT_AVATAR = "/images/default.jpg";
 
 async function fetchUserFromServer(): Promise<UserInfo | null> {
   try {
     const res: HttpResponse = await invoke("post_request", {
-      url: TALK_API + "/user/me",
+      url: getApiBase() + "/user/me",
       body: "",
     });
-    const data: ResponseData = JSON.parse(res.body);
-    if (data.code === 200 && data.data) {
+    const data: ResponseData<UserInfo> = JSON.parse(res.body);
+    if (isBackendSuccess(data.code) && data.data) {
       const remote: UserInfo = data.data;
       const cached = await get_cached_user_info(remote.uuid).catch(() => null);
       const isDifferent =

@@ -1,6 +1,7 @@
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { formatFullTime } from '@/utils/format';
+import { openUserProfile } from '@/utils/userProfile';
 import {
   convertPathToTauriUrl,
   getChatFileByBizId,
@@ -13,7 +14,6 @@ import ChatImage from './ChatImage';
 import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
-import WebRTCMessage from './WebRTCMessage';
 
 const imageCache = new Map<string, string>();
 
@@ -22,6 +22,11 @@ type MineChatBoxProps = {
   isAck: boolean | undefined;
   icon?: string;
   friendUuid: string;
+  currentBizId?: string;
+  /** 上传进度百分比 0-100（发送中展示） */
+  uploadProgress?: number;
+  /** 发送阶段：reading/compressing/uploading */
+  sendPhase?: string;
 };
 
 // 私聊消息类型
@@ -45,9 +50,11 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     icon,
     friendUuid,
   } = props;
+  const sending = isAck === false;
   const [userIcon, setUserIcon] = React.useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageBizId, setImageBizId] = useState<string>('');
   const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
 
   const userInfo = useBearStore((state) => state.userInfo);
@@ -126,6 +133,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           return;
         }
 
+        setImageBizId(bizId);
+
         if (imageCache.has(bizId)) {
           setImageUrl(imageCache.get(bizId)!);
           return;
@@ -181,14 +190,19 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       return TextBox(raw);
     }
     if (text_type === MSG_TYPE_IMAGE) {
-      const bizId = fileRecord?.biz_id || '';
       return (
         <ChatImage
           src={imageUrl}
           loading={loading}
           friendUuid={friendUuid}
-          currentBizId={bizId}
+          currentBizId={imageBizId}
+          bizId={imageBizId}
+          autoDownload={true}
+          sending={sending}
+          uploadProgress={props.uploadProgress}
+          sendPhase={props.sendPhase}
           meUuid={userInfo?.uuid || ''}
+          nanoId={nano_id}
         />
       );
     }
@@ -202,6 +216,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             fileType={fileRecord.file_type}
             nanoId={nano_id}
             loading={loading}
+            sending={sending}
+            uploadProgress={props.uploadProgress}
+            sendPhase={props.sendPhase}
           />
         );
       }
@@ -210,13 +227,6 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
     switch (text_type) {
       case MSG_TYPE_PRIVACY:
         return <PrivacyModeMessage isMine={true} />;
-      case 5:
-      case 12:
-      case 13:
-      case 14:
-      case 15:
-      case 100:
-        return <WebRTCMessage textType={text_type} isMine={true} />;
       default:
         return TextBox(raw);
     }
@@ -238,7 +248,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
 
   const isImageMessage = text_type === MSG_TYPE_IMAGE;
   const isFileMessage = text_type === MSG_TYPE_FILE;
-  const isSpecialMessage = [MSG_TYPE_PRIVACY, 5, 12, 13, 14, 15, 100].includes(text_type);
+  const isSpecialMessage = [MSG_TYPE_PRIVACY].includes(text_type);
 
   return (
     <div className={styles.container}>
@@ -257,13 +267,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
             } ${ackFlag === 101 ? styles.hasSentBubble : ''}`}
           >
             {renderMessage()}
-            {ackFlag === 101 && (
-              <span className={styles.sentBadge} />
-            )}
+            {ackFlag === 101 && <span className={styles.sentBadge} />}
           </div>
-          {ackFlag === 101 && (
-            <span className={styles.sentLabel}>已发送</span>
-          )}
+          {ackFlag === 101 && <span className={styles.sentLabel}>已发送</span>}
           <div className={styles.tooltip}>{formatFullTime(timestamp)}</div>
         </div>
       </div>
@@ -275,6 +281,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
           className={styles.imgItem}
           alt="icon"
           style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() => openUserProfile(userInfo?.uuid || '')}
           onError={(e) => {
             (e.target as HTMLImageElement).src = DEFAULT_ICON;
           }}

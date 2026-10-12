@@ -6,6 +6,8 @@ import { useBearStore } from '@/store/store';
 import {
   BellOutlined,
   MessageOutlined,
+  PictureOutlined,
+  RadarChartOutlined,
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -23,9 +25,12 @@ const LeftAside = () => {
   const [bottomBtnList, setBottomBtnList] = React.useState<LayoutBtnProps[]>(
     [],
   );
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [notifyVisible, setNotifyVisible] = useState(false);
   const userInfo = useBearStore((state) => state.userInfo);
+
+  const isModalVisible = useBearStore((state) => state.userInfoModalVisible);
+  const openUserInfoModal = useBearStore((state) => state.openUserInfoModal);
+  const closeUserInfoModal = useBearStore((state) => state.closeUserInfoModal);
 
   const menuUnread = useBearStore((state) => state.menuUnread);
   const { totalUnreadCount } = useChatsUnread(userInfo.uuid);
@@ -65,11 +70,11 @@ const LeftAside = () => {
   };
 
   const showModal = () => {
-    setIsModalVisible(true);
+    openUserInfoModal();
   };
 
   const handleCancel = () => {
-    setIsModalVisible(false);
+    closeUserInfoModal();
   };
 
   useEffect(() => {
@@ -87,6 +92,20 @@ const LeftAside = () => {
         active: false,
         icon: <UserOutlined style={{ fontSize: '18px' }} />,
         unreadCount: menuUnread.contacts,
+      },
+      {
+        text: intl.formatMessage({ id: 'leftAside.plaza' }),
+        url: '/home/plaza',
+        active: false,
+        icon: <RadarChartOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: menuUnread.plaza,
+      },
+      {
+        text: intl.formatMessage({ id: 'leftAside.moments' }),
+        url: '/home/moments',
+        active: false,
+        icon: <PictureOutlined style={{ fontSize: '18px' }} />,
+        unreadCount: menuUnread.moments,
       },
     ]);
 
@@ -209,7 +228,10 @@ const LeftAside = () => {
       <div className={styles.bottom}>{renderBtn(bottomBtnList)}</div>
 
       <UserInfoModal visible={isModalVisible} onClose={handleCancel} />
-      <NotificationPanel visible={notifyVisible} onClose={() => setNotifyVisible(false)} />
+      <NotificationPanel
+        visible={notifyVisible}
+        onClose={() => setNotifyVisible(false)}
+      />
     </div>
   );
 };

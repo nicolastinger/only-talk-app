@@ -96,18 +96,12 @@
   padding: 24px;
   max-height: 70vh;
   overflow-y: auto;
+  /* 隐藏滚动条(仍可滚动, 编辑表单内容超长时不截断) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
   &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--border-white-light);
-    border-radius: 2px;
+    display: none;
   }
 }
 

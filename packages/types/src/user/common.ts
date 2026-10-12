@@ -57,7 +57,40 @@ interface BasicUser {
   username?: string;
   account?: string;
   icon?: string;
+  email?: string;
   password?: string;
+}
+
+/** 两步注册第一步请求体(email + verification_code 创建占位用户) */
+interface SignUpStep1Request {
+  email: string;
+  verification_code: string;
+}
+
+/** 两步注册第一步响应(注册会话 token + 占位用户 uuid) */
+interface SignUpStep1Response {
+  reg_token: string;
+  uuid: string;
+}
+
+/** 两步注册第二步请求体(凭 reg_token 补全资料完成注册) */
+interface CompleteProfileRequest {
+  reg_token: string;
+  email: string;
+  account: string;
+  password: string;
+  username: string;
+}
+
+/** 发送邮箱验证码请求体 */
+interface SendVerifyCodeRequest {
+  email: string;
+}
+
+/** 登录/刷新令牌响应(POST /user/sign_in, /user/refresh_token 返回) — 镜像 rs SignInResponseVO */
+interface SignInResponseVo {
+  access_token: string;
+  refresh_token: string;
 }
 
 interface UserInfo {
@@ -66,19 +99,15 @@ interface UserInfo {
   account?: string;
   icon?: string;
   gender?: number;
-  age?: number;
+  /** 生日 (Unix 秒)，年龄由生日与当前时间计算，服务端不再返回 age */
   birthday?: number;
   info?: string;
-  created_at?: number;
-  updated_at?: number;
-  last_login_at?: number;
-  last_login_equipment?: string;
-  last_login_ipv4?: string;
-  last_login_ipv6?: string;
   phone?: string;
   email?: string;
   address?: string;
   status?: number;
+  /** 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充) */
+  user_type?: number;
 }
 
 interface UserInfoWithCache {
@@ -90,7 +119,6 @@ interface UpdateUserDTO {
   username?: string;
   info?: string;
   gender?: number;
-  age?: number;
   birthday?: number;
   phone?: string;
   email?: string;
@@ -129,4 +157,9 @@ export type {
   UserInfo,
   UserInfoWithCache,
   BasicUser,
+  SignUpStep1Request,
+  SignUpStep1Response,
+  CompleteProfileRequest,
+  SendVerifyCodeRequest,
+  SignInResponseVo,
 };

@@ -39,9 +39,30 @@ impl GroupMember {
     }
 
     pub async fn upsert_members(members: &[GroupMember]) -> Result<(), anyhow::Error> {
-        for member in members {
-            Self::insert_member(member).await?;
+        if members.is_empty() {
+            return Ok(());
         }
+        // 整批放在同一事务内逐行 upsert, 任一行失败整体回滚, 避免出现半批写入的脏状态
+        let mut tx = get_db_client().await?.begin().await?;
+        for member in members {
+            sqlx::query(
+                r#"INSERT INTO group_member (group_id, user_id, role, nickname, joined_at, is_del)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                ON CONFLICT(group_id, user_id) DO UPDATE SET
+                role = excluded.role,
+                nickname = excluded.nickname,
+                is_del = excluded.is_del"#,
+            )
+            .bind(&member.group_id)
+            .bind(&member.user_id)
+            .bind(member.role)
+            .bind(&member.nickname)
+            .bind(member.joined_at)
+            .bind(member.is_del)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
         Ok(())
     }
 

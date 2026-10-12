@@ -1,0 +1,1624 @@
+#![cfg(test)]
+
+//! sqlite 存储层集成测试。
+//!
+//! 通过 tests/common 脚手架在系统临时目录创建临时 sqlite 文件(含加密 private 库),
+//! 测试完毕后自动删除临时文件。
+
+mod common;
+
+use app_lib::dao::app_log_db::{
+    clear_app_logs, delete_app_log_by_id, insert_app_log, query_app_log_by_id,
+    query_app_logs_paged, update_app_log,
+};
+use app_lib::dao::chat_record_ack::{
+    insert_chat_record_ack, query_ack_record_from_db, query_chat_record_by_send_id,
+    update_chat_record_ack, update_chat_record_ack_prev_id,
+};
+use app_lib::dao::chat_record_db::{
+    delete_chat_record_db, insert_chat_record, local_max_server_id,
+    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
+    query_last_chat_record, query_last_read_msg, recall_chat_record_db, set_chat_record_server_id,
+};
+use app_lib::dao::chat_record_send::{
+    insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
+    update_chat_record_send, update_chat_record_send_status, update_chat_record_send_success,
+};
+use app_lib::dao::client_config_db::{delete_config, get_all_configs, get_config, set_config};
+use app_lib::dao::create_table::{init_private_ddl, init_user_ddl};
+use app_lib::dao::file_record_db::{
+    delete_file_record_by_id, increment_download_retry_count, insert_failed_file_record,
+    insert_file_record, MAX_DOWNLOAD_RETRY_COUNT,
+};
+use app_lib::dao::friend_db::{
+    is_blocked_db, query_black_list_db, query_friend_info_by_id_db, query_friend_info_db,
+    search_friend_db, set_block_friend_db, soft_delete_friend_db, update_friend_info_db,
+    update_friend_profile_db,
+};
+use app_lib::dao::get_db_client;
+use app_lib::dao::group_chat_record_db::{
+    delete_group_chat_record_db, insert_group_chat_record, local_max_group_server_id,
+    query_group_chat_record_by_id, query_group_chat_record_from_db, query_last_group_chat_record,
+    recall_group_chat_record_db, set_group_server_id,
+};
+use app_lib::dao::group_message_ack::{
+    insert_group_message_ack, query_group_message_ack_by_local_nano_id,
+    query_group_message_ack_by_nano_id, query_pending_group_message_acks,
+    update_group_message_ack_status,
+};
+use app_lib::dao::group_message_read::{
+    query_group_last_read_msg, query_group_message_read, update_group_message_read,
+};
+use app_lib::dao::session_db::{
+    hide_chat_session_db, query_chat_session_by_user_db, query_chat_session_db,
+    search_chat_session_db, show_chat_session_db, update_chat_session_db,
+};
+use app_lib::dao::sync_task_db::{
+    history, list_batch_tasks, prune_batches, record_forward_catchup,
+};
+use app_lib::entity::app_log::LOG_LEVEL_INFO;
+use app_lib::entity::chat_record::ChatRecord;
+use app_lib::entity::chat_record_ack::ChatRecordAck;
+use app_lib::entity::chat_record_send::ChatRecordSend;
+use app_lib::entity::chat_session::ChatSession;
+use app_lib::entity::file_record::FileRecord;
+use app_lib::entity::friend::Friend;
+use app_lib::entity::group::Group;
+use app_lib::entity::group_chat_record::GroupChatRecord;
+use app_lib::entity::group_member::GroupMember;
+use app_lib::entity::group_message_ack::GroupMessageAck;
+use app_lib::entity::group_message_read::GroupMessageRead;
+use app_lib::entity::sync_task::{SYNC_STATUS_FAILED, SYNC_STATUS_SUCCESS};
+use app_lib::entity::system_notification::SystemNotification;
+use app_lib::entity::user_info::UserInfo;
+use app_lib::entity::user_token::UserToken;
+use app_lib::service::user_service::insert_user_info;
+use app_lib::service::chat_service::{
+    reconcile_group_recalls, reconcile_single_recalls, resolve_group_recall_target,
+    resolve_single_recall_target,
+};
+use app_lib::vo::text_quic_msg::TextQuicMsgVo;
+
+use common::{with_common_db, with_private_db, with_user_db};
+use sqlx::Row;
+
+const ME: &str = "00000000-0000-0000-0000-000000000001";
+const FRIEND: &str = "00000000-0000-0000-0000-000000000002";
+
+// ---------- user.db (明文) ----------
+
+#[tokio::test]
+async fn friend_db_upsert_query_block_soft_delete_roundtrip() {
+    with_user_db(|_pool| async move {
+        let friend = Friend {
+            id: 0,
+            created_at: 1000,
+            updated_at: 1000,
+            friend_id: FRIEND.to_string(),
+            friend_account: "alice".to_string(),
+            friend_name: "Alice".to_string(),
+            friend_icon: "http://icon/alice.png".to_string(),
+            friend_info: "{}".to_string(),
+            friend_user_type: None,
+            friend_status: 0,
+            me: ME.to_string(),
+            is_del: false,
+            is_block: 0,
+            is_mute: 0,
+            is_top: 0,
+            is_show: 1,
+            version: 0,
+        };
+
+        // 首次调用走 INSERT 分支
+        update_friend_info_db(&friend).await.expect("插入好友失败");
+
+        let list = query_friend_info_db(ME).await.expect("查询好友列表失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].friend_name, "Alice");
+
+        let one = query_friend_info_by_id_db(ME, FRIEND).await.expect("按id查询好友失败");
+        assert_eq!(one.friend_account, "alice");
+
+        // 定向更新资料字段
+        update_friend_profile_db(
+            ME,
+            FRIEND,
+            "alice",
+            "AliceChanged",
+            "http://icon/new.png",
+            "{\"nick\":\"AC\"}",
+        )
+        .await
+        .expect("更新好友资料失败");
+        let one = query_friend_info_by_id_db(ME, FRIEND).await.expect("按id查询好友失败");
+        assert_eq!(one.friend_name, "AliceChanged");
+
+        // 模糊搜索(名称/账号)
+        let hits = search_friend_db(ME, "Alice").await.expect("搜索好友失败");
+        assert_eq!(hits.len(), 1);
+        let no_hits = search_friend_db(ME, "不存在").await.expect("搜索好友失败");
+        assert!(no_hits.is_empty());
+
+        // 拉黑
+        set_block_friend_db(ME, FRIEND, 1).await.expect("拉黑好友失败");
+        assert!(is_blocked_db(ME, FRIEND).await.expect("查询拉黑状态失败"));
+        let black = query_black_list_db(ME).await.expect("查询黑名单失败");
+        assert_eq!(black.len(), 1);
+        assert_eq!(black[0].friend_id, FRIEND);
+
+        // 取消拉黑
+        set_block_friend_db(ME, FRIEND, 0).await.expect("取消拉黑失败");
+        assert!(!is_blocked_db(ME, FRIEND).await.expect("查询拉黑状态失败"));
+
+        // 软删除
+        soft_delete_friend_db(ME, FRIEND).await.expect("软删除好友失败");
+        let list = query_friend_info_db(ME).await.expect("查询好友列表失败");
+        assert!(list.is_empty(), "软删除后列表应过滤 is_del=1");
+        assert!(!is_blocked_db(ME, FRIEND).await.expect("查询拉黑状态失败"));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn session_db_upsert_canonical_hide_search_roundtrip() {
+    with_user_db(|_pool| async move {
+        insert_user_info("uuid", ME).await.expect("写入用户信息失败");
+
+        let session = ChatSession {
+            id: 0,
+            nano_id: "nano-1".to_string(),
+            timestamp: 100,
+            text_type: 0,
+            unread_count: 1,
+            last_message: "hello".to_string(),
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(), // send==me, 应归一化为 send=friend, recv=me
+            session_type: 1,
+            is_show: 1,
+            is_top: 0,
+            group_id: None,
+            session_uuid: None,
+            last_message_id: 0,
+        };
+
+        // 首次调用 -> 无匹配行走 INSERT 分支
+        update_chat_session_db(&session).await.expect("更新会话失败");
+
+        let rows = query_chat_session_by_user_db(ME, FRIEND).await.expect("查询会话失败");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].send_user, FRIEND, "send_user 应归一化为对方");
+        assert_eq!(rows[0].recv_user, ME);
+        assert_eq!(rows[0].last_message, "hello");
+        assert_eq!(rows[0].unread_count, 1);
+
+        // 再次调用 -> 走 UPDATE 分支, unread_count 累加
+        let session2 = ChatSession {
+            id: 0,
+            nano_id: "nano-2".to_string(),
+            timestamp: 200,
+            text_type: 0,
+            unread_count: 2,
+            last_message: "world".to_string(),
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            session_type: 1,
+            is_show: 1,
+            is_top: 0,
+            group_id: None,
+            session_uuid: None,
+            last_message_id: 0,
+        };
+        update_chat_session_db(&session2).await.expect("更新会话失败");
+
+        let rows = query_chat_session_by_user_db(ME, FRIEND).await.expect("查询会话失败");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].unread_count, 3, "UPDATE 分支应累加 unread_count");
+        assert_eq!(rows[0].last_message, "world");
+        assert_eq!(rows[0].timestamp, 200);
+
+        // 会话列表(无好友数据, friend_name 为空串)
+        let list = query_chat_session_db(ME).await.expect("查询会话列表失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].last_message, "world");
+        assert_eq!(list[0].friend_name, "");
+
+        // 隐藏/显示
+        hide_chat_session_db(ME, FRIEND).await.expect("隐藏会话失败");
+        let list = query_chat_session_db(ME).await.expect("查询会话列表失败");
+        assert!(list.is_empty(), "隐藏后 is_show=1 过滤应剔除该会话");
+        show_chat_session_db(ME, FRIEND).await.expect("显示会话失败");
+        let list = query_chat_session_db(ME).await.expect("查询会话列表失败");
+        assert_eq!(list.len(), 1);
+
+        // 按 last_message 模糊搜索
+        let hits = search_chat_session_db(ME, "world").await.expect("搜索会话失败");
+        assert_eq!(hits.len(), 1);
+        let no_hits = search_chat_session_db(ME, "zzz").await.expect("搜索会话失败");
+        assert!(no_hits.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn chat_record_read_query_last_read_msg() {
+    with_user_db(|pool| async move {
+        for (i, (nano, ts)) in [("r1", 100i64), ("r2", 200i64), ("r3", 300i64)].iter().enumerate() {
+            let sender = format!("00000000-0000-0000-0000-00000000001{}", i + 1);
+            sqlx::query(
+                "INSERT INTO chat_record_read (nano_id, timestamp, send_user, recv_user) VALUES (?1, ?2, ?3, ?4)",
+            )
+            .bind(*nano)
+            .bind(*ts)
+            .bind(&sender)
+            .bind(ME)
+            .execute(&pool)
+            .await
+            .expect("插入已读记录失败");
+        }
+
+        let after = query_last_read_msg(ME, 100).await.expect("查询已读失败");
+        assert_eq!(after.len(), 2);
+        assert!(after.iter().all(|r| r.timestamp > 100));
+        assert!(after.iter().all(|r| r.recv_user == ME));
+
+        let all = query_last_read_msg(ME, 0).await.expect("查询已读失败");
+        assert_eq!(all.len(), 3);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn app_log_db_insert_query_update_delete() {
+    with_user_db(|_pool| async move {
+        let id = insert_app_log("QUIC", LOG_LEVEL_INFO, "test", "raw-msg", "127.0.0.1", "detail")
+            .await
+            .expect("插入日志失败");
+        assert!(id > 0);
+
+        let log = query_app_log_by_id(id).await.expect("查询日志失败").expect("日志不存在");
+        assert_eq!(log.raw, "raw-msg");
+
+        let (list, total) = query_app_logs_paged(Some("QUIC"), Some(LOG_LEVEL_INFO), 1, 10)
+            .await
+            .expect("分页查询失败");
+        assert!(total >= 1);
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].source, "test");
+
+        assert!(update_app_log(id, "raw-2", "detail-2").await.expect("更新日志失败"));
+        let log = query_app_log_by_id(id).await.expect("查询日志失败").expect("日志不存在");
+        assert_eq!(log.raw, "raw-2");
+
+        assert!(delete_app_log_by_id(id).await.expect("删除日志失败"));
+        assert!(query_app_log_by_id(id).await.expect("查询日志失败").is_none());
+
+        let id2 = insert_app_log("QUIC", LOG_LEVEL_INFO, "test", "b", "", "")
+            .await
+            .expect("插入日志失败");
+        assert_eq!(clear_app_logs().await.expect("清空日志失败"), 1);
+        assert!(query_app_log_by_id(id2).await.expect("查询日志失败").is_none());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn user_ddl_idempotent_reinit() {
+    with_user_db(|_pool| async move {
+        // 脚手架 setup 已 init 一次, 这里通过全局池再 init 一次验证幂等
+        let pool = get_db_client().await.expect("获取全局池失败");
+        init_user_ddl(&pool).await.expect("重复初始化 user 表结构失败");
+    })
+    .await;
+}
+
+// ---------- common.db (明文) ----------
+
+#[tokio::test]
+async fn file_record_db_insert_retry_limit_delete() {
+    with_common_db(|_pool| async move {
+        let biz = "biz-001";
+        insert_file_record(biz, ME, "photo.jpg", "C:/tmp/photo.jpg", 2048, "image/jpeg", "abc123")
+            .await
+            .expect("插入文件记录失败");
+
+        let records = FileRecord::get_by_biz_id(biz).await.expect("按biz_id查询失败");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].file_name.as_deref(), Some("photo.jpg"));
+        assert_eq!(records[0].file_size, Some(2048));
+
+        // 重试计数递增到上限后 status 置 3
+        let mut count = 0;
+        for _ in 0..MAX_DOWNLOAD_RETRY_COUNT {
+            count = increment_download_retry_count(biz, ME).await.expect("递增重试失败");
+        }
+        assert_eq!(count, MAX_DOWNLOAD_RETRY_COUNT);
+        assert!(
+            FileRecord::get_by_biz_id(biz).await.expect("查询失败").is_empty(),
+            "status=3 的记录不应被正常查询返回"
+        );
+        assert_eq!(FileRecord::get_by_biz_id_include_failed(biz).await.expect("查询失败").len(), 1);
+
+        // 下载失败记录(直接 status=3)
+        insert_failed_file_record("biz-002", ME, 1000).await.expect("插入失败记录失败");
+        assert!(FileRecord::get_by_biz_id("biz-002").await.expect("查询失败").is_empty());
+        assert_eq!(
+            FileRecord::get_by_biz_id_include_failed("biz-002").await.expect("查询失败").len(),
+            1
+        );
+
+        // 删除
+        delete_file_record_by_id(biz, ME).await.expect("删除文件记录失败");
+        assert!(
+            FileRecord::get_by_biz_id_include_failed(biz).await.expect("查询失败").is_empty(),
+            "删除后不应再查到"
+        );
+    })
+    .await;
+}
+
+/// 客户端配置表(client_config): upsert / 读取 / 删除
+#[tokio::test]
+async fn client_config_crud() {
+    with_common_db(|_pool| async move {
+        assert!(get_config("app.theme").await.expect("查询失败").is_none());
+
+        set_config("app.theme", "dark").await.expect("写入失败");
+        assert_eq!(get_config("app.theme").await.expect("查询失败").as_deref(), Some("dark"));
+
+        // upsert 覆盖
+        set_config("app.theme", "light").await.expect("覆盖失败");
+        assert_eq!(get_config("app.theme").await.expect("查询失败").as_deref(), Some("light"));
+
+        set_config("server.api_base", "http://127.0.0.1:8443").await.expect("写入失败");
+        let all = get_all_configs().await.expect("读取全部失败");
+        assert_eq!(all.len(), 2);
+
+        delete_config("app.theme").await.expect("删除失败");
+        assert!(get_config("app.theme").await.expect("查询失败").is_none());
+        assert_eq!(get_all_configs().await.expect("读取全部失败").len(), 1);
+    })
+    .await;
+}
+
+// ---------- private.db (SQLCipher 加密) ----------
+
+#[tokio::test]
+async fn chat_record_db_insert_dedup_query_paging_type_filter() {
+    with_private_db(|_pool| async move {
+        let msg1 = TextQuicMsgVo {
+            nano_id: "m1".to_string(),
+            text_type: 0,
+            raw: "hi".to_string(),
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 100,
+        };
+        assert!(insert_chat_record(&msg1).await.expect("插入消息失败"), "首次应真正新增");
+        assert!(
+            !insert_chat_record(&msg1).await.expect("插入消息失败"),
+            "同 nano_id 应被 INSERT OR IGNORE 去重"
+        );
+
+        for (nano, ts, ty, raw) in [
+            ("m2", 200i64, 0u16, "hello"),
+            ("m3", 300i64, 1u16, "{\"x\":1}"),
+            ("m4", 400i64, 0u16, "world"),
+        ] {
+            let msg = TextQuicMsgVo {
+                nano_id: nano.to_string(),
+                text_type: ty,
+                raw: raw.to_string(),
+                recv_user: FRIEND.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+            };
+            assert!(insert_chat_record(&msg).await.expect("插入消息失败"));
+        }
+
+        // 反向方向(send/recv 互换)也计入双方会话
+        let msg5 = TextQuicMsgVo {
+            nano_id: "m5".to_string(),
+            text_type: 0,
+            raw: "reply".to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 500,
+        };
+        assert!(insert_chat_record(&msg5).await.expect("插入消息失败"));
+
+        let count = ChatRecord::query_chat_record_count_by_friend(ME, FRIEND)
+            .await
+            .expect("统计聊天条数失败");
+        assert_eq!(count, 5);
+
+        // 分页: 内部取 timestamp desc limit, 外层升序 -> 页大小为2时返回 (400, 500)
+        let page = query_chat_record_from_db(ME, FRIEND, 2, 0).await.expect("分页查询失败");
+        assert_eq!(page.len(), 2);
+        assert_eq!(page[0].timestamp, 400);
+        assert_eq!(page[1].timestamp, 500);
+
+        // 类型过滤
+        let typed =
+            query_chat_record_by_type_from_db(ME, FRIEND, 1, 10, 0).await.expect("按类型过滤失败");
+        assert_eq!(typed.len(), 1);
+        assert_eq!(typed[0].nano_id, "m3");
+
+        // 最新一条
+        let last = query_last_chat_record(ME, FRIEND).await.expect("查询最新消息失败");
+        assert_eq!(last.expect("应存在最新消息").nano_id, "m5");
+
+        // 按 nano_id + 本人 uuid 查询
+        let by_id = query_chat_record_by_id_from_db("m4", ME).await.expect("按id查询失败");
+        assert_eq!(by_id.raw, "world");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn chat_record_biz_id_file_info() {
+    with_private_db(|_pool| async move {
+        let raw =
+            r#"{"biz_id":"biz-9","file_name":"report.pdf","file_type":"pdf","file_size":1024}"#;
+        let msg = TextQuicMsgVo {
+            nano_id: "file-1".to_string(),
+            text_type: 3,
+            raw: raw.to_string(),
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 100,
+        };
+        insert_chat_record(&msg).await.expect("插入文件消息失败");
+
+        let info = ChatRecord::get_file_info_by_biz_id("biz-9").await.expect("查询文件信息失败");
+        assert_eq!(info, Some(("report.pdf".to_string(), "pdf".to_string())));
+
+        let none =
+            ChatRecord::get_file_info_by_biz_id("biz-missing").await.expect("查询文件信息失败");
+        assert!(none.is_none());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn group_chat_record_db_insert_dedup_query() {
+    with_private_db(|_pool| async move {
+        let group = "00000000-0000-0000-0000-0000000000gg";
+
+        let rec1 = GroupChatRecord {
+            id: 0,
+            nano_id: "g1".to_string(),
+            text_type: 0,
+            raw: "group hi".to_string(),
+            group_id: group.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 100,
+            server_id: None,
+        };
+        assert!(GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"));
+        assert!(
+            !GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"),
+            "同 nano_id 应去重"
+        );
+
+        let rec2 = GroupChatRecord {
+            id: 0,
+            nano_id: "g2".to_string(),
+            text_type: 0,
+            raw: "second".to_string(),
+            group_id: group.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 200,
+            server_id: None,
+        };
+        insert_group_chat_record(&rec2).await.expect("插入群聊消息失败");
+
+        let list = query_group_chat_record_from_db(group, 10, 0).await.expect("查询群聊失败");
+        assert_eq!(list.len(), 2);
+        assert!(list.iter().all(|m| m.recv_user == group));
+
+        let last = query_last_group_chat_record(group)
+            .await
+            .expect("查询最新群聊失败")
+            .expect("应存在最新群聊消息");
+        assert_eq!(last.nano_id, "g2");
+
+        let by_group =
+            GroupChatRecord::query_by_group_id(group, 10, 0).await.expect("查询群聊失败");
+        assert_eq!(by_group.len(), 2);
+
+        // 兼容路径: 以 chat_record 存储(recv_user=groupId)的群聊
+        let legacy = TextQuicMsgVo {
+            nano_id: "g3".to_string(),
+            text_type: 0,
+            raw: "legacy".to_string(),
+            recv_user: group.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 300,
+        };
+        assert!(insert_chat_record(&legacy).await.expect("插入群聊消息失败"));
+        let legacy_list =
+            app_lib::dao::chat_record_db::query_group_chat_record_from_db(group, 10, 0)
+                .await
+                .expect("查询群聊失败");
+        assert_eq!(legacy_list.len(), 1);
+        assert_eq!(legacy_list[0].nano_id, "g3");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn system_notification_lifecycle() {
+    with_user_db(|_pool| async move {
+        let notif1 = SystemNotification {
+            id: Some("n1".to_string()),
+            title: Some("Title".to_string()),
+            content: Some("Content".to_string()),
+            created_at: Some(100),
+            content_type: Some(0),
+            user_id: Some(ME.to_string()),
+            biz_id: Some("biz1".to_string()),
+            is_read: Some(false),
+            level1: Some(1),
+            level2: Some(1),
+            level3: None,
+            level4: None,
+            unread_count: Some(1),
+            priority: Some(1),
+            is_synced: Some(0),
+        };
+        SystemNotification::insert(&notif1).await.expect("插入通知失败");
+        SystemNotification::insert(&notif1).await.expect("重复插入通知失败");
+
+        let notif2 = SystemNotification {
+            id: Some("n2".to_string()),
+            title: None,
+            content: None,
+            created_at: Some(200),
+            content_type: Some(0),
+            user_id: Some(ME.to_string()),
+            biz_id: Some("biz2".to_string()),
+            is_read: Some(false),
+            level1: Some(1),
+            level2: Some(3),
+            level3: None,
+            level4: None,
+            unread_count: None,
+            priority: Some(1),
+            is_synced: Some(0),
+        };
+        SystemNotification::insert(&notif2).await.expect("插入通知失败");
+
+        let unread =
+            SystemNotification::find_all_by_is_read(ME, Some(0)).await.expect("查询未读通知失败");
+        assert_eq!(unread.len(), 2);
+
+        let counts = SystemNotification::get_unread_counts(ME).await.expect("获取未读计数失败");
+        assert_eq!(counts.contacts, 1);
+        assert_eq!(counts.groups, 1);
+        assert_eq!(counts.plaza, 0);
+
+        // 按 biz_id 批量已读
+        let affected = SystemNotification::batch_read(ME, vec!["biz1".to_string()])
+            .await
+            .expect("批量已读失败");
+        assert_eq!(affected, 1);
+        let unread =
+            SystemNotification::find_all_by_is_read(ME, Some(0)).await.expect("查询未读通知失败");
+        assert_eq!(unread.len(), 1);
+
+        // 已读未同步 -> 标记已同步
+        let pending =
+            SystemNotification::query_read_not_synced_ids(ME).await.expect("查询待同步失败");
+        assert_eq!(pending.len(), 1);
+        SystemNotification::mark_read_synced(ME, &pending).await.expect("标记已同步失败");
+        assert!(SystemNotification::query_read_not_synced_ids(ME)
+            .await
+            .expect("查询待同步失败")
+            .is_empty());
+
+        // 按层级清除未读(groups: level1=1, level2=3)
+        let affected = SystemNotification::clear_unread_by_level(ME, 1, 3, -1, -1)
+            .await
+            .expect("按层级清除失败");
+        assert_eq!(affected, 1);
+
+        // 一键清空剩余未读
+        let notif3 = SystemNotification {
+            id: Some("n3".to_string()),
+            title: None,
+            content: None,
+            created_at: Some(300),
+            content_type: None,
+            user_id: Some(ME.to_string()),
+            biz_id: None,
+            is_read: Some(false),
+            level1: None,
+            level2: None,
+            level3: None,
+            level4: None,
+            unread_count: None,
+            priority: Some(1),
+            is_synced: Some(0),
+        };
+        SystemNotification::insert(&notif3).await.expect("插入通知失败");
+        SystemNotification::clear_all_unread(ME).await.expect("清空未读失败");
+        assert!(SystemNotification::find_all_by_is_read(ME, Some(0))
+            .await
+            .expect("查询未读通知失败")
+            .is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn group_and_members_upsert_query_soft_delete() {
+    with_user_db(|_pool| async move {
+        let group_id = "group-1";
+        let mut group = Group {
+            id: 0,
+            group_id: group_id.to_string(),
+            group_name: "闲聊群".to_string(),
+            group_icon: String::new(),
+            owner_id: ME.to_string(),
+            created_at: 100,
+            updated_at: 100,
+            member_count: 1,
+            is_del: 0,
+            is_show: 1,
+            version: 0,
+        };
+        Group::insert_group(&group).await.expect("插入群失败");
+
+        // upsert 更新
+        group.member_count = 2;
+        group.version = 1;
+        Group::insert_group(&group).await.expect("更新群失败");
+
+        let fetched =
+            Group::query_by_group_id(group_id).await.expect("查询群失败").expect("群不存在");
+        assert_eq!(fetched.member_count, 2);
+        assert_eq!(fetched.version, 1);
+
+        // 成员 upsert
+        let m1 = GroupMember {
+            id: 0,
+            group_id: group_id.to_string(),
+            user_id: ME.to_string(),
+            role: 0,
+            nickname: "me".to_string(),
+            joined_at: 100,
+            is_del: 0,
+        };
+        let m2 = GroupMember {
+            id: 0,
+            group_id: group_id.to_string(),
+            user_id: FRIEND.to_string(),
+            role: 1,
+            nickname: "friend".to_string(),
+            joined_at: 100,
+            is_del: 0,
+        };
+        GroupMember::upsert_members(&[m1, m2]).await.expect("批量插入成员失败");
+
+        let members = GroupMember::query_members(group_id).await.expect("查询成员失败");
+        assert_eq!(members.len(), 2);
+        let one = GroupMember::query_member(group_id, FRIEND)
+            .await
+            .expect("查询成员失败")
+            .expect("成员不存在");
+        assert_eq!(one.role, 1);
+
+        // 我加入的群(join) + 最近群 + 模糊搜索
+        let my_groups = Group::query_user_groups(ME).await.expect("查询我的群失败");
+        assert_eq!(my_groups.len(), 1);
+        let last = Group::get_last_group(ME).await.expect("查询最近群失败").expect("应有群");
+        assert_eq!(last.group_id, group_id);
+        let hits = Group::search_user_groups(ME, "闲聊").await.expect("搜索群失败");
+        assert_eq!(hits.len(), 1);
+
+        // 移除成员后不再出现在我的群列表
+        GroupMember::remove_member(group_id, ME).await.expect("移除成员失败");
+        assert!(Group::query_user_groups(ME).await.expect("查询我的群失败").is_empty());
+
+        // 软删除群
+        Group::soft_delete(group_id).await.expect("软删除群失败");
+        assert!(Group::query_by_group_id(group_id).await.expect("查询群失败").is_none());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn user_info_upsert_query_update_delete() {
+    with_common_db(|_pool| async move {
+        let mut user = UserInfo {
+            id: 0,
+            uuid: ME.to_string(),
+            username: Some("alice".to_string()),
+            account: Some("alice_account".to_string()),
+            icon: Some("icon.png".to_string()),
+            gender: Some(2),
+            age: Some(18),
+            birthday: Some(0),
+            info: Some("hi".to_string()),
+            phone: Some("138".to_string()),
+            email: Some("a@b.c".to_string()),
+            address: Some("sh".to_string()),
+            status: Some(0),
+            user_type: Some(0),
+            created_at: 0,
+            updated_at: 0,
+        };
+        user.upsert().await.expect("upsert 用户失败");
+        let fetched =
+            UserInfo::query_by_uuid(ME).await.expect("按 uuid 查询失败").expect("用户不存在");
+        assert_eq!(fetched.account.as_deref(), Some("alice_account"));
+
+        // upsert 更新
+        user.username = Some("bob".to_string());
+        user.upsert().await.expect("upsert 用户失败");
+        let fetched =
+            UserInfo::query_by_uuid(ME).await.expect("按 uuid 查询失败").expect("用户不存在");
+        assert_eq!(fetched.username.as_deref(), Some("bob"));
+
+        // 按账号查询
+        let by_account = UserInfo::query_by_account("alice_account")
+            .await
+            .expect("按账号查询失败")
+            .expect("用户不存在");
+        assert_eq!(by_account.uuid, ME);
+
+        // update_by_uuid
+        user.username = Some("carol".to_string());
+        assert_eq!(user.update_by_uuid().await.expect("更新用户失败"), 1);
+        let fetched = UserInfo::query_by_uuid(ME).await.expect("查询失败").expect("用户不存在");
+        assert_eq!(fetched.username.as_deref(), Some("carol"));
+
+        // 新用户 insert
+        let u2 = UserInfo {
+            id: 0,
+            uuid: FRIEND.to_string(),
+            username: Some("d".to_string()),
+            account: None,
+            icon: None,
+            gender: None,
+            age: None,
+            birthday: None,
+            info: None,
+            phone: None,
+            email: None,
+            address: None,
+            status: None,
+            user_type: None,
+            created_at: 0,
+            updated_at: 0,
+        };
+        u2.insert().await.expect("插入用户失败");
+        assert_eq!(UserInfo::query_all().await.expect("查询全部失败").len(), 2);
+
+        // 删除
+        assert_eq!(UserInfo::delete_by_uuid(FRIEND).await.expect("删除用户失败"), 1);
+        assert!(UserInfo::query_by_uuid(FRIEND).await.expect("查询失败").is_none());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn user_token_upsert_query_delete() {
+    with_common_db(|_pool| async move {
+        let token = UserToken {
+            id: None,
+            user_id: Some(ME.to_string()),
+            refresh_token: Some("rt-1".to_string()),
+            local_credit: Some("lc".to_string()),
+            created_at: Some(100),
+            updated_at: Some(100),
+            version: Some(0),
+        };
+        UserToken::upsert(&token).await.expect("upsert token 失败");
+        let fetched =
+            UserToken::query_by_user_id(ME).await.expect("查询失败").expect("token 不存在");
+        assert_eq!(fetched.refresh_token.as_deref(), Some("rt-1"));
+        assert_eq!(fetched.version, Some(0));
+
+        // upsert 更新并递增 version
+        let token2 = UserToken {
+            id: None,
+            user_id: Some(ME.to_string()),
+            refresh_token: Some("rt-2".to_string()),
+            local_credit: Some("lc".to_string()),
+            created_at: Some(100),
+            updated_at: Some(200),
+            version: Some(0),
+        };
+        UserToken::upsert(&token2).await.expect("upsert token 失败");
+        let fetched =
+            UserToken::query_by_user_id(ME).await.expect("查询失败").expect("token 不存在");
+        assert_eq!(fetched.refresh_token.as_deref(), Some("rt-2"));
+        assert_eq!(fetched.version, Some(1), "version 应递增 +1");
+
+        // 按 refresh_token 查询
+        let by_rt = UserToken::query_by_refresh_token("rt-2")
+            .await
+            .expect("查询失败")
+            .expect("token 不存在");
+        assert_eq!(by_rt.user_id.as_deref(), Some(ME));
+
+        // 无 refresh_token 的 token 不进入有效列表
+        let bad = UserToken {
+            id: None,
+            user_id: Some(FRIEND.to_string()),
+            refresh_token: None,
+            local_credit: None,
+            created_at: Some(1),
+            updated_at: Some(1),
+            version: Some(0),
+        };
+        UserToken::upsert(&bad).await.expect("upsert token 失败");
+        assert_eq!(UserToken::query_all_valid().await.expect("查询失败").len(), 1);
+
+        UserToken::delete_by_user_id(ME).await.expect("删除失败");
+        assert!(UserToken::query_by_user_id(ME).await.expect("查询失败").is_none());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn chat_record_send_lifecycle() {
+    with_private_db(|_pool| async move {
+        let send = ChatRecordSend {
+            id: 0,
+            send_id: "send-1".to_string(),
+            msg_id: String::new(),
+            text_type: 1,
+            platform: 0,
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 100,
+            raw: "hello".to_string(),
+            send_status: 0,
+            retry_count: 0,
+        };
+        insert_chat_record_send(&send).await.expect("插入发送记录失败");
+
+        let fetched = query_record_send_from_db("send-1").await.expect("查询发送记录失败");
+        assert_eq!(fetched.send_status, 0);
+
+        let pending = query_chat_record_send_by_user(ME, FRIEND, vec![0, 2], false)
+            .await
+            .expect("按用户查询失败");
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].send_id, "send-1");
+
+        // 标记发送成功
+        update_chat_record_send_success("send-1", "server-msg-1").await.expect("标记成功失败");
+        let fetched = query_record_send_from_db("send-1").await.expect("查询发送记录失败");
+        assert_eq!(fetched.send_status, 3);
+        assert_eq!(fetched.msg_id, "server-msg-1");
+
+        // 更新发送记录
+        update_chat_record_send("send-1", "server-msg-1", 2, 3, 200, "retry raw")
+            .await
+            .expect("更新发送记录失败");
+        let fetched = query_record_send_from_db("send-1").await.expect("查询发送记录失败");
+        assert_eq!(fetched.send_status, 2);
+        assert_eq!(fetched.retry_count, 3);
+
+        // 忽略消息(仅更新状态)
+        update_chat_record_send_status("send-1", -1).await.expect("更新状态失败");
+        let fetched = query_record_send_from_db("send-1").await.expect("查询发送记录失败");
+        assert_eq!(fetched.send_status, -1);
+
+        let pending = query_chat_record_send_by_user(ME, FRIEND, vec![0, 2], false)
+            .await
+            .expect("按用户查询失败");
+        assert!(pending.is_empty(), "已忽略消息不应再进入待发送列表");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn chat_record_ack_lifecycle() {
+    with_private_db(|_pool| async move {
+        let ack = ChatRecordAck {
+            id: 0,
+            msg_id: String::new(),
+            prev_id: "prev".to_string(),
+            send_id: "ack-1".to_string(),
+            platform: 0,
+            ack_status: 0,
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 100,
+        };
+        insert_chat_record_ack(&ack).await.expect("插入 ack 失败");
+
+        let fetched = query_ack_record_from_db("ack-1").await.expect("查询 ack 失败");
+        assert_eq!(fetched.ack_status, 0);
+
+        let by_send = query_chat_record_by_send_id("ack-1", FRIEND)
+            .await
+            .expect("查询 ack 失败")
+            .expect("ack 不存在");
+        assert_eq!(by_send.send_user, ME);
+
+        update_chat_record_ack("ack-1", 1, "server-id").await.expect("更新 ack 失败");
+        let fetched = query_ack_record_from_db("ack-1").await.expect("查询 ack 失败");
+        assert_eq!(fetched.ack_status, 1);
+        assert_eq!(fetched.msg_id, "server-id");
+
+        update_chat_record_ack_prev_id("ack-1", "new-prev").await.expect("更新 prev_id 失败");
+        let fetched = query_ack_record_from_db("ack-1").await.expect("查询 ack 失败");
+        assert_eq!(fetched.prev_id, "new-prev");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn group_message_ack_lifecycle() {
+    with_private_db(|_pool| async move {
+        let ack = GroupMessageAck {
+            id: 0,
+            nano_id: String::new(),
+            local_nano_id: "local-1".to_string(),
+            group_uuid: "group-1".to_string(),
+            send_user: ME.to_string(),
+            text_type: 2001,
+            ack_status: 0,
+            raw: "group msg".to_string(),
+            timestamp: 100,
+        };
+        insert_group_message_ack(&ack).await.expect("插入群 ack 失败");
+
+        let fetched = query_group_message_ack_by_local_nano_id("local-1")
+            .await
+            .expect("查询失败")
+            .expect("ack 不存在");
+        assert_eq!(fetched.ack_status, 0);
+
+        let pending = query_pending_group_message_acks("group-1").await.expect("查询待确认失败");
+        assert_eq!(pending.len(), 1);
+
+        update_group_message_ack_status("local-1", "server-nano", 1).await.expect("更新 ack 失败");
+        let fetched = query_group_message_ack_by_nano_id("server-nano")
+            .await
+            .expect("查询失败")
+            .expect("ack 不存在");
+        assert_eq!(fetched.ack_status, 1);
+        assert!(query_pending_group_message_acks("group-1")
+            .await
+            .expect("查询待确认失败")
+            .is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn group_message_read_upsert_query() {
+    with_private_db(|_pool| async move {
+        let rec = GroupMessageRead {
+            id: 0,
+            nano_id: "n1".to_string(),
+            group_uuid: "g1".to_string(),
+            user_uuid: ME.to_string(),
+            timestamp: 100,
+        };
+        update_group_message_read(&rec).await.expect("更新已读失败");
+        let fetched =
+            query_group_message_read("g1", ME).await.expect("查询已读失败").expect("已读不存在");
+        assert_eq!(fetched.timestamp, 100);
+
+        // 再次更新(UPDATE 分支)
+        let rec2 = GroupMessageRead {
+            id: 0,
+            nano_id: "n2".to_string(),
+            group_uuid: "g1".to_string(),
+            user_uuid: ME.to_string(),
+            timestamp: 200,
+        };
+        update_group_message_read(&rec2).await.expect("更新已读失败");
+        let fetched =
+            query_group_message_read("g1", ME).await.expect("查询已读失败").expect("已读不存在");
+        assert_eq!(fetched.timestamp, 200);
+        assert_eq!(fetched.nano_id, "n2");
+
+        // 另一个群(INSERT 分支)
+        let rec3 = GroupMessageRead {
+            id: 0,
+            nano_id: "n3".to_string(),
+            group_uuid: "g2".to_string(),
+            user_uuid: ME.to_string(),
+            timestamp: 300,
+        };
+        update_group_message_read(&rec3).await.expect("更新已读失败");
+
+        let last = query_group_last_read_msg(ME, 150).await.expect("查询已读失败");
+        assert_eq!(last.len(), 2, "g1(200) 与 g2(300) 都应大于 150");
+
+        let only_g2 = query_group_last_read_msg(ME, 250).await.expect("查询已读失败");
+        assert_eq!(only_g2.len(), 1);
+        assert_eq!(only_g2[0].group_uuid, "g2");
+    })
+    .await;
+}
+
+// ---------- 任务12: 同步域(水位表 + 任务表) ----------
+
+/// 任务12: 水位双写 —— synced_id 只前进, hist_floor 单调只向下。
+// ===== 任务12 简化: 正向追平(本地前沿 = max(server_id)) =====
+
+/// 正向追平: 单聊本地前沿(`after_id` 输入) = 双方消息中 max(server_id)。
+///
+/// 在线 QUIC 消息无 server_id → 重连重拉时 nano_id 去重、回填 server_id, 前沿自愈 ——
+/// 这正是 `sync_sessions_forward` 每次重连正向重拉的兜底语义。
+#[tokio::test]
+async fn forward_sync_single_frontier_self_heal() {
+    with_private_db(|_pool| async move {
+        // 无任何消息 → 前沿 None(客户端视为 0, 从窗口内最早起拉)
+        let stranger = "00000000-0000-0000-0000-00000000ffff";
+        assert_eq!(
+            local_max_server_id(ME, stranger).await.expect("查询前沿失败"),
+            None,
+            "无消息不应有前沿"
+        );
+
+        // 首次 HTTP 同步: 落库 + 回填 server_id
+        let synced = TextQuicMsgVo {
+            nano_id: "fs-1".to_string(),
+            text_type: 0,
+            raw: "synced".to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+        };
+        assert!(insert_chat_record(&synced).await.expect("插入消息失败"), "首次应新增");
+        set_chat_record_server_id("fs-1", 1001).await.expect("回填 server_id 失败");
+
+        // 在线 QUIC 已投递但无 server_id(真实场景: 在线消息到本地 server_id 恒 NULL)
+        let online = TextQuicMsgVo {
+            nano_id: "fs-2".to_string(),
+            text_type: 0,
+            raw: "online".to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+        };
+        assert!(insert_chat_record(&online).await.expect("插入在线消息失败"));
+
+        // 前沿只看 server_id → 未含在线消息(低估, 下次重连会重拉)
+        assert_eq!(local_max_server_id(ME, FRIEND).await.expect("查询前沿失败"), Some(1001));
+
+        // 重连重拉 fs-2(服务端补上 server_id=1002): 同 nano_id 去重(非新增)但回填 server_id → 前沿自愈
+        assert!(!insert_chat_record(&online).await.expect("插入在线消息失败"), "同 nano_id 应去重");
+        set_chat_record_server_id("fs-2", 1002).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_server_id(ME, FRIEND).await.expect("查询前沿失败"), Some(1002));
+
+        // 双向对称: 我发出的消息(有 server_id)也计入前沿
+        let sent = TextQuicMsgVo {
+            nano_id: "fs-3".to_string(),
+            text_type: 0,
+            raw: "sent".to_string(),
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 300,
+        };
+        assert!(insert_chat_record(&sent).await.expect("插入发送消息失败"));
+        set_chat_record_server_id("fs-3", 1003).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_server_id(ME, FRIEND).await.expect("查询前沿失败"), Some(1003));
+    })
+    .await;
+}
+
+/// 正向追平: 群聊本地前沿(`after_id` 输入) = 群消息中 max(server_id)。
+#[tokio::test]
+async fn forward_sync_group_frontier_self_heal() {
+    with_private_db(|_pool| async move {
+        let group = "00000000-0000-0000-0000-0000000000gg";
+
+        // 无 server_id → None(视为 0, 全量窗口起拉)
+        assert_eq!(
+            local_max_group_server_id(group).await.expect("查询前沿失败"),
+            None,
+            "无消息不应有前沿"
+        );
+
+        let rec1 = GroupChatRecord {
+            id: 0,
+            nano_id: "fg-1".to_string(),
+            text_type: 0,
+            raw: "group synced".to_string(),
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+            server_id: None,
+        };
+        assert!(GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"));
+        set_group_server_id("fg-1", 2001).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2001));
+
+        // 重拉同消息: 去重 + 回填幂等, 前沿不变
+        assert!(
+            !GroupChatRecord::insert(&rec1).await.expect("插入群聊消息失败"),
+            "同 nano_id 应去重"
+        );
+        set_group_server_id("fg-1", 2001).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2001));
+
+        // 新消息 → 前沿推进
+        let rec2 = GroupChatRecord {
+            id: 0,
+            nano_id: "fg-2".to_string(),
+            text_type: 0,
+            raw: "newer".to_string(),
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+            server_id: None,
+        };
+        assert!(GroupChatRecord::insert(&rec2).await.expect("插入群聊消息失败"));
+        set_group_server_id("fg-2", 2002).await.expect("回填 server_id 失败");
+        assert_eq!(local_max_group_server_id(group).await.expect("查询前沿失败"), Some(2002));
+    })
+    .await;
+}
+
+// ===== 任务12 正向追平: 会话追平记录表(sync_task, 供前端查看追平成败) =====
+// 消费水位表 session_sync_state 已删除(本地前沿由 max(server_id) 推导)。
+
+/// 追平记录: 正向追平流程按「轮次 × 会话」写终态(成功/失败), 批次视图聚合 + 明细。
+#[tokio::test]
+async fn sync_task_record_forward_catchup_history() {
+    with_user_db(|_pool| async move {
+        let batch = 1_700_000_000_000i64;
+
+        // 成功记录(批次 + 新增数)
+        record_forward_catchup(batch, "su1", SYNC_STATUS_SUCCESS, 2, 7, None)
+            .await
+            .expect("写成功记录失败");
+        // 失败记录(attempt=1, last_error 非空)
+        record_forward_catchup(batch, "su2", SYNC_STATUS_FAILED, 1, 2, Some("boom"))
+            .await
+            .expect("写失败记录失败");
+
+        let detail = list_batch_tasks(batch).await.expect("批明细失败");
+        assert_eq!(detail.len(), 2, "同批 2 条记录");
+        let ok = detail.iter().find(|t| t.session_uuid == "su1").expect("应有 su1");
+        assert_eq!(ok.status, SYNC_STATUS_SUCCESS);
+        assert_eq!(ok.batches, 2);
+        assert_eq!(ok.new_count, 7);
+        assert_eq!(ok.attempt, 0);
+        assert!(ok.last_error.is_none(), "成功记录 last_error 应为空");
+        let bad = detail.iter().find(|t| t.session_uuid == "su2").expect("应有 su2");
+        assert_eq!(bad.status, SYNC_STATUS_FAILED);
+        assert_eq!(bad.attempt, 1);
+        assert_eq!(bad.last_error.as_deref(), Some("boom"));
+
+        let sums = history().await.expect("批次视图失败");
+        assert_eq!(sums.len(), 1, "同一 batch_id 聚为一批");
+        assert_eq!(sums[0].total, 2);
+        assert_eq!(sums[0].success, 1);
+        assert_eq!(sums[0].failed, 1);
+        assert_eq!(sums[0].pending, 0, "追平记录均为终态, 无 pending");
+    })
+    .await;
+}
+
+/// 追平记录保留: 仅保留最近 `keep` 批。
+#[tokio::test]
+async fn sync_task_prune_keeps_recent() {
+    with_user_db(|_pool| async move {
+        for b in 0..60i64 {
+            record_forward_catchup(1000 + b, &format!("su-{b}"), SYNC_STATUS_SUCCESS, 1, 0, None)
+                .await
+                .expect("写记录失败");
+        }
+
+        let removed = prune_batches(50).await.expect("清理失败");
+        assert!(removed > 0, "应清理超龄批");
+        let sums = history().await.expect("批次视图失败");
+        assert_eq!(sums.len(), 50, "仅保留最近 50 批");
+        assert_eq!(sums[0].batch_id, 1059, "最老批被清, 最新批保留");
+    })
+    .await;
+}
+
+/// 列迁移: 旧库 synced_id 删列 + 残留水位表 session_sync_state 清理(幂等)。
+#[tokio::test]
+async fn chat_session_synced_id_migration() {
+    with_user_db(|pool| async move {
+        // 重建旧结构(含 synced_id), 模拟任务07 已交付库
+        sqlx::query("DROP TABLE IF EXISTS chat_session").execute(&pool).await.expect("删表失败");
+        sqlx::query(
+            r#"CREATE TABLE chat_session (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, nano_id TEXT NOT NULL, timestamp INTEGER NOT NULL,
+                send_user TEXT NOT NULL, recv_user TEXT NOT NULL, text_type INTEGER NOT NULL DEFAULT 0,
+                unread_count INTEGER NOT NULL DEFAULT 0, last_message TEXT NOT NULL,
+                is_show INTEGER NOT NULL DEFAULT 1, is_top INTEGER NOT NULL DEFAULT 0,
+                session_type INTEGER NOT NULL DEFAULT 0, session_uuid TEXT DEFAULT NULL,
+                synced_id INTEGER NOT NULL DEFAULT 0, UNIQUE(send_user, recv_user), UNIQUE(session_uuid))"#,
+        )
+        .execute(&pool)
+        .await
+        .expect("建旧表失败");
+        sqlx::query(
+            r#"INSERT INTO chat_session
+                 (nano_id, timestamp, text_type, unread_count, last_message, send_user, recv_user,
+                  session_type, is_show, is_top, session_uuid, synced_id)
+               VALUES ('', 0, 0, 0, '', 'p', ?1, 1, 1, 0, 'su-mig', 42)"#,
+        )
+        .bind(ME)
+        .execute(&pool)
+        .await
+        .expect("插旧行失败");
+        // 模拟旧版残留水位表
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS session_sync_state (session_uuid TEXT PRIMARY KEY, synced_id INTEGER NOT NULL DEFAULT 0)",
+        )
+        .execute(&pool)
+        .await
+        .expect("建残留水位表失败");
+
+        init_user_ddl(&pool).await.expect("重跑迁移失败");
+
+        let cols = sqlx::query("PRAGMA table_info(chat_session)").fetch_all(&pool).await.expect("读列失败");
+        let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
+        assert!(!names.contains(&"synced_id".to_string()), "synced_id 列应已删除: {names:?}");
+        assert!(names.contains(&"last_message_id".to_string()), "应新增 last_message_id: {names:?}");
+        let tables = sqlx::query(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='session_sync_state'",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("查表失败");
+        assert!(tables.is_empty(), "残留水位表应被清理");
+
+        // 幂等: 再跑一次不报错
+        init_user_ddl(&pool).await.expect("迁移应幂等");
+    })
+    .await;
+}
+
+/// 单聊聊天记录: deleted 列迁移 + 本机软删除后查询/统计/最新一条均过滤。
+#[tokio::test]
+async fn chat_record_soft_delete_filters() {
+    with_private_db(|pool| async move {
+        let cols =
+            sqlx::query("PRAGMA table_info(chat_record)").fetch_all(&pool).await.expect("读列失败");
+        let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
+        assert!(names.contains(&"deleted".to_string()), "chat_record 应有 deleted 列: {names:?}");
+
+        for (nano, ts) in [("m1", 100i64), ("m2", 200i64), ("m3", 300i64)] {
+            let msg = TextQuicMsgVo {
+                nano_id: nano.to_string(),
+                text_type: 0,
+                raw: format!("raw-{nano}"),
+                recv_user: FRIEND.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+            };
+            insert_chat_record(&msg).await.expect("插入失败");
+        }
+
+        delete_chat_record_db(&["m2".to_string()], ME).await.expect("删除失败");
+
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 2);
+        assert!(list.iter().all(|m| m.nano_id != "m2"), "已删消息不应出现在历史中");
+
+        let last = query_last_chat_record(ME, FRIEND).await.expect("查询最新失败");
+        assert_eq!(last.expect("应存在最新消息").nano_id, "m3");
+
+        assert_eq!(
+            ChatRecord::query_chat_record_count_by_friend(ME, FRIEND).await.expect("统计失败"),
+            2
+        );
+
+        // 非参与者删除不应生效
+        delete_chat_record_db(&["m1".to_string()], "00000000-0000-0000-0000-0000000000ff")
+            .await
+            .expect("删除失败");
+        let after = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(after.len(), 2, "非参与者删除不应生效");
+    })
+    .await;
+}
+
+/// 单聊聊天记录: 旧库(无 deleted 列)重跑迁移后自动补列且旧数据默认可查。
+#[tokio::test]
+async fn chat_record_deleted_column_migration() {
+    with_private_db(|pool| async move {
+        sqlx::query("DROP TABLE IF EXISTS chat_record").execute(&pool).await.expect("删表失败");
+        sqlx::query(
+            r#"CREATE TABLE chat_record (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, nano_id TEXT NOT NULL UNIQUE, raw TEXT NOT NULL,
+                timestamp INTEGER NOT NULL, send_user TEXT NOT NULL, recv_user TEXT NOT NULL,
+                text_type INTEGER NOT NULL DEFAULT 0, server_id INTEGER DEFAULT NULL)"#,
+        )
+        .execute(&pool)
+        .await
+        .expect("建旧表失败");
+        sqlx::query(
+            "INSERT INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES ('old', 'r', 1, ?1, ?2, 0)",
+        )
+        .bind(ME)
+        .bind(FRIEND)
+        .execute(&pool)
+        .await
+        .expect("插旧行失败");
+
+        init_private_ddl(&pool).await.expect("重跑迁移失败");
+
+        let cols = sqlx::query("PRAGMA table_info(chat_record)").fetch_all(&pool).await.expect("读列失败");
+        let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
+        assert!(names.contains(&"deleted".to_string()), "应新增 deleted 列: {names:?}");
+
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1, "旧数据 deleted 默认 0 应仍可见");
+
+        init_private_ddl(&pool).await.expect("迁移应幂等");
+    })
+    .await;
+}
+
+/// 群聊聊天记录: 本机软删除后历史/最新/按群查询均过滤。
+#[tokio::test]
+async fn group_chat_record_soft_delete_filters() {
+    with_private_db(|pool| async move {
+        let group = "00000000-0000-0000-0000-0000000000gg";
+        let cols = sqlx::query("PRAGMA table_info(group_chat_record)")
+            .fetch_all(&pool)
+            .await
+            .expect("读列失败");
+        let names: Vec<String> = cols.iter().map(|r| r.get::<String, _>("name")).collect();
+        assert!(
+            names.contains(&"deleted".to_string()),
+            "group_chat_record 应有 deleted 列: {names:?}"
+        );
+
+        for (nano, ts) in [("g1", 100i64), ("g2", 200i64)] {
+            let rec = GroupChatRecord {
+                id: 0,
+                nano_id: nano.to_string(),
+                text_type: 0,
+                raw: format!("g-{nano}"),
+                group_id: group.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+                server_id: None,
+            };
+            GroupChatRecord::insert(&rec).await.expect("插入失败");
+        }
+
+        delete_group_chat_record_db(&["g1".to_string()], group).await.expect("删除失败");
+
+        let list = query_group_chat_record_from_db(group, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].nano_id, "g2");
+
+        let last = query_last_group_chat_record(group)
+            .await
+            .expect("查询最新失败")
+            .expect("应存在最新消息");
+        assert_eq!(last.nano_id, "g2");
+
+        let by_group = GroupChatRecord::query_by_group_id(group, 10, 0).await.expect("查询失败");
+        assert_eq!(by_group.len(), 1);
+    })
+    .await;
+}
+
+/// 单聊撤回: 仅发送者本人可撤回; 命中后清空 raw 并置 deleted=1 从历史消失。
+#[tokio::test]
+async fn chat_record_recall_clears_and_deletes() {
+    with_private_db(|pool| async move {
+        for (nano, ts) in [("m1", 100i64), ("m2", 200i64)] {
+            let msg = TextQuicMsgVo {
+                nano_id: nano.to_string(),
+                text_type: 1,
+                raw: format!("raw-{nano}"),
+                recv_user: FRIEND.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+            };
+            insert_chat_record(&msg).await.expect("插入失败");
+        }
+
+        // 非发送者撤回不生效
+        assert!(!recall_chat_record_db("m1", FRIEND).await.expect("撤回失败"));
+        // 本人撤回生效
+        assert!(recall_chat_record_db("m1", ME).await.expect("撤回失败"));
+        // 重复撤回不生效(已 deleted)
+        assert!(!recall_chat_record_db("m1", ME).await.expect("撤回失败"));
+
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].nano_id, "m2");
+
+        // 内容已清空且 deleted 置 1
+        let row = sqlx::query("SELECT raw, deleted FROM chat_record WHERE nano_id = 'm1'")
+            .fetch_one(&pool)
+            .await
+            .expect("查询失败");
+        assert_eq!(row.get::<String, _>("raw"), "");
+        assert_eq!(row.get::<i64, _>("deleted"), 1);
+    })
+    .await;
+}
+
+/// 群聊撤回: 仅发送者本人可撤回; 命中后清空 raw 并置 deleted=1。
+#[tokio::test]
+async fn group_chat_record_recall_clears_and_deletes() {
+    with_private_db(|pool| async move {
+        let group = "00000000-0000-0000-0000-0000000000gg";
+        for (nano, ts) in [("g1", 100i64), ("g2", 200i64)] {
+            let rec = GroupChatRecord {
+                id: 0,
+                nano_id: nano.to_string(),
+                text_type: 2001,
+                raw: format!("g-{nano}"),
+                group_id: group.to_string(),
+                send_user: ME.to_string(),
+                timestamp: ts,
+                server_id: None,
+            };
+            GroupChatRecord::insert(&rec).await.expect("插入失败");
+        }
+
+        // 撤回前可按 nano_id 查到
+        assert!(query_group_chat_record_by_id("g1", group).await.expect("查询失败").is_some());
+
+        assert!(!recall_group_chat_record_db("g1", group, FRIEND).await.expect("撤回失败"));
+        assert!(recall_group_chat_record_db("g1", group, ME).await.expect("撤回失败"));
+        assert!(!recall_group_chat_record_db("g1", group, ME).await.expect("撤回失败"));
+
+        let list = query_group_chat_record_from_db(group, 10, 0).await.expect("查询失败");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].nano_id, "g2");
+        assert!(query_group_chat_record_by_id("g1", group).await.expect("查询失败").is_none());
+
+        let row = sqlx::query("SELECT raw, deleted FROM group_chat_record WHERE nano_id = 'g1'")
+            .fetch_one(&pool)
+            .await
+            .expect("查询失败");
+        assert_eq!(row.get::<String, _>("raw"), "");
+        assert_eq!(row.get::<i64, _>("deleted"), 1);
+    })
+    .await;
+}
+
+/// 撤回目标归一：前端本地 nano_id 通过发送表/群 ack 映射回服务端 nano_id。
+///
+/// 前端乐观消息持有本地 nano_id，ACK 后 `chat_record` 落库为服务端 nano_id，
+/// 撤回时需先归一，否则"刚发的消息"会查不到原消息。
+#[tokio::test]
+async fn recall_target_resolves_local_to_server_id() {
+    with_private_db(|_pool| async move {
+        // 单聊：ack 已确认 -> 返回服务端 id
+        let ack = ChatRecordAck {
+            id: 0,
+            msg_id: "server-1".to_string(),
+            prev_id: String::new(),
+            send_id: "local-1".to_string(),
+            platform: 0,
+            ack_status: 1,
+            recv_user: FRIEND.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 100,
+        };
+        insert_chat_record_ack(&ack).await.expect("插入失败");
+        assert_eq!(resolve_single_recall_target("local-1").await, "server-1");
+
+        // 未确认(ack_status=0, msg_id 空) -> 原样返回
+        let pending = ChatRecordAck {
+            msg_id: String::new(),
+            send_id: "local-2".to_string(),
+            ack_status: 0,
+            ..ack
+        };
+        insert_chat_record_ack(&pending).await.expect("插入失败");
+        assert_eq!(resolve_single_recall_target("local-2").await, "local-2");
+
+        // 无记录(历史/同步消息) -> 原样返回
+        assert_eq!(resolve_single_recall_target("server-1").await, "server-1");
+
+        // 群聊：ack_status=1 -> 返回服务端 id
+        let ack = GroupMessageAck {
+            id: 0,
+            nano_id: "server-g1".to_string(),
+            local_nano_id: "local-g1".to_string(),
+            group_uuid: "group-1".to_string(),
+            send_user: ME.to_string(),
+            text_type: 2001,
+            ack_status: 1,
+            raw: "{}".to_string(),
+            timestamp: 100,
+        };
+        insert_group_message_ack(&ack).await.expect("插入失败");
+        assert_eq!(resolve_group_recall_target("local-g1").await, "server-g1");
+        assert_eq!(resolve_group_recall_target("server-g1").await, "server-g1");
+    })
+    .await;
+}
+
+/// 撤回核对：与到达顺序无关，按会话扫描撤回消息并清除原消息（幂等）。
+#[tokio::test]
+async fn recall_reconcile_is_order_independent() {
+    with_private_db(|_pool| async move {
+        // 单聊：模拟"撤回先于原消息到达"（撤回 id 时间戳更大但先插入）
+        let recall = TextQuicMsgVo {
+            nano_id: "recall-1".to_string(),
+            text_type: 3001,
+            raw: r#"{"ot_recall":1,"target_nano_id":"origin-1"}"#.to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+        };
+        insert_chat_record(&recall).await.expect("插入撤回失败");
+        let origin = TextQuicMsgVo {
+            nano_id: "origin-1".to_string(),
+            text_type: 1,
+            raw: r#"{"text":"hi","prev_id":"","platform":0}"#.to_string(),
+            recv_user: ME.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+        };
+        insert_chat_record(&origin).await.expect("插入原消息失败");
+
+        assert_eq!(reconcile_single_recalls(ME, FRIEND).await.expect("核对失败"), 1);
+        assert_eq!(reconcile_single_recalls(ME, FRIEND).await.expect("核对失败"), 0, "幂等");
+        let list = query_chat_record_from_db(ME, FRIEND, 10, 0).await.expect("查询失败");
+        assert!(list.iter().all(|m| m.nano_id != "origin-1"), "原消息应被删除");
+        assert!(list.iter().any(|m| m.nano_id == "recall-1"), "撤回提示应保留");
+
+        // 发送者不一致不应删除
+        let other = TextQuicMsgVo {
+            nano_id: "solo-1".to_string(),
+            text_type: 1,
+            raw: r#"{"text":"mine","prev_id":"","platform":0}"#.to_string(),
+            recv_user: ME.to_string(),
+            send_user: ME.to_string(),
+            timestamp: 90,
+        };
+        insert_chat_record(&other).await.expect("插入失败");
+        assert_eq!(reconcile_single_recalls(ME, FRIEND).await.expect("核对失败"), 0);
+
+        // 群聊：撤回以 2001 承载
+        let group = "reconcile-group";
+        let outer = serde_json::json!({
+            "text": r#"{"ot_recall":1,"target_nano_id":"gorigin-1"}"#,
+            "send_user": FRIEND,
+        })
+        .to_string();
+        GroupChatRecord::insert(&GroupChatRecord {
+            id: 0,
+            nano_id: "grecall-1".to_string(),
+            text_type: 2001,
+            raw: outer,
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 200,
+            server_id: None,
+        })
+        .await
+        .expect("插入群撤回失败");
+        GroupChatRecord::insert(&GroupChatRecord {
+            id: 0,
+            nano_id: "gorigin-1".to_string(),
+            text_type: 2001,
+            raw: r#"{"text":"hello","send_user":"x"}"#.to_string(),
+            group_id: group.to_string(),
+            send_user: FRIEND.to_string(),
+            timestamp: 100,
+            server_id: None,
+        })
+        .await
+        .expect("插入群原消息失败");
+
+        assert_eq!(reconcile_group_recalls(group).await.expect("群核对失败"), 1);
+        assert_eq!(reconcile_group_recalls(group).await.expect("群核对失败"), 0, "幂等");
+        assert!(
+            query_group_chat_record_by_id("gorigin-1", group).await.expect("查询失败").is_none()
+        );
+    })
+    .await;
+}

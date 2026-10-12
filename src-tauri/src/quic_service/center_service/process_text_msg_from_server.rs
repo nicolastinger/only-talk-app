@@ -1,9 +1,20 @@
 use std::time::Duration;
 
+use anyhow::anyhow;
+use log::{error, info, warn};
+use serde::{Deserialize, Serialize};
+use tauri::Emitter;
+use tokio::time::timeout;
+
 use crate::dao::chat_record_ack::update_chat_record_ack;
-use crate::dao::chat_record_db::insert_chat_record;
+use crate::dao::chat_record_db::{
+    insert_chat_record, query_chat_record_by_id_from_db, recall_chat_record_db,
+};
 use crate::dao::chat_record_send::{query_record_send_from_db, update_chat_record_send_success};
-use crate::dao::group_chat_record_db::insert_group_chat_record;
+use crate::dao::friend_db::is_blocked_db;
+use crate::dao::group_chat_record_db::{
+    insert_group_chat_record, query_group_chat_record_by_id, recall_group_chat_record_db,
+};
 use crate::dao::group_message_ack::{
     query_group_message_ack_by_local_nano_id, update_group_message_ack_status,
 };
@@ -14,40 +25,39 @@ use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::p2p_models::P2pInitMsg;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::text_msg::TextQuicMsg;
-use crate::service::chat_service::{clear_chat_session, process_no_send_success_msg};
 use crate::service::chat_service::{
-    create_chat_session_service, create_group_chat_session_service,
+    clear_chat_session, create_group_chat_session_service, process_no_send_success_msg,
 };
-use crate::service::friend_service;
-use crate::service::group_service;
 use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
-use crate::service::user_service::{get_user_info, insert_user_info};
+use crate::service::recall::{can_recall, parse_group_recall_target, parse_recall_target};
+use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
+use crate::service::{friend_service, group_service, message_alert};
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
-    CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE,
-    MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_NOTIFICATION, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE,
-    MSG_TYPE_JSON, MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_PING,
-    MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL,
-    NOTIFY_TYPE_MSG,
+    CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_FORCE_LOGOUT,
+    MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE, MSG_TYPE_JSON,
+    MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER,
+    MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL, MSG_TYPE_RECALL_SUCCESS,
+    MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
 };
+use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
-use anyhow::anyhow;
-use log::{error, info, warn};
-use serde::{Deserialize, Serialize};
-use tauri::Emitter;
-use tokio::time::timeout;
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
-struct WebRTCSignalMessage {
+pub struct WebRTCSignalMessage {
     #[serde(rename = "type")]
-    msg_type: String,
-    sender: String,
-    receiver: String,
-    data: serde_json::Value,
-    timestamp: i64,
+    pub msg_type: String,
+    pub sender: String,
+    pub receiver: String,
+    #[serde(rename = "sessionId")]
+    pub session_id: Option<String>,
+    #[serde(default)]
+    pub prev_id: Option<String>,
+    pub data: serde_json::Value,
+    pub timestamp: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -72,9 +82,20 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
     info!("处理消息 {:?}", text_vec);
     for msg in text_vec {
         match msg.text_type {
-            // 单聊消息
+            // 单聊消息（文本/图片/文件）
             MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE => {
                 process_private_chat_message(msg).await?;
+            }
+            // 单聊消息撤回（伪撤回）：校验后清除目标消息，再按普通消息落库/上屏
+            MSG_TYPE_RECALL => {
+                process_recall_message(msg).await?;
+            }
+            // 视频通话控制消息（12-15）：只转发控制命令，不落库、不进会话列表
+            MSG_TYPE_P2P_VIDEO_CALL_INVITE
+            | MSG_TYPE_P2P_VIDEO_CALL_ACCEPT
+            | MSG_TYPE_P2P_VIDEO_CALL_REJECT
+            | MSG_TYPE_P2P_VIDEO_CALL_END => {
+                process_call_control(msg).await?;
             }
             // 群聊消息
             MSG_TYPE_GROUP_TEXT | MSG_TYPE_GROUP_IMAGE | MSG_TYPE_GROUP_FILE => {
@@ -138,6 +159,9 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 process_notify_message(msg).await?;
             }
             // 收到系统消息
+            MSG_TYPE_FORCE_LOGOUT => {
+                process_force_logout(msg).await?;
+            }
             MSG_TYPE_SYSTEM => {
                 info!("接收到系统通知 {:?}", msg);
                 process_system_message(msg).await?;
@@ -150,11 +174,133 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
     Ok(())
 }
 
+/// 处理服务端的同平台挤下线通知。设置 Idle 是为了阻止 run_client 自动重连。
+async fn process_force_logout(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let (reason, killer_session) = parse_force_logout_raw(&text_quic_msg.raw);
+    info!("收到强制退出通知: {}", reason);
+
+    // 同进程旧连接顶替自己(本机重新登录/刷新 token 后,旧代连接收到自己发起的强退帧):
+    // killer 会话等于本机当前 token 的 jti,忽略即可,避免把自己置为 Idle 停掉重连。
+    if let Some(killer) = killer_session.as_deref() {
+        if current_token_jti().await.as_deref() == Some(killer) {
+            info!("强退帧来自本机当前会话,忽略(旧连接顶替自己): killer_session={}", killer);
+            return Ok(());
+        }
+    }
+
+    disconnect_quic().await?;
+    GLOBAL_QUIC_USER_INFO.write().await.clear();
+
+    if let Some(handle) = APP_HANDLE.get() {
+        handle.emit("force_logout", reason)?;
+    }
+    Ok(())
+}
+
+/// 解析服务端强退帧:JSON {reason, session} 或历史纯文本 reason。
+/// 返回 (展示文案, 发起该次强退的会话 jti)。
+fn parse_force_logout_raw(raw: &[u8]) -> (String, Option<String>) {
+    match serde_json::from_slice::<serde_json::Value>(raw) {
+        Ok(value) => {
+            let session = value
+                .get("session")
+                .and_then(|s| s.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string());
+            let reason = value
+                .get("reason")
+                .and_then(|r| r.as_str())
+                .map(|r| r.to_string())
+                .unwrap_or_default();
+            if reason.is_empty() {
+                (String::from_utf8_lossy(raw).to_string(), session)
+            } else {
+                (reason, session)
+            }
+        }
+        Err(_) => (String::from_utf8_lossy(raw).to_string(), None),
+    }
+}
+
+/// 当前 access_token 中携带的会话 jti(仅 base64url 解析 payload,不校验签名,
+/// 用于识别强退帧是否来自本机当前会话)。
+async fn current_token_jti() -> Option<String> {
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").cloned()?;
+    decode_token_jti(&token)
+}
+
+fn decode_token_jti(token: &str) -> Option<String> {
+    let payload = token.split('.').nth(1)?;
+    let bytes = decode_base64url(payload)?;
+    let value: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    value.get("jti")?.as_str().map(|s| s.to_string())
+}
+
+/// 无填充 base64url 解码(仅用于解析 JWT payload 片段)。
+fn decode_base64url(input: &str) -> Option<Vec<u8>> {
+    let decode_table = |c: u8| -> Option<u8> {
+        match c {
+            b'A'..=b'Z' => Some(c - b'A'),
+            b'a'..=b'z' => Some(c - b'a' + 26),
+            b'0'..=b'9' => Some(c - b'0' + 52),
+            b'-' => Some(62),
+            b'_' => Some(63),
+            _ => None,
+        }
+    };
+    let mut out = Vec::with_capacity(input.len() * 3 / 4);
+    let mut acc: u32 = 0;
+    let mut bits: u8 = 0;
+    for byte in input.bytes() {
+        let value = decode_table(byte)?;
+        acc = (acc << 6) | u32::from(value);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+            acc &= (1u32 << bits) - 1;
+        }
+    }
+    Some(out)
+}
+
 async fn is_group_message(recv_user: &str) -> bool {
     crate::entity::group::Group::query_by_group_id(recv_user)
         .await
         .map(|g| g.is_some())
         .unwrap_or(false)
+}
+
+/// 处理视频通话控制消息（CallControlLifecycle，12-15）
+///
+/// 只向前端分发 `call_control` 事件驱动通话 UI（邀请弹窗/接受/拒绝/结束）；
+/// 不落库、不进会话列表、不重发（服务端只转发不存储，历史由自动生成的文本记录承担）。
+async fn process_call_control(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let me = get_user_info("uuid").await?;
+
+    // 自己另一台设备同步回推的消息(self-echo)：不发来电/响铃，避免本端自连回环
+    if msg.send_user == me {
+        info!(
+            "self-echo 跳过通话控制命令: send_user={} recv_user={}",
+            msg.send_user, msg.recv_user
+        );
+        return Ok(());
+    }
+
+    // 发送者已被拉黑：不分发控制命令（不弹通话窗口）
+    if msg.send_user != me && is_blocked_db(&me, &msg.send_user).await? {
+        info!("发送者已被拉黑，跳过通话控制命令: {}", msg.send_user);
+        return Ok(());
+    }
+
+    let payload = serde_json::to_string(&msg)?;
+    info!(
+        "emit call_control: send_user={} recv_user={} text_type={} nano_id={}",
+        msg.send_user, msg.recv_user, msg.text_type, msg.nano_id
+    );
+    APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("call_control", payload)?;
+    Ok(())
 }
 
 /// 处理单聊消息
@@ -164,34 +310,62 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
 
     insert_chat_record(&msg).await?;
 
+    // 自己另一台设备同步回推的消息(self-echo)：由 send_user == me 标识，
+    // 会话对象是 recv_user，而非 send_user（见下方 peer_uuid）。
+    let is_self = msg.send_user == me;
+
+    // 发送者已被拉黑：消息仍落库，但不展示、不进会话列表、不计未读（对方可发送，本地不显示）
+    if !is_self && is_blocked_db(&me, &msg.send_user).await? {
+        info!("发送者已被拉黑，仅落库不展示: {}", msg.send_user);
+        return Ok(());
+    }
+
     let payload = serde_json::to_string(&msg)?;
+    info!(
+        "emit text_message: is_self={} send_user={} recv_user={} text_type={} nano_id={}",
+        is_self, msg.send_user, msg.recv_user, msg.text_type, msg.nano_id
+    );
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("text_message", payload)?;
 
-    let friend_uuid = &msg.send_user;
+    // 视频通话控制消息(12-15)不在此提前返回：仍更新会话列表，
+    // 便于会话列表预览 [视频通话邀请]/[已接听]/[已拒绝]/[通话结束]（前端聊天窗对 12-15 不渲染气泡）
+    // 单聊会话对象：普通入站消息为 send_user（对方），自己另一台设备的回推为 recv_user（对方）。
+    let peer_uuid = if is_self { &msg.recv_user } else { &msg.send_user };
     let mut flag = false;
     let current_session_friend = get_user_info(CURRENT_SESSION_FRIEND).await;
-    if current_session_friend.is_ok() && current_session_friend? == *friend_uuid {
+    if current_session_friend.is_ok() && current_session_friend? == *peer_uuid {
         flag = true;
     }
 
-    let mut friend_session = query_chat_session_by_user_db(&me, friend_uuid).await?;
+    // 新消息到达提醒(系统通知/桌面可点横幅)，不阻塞主流程；自己另一台设备回推的消息不提醒自己
+    if !is_self {
+        message_alert::on_incoming_message(&me, &msg, false, flag).await;
+    }
+
+    let mut friend_session = query_chat_session_by_user_db(&me, peer_uuid).await?;
     if friend_session.is_empty() {
-        create_chat_session_service(friend_uuid.to_string()).await?;
+        // 规范方向入库：recv_user = 我，send_user = 对方
         let mut chat_session = ChatSession {
             id: 0,
             nano_id: msg.nano_id,
             timestamp: msg.timestamp,
             text_type: msg.text_type,
-            unread_count: 1,
+            unread_count: if is_self { 0 } else { 1 },
             last_message: msg.raw,
-            recv_user: msg.recv_user,
-            send_user: msg.send_user,
-            session_type: 0,
-            is_show: 0,
+            recv_user: me.clone(),
+            send_user: peer_uuid.clone(),
+            session_type: 1,
+            is_show: 1,
             is_top: 0,
             group_id: None,
+            session_uuid: None,
+            last_message_id: 0,
         };
-        if flag {
+        if is_self {
+            // 自己另一台设备回推：仅落库并广播会话事件(type=1, unread_count=0)，
+            // 让会话列表实时置顶预览，不依赖轮询/重进刷新
+            update_session_list(chat_session).await?;
+        } else if flag {
             chat_session.unread_count = 0;
             update_chat_session_db(&chat_session).await?;
             clear_chat_session(chat_session).await?;
@@ -204,7 +378,10 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
         chat_session.timestamp = msg.timestamp;
         chat_session.text_type = msg.text_type;
         chat_session.nano_id = msg.nano_id;
-        if flag {
+        if is_self {
+            // 自己另一台设备回推：更新预览并广播会话事件，未读保持不变(0)
+            update_session_list(chat_session).await?;
+        } else if flag {
             chat_session.unread_count = 0;
             update_chat_session_db(&chat_session).await?;
             clear_chat_session(chat_session).await?;
@@ -217,10 +394,47 @@ async fn process_private_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), 
     Ok(())
 }
 
+/// 处理单聊撤回消息（伪撤回）。
+///
+/// 校验被撤回消息存在且与撤回消息发送者一致，命中则清除其内容并置 `deleted = 1`；
+/// 随后把撤回消息本身按普通单聊消息落库、上屏、更新会话（前端识别为撤回提示）。
+async fn process_recall_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
+    let raw_str = String::from_utf8_lossy(&text_quic_msg.raw).to_string();
+    let target = match parse_recall_target(&raw_str) {
+        Some(target) => target,
+        None => {
+            warn!("单聊撤回消息载荷解析失败: {}", raw_str);
+            return Ok(());
+        }
+    };
+    let me = get_user_info("uuid").await?;
+    match query_chat_record_by_id_from_db(&target, &me).await {
+        Ok(original) if can_recall(&original.send_user, &text_quic_msg.send_user) => {
+            recall_chat_record_db(&target, &text_quic_msg.send_user).await?;
+        }
+        Ok(_) => info!("单聊撤回校验未通过(非同一发送者): target={}", target),
+        Err(_) => info!("单聊撤回目标不存在或已删除: target={}", target),
+    }
+    process_private_chat_message(text_quic_msg).await
+}
+
 /// 处理群聊消息
 async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
     let me = get_user_info("uuid").await?;
+
+    // 群聊撤回（伪撤回）：以 2001 承载，解析内层载荷，校验后清除目标消息；
+    // 撤回消息本身仍按普通群消息落库/上屏。
+    if let Some(target) = parse_group_recall_target(&msg.raw) {
+        let group_id = &msg.recv_user;
+        match query_group_chat_record_by_id(&target, group_id).await {
+            Ok(Some(original)) if can_recall(&original.send_user, &msg.send_user) => {
+                recall_group_chat_record_db(&target, group_id, &msg.send_user).await?;
+            }
+            Ok(_) => info!("群撤回校验未通过或目标不存在: target={}", target),
+            Err(e) => info!("群撤回目标查询失败: target={} err={}", target, e),
+        }
+    }
 
     let record = GroupChatRecord {
         id: 0,
@@ -230,6 +444,7 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
         group_id: msg.recv_user.clone(),
         send_user: msg.send_user.clone(),
         timestamp: msg.timestamp,
+        server_id: None,
     };
     insert_group_chat_record(&record).await?;
 
@@ -244,6 +459,9 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
             flag = true;
         }
     }
+
+    // 新消息到达提醒(系统通知/桌面可点横幅)，不阻塞主流程
+    message_alert::on_incoming_message(&me, &msg, true, flag).await;
 
     let mut group_session = query_chat_session_by_user_db(&me, group_id).await?;
     if group_session.is_empty() {
@@ -261,6 +479,8 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
             is_show: 1,
             is_top: 0,
             group_id: Some(group_id.clone()),
+            session_uuid: None,
+            last_message_id: 0,
         };
         if flag {
             chat_session.unread_count = 0;
@@ -289,11 +509,16 @@ async fn process_group_chat_message(text_quic_msg: TextQuicMsg) -> Result<(), an
 
 // 更新会话列表
 pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow::Error> {
+    // 收到新消息时强制将会话置为显示状态，满足“隐藏会话直到新消息再显示”
+    let mut chat_session = chat_session;
+    chat_session.is_show = 1;
     update_chat_session_db(&chat_session).await?;
 
-    //发送会话消息给前端
+    // 向前的会话事件统一为规范方向（send_user=对方、recv_user=我），
+    // 避免 ack/self-echo 等路径把方向写反、前端误判未读
+    let me = get_user_info("uuid").await?;
     let chat_session_event =
-        ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session)? };
+        ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session.to_canonical(&me))? };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
@@ -371,6 +596,8 @@ async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Erro
         is_show: 1,
         is_top: 0,
         group_id: if is_group { Some(recv_user) } else { None },
+        session_uuid: None,
+        last_message_id: 0,
     };
     clear_chat_session(chat_session).await?;
     Ok(())
@@ -399,6 +626,7 @@ async fn process_group_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
         group_id: ack_record.group_uuid.clone(),
         send_user: ack_record.send_user.clone(),
         timestamp: ack_record.timestamp,
+        server_id: None,
     };
     insert_group_chat_record(&record).await?;
 
@@ -464,6 +692,12 @@ async fn process_local_notify_message(
         3 => {
             group_service::process_group_notify_message(system_notification).await?;
         }
+        4 => {
+            info!("处理交友广场通知 {:?}", system_notification);
+        }
+        5 => {
+            info!("处理动态广场通知 {:?}", system_notification);
+        }
         _ => {
             info!("处理其他通知 {:?}", system_notification);
         }
@@ -473,6 +707,17 @@ async fn process_local_notify_message(
 
 async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let msg = TextQuicMsgVo::from(text_quic_msg)?;
+    let me = get_user_info("uuid").await?;
+
+    // 自己另一台设备同步回推的信令(self-echo)：不回灌前端，避免本端自连回环
+    if msg.send_user == me {
+        info!(
+            "self-echo 跳过 WebRTC 信令: send_user={} recv_user={}",
+            msg.send_user, msg.recv_user
+        );
+        return Ok(());
+    }
+
     let signal: WebRTCSignalMessage = serde_json::from_str(&msg.raw)?;
 
     info!(
@@ -510,6 +755,7 @@ async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<(), anyhow:
         }
     }
 
+    // 转发给前端（保持原始信令格式）；纯实时信令，不落库（服务端只转发不存储）
     let payload = serde_json::to_string(&msg)?;
     APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("webrtc_signal", payload)?;
 
@@ -537,5 +783,7 @@ fn parse_ice_candidate(candidate_str: &str) -> Option<ParsedCandidate> {
 async fn process_ping_msg(msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     info!("{:?} 收到quic服务器的ping消息", msg.recv_user);
     insert_user_info("ping_lost_count", "0").await?;
+    let now = get_now_time_stamp_as_millis().unwrap_or(0).to_string();
+    insert_user_info("last_pong_time", &now).await?;
     Ok(())
 }

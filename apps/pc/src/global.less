@@ -76,6 +76,9 @@
   --banner-text-font-size: 24px;
   --large-title-font-size: 32px;
 
+  // 聊天区文字缩放比例 (small=0.875 / medium=1 / large=1.125)
+  --chat-font-scale: 1;
+
   // 侧边栏背景
   --sidebar-bg: rgb(220, 225, 230);
   --content-list-bg: rgb(230, 235, 240);
@@ -102,6 +105,14 @@
   --gradient-blue-pale: #a8d4ff;
   --gradient-blue-hover: #0a4de8;
   --gradient-blue-hover-light: #3a80ff;
+
+  // 资料卡封面渐变（主题可感知，暗色覆写在 theme/dark.json）
+  --profile-cover-grad: linear-gradient(
+    135deg,
+    var(--gradient-blue-mid) 0%,
+    var(--gradient-blue-accent) 55%,
+    var(--gradient-blue-light) 100%
+  );
 
   // 功能色
   --color-success: #52c41a;
@@ -247,4 +258,46 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   transition: all 0.3s;
+}
+
+// 主题切换遮罩动画（参考 apps/web）
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+.theme-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: clip-path;
+}
+
+// 全局滚动条默认样式 (统一为动态广场风格; 局部定义的滚动条样式优先)
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
 }

@@ -37,6 +37,8 @@ pub struct SystemNotification {
     pub unread_count: Option<i32>,
     /// 通知优先级
     pub priority: Option<i32>,
+    /// 已读状态是否已同步到服务端
+    pub is_synced: Option<i32>,
 }
 
 impl SystemNotification {
@@ -94,12 +96,16 @@ impl SystemNotification {
         let placeholders_str = placeholders.join(",");
 
         // 更新未读的系统消息为已读，并返回更新的行数
+        // 传入的 id 可能是通知主键 id，也可能是业务 id(biz_id)，两者都尝试匹配
         let query_str = format!(
-            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND id IN ({}) AND is_read = 0",
-            placeholders_str
+            "UPDATE system_notification SET is_read = 1 WHERE user_id = ? AND (id IN ({}) OR biz_id IN ({})) AND is_read = 0",
+            placeholders_str, placeholders_str
         );
 
         let mut query = sqlx::query(&query_str).bind(user_id);
+        for id in &ids {
+            query = query.bind(id);
+        }
         for id in &ids {
             query = query.bind(id);
         }
@@ -110,6 +116,37 @@ impl SystemNotification {
         info!("批量已读系统通知完成，user_id: {}, effect_row: {}", user_id, effect_row);
 
         Ok(effect_row)
+    }
+
+    /// 查询本地已读但尚未同步到服务端的通知 id 列表（定时任务上报用）
+    pub async fn query_read_not_synced_ids(user_id: &str) -> Result<Vec<String>, anyhow::Error> {
+        let pool_sqlite = get_db_client().await?;
+        let ids: Vec<String> = sqlx::query_scalar(
+            r#"SELECT id FROM system_notification WHERE user_id = ? AND is_read = 1 AND (is_synced IS NULL OR is_synced = 0)"#,
+        )
+        .bind(user_id)
+        .fetch_all(&pool_sqlite)
+        .await?;
+        Ok(ids)
+    }
+
+    /// 将已上报的通知标记为已同步
+    pub async fn mark_read_synced(user_id: &str, ids: &[String]) -> Result<(), anyhow::Error> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let pool_sqlite = get_db_client().await?;
+        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+        let sql = format!(
+            "UPDATE system_notification SET is_synced = 1 WHERE user_id = ? AND id IN ({})",
+            placeholders.join(",")
+        );
+        let mut query = sqlx::query(&sql).bind(user_id);
+        for id in ids {
+            query = query.bind(id);
+        }
+        query.execute(&pool_sqlite).await?;
+        Ok(())
     }
 
     /// 按层级条件批量清除未读通知
@@ -177,14 +214,16 @@ impl SystemNotification {
     }
 
     /// 查询各模块未读通知数量
-    /// 返回 { contacts: level1=1且level2=1的未读数, groups: level1=1且level2=3的未读数 }
+    /// 返回 { contacts: level1=1且level2=1, groups: level1=1且level2=3, plaza: level2=4, moments: level2=5 }
     pub async fn get_unread_counts(user_id: &str) -> Result<UnreadCounts, anyhow::Error> {
         let pool_sqlite = get_db_client().await?;
         let row = sqlx::query(
             r#"
             SELECT
                 SUM(CASE WHEN level1 = 1 AND level2 = 1 THEN 1 ELSE 0 END) as contacts_unread,
-                SUM(CASE WHEN level1 = 1 AND level2 = 3 THEN 1 ELSE 0 END) as groups_unread
+                SUM(CASE WHEN level1 = 1 AND level2 = 3 THEN 1 ELSE 0 END) as groups_unread,
+                SUM(CASE WHEN level1 = 1 AND level2 = 4 THEN 1 ELSE 0 END) as plaza_unread,
+                SUM(CASE WHEN level1 = 1 AND level2 = 5 THEN 1 ELSE 0 END) as moments_unread
             FROM system_notification
             WHERE user_id = ? AND is_read = 0
             "#,
@@ -195,8 +234,15 @@ impl SystemNotification {
 
         let contacts: i64 = row.try_get(0).unwrap_or(0);
         let groups: i64 = row.try_get(1).unwrap_or(0);
+        let plaza: i64 = row.try_get(2).unwrap_or(0);
+        let moments: i64 = row.try_get(3).unwrap_or(0);
 
-        Ok(UnreadCounts { contacts: contacts as i32, groups: groups as i32 })
+        Ok(UnreadCounts {
+            contacts: contacts as i32,
+            groups: groups as i32,
+            plaza: plaza as i32,
+            moments: moments as i32,
+        })
     }
 }
 
@@ -205,6 +251,8 @@ impl SystemNotification {
 pub struct UnreadCounts {
     pub contacts: i32,
     pub groups: i32,
+    pub plaza: i32,
+    pub moments: i32,
 }
 
 impl SqliteStore for SystemNotification {
@@ -224,7 +272,8 @@ impl SqliteStore for SystemNotification {
             level3 INTEGER,
             level4 INTEGER,
             unread_count INTEGER,
-            priority INTEGER NOT NULL DEFAULT 0
+            priority INTEGER NOT NULL DEFAULT 0,
+            is_synced INTEGER NOT NULL DEFAULT 0
         )"#,
         )
         .execute(pool_sqlite)
@@ -245,6 +294,14 @@ impl SqliteStore for SystemNotification {
         )
             .execute(pool_sqlite)
             .await?;
+
+        // 迁移：补充 is_synced 列（老库无此列，SQLite 不支持 ADD COLUMN IF NOT EXISTS）
+        let add_is_synced = sqlx::query(
+            r#"ALTER TABLE system_notification ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0"#,
+        )
+        .execute(pool_sqlite)
+        .await;
+        let _ = add_is_synced; // 列已存在，忽略
 
         Ok(())
     }

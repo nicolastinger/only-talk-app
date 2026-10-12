@@ -5,13 +5,16 @@ use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::cmd::api_controller::post_request;
-use crate::dao::friend_db::{query_friend_info_db, search_friend_db, soft_delete_friend_db, update_friend_info_db};
-use crate::dao::session_db::hide_chat_session_db;
+use crate::dao::friend_db::{
+    query_black_list_db, query_friend_info_db, search_friend_db, set_block_friend_db,
+    soft_delete_friend_db, update_friend_info_db,
+};
+use crate::dao::session_db::{hide_chat_session_db, show_chat_session_db};
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
 use crate::service::user_service::get_user_info;
-use crate::utils::global_static_str::TALK_API;
-use crate::vo::friend_vo::{FriendListVO, FriendVo};
+use crate::utils::global_static_str::talk_api_base;
+use crate::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};
 use crate::vo::http_response::Response;
 use crate::APP_HANDLE;
 
@@ -45,7 +48,7 @@ pub async fn process_friend_notify_message(
 pub async fn delete_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     let uuid = get_user_info("uuid").await?;
 
-    let url = format!("{}/friend/delete_friend/{}", TALK_API, friend_uuid);
+    let url = format!("{}/friend/delete_friend/{}", talk_api_base(), friend_uuid);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     info!("删除好友结果 {:?}", result.body);
@@ -76,7 +79,7 @@ pub async fn update_friend_list() -> Result<(), anyhow::Error> {
             last_version = last_update_friend.version;
         }
     }
-    let url = format!("{}/friend/get_friend/{}/{}", TALK_API, &last_uuid, last_version);
+    let url = format!("{}/friend/get_friend/{}/{}", talk_api_base(), &last_uuid, last_version);
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
 
     let data = result.body;
@@ -99,10 +102,11 @@ pub async fn update_friend_list() -> Result<(), anyhow::Error> {
                     friend_name: friend_vo.username,
                     friend_icon: friend_vo.icon,
                     friend_info: friend_vo.info,
+                    friend_user_type: friend_vo.user_type,
                     friend_status: 0,
                     me: uuid.clone(),
                     is_del: friend_vo.is_del,
-                    is_block: 0,
+                    is_block: if friend_vo.is_block { 1 } else { 0 },
                     is_mute: 0,
                     is_top: 0,
                     is_show: 1,
@@ -128,4 +132,59 @@ pub async fn search_friend_list(keyword: String) -> Result<Vec<FriendVo>, anyhow
     let me = get_user_info("uuid").await?;
     let friends = search_friend_db(&me, &keyword).await?;
     Ok(friends.into_iter().map(FriendVo::from).collect())
+}
+
+/// 拉黑好友（同步后端 + 更新本地 is_block）
+pub async fn block_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+
+    let url = format!("{}/friend/block_friend/{}", talk_api_base(), friend_uuid);
+    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+
+    info!("拉黑好友结果 {:?}", result.body);
+
+    if result.status == 200 {
+        set_block_friend_db(&uuid, friend_uuid, 1).await?;
+        hide_chat_session_db(&uuid, friend_uuid).await?;
+    } else {
+        return Err(anyhow!("拉黑好友失败: {}", result.body));
+    }
+
+    Ok(())
+}
+
+/// 取消拉黑好友（同步后端 + 更新本地 is_block）
+pub async fn unblock_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
+    let uuid = get_user_info("uuid").await?;
+
+    let url = format!("{}/friend/unblock_friend/{}", talk_api_base(), friend_uuid);
+    let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
+
+    info!("取消拉黑好友结果 {:?}", result.body);
+
+    if result.status == 200 {
+        set_block_friend_db(&uuid, friend_uuid, 0).await?;
+        show_chat_session_db(&uuid, friend_uuid).await?;
+    } else {
+        return Err(anyhow!("取消拉黑好友失败: {}", result.body));
+    }
+
+    Ok(())
+}
+
+/// 获取黑名单列表（优先从本地 is_block=1 的好友读取）
+pub async fn get_black_list() -> Result<Vec<BlackListVo>, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friends = query_black_list_db(&me).await?;
+    Ok(friends
+        .into_iter()
+        .map(|f| BlackListVo {
+            uuid: f.friend_id,
+            account: f.friend_account,
+            username: f.friend_name,
+            icon: f.friend_icon,
+            user_type: f.friend_user_type,
+            created_at: f.created_at,
+        })
+        .collect())
 }

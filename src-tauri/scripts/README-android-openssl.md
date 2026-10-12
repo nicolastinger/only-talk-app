@@ -46,8 +46,9 @@ cargo build → 链接器找到 -lcrypto ✅
 |------|------|
 | `scripts/build-openssl-android.sh` | 一键交叉编译脚本（MSYS2 bash） |
 | `openssl-android/` | 编译产物输出目录（4 个架构的 `libcrypto.a`） |
-| `.cargo/config.toml` | Rust 目标配置，含 `rustflags` 库搜索路径 |
-| `src-tauri/.cargo/config.toml` | 同上（src-tauri 下的副本） |
+| `scripts/generate-cargo-config.ps1` | 生成本机 `.cargo/config.toml`（自动探测 NDK 路径） |
+| `.cargo/config.toml` | Rust 目标配置，含 `rustflags` 库搜索路径（本机生成，不提交 Git） |
+| `src-tauri/.cargo/config.toml` | 同上（src-tauri 下的副本，本机生成，不提交 Git） |
 
 ## 使用方法
 
@@ -58,7 +59,7 @@ cargo build → 链接器找到 -lcrypto ✅
 C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm make"
 
 # 2. 运行交叉编译脚本
-C:\msys64\usr\bin\bash.exe -lc "cd 'I:/code/rust/umi_gitee/frontend/src-tauri' && bash scripts/build-openssl-android.sh"
+C:\msys64\usr\bin\bash.exe -lc "cd '<仓库路径>/src-tauri' && bash scripts/build-openssl-android.sh"
 ```
 
 脚本会自动完成：
@@ -103,10 +104,13 @@ OPENSSL_VERSION="3.0.15"   # 改为新版本号
 
 ### NDK 版本/路径变更
 
-如果 NDK 路径不同，有两个地方需要更新：
+`.cargo/config.toml` 由脚本在本机生成、不提交到 Git，NDK 路径变更后重新生成即可：
 
-1. **`build-openssl-android.sh`** — `NDK_PATH` 变量
-2. **`.cargo/config.toml`** 和 **`src-tauri/.cargo/config.toml`** — 每个 `[target.*]` 块下的 `ar`、`linker`、`rustflags` 路径
+```powershell
+powershell -ExecutionPolicy Bypass -File src-tauri\scripts\generate-cargo-config.ps1
+```
+
+脚本会自动探测 `ANDROID_NDK_HOME` 或 `%LOCALAPPDATA%\Android\Sdk\ndk` 下最新版本的 NDK；也可用 `-NDKPath` 参数显式指定。OpenSSL 交叉编译脚本 `build-openssl-android.sh` 顶部的 `NDK_PATH` 变量仍需手动同步。
 
 ## 故障排除
 
@@ -116,7 +120,7 @@ Windows 上的 Strawberry Perl 产生的路径不兼容。必须使用 **MSYS2 �
 
 ### `unable to find library -lcrypto` 仍出现
 
-检查 `.cargo/config.toml` 中的 `rustflags` 路径是否正确，以及对应的 `libcrypto.a` 是否存在：
+检查 `.cargo/config.toml` 中的 `rustflags` 路径是否正确（重新运行 `generate-cargo-config.ps1` 可重置为本机路径），以及对应的 `libcrypto.a` 是否存在：
 
 ```powershell
 ls openssl-android\{arch}\lib\libcrypto.a

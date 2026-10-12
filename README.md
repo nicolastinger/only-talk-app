@@ -169,6 +169,37 @@ pnpm build:types
 pnpm build:services
 ```
 
+## 本地运行环境与数据目录
+
+客户端的本地数据与资源目录会按 **运行环境（`{env}`）** 隔离，避免 dev / test / prod 数据互相干扰。
+
+目录结构（`Documents/OnlyTalk/{env}/...`，桌面端为范例）：
+
+```
+Documents/OnlyTalk/{env}/
+├── dbData/          # 本地数据库（user.db / common.db / private.db）
+├── resource/        # 本地资源文件
+│   └── YYYY-MM/     # 按月分目录的资源
+└── logs/            # 日志
+```
+
+- 运行环境通过环境变量 **`ONLY_TALK_ENV`** 指定
+- 未设置时默认 **`prod`**（即路径为 `Documents/OnlyTalk/prod/...`）
+
+设置示例：
+
+```bash
+# PowerShell (Windows)
+$env:ONLY_TALK_ENV="dev"
+pnpm tauri dev
+
+# bash (macOS/Linux)
+export ONLY_TALK_ENV="dev"
+pnpm tauri dev
+```
+
+> 注：不同环境的数据彼此隔离，切换环境不会自动迁移旧目录数据。
+
 ## 功能特性
 
 ### 即时通讯

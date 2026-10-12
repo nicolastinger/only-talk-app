@@ -1,3 +1,4 @@
+import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { history } from '@umijs/max';
 import { getFiles } from '@workspace/services';
@@ -6,7 +7,7 @@ import { Badge } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/FriendBox.less';
 
-const FriendBox = (props: { friend: FriendVo }) => {
+const FriendBox = (props: { friend: FriendVo; isSelected?: boolean }) => {
   const { friend_name, friend_id, friend_icon } = props.friend;
   const [userIcon, setUserIcon] = useState<string | null>(null);
 
@@ -30,7 +31,10 @@ const FriendBox = (props: { friend: FriendVo }) => {
   }, [friend_icon]);
 
   return (
-    <div className={styles.container} onClick={routeToFriendInfo}>
+    <div
+      className={`${styles.container} ${props.isSelected ? styles.selected : ''}`}
+      onClick={routeToFriendInfo}
+    >
       <div className={styles.left}>
         <Badge>
           <img
@@ -44,7 +48,10 @@ const FriendBox = (props: { friend: FriendVo }) => {
         </Badge>
       </div>
       <div className={styles.center}>
-        <div className={styles.centerTitle}>{friend_name}</div>
+        <div className={styles.centerTitle}>
+          {friend_name}
+          <UserTypeTag type={props.friend.friend_user_type} />
+        </div>
       </div>
     </div>
   );

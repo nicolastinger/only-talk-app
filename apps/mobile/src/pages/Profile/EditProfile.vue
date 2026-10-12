@@ -3,18 +3,23 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { showToast, showLoadingToast, closeToast } from "vant";
 import { invoke } from "@tauri-apps/api/core";
-import { writeFile } from "@tauri-apps/plugin-fs";
 import {
   selectFile,
   convertPathToTauriUrl,
   cache_user_info,
+  isBackendSuccess,
+  isHttpSuccess,
 } from "@workspace/services";
-import { TALK_API } from "@workspace/types";
+import { getApiBase } from "@workspace/services";
 import type { UserInfo } from "@workspace/types";
+import { resolveContentToTempFile } from "@/utils/tempImage";
+import AvatarCropPopup, { CropRect } from "@/components/AvatarCropPopup.vue";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useI18n } from "@/i18n";
 
 const router = useRouter();
+const { t } = useI18n();
 const { userInfo, loadUserInfo, setUserInfo } = useUserStore();
 const { getAvatarUrl } = useAvatar();
 
@@ -23,24 +28,56 @@ const uploading = ref(false);
 const previewUrl = ref<string | null>(null);
 const avatarUrl = ref<string | null>(null);
 let uploadCancelled = false;
+const cropShow = ref(false);
+const cropSrc = ref("");
+let cropResolver: ((rect: CropRect | null) => void) | null = null;
 
-const genderOptions = [
-  { name: "未知", value: 0 },
-  { name: "保密", value: 1 },
-  { name: "男", value: 2 },
-  { name: "女", value: 3 },
-  { name: "机器人", value: 4 },
-  { name: "其他", value: 5 },
-];
+const startCrop = (filePath: string): Promise<CropRect | null> => {
+  cropSrc.value = convertPathToTauriUrl(filePath) || "";
+  cropShow.value = true;
+  return new Promise<CropRect | null>((resolve) => {
+    cropResolver = resolve;
+  });
+};
+
+const onCropConfirm = (rect: CropRect) => {
+  cropResolver?.(rect);
+  cropResolver = null;
+  cropShow.value = false;
+};
+
+const onCropCancel = () => {
+  cropResolver?.(null);
+  cropResolver = null;
+  cropShow.value = false;
+};
+
+const genderOptions = computed(() => [
+  { name: t("userInfo.genderTypes.unknown"), value: 0 },
+  { name: t("userInfo.genderTypes.secret"), value: 1 },
+  { name: t("userInfo.genderTypes.male"), value: 2 },
+  { name: t("userInfo.genderTypes.female"), value: 3 },
+  { name: t("userInfo.genderTypes.robot"), value: 4 },
+  { name: t("userInfo.genderTypes.other"), value: 5 },
+]);
 
 const showGenderSheet = ref(false);
 const showBirthdayPopup = ref(false);
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error) || fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 const form = reactive({
   username: "",
   info: "",
   gender: null as number | null,
-  age: "",
   birthday: null as Date | null,
   phone: "",
   email: "",
@@ -53,7 +90,7 @@ const birthdayPickerValue = ref([String(new Date().getFullYear()), "1", "1"]);
 
 const genderLabel = computed(() => {
   if (form.gender === null || form.gender === undefined) return "";
-  const opt = genderOptions.find((g) => g.value === form.gender);
+  const opt = genderOptions.value.find((g) => g.value === form.gender);
   return opt?.name || "";
 });
 
@@ -71,7 +108,6 @@ function populateForm(info: UserInfo) {
   form.username = info.username || "";
   form.info = info.info || "";
   form.gender = info.gender ?? null;
-  form.age = info.age != null ? String(info.age) : "";
   form.birthday = info.birthday ? new Date(info.birthday * 1000) : null;
   if (form.birthday) {
     birthdayPickerValue.value = [
@@ -111,7 +147,7 @@ const onBack = () => {
     closeToast();
     uploading.value = false;
     previewUrl.value = null;
-    showToast({ message: "已取消上传", icon: "none" });
+    showToast({ message: t("userInfo.edit.uploadCancelled"), icon: "none" });
     return;
   }
   router.back();
@@ -125,7 +161,7 @@ const pickAndUploadAvatar = async () => {
   uploadCancelled = false;
   try {
     if (!userInfo.value) {
-      showToast({ message: "请先登录", icon: "fail" });
+      showToast({ message: t("userInfo.edit.loginRequired"), icon: "fail" });
       return;
     }
 
@@ -137,60 +173,59 @@ const pickAndUploadAvatar = async () => {
 
     // 处理 Android content:// URI
     if (filePath.startsWith("content://")) {
-      showLoadingToast({ message: "读取文件中...", forbidClick: true, duration: 0 });
-      
+      showLoadingToast({
+        message: t("userInfo.edit.readingFile"),
+        forbidClick: true,
+        duration: 0,
+      });
+
       console.log("[DEBUG] Detected content URI, starting read...");
-      
+
       try {
-        // 使用 fetch API 读取 content URI
-        console.log("[DEBUG] Trying fetch:", filePath);
-        const response = await fetch(filePath);
-        console.log("[DEBUG] Fetch response status:", response.status);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        console.log("[DEBUG] Blob size:", blob.size, "type:", blob.type);
-        
-        const buffer = await blob.arrayBuffer();
-        const fileData = new Uint8Array(buffer);
-        console.log("[DEBUG] ArrayBuffer size:", fileData.length);
-        
-        // 写入临时文件
-        const timestamp = Date.now();
-        const tempPath = `umi_gitee_temp/avatar_${timestamp}.jpg`;
-        console.log("[DEBUG] Writing to temp file:", tempPath);
-        
-        await writeFile(tempPath, fileData);
+        const { tempPath } = await resolveContentToTempFile(filePath);
         filePath = tempPath;
         console.log("[DEBUG] Success! Resolved to:", filePath);
-      } catch (error: any) {
-        console.error("[DEBUG] ERROR:", error?.message || error?.toString() || error);
-        console.error("[DEBUG] ERROR stack:", error?.stack);
         closeToast();
-        showToast({ 
-          message: `读取失败: ${error?.message || 'Unknown error'}`, 
-          icon: "fail" 
+      } catch (error) {
+        const errMsg = getErrorMessage(error, "Unknown error");
+        console.error("[DEBUG] ERROR:", error);
+        console.error(
+          "[DEBUG] ERROR stack:",
+          error instanceof Error ? error.stack : undefined
+        );
+        closeToast();
+        showToast({
+          message: t("userInfo.edit.readFailed", {
+            error: errMsg || "Unknown error",
+          }),
+          icon: "fail",
         });
         return;
       }
     }
 
-    uploading.value = true;
-    showLoadingToast({ message: "压缩中...", forbidClick: true, duration: 0 });
+    const rect = await startCrop(filePath);
+    if (!rect) return;
 
-    const compressedResult = await invoke<string>(
-      "compress_image_to_webp_command",
-      {
-        inputPath: filePath,
-      }
-    );
-    
+    uploading.value = true;
+    showLoadingToast({
+      message: t("groupSettings.avatar.cropping"),
+      forbidClick: true,
+      duration: 0,
+    });
+
+    const compressedResult = await invoke<string>("crop_image_to_webp_command", {
+      inputPath: filePath,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      outputSize: 512,
+    });
+
     if (uploadCancelled) return;
-    
-    console.log("Compressed result:", compressedResult);
+
+    console.log("Cropped result:", compressedResult);
 
     const preview = convertPathToTauriUrl(compressedResult);
     if (preview) {
@@ -198,12 +233,16 @@ const pickAndUploadAvatar = async () => {
     }
 
     closeToast();
-    showLoadingToast({ message: "上传中...", forbidClick: true, duration: 0 });
+    showLoadingToast({
+      message: t("userInfo.edit.uploading"),
+      forbidClick: true,
+      duration: 0,
+    });
 
     const uploadResult = await invoke<{ status: number; body: string }>(
       "upload_file_request",
       {
-        url: `${TALK_API}/file_integrated/upload/user_avatar`,
+        url: `${getApiBase()}/file_integrated/upload/user_avatar`,
         filePath: compressedResult,
         fieldName: "file",
       }
@@ -214,17 +253,22 @@ const pickAndUploadAvatar = async () => {
     closeToast();
     console.log("Upload result:", uploadResult);
 
-    if (uploadResult.status === 200) {
-      const responseBody = JSON.parse(uploadResult.body);
+    if (isHttpSuccess(uploadResult.status)) {
+      const responseBody = uploadResult.body
+        ? JSON.parse(uploadResult.body)
+        : null;
       console.log("Response body:", responseBody);
-      if (responseBody.code === 200 && responseBody.data) {
+      if (responseBody && isBackendSuccess(responseBody.code) && responseBody.data) {
         try {
-          const res: { status: number; body: string } = await invoke("post_request", {
-            url: TALK_API + "/user/me",
-            body: "",
-          });
+          const res: { status: number; body: string } = await invoke(
+            "post_request",
+            {
+              url: getApiBase() + "/user/me",
+              body: "",
+            }
+          );
           const meData = JSON.parse(res.body);
-          if (meData.code === 200 && meData.data) {
+          if (isBackendSuccess(meData.code) && meData.data) {
             const info: UserInfo = meData.data;
             setUserInfo(info);
             await cache_user_info(info).catch(() => null);
@@ -234,31 +278,39 @@ const pickAndUploadAvatar = async () => {
         }
 
         if (userInfo.value?.icon) {
-          avatarUrl.value = await getAvatarUrl(userInfo.value.icon).catch(() => null);
+          avatarUrl.value = await getAvatarUrl(userInfo.value.icon).catch(
+            () => null
+          );
         }
-        
-        showToast({ message: "头像更新成功", icon: "success" });
+
+        showToast({ message: t("userInfo.avatar.updateSuccess"), icon: "success" });
       } else {
         const errorMsg =
-          responseBody.msg ||
-          responseBody.message ||
-          JSON.stringify(responseBody);
+          responseBody?.msg ||
+          responseBody?.message ||
+          t("userInfo.avatar.updateFailed");
         console.error("Server error:", errorMsg);
-        showToast({ message: errorMsg || "头像更新失败", icon: "fail" });
+        showToast({
+          message: errorMsg || t("userInfo.avatar.updateFailed"),
+          icon: "fail",
+        });
       }
     } else {
       console.error("HTTP error:", uploadResult.status, uploadResult.body);
       showToast({
-        message: `上传失败(${uploadResult.status}): ${uploadResult.body}`,
+        message: t("userInfo.edit.uploadFailedStatus", {
+          status: uploadResult.status,
+          body: uploadResult.body,
+        }),
         icon: "fail",
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     if (uploadCancelled) return;
     closeToast();
     console.error("Upload error:", error);
     showToast({
-      message: error.message || error.toString() || "头像更新失败",
+      message: getErrorMessage(error, t("userInfo.avatar.updateFailed")),
       icon: "fail",
     });
   } finally {
@@ -287,14 +339,23 @@ const onBirthdayConfirm = ({
 
 const onSave = async () => {
   if (!originalUserInfo) {
-    showToast({ message: "用户信息未加载", icon: "fail" });
+    showToast({ message: t("userInfo.edit.notLoaded"), icon: "fail" });
     return;
   }
 
   saving.value = true;
 
   try {
-    const updateData: Record<string, any> = {};
+    const updateData: {
+      username?: string;
+      info?: string;
+      gender?: number | null;
+      age?: number;
+      birthday?: number;
+      phone?: string;
+      email?: string;
+      address?: string;
+    } = {};
 
     const newUsername = form.username || undefined;
     if (newUsername !== (originalUserInfo.username || undefined)) {
@@ -309,11 +370,6 @@ const onSave = async () => {
     const newGender = form.gender;
     if (newGender !== (originalUserInfo.gender ?? undefined)) {
       updateData.gender = newGender;
-    }
-
-    const newAge = form.age ? Number(form.age) : undefined;
-    if (newAge !== (originalUserInfo.age ?? undefined)) {
-      updateData.age = newAge;
     }
 
     const newBirthday = form.birthday
@@ -339,7 +395,7 @@ const onSave = async () => {
     }
 
     if (Object.keys(updateData).length === 0) {
-      showToast({ message: "没有修改任何信息", icon: "info" });
+      showToast({ message: t("userInfo.edit.noChanges"), icon: "info" });
       saving.value = false;
       return;
     }
@@ -348,8 +404,8 @@ const onSave = async () => {
       updateDto: updateData,
     });
 
-    const response = JSON.parse(result);
-    if (response.code === 200) {
+    const response = result ? JSON.parse(result) : null;
+    if (response && isBackendSuccess(response.code)) {
       const updatedInfo = {
         ...originalUserInfo,
         ...updateData,
@@ -363,13 +419,19 @@ const onSave = async () => {
         /* 缓存失败不影响主流程 */
       }
 
-      showToast({ message: "用户信息更新成功", icon: "success" });
+      showToast({ message: t("userInfo.edit.updateSuccess"), icon: "success" });
       setTimeout(() => router.back(), 800);
     } else {
-      showToast({ message: response.message || "更新失败", icon: "fail" });
+      showToast({
+        message: response.message || t("userInfo.edit.updateFailed"),
+        icon: "fail",
+      });
     }
-  } catch (error: any) {
-    showToast({ message: error.message || "更新失败", icon: "fail" });
+  } catch (error) {
+    showToast({
+      message: getErrorMessage(error, t("userInfo.edit.updateFailed")),
+      icon: "fail",
+    });
     saving.value = false;
   }
 };
@@ -378,8 +440,8 @@ const onSave = async () => {
 <template>
   <div class="edit-profile-page">
     <van-nav-bar
-      :title="uploading ? '上传头像中' : '编辑资料'"
-      :left-text="uploading ? '取消' : '返回'"
+      :title="uploading ? t('userInfo.edit.uploadingAvatar') : t('userInfo.edit.edit')"
+      :left-text="uploading ? t('common.cancel') : t('common.back')"
       left-arrow
       @click-left="onBack"
     />
@@ -412,7 +474,7 @@ const onSave = async () => {
           </svg>
         </div>
       </div>
-      <p class="avatar-hint">点击更换头像</p>
+      <p class="avatar-hint">{{ t("userInfo.edit.changeAvatarHint") }}</p>
     </div>
 
     <div class="form-section">
@@ -420,8 +482,8 @@ const onSave = async () => {
         <van-field
           v-model="form.username"
           name="username"
-          label="用户名"
-          placeholder="请输入用户名"
+          :label="t('userInfo.username')"
+          :placeholder="t('userInfo.edit.usernamePlaceholder')"
           maxlength="50"
           clearable
         />
@@ -429,8 +491,8 @@ const onSave = async () => {
         <van-field
           v-model="form.info"
           name="info"
-          label="个人简介"
-          placeholder="介绍一下自己"
+          :label="t('userInfo.info')"
+          :placeholder="t('userInfo.edit.infoPlaceholder')"
           type="textarea"
           rows="2"
           autosize
@@ -441,27 +503,18 @@ const onSave = async () => {
         <van-field
           v-model="genderLabel"
           name="gender"
-          label="性别"
-          placeholder="请选择性别"
+          :label="t('userInfo.gender')"
+          :placeholder="t('userInfo.edit.selectGender')"
           readonly
           is-link
           @click="showGenderSheet = true"
         />
 
         <van-field
-          v-model="form.age"
-          name="age"
-          label="年龄"
-          placeholder="请输入年龄"
-          type="digit"
-          clearable
-        />
-
-        <van-field
           v-model="birthdayLabel"
           name="birthday"
-          label="生日"
-          placeholder="请选择生日"
+          :label="t('userInfo.birthday')"
+          :placeholder="t('userInfo.edit.selectBirthday')"
           readonly
           is-link
           @click="showBirthdayPopup = true"
@@ -470,8 +523,8 @@ const onSave = async () => {
         <van-field
           v-model="form.phone"
           name="phone"
-          label="手机号"
-          placeholder="请输入手机号"
+          :label="t('userInfo.phone')"
+          :placeholder="t('userInfo.edit.phonePlaceholder')"
           type="tel"
           maxlength="11"
           clearable
@@ -480,8 +533,8 @@ const onSave = async () => {
         <van-field
           v-model="form.email"
           name="email"
-          label="邮箱"
-          placeholder="请输入邮箱"
+          :label="t('userInfo.email')"
+          :placeholder="t('userInfo.edit.emailPlaceholder')"
           type="email"
           clearable
         />
@@ -489,8 +542,8 @@ const onSave = async () => {
         <van-field
           v-model="form.address"
           name="address"
-          label="地址"
-          placeholder="请输入地址"
+          :label="t('userInfo.address')"
+          :placeholder="t('userInfo.edit.addressPlaceholder')"
           maxlength="200"
           clearable
         />
@@ -503,7 +556,7 @@ const onSave = async () => {
             :loading="saving"
             round
           >
-            保存
+            {{ t("userInfo.edit.save") }}
           </van-button>
         </div>
       </van-form>
@@ -513,7 +566,7 @@ const onSave = async () => {
       v-model:show="showGenderSheet"
       :actions="genderOptions.map((g) => ({ name: g.name, value: g.value }))"
       @select="onGenderSelect"
-      cancel-text="取消"
+      :cancel-text="t('common.cancel')"
     />
 
     <van-popup v-model:show="showBirthdayPopup" position="bottom">
@@ -526,6 +579,13 @@ const onSave = async () => {
         @cancel="showBirthdayPopup = false"
       />
     </van-popup>
+
+    <AvatarCropPopup
+      :show="cropShow"
+      :src="cropSrc"
+      @cancel="onCropCancel"
+      @confirm="onCropConfirm"
+    />
   </div>
 </template>
 

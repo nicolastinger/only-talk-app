@@ -2,6 +2,7 @@
 
 use crate::dao::{get_db_client, get_private_db_client};
 use crate::entity::chat_record_read::ChatRecordRead;
+use crate::utils::message_types::MSG_TYPE_RECALL;
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 分页获取聊天记录
@@ -12,7 +13,7 @@ pub async fn query_chat_record_from_db(
     offset: i64,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE (send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1) order by timestamp desc limit ?3 offset ?4) order by timestamp asc"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE ((send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)) AND deleted = 0 order by timestamp desc limit ?3 offset ?4) order by timestamp asc"#)
         .bind(send_user)
         .bind(recv_user)
         .bind(limit)
@@ -29,7 +30,7 @@ pub async fn query_chat_record_by_id_from_db(
 ) -> Result<TextQuicMsgVo, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
     let record = sqlx::query_as::<_, TextQuicMsgVo>(
-        r#"SELECT * FROM chat_record WHERE nano_id = ? and (send_user = ? OR recv_user = ?)"#,
+        r#"SELECT * FROM chat_record WHERE nano_id = ? and (send_user = ? OR recv_user = ?) AND deleted = 0"#,
     )
     .bind(id)
     .bind(uuid)
@@ -39,10 +40,10 @@ pub async fn query_chat_record_by_id_from_db(
     Ok(record)
 }
 
-/// 插入聊天记录
-pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), anyhow::Error> {
+/// 插入聊天记录，返回是否真正新增（本地已有同 nano_id 的消息则返回 false）
+pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<bool, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    sqlx::query(r#"INSERT OR IGNORE INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
+    let res = sqlx::query(r#"INSERT OR IGNORE INTO chat_record (nano_id, raw, timestamp, send_user, recv_user, text_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#)
         .bind(&text_quic_msg.nano_id)
         .bind(&text_quic_msg.raw)
         .bind(text_quic_msg.timestamp)
@@ -51,7 +52,7 @@ pub async fn insert_chat_record(text_quic_msg: &TextQuicMsgVo) -> Result<(), any
         .bind(text_quic_msg.text_type)
         .execute(&pool_sqlite)
         .await?;
-    Ok(())
+    Ok(res.rows_affected() > 0)
 }
 
 /// 获取已读消息
@@ -76,7 +77,7 @@ pub async fn query_last_chat_record(
     friend_id: &str,
 ) -> Result<Option<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"select * from chat_record where (send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1) order by timestamp desc limit 1"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"select * from chat_record where ((send_user = ?1 and recv_user = ?2) or (send_user = ?2 and recv_user = ?1)) and deleted = 0 order by timestamp desc limit 1"#)
         .bind(uuid)
         .bind(friend_id)
         .fetch_optional(&pool_sqlite)
@@ -91,7 +92,7 @@ pub async fn query_group_chat_record_from_db(
     offset: i64,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE recv_user = ?1 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE recv_user = ?1 AND deleted = 0 order by timestamp desc limit ?2 offset ?3) order by timestamp asc"#)
         .bind(group_id)
         .bind(limit)
         .bind(offset)
@@ -109,7 +110,7 @@ pub async fn query_chat_record_by_type_from_db(
     offset: i64,
 ) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;
-    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE ((send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)) AND text_type = ?3 order by timestamp desc limit ?4 offset ?5) order by timestamp asc"#)
+    let record = sqlx::query_as::<_, TextQuicMsgVo>(r#"SELECT * from(SELECT * FROM chat_record WHERE ((send_user = ?1 and recv_user = ?2) OR (send_user = ?2 and recv_user = ?1)) AND text_type = ?3 AND deleted = 0 order by timestamp desc limit ?4 offset ?5) order by timestamp asc"#)
         .bind(send_user)
         .bind(recv_user)
         .bind(text_type)
@@ -118,4 +119,107 @@ pub async fn query_chat_record_by_type_from_db(
         .fetch_all(&pool_sqlite)
         .await?;
     Ok(record)
+}
+
+/// 任务07: 同步落库后回填服务端消息 id。
+pub async fn set_chat_record_server_id(nano_id: &str, server_id: i64) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    sqlx::query("UPDATE chat_record SET server_id = ?1 WHERE nano_id = ?2")
+        .bind(server_id)
+        .bind(nano_id)
+        .execute(&pool_sqlite)
+        .await?;
+    Ok(())
+}
+
+/// 本机软删除单聊消息（仅限当前用户参与的会话）：deleted 置 1
+pub async fn delete_chat_record_db(nano_ids: &[String], uuid: &str) -> Result<(), anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let mut tx = pool_sqlite.begin().await?;
+    for nano_id in nano_ids {
+        sqlx::query(
+            r#"UPDATE chat_record SET deleted = 1 WHERE nano_id = ?1 AND (send_user = ?2 OR recv_user = ?2)"#,
+        )
+        .bind(nano_id)
+        .bind(uuid)
+        .execute(&mut *tx)
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// 撤回单聊消息：清除内容并置 `deleted = 1`（仅限发送者本人）。
+///
+/// 返回是否命中(命中要求消息存在、未删除且 `send_user` 与撤回消息发送者一致)。
+pub async fn recall_chat_record_db(nano_id: &str, send_user: &str) -> Result<bool, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let res = sqlx::query(
+        r#"UPDATE chat_record SET raw = '', deleted = 1 WHERE nano_id = ?1 AND send_user = ?2 AND deleted = 0"#,
+    )
+    .bind(nano_id)
+    .bind(send_user)
+    .execute(&pool_sqlite)
+    .await?;
+    Ok(res.rows_affected() > 0)
+}
+
+/// 查询会话内所有撤回控制消息 `(raw, send_user)`，用于本地撤回核对。
+pub async fn query_single_recall_messages(
+    send_user: &str,
+    recv_user: &str,
+) -> Result<Vec<(String, String)>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let rows = sqlx::query_as::<_, (String, String)>(
+        r#"SELECT raw, send_user FROM chat_record WHERE text_type = ?1 AND ((send_user = ?2 AND recv_user = ?3) OR (send_user = ?3 AND recv_user = ?2))"#,
+    )
+    .bind(MSG_TYPE_RECALL)
+    .bind(send_user)
+    .bind(recv_user)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(rows)
+}
+
+/// 已读上报推进校验: 按 nano_id 查本地聊天记录表中该消息的时间戳。
+///
+/// 推进是否合法以**聊天记录表的时间戳**为准(而非水位表记录), 跨端回填等场景下
+/// 水位可能被推到历史位置, 只有聊天记录表里的消息时间戳才是消息本身的先后顺序。
+pub async fn chat_record_timestamp_by_nano_id(nano_id: &str) -> Result<Option<i64>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let row: Option<(i64,)> =
+        sqlx::query_as(r#"SELECT timestamp FROM chat_record WHERE nano_id = ?1"#)
+            .bind(nano_id)
+            .fetch_optional(&pool_sqlite)
+            .await?;
+    Ok(row.map(|r| r.0))
+}
+
+/// 任务07: 单聊会话本地已同步的最大服务端 id(已读上报用); 无则 None。
+pub async fn local_max_server_id(me: &str, peer: &str) -> Result<Option<i64>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let (max,): (Option<i64>,) = sqlx::query_as(
+        "SELECT MAX(server_id) FROM chat_record WHERE (send_user = ?1 AND recv_user = ?2) OR (send_user = ?2 AND recv_user = ?1)",
+    )
+    .bind(me)
+    .bind(peer)
+    .fetch_one(&pool_sqlite)
+    .await?;
+    Ok(max)
+}
+
+/// 任务07: 自 watermark 起有阅读事件的单聊对端及各自最大事件时间(已读上报聚合用)。
+pub async fn query_read_peers(
+    uuid: &str,
+    timestamp: i64,
+) -> Result<Vec<(String, i64)>, anyhow::Error> {
+    let pool_sqlite = get_db_client().await?;
+    let rows = sqlx::query_as::<_, (String, i64)>(
+        r#"SELECT send_user AS peer, MAX(timestamp) AS ts FROM chat_record_read WHERE recv_user = ?1 AND timestamp > ?2 GROUP BY send_user"#,
+    )
+    .bind(uuid)
+    .bind(timestamp)
+    .fetch_all(&pool_sqlite)
+    .await?;
+    Ok(rows)
 }

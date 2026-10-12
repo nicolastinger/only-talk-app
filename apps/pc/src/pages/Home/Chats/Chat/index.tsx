@@ -1,8 +1,14 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
 import { useMessageApi } from '@/hooks/useMessageApi';
+import {
+  isMessageSelectable,
+  useMessageSelection,
+} from '@/hooks/useMessageSelection';
 import { useBearStore } from '@/store/store';
+import { isRecallChatMessage, isRecallMessage } from '@/utils/recall';
 import { invoke } from '@tauri-apps/api/core';
-import { useLocation, useIntl } from '@umijs/max';
+import { useIntl, useLocation } from '@umijs/max';
+import { listenChatFileUploadProgress } from '@workspace/services';
 import {
   ChatMessage,
   FriendVo,
@@ -11,21 +17,36 @@ import {
   ResponseData,
   TextQuicMsgVo,
 } from '@workspace/types';
+import { message, Modal } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ChatFooter from '../components/Footer';
+import ForwardModal, { ForwardTarget } from '../components/ForwardModal';
+import MessageActionMenu, {
+  MessageAction,
+} from '../components/MessageActionMenu';
 import MessageList from '../components/MessageList';
+import MessageSelectionBar from '../components/MessageSelectionBar';
+import PendingSendBar from '../components/PendingSendBar';
 import Splitter from '../components/Splitter';
 import ChatTopBar from '../components/TopBar';
 import styles from './index.less';
 
 const PAGE_SIZE = 20;
 
+/** 瞬态消息(通话控制 12-15 / WebRTC 信令 100)：新生命周期下不入聊天历史，
+ *  历史由自动生成的 type=1 文本记录承担；仅过滤历史遗留旧数据，避免重复渲染。 */
+const isTransientType = (textType: number): boolean =>
+  textType === 12 ||
+  textType === 13 ||
+  textType === 14 ||
+  textType === 15 ||
+  textType === 100;
+
 const ChatPage: React.FC = () => {
   const intl = useIntl();
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [currentFriend, setCurrentFriend] = useState<FriendVo>();
   const [footerHeight, setFooterHeight] = useState(180);
-  const [realFootHeight, setRealFooterHeight] = useState(186);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,13 +56,214 @@ const ChatPage: React.FC = () => {
     new Set(),
   );
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadProgressMap, setUploadProgressMap] = useState<
+    Record<string, { percent: number; phase: string }>
+  >({});
+  const [pendingBarVisible, setPendingBarVisible] = useState(false);
+  const [pendingRefreshSignal, setPendingRefreshSignal] = useState(0);
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const friendUuid = params.get('currentFriend') || '';
-
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
+
+  /* ===== 多选 / 删除 / 转发 ===== */
+  const {
+    selectMode,
+    selectedIds,
+    selectedMessages,
+    allSelected,
+    enterSelect,
+    exitSelect,
+    toggle,
+    toggleAll,
+  } = useMessageSelection(messageList);
+  const [actionMenu, setActionMenu] = useState<{
+    x: number;
+    y: number;
+    msg: ChatMessage;
+  } | null>(null);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardMessages, setForwardMessages] = useState<ChatMessage[]>([]);
+
+  const handleMessageContext = useCallback(
+    (msg: ChatMessage, e: React.MouseEvent) => {
+      if (!isMessageSelectable(msg)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setActionMenu({ x: e.clientX, y: e.clientY, msg });
+    },
+    [],
+  );
+
+  const handleToggleSelect = useCallback(
+    (msg: ChatMessage) => toggle(msg),
+    [toggle],
+  );
+
+  const copyMessage = useCallback(
+    async (msg: ChatMessage) => {
+      if (msg.text_msg_raw.text_type !== 1) return;
+      try {
+        const parsed = JSON.parse(msg.text_msg_raw.raw);
+        const text = parsed.text || parsed.content || '';
+        if (!text) return;
+        await navigator.clipboard.writeText(text);
+        message.success(
+          intl.formatMessage({ id: 'chat.messageActions.copied' }),
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [intl],
+  );
+
+  const deleteMessages = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await invoke('delete_chat_record', { nanoIdList: ids });
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.deleteConfirm.failed' }));
+        return;
+      }
+      setMessageList((prev) =>
+        prev.filter((m) => !ids.includes(m.text_msg_raw.nano_id)),
+      );
+      exitSelect();
+    },
+    [intl, exitSelect],
+  );
+
+  const confirmDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.deleteConfirm.title' }),
+        content: intl.formatMessage(
+          { id: 'chat.deleteConfirm.content' },
+          { count: ids.length },
+        ),
+        okText: intl.formatMessage({ id: 'chat.messageActions.delete' }),
+        okButtonProps: { danger: true },
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => deleteMessages(ids),
+      });
+    },
+    [deleteMessages, intl],
+  );
+
+  const openForward = useCallback((msgs: ChatMessage[]) => {
+    if (msgs.length === 0) return;
+    setForwardMessages(msgs);
+    setForwardOpen(true);
+  }, []);
+
+  const recallMessage = useCallback(
+    async (msg: ChatMessage) => {
+      let recalled: TextQuicMsgVo;
+      try {
+        recalled = (await invoke('recall_chat_message', {
+          recvUser: friendUuid,
+          targetNanoId: msg.text_msg_raw.nano_id,
+        })) as TextQuicMsgVo;
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.recall.failed' }));
+        return;
+      }
+      setMessageList((prev) => {
+        const filtered = prev.filter(
+          (m) => m.text_msg_raw.nano_id !== msg.text_msg_raw.nano_id,
+        );
+        const temp: ChatMessage = {
+          from: MessageFrom.Mine,
+          text_msg_raw: recalled,
+          ack: false,
+        };
+        return [...filtered, temp];
+      });
+      setTimeout(() => scrollToBottom(), 100);
+    },
+    [friendUuid, intl],
+  );
+
+  const confirmRecall = useCallback(
+    (msg: ChatMessage) => {
+      Modal.confirm({
+        title: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        content: intl.formatMessage({ id: 'chat.recall.confirm' }),
+        okText: intl.formatMessage({ id: 'chat.messageActions.recall' }),
+        cancelText: intl.formatMessage({ id: 'chat.messageActions.cancel' }),
+        onOk: () => recallMessage(msg),
+      });
+    },
+    [intl, recallMessage],
+  );
+
+  const handleForwardConfirm = useCallback(
+    async (target: ForwardTarget) => {
+      const list = forwardMessages.map((m) => m.text_msg_raw);
+      setForwardOpen(false);
+      if (list.length === 0) return;
+      try {
+        await invoke('forward_chat_messages', {
+          messages: list,
+          targetRecv: target.recv,
+          targetGroup: target.isGroup,
+        });
+        message.success(
+          intl.formatMessage(
+            { id: 'chat.forward.success' },
+            { name: target.name },
+          ),
+        );
+        if (!target.isGroup && target.recv === friendUuid) {
+          setCurrentPage(1);
+          setHasMore(true);
+          setIsInitialLoad(true);
+          loadChatRecordFromStore(meUuid, friendUuid, 1, true);
+        }
+        exitSelect();
+      } catch (err) {
+        console.error(err);
+        message.error(intl.formatMessage({ id: 'chat.forward.failed' }));
+      }
+    },
+    [forwardMessages, friendUuid, meUuid, intl, exitSelect],
+  );
+
+  const handleActionMenuSelect = useCallback(
+    (action: MessageAction) => {
+      const msg = actionMenu?.msg;
+      setActionMenu(null);
+      if (!msg) return;
+      if (action === 'multi') {
+        enterSelect(msg);
+      } else if (action === 'forward') {
+        openForward([msg]);
+      } else if (action === 'recall') {
+        confirmRecall(msg);
+      } else if (action === 'delete') {
+        confirmDelete([msg.text_msg_raw.nano_id]);
+      } else if (action === 'copy') {
+        copyMessage(msg);
+      }
+    },
+    [
+      actionMenu,
+      enterSelect,
+      openForward,
+      confirmRecall,
+      confirmDelete,
+      copyMessage,
+    ],
+  );
+
   const { textMessage } = useMessageApi(friendUuid, meUuid);
 
   const handleHeightChange = (heightPercent: number) => {
@@ -54,10 +276,6 @@ const ChatPage: React.FC = () => {
     );
     setFooterHeight(heightPx);
   };
-
-  useEffect(() => {
-    setRealFooterHeight(footerHeight + 6);
-  }, [footerHeight]);
 
   useEffect(() => {
     if (messageList.length > 1) {
@@ -82,16 +300,43 @@ const ChatPage: React.FC = () => {
     setCurrentFriendSession(friendUuid);
 
     // 监听全局上传事件
-    const handleUploadStartEvent = () => setIsUploading(true);
-    const handleUploadEndEvent = () => setIsUploading(false);
+    const handleUploadStartEvent = () => {
+      setIsUploading(true);
+      setUploadPercent(0);
+    };
+    const handleUploadEndEvent = () => {
+      setUploadPercent(100);
+      setIsUploading(false);
+    };
 
     window.addEventListener('uploadStart', handleUploadStartEvent);
     window.addEventListener('uploadEnd', handleUploadEndEvent);
 
+    let unlistenUpload: (() => void) | undefined;
+    let disposed = false;
+    listenChatFileUploadProgress((p) => {
+      const pct =
+        p.total > 0
+          ? Math.min(99, Math.floor((p.uploaded / p.total) * 100))
+          : 0;
+      setUploadPercent(pct);
+      setUploadProgressMap((prev) => ({
+        ...prev,
+        [p.nanoId]: { percent: pct, phase: p.phase },
+      }));
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlistenUpload = fn;
+      })
+      .catch(() => {});
+
     return () => {
+      disposed = true;
       setCurrentFriendSession('-1');
       window.removeEventListener('uploadStart', handleUploadStartEvent);
       window.removeEventListener('uploadEnd', handleUploadEndEvent);
+      unlistenUpload?.();
     };
   }, [meUuid, friendUuid]);
 
@@ -182,16 +427,18 @@ const ChatPage: React.FC = () => {
         return;
       }
 
-      const chatMessages: ChatMessage[] = data.map((item) => {
-        const from =
-          item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;
-        const temp: ChatMessage = {
-          from,
-          text_msg_raw: item,
-          ack: undefined,
-        };
-        return temp;
-      });
+      const chatMessages: ChatMessage[] = data
+        .filter((item) => !isTransientType(item.text_type))
+        .map((item) => {
+          const from =
+            item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;
+          const temp: ChatMessage = {
+            from,
+            text_msg_raw: item,
+            ack: undefined,
+          };
+          return temp;
+        });
 
       if (isInitial) {
         setMessageList(chatMessages);
@@ -263,9 +510,22 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (textMessage) {
+      // 撤回消息：被撤回的原消息已在本地库删除，重拉聊天记录以移除原消息并显示撤回提示
+      if (isRecallMessage(textMessage.text_type, textMessage.raw)) {
+        setCurrentPage(1);
+        setHasMore(true);
+        setIsInitialLoad(true);
+        loadChatRecordFromStore(meUuid, friendUuid, 1, true);
+        return;
+      }
+      // 实时消息：通话控制(12-15)/信令(100) 走独立事件 call_control/webrtc_signal，
+      // 不会进入 text_message，此处仅处理文本/图片/文件等历史消息类型。
       let from = MessageFrom.Customer;
       if (textMessage.send_user == SYSTEM_ACCOUNT) {
         from = MessageFrom.System;
+      } else if (textMessage.send_user === meUuid) {
+        // 自己其他端发送的消息(self-echo)回推, 渲染为己方气泡
+        from = MessageFrom.Mine;
       }
       const temp: ChatMessage = {
         from,
@@ -279,6 +539,11 @@ const ChatPage: React.FC = () => {
           );
           if (index !== -1) {
             prevState[index].ack = true;
+            // 用服务端返回的 nano_id 归一本地乐观消息的 nano_id，
+            // 否则后续撤回/删除/已读会因本地 id 在 chat_record 中不存在而失败
+            if (textMessage.nano_id) {
+              prevState[index].text_msg_raw.nano_id = textMessage.nano_id;
+            }
             // 检查被 ack 的消息是否是图片(text_type=2)或文件(text_type=3)
             const ackedMessage = prevState[index];
             const ackedMessageType = ackedMessage.text_msg_raw.text_type;
@@ -294,9 +559,21 @@ const ChatPage: React.FC = () => {
               setIsInitialLoad(true);
               loadChatRecordFromStore(meUuid, friendUuid, 1, true);
             }
+          } else {
+            // 列表中没有该消息：重发/补发成功的消息此前从未落库渲染过，
+            // 重新加载最新聊天记录让新落库的气泡出现（否则需重进会话才可见）
+            console.log(
+              'ACK 消息不在列表中（重发/补发成功），重新加载聊天记录',
+            );
+            setCurrentPage(1);
+            setHasMore(true);
+            setIsInitialLoad(true);
+            loadChatRecordFromStore(meUuid, friendUuid, 1, true);
           }
           return [...prevState, temp];
         });
+        // 201 ACK 到达，send 表对应记录状态置 3，刷新待发送记录条
+        setPendingRefreshSignal((s) => s + 1);
       } else {
         setNewMessageIds(new Set([textMessage.nano_id]));
         setMessageList((prevState) => [...prevState, temp]);
@@ -321,6 +598,8 @@ const ChatPage: React.FC = () => {
     const temp: ChatMessage = JSON.parse(message);
     setNewMessageIds(new Set([temp.text_msg_raw.nano_id]));
     setMessageList((prev) => [...prev, temp]);
+    // 新消息已入 send 队列，刷新待发送记录条
+    setPendingRefreshSignal((s) => s + 1);
     setTimeout(() => {
       scrollToBottom();
     }, 100);
@@ -331,9 +610,11 @@ const ChatPage: React.FC = () => {
 
   const handleUploadStart = () => {
     setIsUploading(true);
+    setUploadPercent(0);
   };
 
   const handleUploadEnd = () => {
+    setUploadPercent(100);
     setIsUploading(false);
   };
 
@@ -346,7 +627,14 @@ const ChatPage: React.FC = () => {
         />
         {isUploading && (
           <div className={styles.uploadLoadingBar}>
-            <div className={styles.uploadLoadingProgress} />
+            {uploadPercent === 0 ? (
+              <div className={styles.uploadLoadingIndeterminate} />
+            ) : (
+              <div
+                className={styles.uploadLoadingProgress}
+                style={{ width: `${uploadPercent}%` }}
+              />
+            )}
           </div>
         )}
       </div>
@@ -354,7 +642,11 @@ const ChatPage: React.FC = () => {
         <div
           ref={messageContainerRef}
           className={styles.messageContainer}
-          style={{ height: `calc(100% - ${realFootHeight}px)` }}
+          style={{
+            height: selectMode
+              ? 'calc(100% - 50px)'
+              : `calc(100% - ${footerHeight + 6}px)`,
+          }}
         >
           {isLoading && !isInitialLoad && (
             <div className={styles.loadingIndicator}>
@@ -363,31 +655,77 @@ const ChatPage: React.FC = () => {
             </div>
           )}
           {!hasMore && messageList.length > 0 && (
-            <div className={styles.noMoreIndicator}>{intl.formatMessage({ id: 'chat.noMoreMessages' })}</div>
+            <div className={styles.noMoreIndicator}>
+              {intl.formatMessage({ id: 'chat.noMoreMessages' })}
+            </div>
           )}
           <MessageList
             messages={messageList}
             friendIcon={currentFriend?.friend_icon}
             friendUuid={friendUuid}
+            friendName={currentFriend?.friend_name}
             newMessageIds={newMessageIds}
             loadedMessageIds={loadedMessageIds}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+            onMessageContext={handleMessageContext}
+            onToggleSelect={handleToggleSelect}
+            uploadProgressMap={uploadProgressMap}
           />
           <div id="anchor"></div>
         </div>
-        <Splitter
-          onHeightChange={handleHeightChange}
-          minHeight={20}
-          maxHeight={80}
-        />
-        <div style={{ height: `${footerHeight}px` }}>
-          <ChatFooter
-            friendUuid={friendUuid}
-            onMessageSent={handleMessageSent}
-            onUploadStart={handleUploadStart}
-            onUploadEnd={handleUploadEnd}
+        {selectMode ? (
+          <MessageSelectionBar
+            count={selectedIds.size}
+            allSelected={allSelected}
+            onToggleAll={toggleAll}
+            onCancel={exitSelect}
+            onForward={() => openForward(selectedMessages)}
+            onDelete={() => confirmDelete([...selectedIds])}
           />
-        </div>
+        ) : (
+          <>
+            <Splitter
+              onHeightChange={handleHeightChange}
+              minHeight={20}
+              maxHeight={80}
+            />
+            <PendingSendBar
+              friendUuid={friendUuid}
+              refreshSignal={pendingRefreshSignal}
+              bottom={footerHeight}
+              onVisibleChange={setPendingBarVisible}
+            />
+            <div style={{ height: `${footerHeight}px` }}>
+              <ChatFooter
+                friendUuid={friendUuid}
+                onMessageSent={handleMessageSent}
+                onUploadStart={handleUploadStart}
+                onUploadEnd={handleUploadEnd}
+              />
+            </div>
+          </>
+        )}
       </div>
+      {actionMenu && (
+        <MessageActionMenu
+          x={actionMenu.x}
+          y={actionMenu.y}
+          canCopy={actionMenu.msg.text_msg_raw.text_type === 1}
+          canRecall={
+            actionMenu.msg.from === MessageFrom.Mine &&
+            !isRecallChatMessage(actionMenu.msg)
+          }
+          onSelect={handleActionMenuSelect}
+          onClose={() => setActionMenu(null)}
+        />
+      )}
+      <ForwardModal
+        open={forwardOpen}
+        count={forwardMessages.length}
+        onCancel={() => setForwardOpen(false)}
+        onConfirm={handleForwardConfirm}
+      />
     </div>
   );
 };

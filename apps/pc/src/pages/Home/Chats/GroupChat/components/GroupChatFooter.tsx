@@ -1,14 +1,24 @@
-import { invoke } from '@tauri-apps/api/core';
-import { useIntl } from '@umijs/max';
-import { selectFile } from '@workspace/services';
-import { ChatMessage, MessageFrom, TextQuicMsgVo } from '@workspace/types';
-import { Button, Input, message } from 'antd';
-import { TextAreaRef } from 'antd/es/input/TextArea';
 import {
-  FileOutlined,
+  PaperClipOutlined,
   PictureOutlined,
   SmileOutlined,
 } from '@ant-design/icons';
+import { invoke } from '@tauri-apps/api/core';
+import { useIntl } from '@umijs/max';
+import {
+  getAllFileExtensions,
+  getImageExtensions,
+  getLocalFileSize,
+  selectFile,
+} from '@workspace/services';
+import {
+  ChatMessage,
+  MessageFrom,
+  TextQuicMsgVo,
+  UPLOAD_LIMITS,
+} from '@workspace/types';
+import { Button, Input, message } from 'antd';
+import { TextAreaRef } from 'antd/es/input/TextArea';
 import { nanoid } from 'nanoid';
 import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
 import styles from './GroupChatFooter.less';
@@ -27,14 +37,70 @@ interface GroupChatFooterProps {
 }
 
 const EMOJI_LIST = [
-  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
-  '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
-  '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜',
-  '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐',
-  '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬',
-  '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷',
-  '👍', '👎', '👏', '🙌', '🤝', '🙏', '💪', '🤘',
-  '❤️', '💔', '💯', '🔥', '⭐', '✨', '💥', '🎉',
+  '😀',
+  '😃',
+  '😄',
+  '😁',
+  '😆',
+  '😅',
+  '🤣',
+  '😂',
+  '🙂',
+  '🙃',
+  '😉',
+  '😊',
+  '😇',
+  '🥰',
+  '😍',
+  '🤩',
+  '😘',
+  '😗',
+  '😚',
+  '😙',
+  '🥲',
+  '😋',
+  '😛',
+  '😜',
+  '🤪',
+  '😝',
+  '🤑',
+  '🤗',
+  '🤭',
+  '🤫',
+  '🤔',
+  '🤐',
+  '🤨',
+  '😐',
+  '😑',
+  '😶',
+  '😏',
+  '😒',
+  '🙄',
+  '😬',
+  '😮‍💨',
+  '🤥',
+  '😌',
+  '😔',
+  '😪',
+  '🤤',
+  '😴',
+  '😷',
+  '👍',
+  '👎',
+  '👏',
+  '🙌',
+  '🤝',
+  '🙏',
+  '💪',
+  '🤘',
+  '❤️',
+  '💔',
+  '💯',
+  '🔥',
+  '⭐',
+  '✨',
+  '💥',
+  '🎉',
 ];
 
 const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
@@ -100,11 +166,21 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
   const sendImage = async () => {
     try {
       const filePaths = await selectFile(false, false, [
-        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+        { name: 'Images', extensions: await getImageExtensions() },
       ]);
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
+        const size = await getLocalFileSize(filePath);
+        if (size > UPLOAD_LIMITS.image) {
+          message.error(
+            intl.formatMessage(
+              { id: 'chat.imageTooLarge' },
+              { limit: Math.floor(UPLOAD_LIMITS.image / (1024 * 1024)) },
+            ),
+          );
+          return;
+        }
         const text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
           text_type: MSG_TYPE_GROUP_IMAGE,
@@ -120,10 +196,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
           ack: false,
         };
 
+        // 先上屏(展示气泡与上传进度)，再执行发送
+        onMessageSent(JSON.stringify(temp));
         onUploadStart?.();
         try {
           await invoke('send_group_image_msg', { textQuicMsg: text_msg_raw });
-          onMessageSent(JSON.stringify(temp));
         } finally {
           onUploadEnd?.();
         }
@@ -137,10 +214,22 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
 
   const sendFile = async () => {
     try {
-      const filePaths = await selectFile(false, false);
+      const filePaths = await selectFile(false, false, [
+        { name: 'Files', extensions: await getAllFileExtensions() },
+      ]);
 
       if (filePaths && filePaths.length > 0) {
         const filePath = filePaths[0];
+        const size = await getLocalFileSize(filePath);
+        if (size > UPLOAD_LIMITS.file) {
+          message.error(
+            intl.formatMessage(
+              { id: 'chat.fileTooLarge' },
+              { limit: Math.floor(UPLOAD_LIMITS.file / (1024 * 1024)) },
+            ),
+          );
+          return;
+        }
         const text_msg_raw: TextQuicMsgVo = {
           nano_id: nanoid(),
           text_type: MSG_TYPE_GROUP_FILE,
@@ -156,10 +245,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
           ack: false,
         };
 
+        // 先上屏(展示气泡与上传进度)，再执行发送
+        onMessageSent(JSON.stringify(temp));
         onUploadStart?.();
         try {
           await invoke('send_group_file_msg', { textQuicMsg: text_msg_raw });
-          onMessageSent(JSON.stringify(temp));
         } finally {
           onUploadEnd?.();
         }
@@ -197,18 +287,28 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
             </div>
           )}
         </div>
-        <div className={styles.footerBtn} onClick={sendImage} title={intl.formatMessage({ id: 'groupChat.sendImage' })}>
+        <div
+          className={styles.footerBtn}
+          onClick={sendImage}
+          title={intl.formatMessage({ id: 'groupChat.sendImage' })}
+        >
           <PictureOutlined />
         </div>
-        <div className={styles.footerBtn} onClick={sendFile} title={intl.formatMessage({ id: 'groupChat.sendFile' })}>
-          <FileOutlined />
+        <div
+          className={styles.footerBtn}
+          onClick={sendFile}
+          title={intl.formatMessage({ id: 'groupChat.sendFile' })}
+        >
+          <PaperClipOutlined />
         </div>
       </div>
       <div className={styles.footerMessage}>
         <TextArea
           onPressEnter={sendMessage}
           value={msg}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMsg(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+            setMsg(e.target.value)
+          }
           className={styles.footerTextArea}
           placeholder={intl.formatMessage({ id: 'groupChat.inputPlaceholder' })}
         />

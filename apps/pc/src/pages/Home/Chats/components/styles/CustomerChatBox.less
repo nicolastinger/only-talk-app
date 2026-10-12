@@ -26,6 +26,7 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
+  cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   border: 2px solid rgba(255, 255, 255, 0.8);
@@ -59,7 +60,7 @@
 }
 
 .senderName {
-  font-size: 12px;
+  font-size: calc(12px * var(--chat-font-scale));
   color: #4096ff;
   font-weight: 500;
   margin-left: 4px;
@@ -112,7 +113,7 @@
   justify-content: center;
   word-break: break-word;
   overflow-wrap: break-word;
-  font-size: 14px;
+  font-size: calc(14px * var(--chat-font-scale));
   line-height: 1.6;
   overflow: hidden;
   padding: 5px 7px;
