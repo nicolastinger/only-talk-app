@@ -37,7 +37,7 @@ export default {
       },
       {
         icon: "🔒",
-        title: "End-to-End Security",
+        title: "Secure",
         desc: "TLS-protected links and locally encrypted chat history keep your private data under your control.",
       },
       {
@@ -48,7 +48,7 @@ export default {
       {
         icon: "📞",
         title: "HD Calls",
-        desc: "Built-in WebRTC audio/video calls for one-on-one and group chats, smooth and crystal clear.",
+        desc: "Built-in WebRTC audio/video calls for one-on-one conversations, smooth and crystal clear.",
       },
       {
         icon: "🛰️",
@@ -81,7 +81,7 @@ export default {
           "Low-latency real-time connections over QUIC",
           "NAT hole punching and P2P direct links",
           "Private-mode chats that never touch servers",
-          "End-to-end encryption readable only by participants",
+          "Peer-to-peer delivery that minimizes server relay",
         ],
       },
       {
@@ -135,7 +135,7 @@ export default {
         name: "Backend",
         tech: "Rust · Actix-web · PostgreSQL · Redis · MinIO",
       },
-      { name: "Security", tech: "TLS · SQLCipher · End-to-end encryption" },
+      { name: "Security", tech: "TLS · SQLCipher · Local encryption" },
     ],
     ctaTitle: "Start Now",
     ctaDesc: "Pick your platform and start chatting in minutes.",
@@ -193,7 +193,7 @@ export default {
         title: "3. How We Collect and Use Your Personal Information",
         paras: [
           "Registration and sign-in: you may register and sign in with an email verification code. To complete registration, we collect your email address, verification code, username (account) and password (if any). You may optionally complete your avatar, nickname and signature.",
-          "Instant messaging: to send, receive and sync text, image and file messages, we process the message content and related files you send. Text messages are relayed through our servers for delivery and history sync; images and files are uploaded to our file storage service so the other party can download them. Chat records are stored locally in encrypted form (SQLCipher). In private mode you may use end-to-end encryption, and messages are not stored on the server.",
+          "Instant messaging: to send, receive and sync text, image and file messages, we process the message content and related files you send. Text messages are relayed through our servers for delivery and history sync; images and files are uploaded to our file storage service so the other party can download them. Chat records are stored locally in encrypted form (SQLCipher). In private mode you may use peer-to-peer delivery, and messages are not stored on the server.",
           "Audio/video calls: when you use voice or video calls, we access the camera and microphone with your authorization and process audio/video data during the call; call media is preferentially transmitted peer-to-peer over a direct P2P connection.",
           "Moments plaza: when you post content, like or comment, we collect the content you post and your interaction records to display them to you and your friends.",
           "Friends and groups: to establish friend relationships and group chats, we process your friend connections, group membership and related operation records.",
