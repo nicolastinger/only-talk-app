@@ -6,7 +6,6 @@ import {
   SyncOutlined,
 } from '@ant-design/icons';
 import { getVersion } from '@tauri-apps/api/app';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import { useIntl } from '@umijs/max';
 import type { UpdateDownloadProgress } from '@workspace/services';
 import {
@@ -14,6 +13,7 @@ import {
   downloadUpdatePackage,
   formatFileSize,
   installUpdate,
+  openExternalUrl,
 } from '@workspace/services';
 import {
   PRIVACY_POLICY_URL,
@@ -120,7 +120,7 @@ const AboutApp = () => {
 
   /** 打开官网法务页面(用户协议 / 隐私协议) */
   const openExternal = (url: string) => {
-    openUrl(url).catch((e) => console.error('打开链接失败:', url, e));
+    openExternalUrl(url).catch((e) => console.error('打开链接失败:', url, e));
   };
 
   const forceUpdate = !!updateInfo?.force_update;

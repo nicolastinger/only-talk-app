@@ -2,7 +2,6 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   showToast,
   showLoadingToast,
@@ -27,6 +26,7 @@ import {
   get_quic_servers,
   list_auth_factors,
   isBackendSuccess,
+  openExternalUrl,
 } from "@workspace/services";
 import { useAuthStore } from "@/stores/auth";
 import { parseResponse } from "@/utils/api";
@@ -396,14 +396,7 @@ const onLogin = async () => {
 };
 
 /** 打开官网隐私协议页面 */
-const onOpenPrivacy = async () => {
-  try {
-    await openUrl(PRIVACY_POLICY_URL);
-  } catch (e) {
-    console.error("打开隐私协议失败:", e);
-    showToast({ message: t("login.privacyLoadFailed"), icon: "fail" });
-  }
-};
+const onOpenPrivacy = () => void openExternalUrl(PRIVACY_POLICY_URL);
 onMounted(() => {
   clearAuth();
   accountAvatar.value = null;

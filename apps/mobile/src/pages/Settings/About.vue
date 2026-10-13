@@ -3,12 +3,12 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { showDialog, showToast } from "vant";
 import { getVersion } from "@tauri-apps/api/app";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   checkForUpdate,
   downloadUpdatePackage,
   formatFileSize,
   installUpdate,
+  openExternalUrl,
 } from "@workspace/services";
 import { PRIVACY_POLICY_URL, USER_AGREEMENT_URL } from "@workspace/types";
 import type { UpdateInfo } from "@workspace/types";
@@ -154,16 +154,8 @@ const onComingSoon = (row: string) => {
 };
 
 /** 打开官网法务页面(用户协议 / 隐私协议) */
-const openExternal = async (url: string) => {
-  try {
-    await openUrl(url);
-  } catch (e) {
-    console.error("打开链接失败:", url, e);
-    showToast({ message: t("common.operationFailed"), icon: "fail" });
-  }
-};
-const onOpenUserAgreement = () => void openExternal(USER_AGREEMENT_URL);
-const onOpenPrivacy = () => void openExternal(PRIVACY_POLICY_URL);
+const onOpenUserAgreement = () => void openExternalUrl(USER_AGREEMENT_URL);
+const onOpenPrivacy = () => void openExternalUrl(PRIVACY_POLICY_URL);
 </script>
 
 <template>

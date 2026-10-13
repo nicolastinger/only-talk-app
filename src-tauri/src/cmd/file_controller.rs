@@ -4,7 +4,6 @@ use std::path::Path;
 use log::{error, info, warn};
 use tauri::path::BaseDirectory;
 use tauri::{Manager, Runtime};
-#[cfg(not(target_os = "android"))]
 use tauri_plugin_opener::OpenerExt;
 
 use crate::config::get_config;
@@ -222,6 +221,23 @@ pub async fn get_local_file_size(path: String) -> Result<u64, String> {
     }
     let metadata = fs::metadata(&path).map_err(|e| format!("读取文件失败: {}", e))?;
     Ok(metadata.len())
+}
+
+/// 打开外部链接（跨平台）
+/// - 桌面: 系统默认浏览器
+/// - Android/iOS: 经 opener 插件走系统 Intent / 默认程序
+#[tauri::command]
+pub async fn open_external_url<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    url: String,
+) -> Result<(), String> {
+    if url.is_empty() {
+        return Err("URL 不能为空".to_string());
+    }
+    app.opener().open_url(url, None::<&str>).map_err(|e| {
+        error!("打开外部链接失败: {}", e);
+        e.to_string()
+    })
 }
 
 /// 打开本地文件（跨平台）

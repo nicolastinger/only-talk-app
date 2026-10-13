@@ -6,6 +6,7 @@ export * from "./fileTypeConfigService";
 export * from "./groupService";
 export * from "./httpService";
 export * from "./imagePreviewService";
+export * from "./linkService";
 export * from "./momentService";
 export * from "./networkService";
 export * from "./notificationService";

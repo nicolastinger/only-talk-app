@@ -18,9 +18,13 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { Window } from '@tauri-apps/api/window';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import { history, useIntl } from '@umijs/max';
-import { getApiBase, getFiles, isBackendSuccess } from '@workspace/services';
+import {
+  getApiBase,
+  getFiles,
+  isBackendSuccess,
+  openExternalUrl,
+} from '@workspace/services';
 import {
   HttpResponse,
   PRIVACY_POLICY_URL,
@@ -381,7 +385,7 @@ const LoginPage: React.FC = () => {
   const openPrivacyModal = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    openUrl(PRIVACY_POLICY_URL).catch((err) =>
+    openExternalUrl(PRIVACY_POLICY_URL).catch((err) =>
       console.error('打开隐私协议失败:', err),
     );
   };
