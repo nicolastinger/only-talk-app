@@ -142,6 +142,10 @@ const routes = [
         component: './Sign/SignUp',
       },
       {
+        path: '/forgotPassword',
+        component: './Sign/ForgotPassword',
+      },
+      {
         name: 'menu.testComponent',
         path: '/testComponent',
         component: './TestComponent',

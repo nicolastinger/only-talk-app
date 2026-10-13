@@ -9,6 +9,7 @@ export * from "./imagePreviewService";
 export * from "./momentService";
 export * from "./networkService";
 export * from "./notificationService";
+export * from "./passwordService";
 export * from "./plazaService";
 export * from "./reportService";
 export * from "./updateService";

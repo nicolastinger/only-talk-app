@@ -220,6 +220,10 @@ const toRegister = () => {
   router.push("/signup");
 };
 
+const toForgotPassword = () => {
+  router.push("/forgot-password");
+};
+
 const validateAccount = (value: string): boolean => {
   if (!value) {
     accountError.value = t("login.accountRequired");
@@ -607,6 +611,10 @@ onMounted(() => {
               }}</a>
               <span class="divider">|</span>
             </template>
+            <a class="switch-link" @click="toForgotPassword">{{
+              t("login.forgotPassword")
+            }}</a>
+            <span class="divider">|</span>
             <a class="switch-link" @click="toRegister">{{
               t("login.register")
             }}</a>

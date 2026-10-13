@@ -87,6 +87,28 @@ interface SendVerifyCodeRequest {
   email: string;
 }
 
+/** 忘记密码(未登录)第一步: 向已绑定的二次认证因素发送找回验证码 */
+interface ForgotPasswordSendCodeRequest {
+  /** 登录账号(同一邮箱可能被多个账号绑定, 需账号定位用户) */
+  account: string;
+  /** 认证因素类型: 0=email 1=phone 2=other(当前仅 email) */
+  factor_type: number;
+  /** 已绑定的因素值(邮箱/手机号) */
+  factor_value: string;
+}
+
+/** 忘记密码(未登录)第二步: 校验验证码并重置密码 */
+interface ForgotPasswordResetRequest {
+  /** 登录账号 */
+  account: string;
+  /** 认证因素类型: 0=email 1=phone 2=other(当前仅 email) */
+  factor_type: number;
+  /** 已绑定的因素值(邮箱/手机号), 需与发码时一致 */
+  factor_value: string;
+  verification_code: string;
+  new_password: string;
+}
+
 /** 登录/刷新令牌响应(POST /user/sign_in, /user/refresh_token 返回) — 镜像 rs SignInResponseVO */
 interface SignInResponseVo {
   access_token: string;
@@ -161,5 +183,7 @@ export type {
   SignUpStep1Response,
   CompleteProfileRequest,
   SendVerifyCodeRequest,
+  ForgotPasswordSendCodeRequest,
+  ForgotPasswordResetRequest,
   SignInResponseVo,
 };

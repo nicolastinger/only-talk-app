@@ -181,6 +181,10 @@ const LoginPage: React.FC = () => {
     history.push('/signUp');
   };
 
+  const goToForgotPassword = () => {
+    history.push('/forgotPassword');
+  };
+
   const validateUserCode = (value: string): boolean => {
     if (!value) {
       setUserCodeError(
@@ -607,7 +611,7 @@ const LoginPage: React.FC = () => {
                     <span className={styles.divider}>|</span>
                   </>
                 )}
-                <a className={styles.link}>
+                <a className={styles.link} onClick={goToForgotPassword}>
                   <FormattedMessage id="signIn.forgotPassword" />
                 </a>
                 <span className={styles.divider}>|</span>
