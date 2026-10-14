@@ -140,7 +140,7 @@ pub async fn on_incoming_message(me: &str, msg: &TextQuicMsgVo, is_group: bool, 
 
         // Windows 托盘提示：窗口隐藏/最小化时短暂闪烁托盘图标
         #[cfg(desktop)]
-        crate::tray::pulse_tray_on_new_message(app);
+        crate::emit_app::tray::pulse_tray_on_new_message(app);
     }
 }
 

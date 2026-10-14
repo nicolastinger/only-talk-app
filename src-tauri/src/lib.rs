@@ -19,8 +19,6 @@ mod emit_app;
 pub mod entity;
 mod init_app;
 pub mod service;
-#[cfg(desktop)]
-mod tray;
 pub mod utils;
 pub mod vo;
 
@@ -91,10 +89,10 @@ use crate::cmd::user_controller::{
     get_user_map, reconnect_quic_command, refresh_user_info, remove_user_map,
     update_user_info_command,
 };
+#[cfg(desktop)]
+use crate::emit_app::tray::setup_tray;
 use crate::init_app::init_app;
 use crate::quic_service::models::TargetSendStream;
-#[cfg(desktop)]
-use crate::tray::setup_tray;
 use crate::utils::global_static_str::APP_NAME;
 
 static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();

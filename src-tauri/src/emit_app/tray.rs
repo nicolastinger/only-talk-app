@@ -22,7 +22,7 @@ pub fn setup_tray<R: Runtime>(
 
     let menu = Menu::with_items(app, &[&show_window, &quit_app])?;
 
-    let icon_bytes = include_bytes!("../icons/icon.ico");
+    let icon_bytes = include_bytes!("../../icons/icon.ico");
     let icon = Image::from_bytes(icon_bytes)?;
 
     let tray = TrayIconBuilder::new()
@@ -89,7 +89,7 @@ pub fn pulse_tray_on_new_message<R: Runtime>(app: &AppHandle<R>) {
             return;
         }
     };
-    let normal_bytes: &'static [u8] = include_bytes!("../icons/128x128.png");
+    let normal_bytes: &'static [u8] = include_bytes!("../../icons/128x128.png");
     let app_handle = app.clone();
 
     info!("收到新消息,托盘图标开始闪烁提示");
@@ -122,7 +122,7 @@ async fn set_tray_icon<R: Runtime>(app: &AppHandle<R>, bytes: Vec<u8>) {
 
 /// 生成"带红点提醒"的托盘图标 PNG(以 128x128 应用图标为底图,右下角画红点)
 fn build_alert_icon_bytes() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let base = include_bytes!("../icons/128x128.png");
+    let base = include_bytes!("../../icons/128x128.png");
     let img = image::load_from_memory(base)?.to_rgba8();
     let (w, h) = img.dimensions();
 
