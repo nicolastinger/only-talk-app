@@ -10,12 +10,11 @@ use log::info;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{query, SqlitePool};
 
-use crate::cmd::user_controller::get_user_map;
 use crate::config::get_config;
 use crate::dao::create_table::init_private_ddl;
 use crate::dao::get_db_client;
-use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{APP_PATH, PRIVATE_DB, SQLITE_PATH};
+use crate::utils::user_state::get_user_info;
 use crate::GLOBAL_PRIVATE_SQL_POOL;
 
 /// 明文 user.db 中历史遗留的聊天数据表(聊天记录现统一存加密 private.db)
@@ -120,7 +119,7 @@ async fn get_db_path() -> String {
         sleep(Duration::from_secs(3));
         panic!("获取应用路径失败");
     });
-    let uuid = get_user_map("uuid".to_string()).await.expect("获取用户uuid失败");
+    let uuid = get_user_info("uuid").await.expect("获取用户uuid失败");
     let sqlite_path = Path::new(&app_path).join(SQLITE_PATH);
 
     let db_data_dir = Path::new(&app_path).join(SQLITE_PATH).join(&uuid);

@@ -48,6 +48,7 @@ use crate::service::recall::{can_recall, parse_group_recall_target, parse_recall
 use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
 use crate::utils::session_uuid::single_session_uuid;
+pub use crate::utils::user_state::{add_user_map, get_user_info, get_user_map, insert_user_info};
 use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{
     SessionControl, APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_PRIVATE_SQL_POOL,
@@ -154,21 +155,6 @@ pub(crate) async fn perform_session_login_tasks() -> Result<(), anyhow::Error> {
 /// 用户登录入口(会话状态机 actor): LoggedOut -> LoggingIn -> LoggedIn
 pub async fn user_login() -> Result<(), anyhow::Error> {
     crate::service::session_manager::SESSION_MANAGER.login().await
-}
-
-/// 获取用户信息
-pub async fn get_user_info(key: &str) -> Result<String, anyhow::Error> {
-    let guard = GLOBAL_QUIC_USER_INFO.read().await;
-    match guard.get(key) {
-        Some(value) => Ok(value.clone()),
-        None => Err(anyhow!("数据不存在")),
-    }
-}
-
-/// 插入用户信息
-pub async fn insert_user_info(key: &str, value: &str) -> Result<(), anyhow::Error> {
-    GLOBAL_QUIC_USER_INFO.write().await.insert(key.to_string(), value.to_string());
-    Ok(())
 }
 
 /// 会话级后台任务监督。
@@ -1017,15 +1003,6 @@ async fn merge_local_session(me: &str, s: &SessionListItem) -> Result<(), anyhow
         .execute(&pool_sqlite)
         .await?;
     }
-    Ok(())
-}
-
-pub async fn get_user_map(key: &str) -> Result<String, String> {
-    Ok(GLOBAL_QUIC_USER_INFO.read().await.get(key).cloned().ok_or("not found")?.to_string())
-}
-
-pub async fn add_user_map(key: &str, value: &str) -> Result<(), String> {
-    GLOBAL_QUIC_USER_INFO.write().await.insert(key.to_string(), value.to_string());
     Ok(())
 }
 

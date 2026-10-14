@@ -2,7 +2,7 @@ use log::{error, info};
 
 use crate::dao::get_db_client;
 use crate::entity::chat_session::ChatSession;
-use crate::service::user_service::get_user_info;
+use crate::utils::user_state::get_user_info;
 use crate::vo::chat_session_vo::ChatSessionVo;
 
 /// 会话消息更新

@@ -8,4 +8,5 @@ pub mod message_lifecycle;
 pub mod message_types;
 pub mod session_uuid;
 pub mod time;
+pub mod user_state;
 pub mod uuid_utils;
