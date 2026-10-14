@@ -43,8 +43,10 @@ pub struct FriendListVO {
     pub uuid: String,
     pub account: String,
     pub username: String,
-    pub icon: String,
-    pub info: String,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub info: Option<String>,
     /// 用户类型 (0: 普通用户, 1: 机器人, 2: 企业用户, 其他待补充)
     #[serde(default)]
     pub user_type: Option<i16>,
