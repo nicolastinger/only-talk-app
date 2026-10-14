@@ -10,14 +10,107 @@ use std::time::{Duration, Instant};
 use anyhow::anyhow;
 use reqwest::header::HeaderMap;
 use reqwest::Response;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::io::{AsyncRead, ReadBuf};
 use tokio_util::io::ReaderStream;
 
 use crate::utils::http_client::{
-    http_client_120, http_client_30, http_client_300, http_client_600,
+    http_client, http_client_120, http_client_30, http_client_300, http_client_600,
 };
 use crate::GLOBAL_QUIC_USER_INFO;
+
+/// 原始 HTTP 响应: 状态码 + 文本 body。
+#[derive(Serialize, Deserialize)]
+pub struct ApiResponse {
+    pub status: u16,
+    pub body: String,
+}
+
+/// 构造带 `Authorization` 头的请求头(token 取自 `GLOBAL_QUIC_USER_INFO`)。
+async fn auth_headers() -> Result<HeaderMap, String> {
+    let empty_token = String::new();
+    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let mut headers = HeaderMap::new();
+    headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
+    Ok(headers)
+}
+
+/// 带 token 的 GET 请求, 返回状态码与文本 body。
+pub async fn get_request(url: String) -> Result<ApiResponse, String> {
+    let client = http_client();
+    let headers = auth_headers().await?;
+
+    let response = client.get(&url).headers(headers).send().await.map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse { status, body })
+}
+
+/// 带 token 的 POST 请求, 返回状态码与文本 body。
+pub async fn post_request(url: String, body: String) -> Result<ApiResponse, String> {
+    let client = http_client();
+    let headers = auth_headers().await?;
+
+    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
+
+    let response = client
+        .post(&url)
+        .json(&json_body)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse { status, body })
+}
+
+/// 带 token 的 PUT 请求, 返回状态码与文本 body。
+pub async fn put_request(url: String, body: String) -> Result<ApiResponse, String> {
+    let client = http_client();
+    let headers = auth_headers().await?;
+
+    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
+
+    let response = client
+        .put(&url)
+        .json(&json_body)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse { status, body })
+}
+
+/// 带 token 的 DELETE 请求, 返回状态码与文本 body。
+pub async fn delete_request(url: String, body: String) -> Result<ApiResponse, String> {
+    let client = http_client();
+    let headers = auth_headers().await?;
+
+    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
+
+    let response = client
+        .delete(&url)
+        .json(&json_body)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse { status, body })
+}
 
 /// 上传进度回调: (已上传字节, 总字节)
 pub type UploadProgressFn = Arc<dyn Fn(u64, u64) + Send + Sync>;

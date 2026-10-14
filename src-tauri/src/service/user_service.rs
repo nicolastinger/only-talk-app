@@ -9,7 +9,6 @@ use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::app_log_db::log_quic_event;
 use crate::dao::chat_record_db::{
     chat_record_timestamp_by_nano_id, insert_chat_record, local_max_server_id,
@@ -41,6 +40,7 @@ use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::system_notification::SystemNotification;
 use crate::quic_service::center_service::text_quic_client::{spawn_client_loop, stop_client_loop};
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
+use crate::service::api_service::{get_request, post_request};
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::friend_service::update_friend_list;
 use crate::service::group_service::{parse_http_result, sync_group_list};

@@ -9,7 +9,7 @@ use tauri_plugin_opener::OpenerExt;
 use crate::config::get_config;
 use crate::service::file_service::{
     delete_local_file_service, get_file_by_biz_id_service, get_local_file_list_service,
-    has_local_chat_file_service,
+    has_local_chat_file_service, open_local_file_service,
 };
 use crate::utils::global_static_str::{talk_api_base, DEFAULT_IMAGE, RESOURCE_PATH};
 use crate::vo::file_vo::{FileVo, LocalFileVo};
@@ -250,55 +250,7 @@ pub async fn open_local_file<R: Runtime>(
     app: tauri::AppHandle<R>,
     path: String,
 ) -> Result<(), String> {
-    if path.is_empty() {
-        return Err("文件路径不能为空".to_string());
-    }
-    let file_path = Path::new(&path);
-    if !file_path.is_file() {
-        warn!("文件不存在: {}", path);
-        return Err(format!("文件不存在: {}", path));
-    }
-
-    #[cfg(target_os = "android")]
-    {
-        // Android: 复制到 cache/open 目录后交给 view 插件打开,
-        // 复用 manifest 声明的 ${applicationId}.fileprovider + file_paths.xml 的 cache-path
-        let cache_dir = app.path().cache_dir().map_err(|e| format!("获取缓存目录失败: {}", e))?;
-        let open_dir = cache_dir.join("open");
-        fs::create_dir_all(&open_dir).map_err(|e| format!("创建打开目录失败: {}", e))?;
-
-        let file_name = file_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .ok_or_else(|| "无法获取文件名".to_string())?;
-
-        // 目标文件已存在则跳过复制(同名文件复用)
-        let dest = open_dir.join(file_name);
-        if !dest.is_file() {
-            fs::copy(file_path, &dest).map_err(|e| format!("复制文件到缓存失败: {}", e))?;
-        }
-
-        info!("Android 打开文件: {:?}", dest);
-        use tauri_plugin_view::ViewExt;
-        app.view()
-            .view(tauri_plugin_view::ViewRequest {
-                path: Some(dest.to_string_lossy().into_owned()),
-            })
-            .map_err(|e| {
-                error!("Android 打开文件失败: {}", e);
-                e.to_string()
-            })?;
-        Ok(())
-    }
-
-    #[cfg(not(target_os = "android"))]
-    {
-        info!("打开本地文件: {}", path);
-        app.opener().open_path(path, None::<String>).map_err(|e| {
-            error!("打开文件失败: {}", e);
-            e.to_string()
-        })
-    }
+    open_local_file_service(app, path).await
 }
 
 /// 获取本地文件列表（文件管理: 分类筛选 + 名称/日期排序）

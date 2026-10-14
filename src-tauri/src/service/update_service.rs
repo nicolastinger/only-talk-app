@@ -1,7 +1,7 @@
 //! 应用自更新服务(GitHub Releases 分发):
 //! - `get_latest_release`: 查询最新版本 + 按平台筛选安装包资产
 //! - `download_update_package`: 下载更新包 + SHA-256 校验(用 GitHub 自动生成的 digest)
-//! - `install_update`: Windows 静默安装(NSIS /S), Android 走系统安装器(复用 open_local_file)
+//! - `install_update`: Windows 静默安装(NSIS /S), Android 走系统安装器(复用 open_local_file_service)
 
 use std::fs::File;
 use std::io::Write;
@@ -226,7 +226,7 @@ pub async fn download_update_package<R: Runtime>(
 /// 安装更新包:
 /// - Windows: 以可见向导方式(非 `/S`)启动 NSIS 安装器, 展示完整安装向导让用户看到更新动作;
 ///   运行中的本进程由安装器内置的 CheckIfAppIsRunning 检测并提示关闭, 完成页可勾选“运行 Only Talk”启动新版本
-/// - Android: 复用 open_local_file, 经 FileProvider + ACTION_VIEW 调起系统安装器
+/// - Android: 复用 open_local_file_service, 经 FileProvider + ACTION_VIEW 调起系统安装器
 #[cfg(windows)]
 pub async fn install_update<R: Runtime>(_app: AppHandle<R>, path: String) -> Result<(), String> {
     use std::process::Command;
@@ -240,7 +240,7 @@ pub async fn install_update<R: Runtime>(_app: AppHandle<R>, path: String) -> Res
 
 #[cfg(target_os = "android")]
 pub async fn install_update<R: Runtime>(app: AppHandle<R>, path: String) -> Result<(), String> {
-    crate::cmd::file_controller::open_local_file(app, path).await
+    crate::service::file_service::open_local_file_service(app, path).await
 }
 
 #[cfg(all(desktop, not(windows)))]

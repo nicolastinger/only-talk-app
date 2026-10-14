@@ -2,7 +2,6 @@ use anyhow::anyhow;
 use log::{error, info};
 use serde_json::Value;
 
-use crate::cmd::api_controller::{get_request, post_request};
 use crate::dao::group_db::{query_group_list, search_group_list, upsert_group};
 use crate::dao::group_member_db::{insert_group_member, query_group_members, remove_group_member};
 use crate::dao::session_db::hide_group_session_db;
@@ -10,6 +9,7 @@ use crate::dto::http_result::HttpResult;
 use crate::entity::group::Group;
 use crate::entity::group_member::GroupMember;
 use crate::entity::system_notification::SystemNotification;
+use crate::service::api_service::{get_request, post_request};
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::talk_api_base;
 use crate::utils::time::get_now_time_stamp_as_millis;

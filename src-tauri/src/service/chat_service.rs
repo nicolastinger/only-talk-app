@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::time::timeout;
 
-use crate::cmd::api_controller::get_request;
 use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_ack_record_from_db, query_chat_record_by_send_id,
     update_chat_record_ack_prev_id,
@@ -50,7 +49,7 @@ use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::group_message_read::GroupMessageRead;
 use crate::entity::Page;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
-use crate::service::api_service::{upload_file_with_progress, UploadProgressFn};
+use crate::service::api_service::{get_request, upload_file_with_progress, UploadProgressFn};
 use crate::service::message_convert::normalize_for_target;
 use crate::service::recall::{build_recall_raw, parse_group_recall_target, parse_recall_target};
 use crate::service::send_queue;

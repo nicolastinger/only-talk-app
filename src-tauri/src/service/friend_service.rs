@@ -4,7 +4,6 @@ use serde_json::Value;
 use tauri::Emitter;
 use uuid::Uuid;
 
-use crate::cmd::api_controller::post_request;
 use crate::dao::friend_db::{
     query_black_list_db, query_friend_info_db, search_friend_db, set_block_friend_db,
     soft_delete_friend_db, update_friend_info_db,
@@ -12,6 +11,7 @@ use crate::dao::friend_db::{
 use crate::dao::session_db::{hide_chat_session_db, show_chat_session_db};
 use crate::entity::friend::Friend;
 use crate::entity::system_notification::SystemNotification;
+use crate::service::api_service::post_request;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::talk_api_base;
 use crate::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};

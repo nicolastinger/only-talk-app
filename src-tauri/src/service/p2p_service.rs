@@ -9,7 +9,6 @@ use nanoid::nanoid;
 use serde::Deserialize;
 use tauri::Emitter;
 
-use crate::cmd::api_controller::get_request;
 use crate::entity::p2p_models::{
     MediaFrameType, P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse,
     P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMsg, P2pVideoConfig, UserAddressInfo,
@@ -21,6 +20,7 @@ use crate::quic_service::p2p_service::p2p_stream_quic_client::run_client;
 use crate::quic_service::p2p_service::p2p_stream_quic_server::{
     get_user_address_info, run_server, udp_port_forward, udp_port_forward_ipv6,
 };
+use crate::service::api_service::get_request;
 use crate::service::user_service::get_user_info;
 use crate::utils::dns::{resolve_ipv4, resolve_ipv6};
 use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
