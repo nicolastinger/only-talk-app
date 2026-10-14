@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::time::timeout;
 
+use super::send::send_text_msg_service;
 use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord};
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::api_service::{upload_file_with_progress, UploadProgressFn};
@@ -17,8 +18,6 @@ use crate::utils::global_static_str::{
 };
 use crate::utils::image_utils::{compress_image_to_webp, should_skip_image_compression};
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
-
-use super::send::send_text_msg_service;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct FileInfo {

@@ -7,6 +7,7 @@ use log::{error, info};
 use nanoid::nanoid;
 use tauri::Emitter;
 
+use super::nat::check_user_ip_type;
 use crate::models::bo::p2p_models::{P2pInitMsg, P2pMsg, UserAddressInfo};
 use crate::models::bo::text_msg::TextQuicMsg;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg;
@@ -14,8 +15,6 @@ use crate::quic_core::p2p_service::p2p_stream_quic_client::run_client;
 use crate::quic_core::p2p_service::p2p_stream_quic_server::{run_server, udp_port_forward};
 use crate::utils::message_types::{MSG_TYPE_P2P, P2P_ACCEPT_REQUEST};
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
-
-use super::nat::check_user_ip_type;
 
 /// 发送p2p初始化信息
 pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error> {

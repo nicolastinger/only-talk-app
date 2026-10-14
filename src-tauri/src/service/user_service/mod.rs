@@ -13,10 +13,10 @@ mod read_report;
 mod session;
 mod sync;
 
-pub use crate::utils::user_state::{add_user_map, get_user_info, get_user_map, insert_user_info};
-
 pub use quic::{disconnect_quic, reconnect_quic};
 pub use read_report::{get_unread_notification, send_notify_read_message, send_read_message};
-pub use session::{start_session_tasks, teardown_session, user_login};
 pub(crate) use session::{perform_session_login_tasks, perform_session_logout_tasks};
+pub use session::{start_session_tasks, teardown_session, user_login};
 pub use sync::{get_sync_history, sync_offline_messages, SyncBatchView};
+
+pub use crate::utils::user_state::{add_user_map, get_user_info, get_user_map, insert_user_info};

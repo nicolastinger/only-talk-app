@@ -1,10 +1,9 @@
-use crate::models::vo::text_quic_msg::TextQuicMsgVo;
+use super::group::send_group_text_msg_service;
 use super::message_convert::normalize_for_target;
+use super::send::send_text_msg_service;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::user_service::get_user_info;
 use crate::utils::time::get_now_time_stamp_as_millis;
-
-use super::group::send_group_text_msg_service;
-use super::send::send_text_msg_service;
 
 /// 逐条转发消息到目标会话（好友或群）。
 ///

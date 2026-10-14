@@ -5,6 +5,10 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 
+use super::media::{
+    ensure_within_size_limit, prepare_image_for_upload, upload_group_chat_file_server,
+};
+use super::send::send_msg;
 use crate::dao::group_message_ack::insert_group_message_ack;
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::models::entity::chat_record_raw::ChatRecordRaw;
@@ -17,11 +21,6 @@ use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::MAX_FILE_UPLOAD_SIZE;
 use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST};
-
-use super::media::{
-    ensure_within_size_limit, prepare_image_for_upload, upload_group_chat_file_server,
-};
-use super::send::send_msg;
 
 /// 发送群聊文本消息（简化版，无prev_id和锁机制，写入群消息 ack 表）
 pub async fn send_group_text_msg_service(

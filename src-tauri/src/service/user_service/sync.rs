@@ -4,6 +4,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use uuid::Uuid;
 
+use super::read_report::get_unread_notification;
 use crate::dao::chat_record_db::{
     insert_chat_record, local_max_server_id, query_chat_record_by_id_from_db,
     recall_chat_record_db, set_chat_record_server_id,
@@ -20,6 +21,7 @@ use crate::dao::group_message_read::{
 };
 use crate::dao::session_db::update_chat_session_db;
 use crate::dao::{get_db_client, get_private_db_client};
+use crate::models::bo::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::models::dto::http_result::HttpResult;
 use crate::models::entity::chat_record_read::ChatRecordRead;
 use crate::models::entity::chat_session::ChatSession;
@@ -28,14 +30,11 @@ use crate::models::entity::group_message_read::GroupMessageRead;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::api_service::post_request;
 use crate::service::group_service::parse_http_result;
-use crate::models::bo::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::utils::global_static_str::talk_api_base;
 use crate::utils::session_uuid::single_session_uuid;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::utils::user_state::get_user_info;
 use crate::GLOBAL_QUIC_USER_INFO;
-
-use super::read_report::get_unread_notification;
 
 /// 重连后同步离线消息(任务12 简化: 正向追平): 通知 → refresh → 串行逐会话追平。
 pub async fn sync_offline_messages() {

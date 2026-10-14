@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use uuid::Uuid;
 
+use super::session::check_schedule_key;
 use crate::dao::chat_record_db::{chat_record_timestamp_by_nano_id, query_read_peers};
 use crate::dao::chat_record_read::{
     read_reported_position, read_watermark_nano_id, update_reported_position,
@@ -24,8 +25,6 @@ use crate::utils::global_static_str::talk_api_base;
 use crate::utils::session_uuid::single_session_uuid;
 use crate::utils::user_state::get_user_info;
 use crate::GLOBAL_QUIC_USER_INFO;
-
-use super::session::check_schedule_key;
 
 // 发送已读消息(任务07): 按会话聚合, 只上报本地已读水位的 nano_id。
 //

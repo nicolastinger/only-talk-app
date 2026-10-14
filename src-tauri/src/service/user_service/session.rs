@@ -9,6 +9,9 @@ use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+use super::quic::{disconnect_quic, discover_quic_server_addr};
+use super::read_report::{get_unread_notification, send_notify_read_message, send_read_message};
+use super::sync::refresh_and_forward;
 use crate::dao::app_log_db::log_quic_event;
 use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
@@ -26,10 +29,6 @@ use crate::{
     SessionControl, GLOBAL_MSG_SEND_LOCK, GLOBAL_PRIVATE_SQL_POOL, GLOBAL_QUIC_SERVER_LIST,
     GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL, MEDIA_DATA_CANCEL_TOKEN, SESSION_CONTROL,
 };
-
-use super::quic::{disconnect_quic, discover_quic_server_addr};
-use super::read_report::{get_unread_notification, send_notify_read_message, send_read_message};
-use super::sync::refresh_and_forward;
 
 /// 从服务端拉取当前用户+设备 唯一的本地加密库密钥(由 user_id + 设备指纹签发)
 async fn fetch_private_db_key() -> Result<String, anyhow::Error> {
