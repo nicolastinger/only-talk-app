@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::dao::store::SqliteStore;
+use crate::entity::store::SqliteStore;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ChatRecordSend {

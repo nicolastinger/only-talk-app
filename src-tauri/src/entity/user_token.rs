@@ -3,8 +3,8 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::dao::get_common_db_client;
-use crate::dao::store::SqliteStore;
+use crate::entity::store::SqliteStore;
+use crate::utils::db::get_common_db_client;
 
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub struct UserToken {

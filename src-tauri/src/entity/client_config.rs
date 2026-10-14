@@ -3,7 +3,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::dao::store::SqliteStore;
+use crate::entity::store::SqliteStore;
 
 /// 客户端配置表(公共库 common.db): key-value 持久化客户端状态。
 ///

@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::dao::store::SqliteStore;
+use crate::entity::store::SqliteStore;
 
 /// 会话类型: 单聊
 pub const CHAT_TYPE_SINGLE: u32 = 1;

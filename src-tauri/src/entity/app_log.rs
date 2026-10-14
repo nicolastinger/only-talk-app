@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::dao::store::SqliteStore;
+use crate::entity::store::SqliteStore;
 
 /// 日志等级常量
 #[allow(dead_code)]

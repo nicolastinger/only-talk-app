@@ -1,6 +1,5 @@
 use sqlx::SqlitePool;
 
-use crate::dao::store::init_sqlite;
 use crate::entity::app_log::AppLog;
 use crate::entity::chat_record::ChatRecord;
 use crate::entity::chat_record_ack::ChatRecordAck;
@@ -15,6 +14,7 @@ use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::group_member::GroupMember;
 use crate::entity::group_message_ack::GroupMessageAck;
 use crate::entity::group_message_read::GroupMessageRead;
+use crate::entity::store::init_sqlite;
 use crate::entity::sync_task::SyncTask;
 use crate::entity::system_notification::SystemNotification;
 use crate::entity::user_info::UserInfo;
