@@ -12,9 +12,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::models::entity::chat_record_raw::ChatRecordRaw;
-use crate::service::chat_service::GroupTextRecord;
-
 /// 撤回载荷标记 key（带版本号，避免与普通文本误判）。
 pub const RECALL_MARKER_KEY: &str = "ot_recall";
 
@@ -43,10 +40,11 @@ pub fn parse_recall_target(raw: &str) -> Option<String> {
     value.get("target_nano_id")?.as_str().map(ToString::to_string)
 }
 
-/// 从群聊 raw（外层 `GroupTextRecord`）解析撤回目标 nano_id。
+/// 从群聊 raw（外层 `{"text":"<内层>","send_user":"..."}`）解析撤回目标 nano_id。
 pub fn parse_group_recall_target(raw: &str) -> Option<String> {
-    let outer = <GroupTextRecord as ChatRecordRaw>::deserialize(raw).ok()?;
-    parse_recall_target(&outer.text)
+    let outer: Value = serde_json::from_str(raw).ok()?;
+    let text = outer.get("text")?.as_str()?;
+    parse_recall_target(text)
 }
 
 /// 撤回校验：仅当被撤回消息的发送者与撤回消息的发送者一致时允许撤回。
@@ -77,7 +75,7 @@ mod tests {
     #[test]
     fn parse_group_wrapped() {
         let inner = build_recall_raw("g1").expect("构建失败");
-        let outer = GroupTextRecord { text: inner, send_user: "u1".to_string() };
+        let outer = serde_json::json!({ "text": inner, "send_user": "u1" });
         let raw = serde_json::to_string(&outer).expect("序列化失败");
         assert_eq!(parse_group_recall_target(&raw).as_deref(), Some("g1"));
     }

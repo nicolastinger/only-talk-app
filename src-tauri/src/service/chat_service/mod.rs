@@ -10,14 +10,22 @@
 //! - [`media`]：图片/文件上传与压缩
 //! - [`forward`]：消息转发
 //! - [`recall`]：撤回与本地撤回核对
+//! - [`message_dispatch`]：入站消息分发
+//! - [`message_convert`]：单聊/群聊 raw 互转
+//! - [`message_alert`]：新消息到达提醒
 
 mod forward;
 mod group;
 mod media;
+mod message_alert;
+mod message_convert;
+mod message_dispatch;
 mod recall;
 mod record;
 mod send;
 mod session;
+
+pub use message_dispatch::process_msg;
 
 pub use forward::forward_chat_messages_service;
 pub use group::{

@@ -28,7 +28,7 @@ use crate::models::entity::group_message_read::GroupMessageRead;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::api_service::post_request;
 use crate::service::group_service::parse_http_result;
-use crate::service::recall::{can_recall, parse_group_recall_target, parse_recall_target};
+use crate::models::bo::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::utils::global_static_str::talk_api_base;
 use crate::utils::session_uuid::single_session_uuid;
 use crate::utils::time::get_now_time_stamp_as_millis;

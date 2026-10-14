@@ -9,7 +9,7 @@ use crate::dao::group_chat_record_db::{
 };
 use crate::dao::group_message_ack::query_group_message_ack_by_local_nano_id;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
-use crate::service::recall::{build_recall_raw, parse_group_recall_target, parse_recall_target};
+use crate::models::bo::recall::{build_recall_raw, parse_group_recall_target, parse_recall_target};
 use crate::service::user_service::get_user_info;
 use crate::utils::message_types::{MSG_TYPE_GROUP_TEXT, MSG_TYPE_RECALL};
 use crate::utils::time::get_now_time_stamp_as_millis;

@@ -1,5 +1,5 @@
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
-use crate::service::message_convert::normalize_for_target;
+use super::message_convert::normalize_for_target;
 use crate::service::user_service::get_user_info;
 use crate::utils::time::get_now_time_stamp_as_millis;
 
