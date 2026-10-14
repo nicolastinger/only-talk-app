@@ -518,7 +518,7 @@ pub async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow
     // 避免 ack/self-echo 等路径把方向写反、前端误判未读
     let me = get_user_info("uuid").await?;
     let chat_session_event =
-        ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session.to_canonical(&me))? };
+        ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session.to_canonical(&me)) };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;

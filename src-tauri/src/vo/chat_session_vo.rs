@@ -26,9 +26,9 @@ pub struct ChatSessionVo {
     pub last_message_id: i64,
 }
 
-impl ChatSessionVo {
-    pub fn from(chat_session: ChatSession) -> Result<Self, anyhow::Error> {
-        Ok(ChatSessionVo {
+impl From<ChatSession> for ChatSessionVo {
+    fn from(chat_session: ChatSession) -> Self {
+        ChatSessionVo {
             nano_id: chat_session.nano_id,
             timestamp: chat_session.timestamp,
             text_type: chat_session.text_type,
@@ -45,7 +45,28 @@ impl ChatSessionVo {
             group_id: chat_session.group_id,
             session_uuid: chat_session.session_uuid,
             last_message_id: chat_session.last_message_id,
-        })
+        }
+    }
+}
+
+impl From<ChatSessionVo> for ChatSession {
+    fn from(chat_session_vo: ChatSessionVo) -> Self {
+        ChatSession {
+            id: 0,
+            nano_id: chat_session_vo.nano_id,
+            timestamp: chat_session_vo.timestamp,
+            text_type: chat_session_vo.text_type,
+            unread_count: chat_session_vo.unread_count,
+            last_message: chat_session_vo.last_message,
+            recv_user: chat_session_vo.recv_user,
+            send_user: chat_session_vo.send_user,
+            session_type: chat_session_vo.session_type,
+            is_show: chat_session_vo.is_show,
+            is_top: chat_session_vo.is_top,
+            group_id: chat_session_vo.group_id,
+            session_uuid: chat_session_vo.session_uuid,
+            last_message_id: chat_session_vo.last_message_id,
+        }
     }
 }
 

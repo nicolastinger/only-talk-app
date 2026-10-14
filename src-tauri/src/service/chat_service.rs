@@ -168,7 +168,7 @@ pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow:
     // 避免 ack 等路径把方向写反、前端误判
     let me = get_user_info("uuid").await?;
     let chat_session_event =
-        ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session.to_canonical(&me))? };
+        ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session.to_canonical(&me)) };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
@@ -228,7 +228,7 @@ pub async fn update_group_last_read_msg_service(
         update_chat_session_local_db(&chat_session).await?;
 
         let chat_session_event =
-            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     }
@@ -393,7 +393,7 @@ pub async fn create_chat_session_service(friend_uuid: String) -> Result<(), anyh
         if item.send_user == friend_uuid {
             // 存在会话
             item.is_show = 1;
-            let chat_session = ChatSession::from(item)?;
+            let chat_session = ChatSession::from(item);
             update_chat_session_local_db(&chat_session).await?;
             return Ok(());
         }
@@ -817,7 +817,7 @@ async fn update_group_session_after_send(
 
         // 发送会话事件到前端
         let chat_session_event =
-            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     } else {
@@ -833,7 +833,7 @@ async fn update_group_session_after_send(
 
         // 发送会话事件到前端
         let chat_session_event =
-            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session)? };
+            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
         APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
     }

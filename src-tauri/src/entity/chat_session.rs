@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
 use crate::entity::store::SqliteStore;
-use crate::vo::chat_session_vo::ChatSessionVo;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct ChatSession {
@@ -34,25 +33,6 @@ impl ChatSession {
             std::mem::swap(&mut self.send_user, &mut self.recv_user);
         }
         self
-    }
-
-    pub fn from(chat_session_vo: ChatSessionVo) -> Result<Self, anyhow::Error> {
-        Ok(ChatSession {
-            id: 0,
-            nano_id: chat_session_vo.nano_id,
-            timestamp: chat_session_vo.timestamp,
-            text_type: chat_session_vo.text_type,
-            unread_count: chat_session_vo.unread_count,
-            last_message: chat_session_vo.last_message,
-            recv_user: chat_session_vo.recv_user,
-            send_user: chat_session_vo.send_user,
-            session_type: chat_session_vo.session_type,
-            is_show: chat_session_vo.is_show,
-            is_top: chat_session_vo.is_top,
-            group_id: chat_session_vo.group_id,
-            session_uuid: chat_session_vo.session_uuid,
-            last_message_id: chat_session_vo.last_message_id,
-        })
     }
 }
 
