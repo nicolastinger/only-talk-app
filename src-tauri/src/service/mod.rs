@@ -1,5 +1,6 @@
 pub mod api_service;
 pub mod chat_service;
+pub mod config_service;
 pub mod file_service;
 pub mod friend_service;
 pub mod group_service;

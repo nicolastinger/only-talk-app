@@ -8,8 +8,9 @@ use fast_log::Config;
 use log::{error, info, LevelFilter};
 use tauri::{Manager, Wry};
 
-use crate::config::{init_persisted_config, set_config};
+use crate::config::set_config;
 use crate::dao::init_common_db::init_common_sqlite;
+use crate::service::config_service::init_persisted_config;
 use crate::utils::global_static_str::{
     get_env, APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
     RESOURCE_PATH, SQLITE_PATH,

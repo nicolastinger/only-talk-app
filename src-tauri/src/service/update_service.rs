@@ -13,11 +13,9 @@ use reqwest::StatusCode;
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
+use crate::config::DEFAULT_GITHUB_REPO;
 use crate::utils::http_client::{http_client_30, http_client_600};
 use crate::vo::update_vo::UpdateInfo;
-
-/// 默认 GitHub 仓库(格式 owner/repo), 可用客户端配置 `update.github_repo` 覆盖。
-pub const DEFAULT_GITHUB_REPO: &str = "nicolastinger/only-talk-app";
 
 fn github_repo() -> String {
     crate::config::get_config(crate::utils::global_static_str::CONFIG_UPDATE_GITHUB_REPO)

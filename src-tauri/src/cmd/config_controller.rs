@@ -1,7 +1,8 @@
 use serde::Serialize;
 use tauri::command;
 
-use crate::config::{get_config, persist_config, reset_config};
+use crate::config::get_config;
+use crate::service::config_service::{persist_config, reset_config};
 
 /// 客户端配置项(key-value)。
 #[derive(Debug, Serialize)]
