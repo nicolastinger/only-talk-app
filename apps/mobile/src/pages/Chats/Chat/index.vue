@@ -76,6 +76,8 @@ const friendInfo = reactive({
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
 const meUuid = ref("");
+/** 是否停留在消息列表底部（决定软键盘弹起时是否自动贴底） */
+const isAtBottom = ref(true);
 
 let allowInfiniteScroll = false;
 
@@ -462,8 +464,9 @@ const reloadFirstPage = () => {
 
 const onScroll = () => {
   const el = containerRef.value;
+  if (!el) return;
+  isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
   if (
-    !el ||
     !allowInfiniteScroll ||
     loading.value ||
     loadingMore.value ||
@@ -484,6 +487,11 @@ const scrollToBottom = (smooth: boolean) => {
     top: el.scrollHeight,
     behavior: smooth ? "smooth" : ("instant" as ScrollBehavior),
   });
+};
+
+/** 软键盘弹出/收起改变可视高度后：原本就在底部时保持贴底 */
+const pinToBottomOnViewportChange = () => {
+  if (isAtBottom.value) scrollToBottom(false);
 };
 
 const pushMessage = async (msg: TextQuicMsgVo) => {
@@ -812,7 +820,10 @@ onMounted(async () => {
     map: { current_session_friend: friendId },
   }).catch(() => {});
 
-  viewportCleanup = attachViewportHeight(() => chatPageRef.value);
+  viewportCleanup = attachViewportHeight(
+    () => chatPageRef.value,
+    pinToBottomOnViewportChange
+  );
   listenChatFileUploadProgress(applyUploadProgress)
     .then((fn) => {
       uploadUnlisten = fn;
