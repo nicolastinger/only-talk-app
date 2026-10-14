@@ -3,7 +3,7 @@
 //! P2P 媒体帧头(MediaFrameHeader)字节布局与 P2P 结构体序列化单元测试。
 //!
 //! 帧头布局固定 5 字节: [frame_type: u8][data_len: u32(大端序)]，
-//! 与 quic_service 媒体通道协议强相关，改动前必须保证此测试通过。
+//! 与 quic_core 媒体通道协议强相关，改动前必须保证此测试通过。
 
 use app_lib::models::bo::p2p_models::{
     MediaFrameHeader, MediaFrameType, P2pAudioConfig, P2pBufferConfig, P2pChannelType,

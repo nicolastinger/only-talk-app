@@ -18,7 +18,7 @@ use crate::models::bo::p2p_models::{
 use crate::models::bo::quic_connection::ConnectionType;
 use crate::models::bo::text_msg::TextQuicMsg;
 use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
-use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
+use crate::quic_core::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
     MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,

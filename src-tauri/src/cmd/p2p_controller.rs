@@ -4,8 +4,8 @@ use tauri::ipc::{InvokeBody, InvokeResponseBody, Request};
 use crate::models::bo::p2p_models::{
     MediaFrameType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg,
 };
-use crate::quic_service::p2p_service::p2p_quic_service::send_media_frame;
-use crate::quic_service::udp_utils::send_udp_ping_msg;
+use crate::quic_core::p2p_service::p2p_quic_service::send_media_frame;
+use crate::quic_core::udp_utils::send_udp_ping_msg;
 use crate::service::p2p_service::{
     access_p2p_request, close_p2p_connection_service, find_available_udp_port, get_nat_udp_ports,
     reject_p2p_request, send_p2p_audio_frame_service, send_p2p_file_data_service,

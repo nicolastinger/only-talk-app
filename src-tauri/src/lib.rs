@@ -1,6 +1,6 @@
 use tauri::ipc::Channel;
 use tauri::{generate_handler, AppHandle, Manager, Wry};
-mod quic_service;
+mod quic_core;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, OnceLock};
@@ -90,7 +90,7 @@ use crate::cmd::user_controller::{
 #[cfg(desktop)]
 use crate::emit_app::tray::setup_tray;
 use crate::init_app::init_app;
-use crate::quic_service::models::TargetSendStream;
+use crate::quic_core::models::TargetSendStream;
 use crate::utils::global_static_str::APP_NAME;
 
 static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();

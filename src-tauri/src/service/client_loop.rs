@@ -14,11 +14,11 @@ use uuid::Uuid;
 use crate::dao::app_log_db::log_quic_event;
 use crate::models::bo::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
-use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
-use crate::quic_service::connection_state::{
+use crate::quic_core::center_service::text_msg_service::{generate_text_msg, get_text_msg};
+use crate::quic_core::connection_state::{
     current_quic_epoch, invalidate_quic_epoch, QuicConnectionState, GLOBAL_QUIC_STATE,
 };
-use crate::quic_service::safe_configuration::configure_client;
+use crate::quic_core::safe_configuration::configure_client;
 use crate::service::chat_service::process_msg;
 use crate::service::user_service::{get_user_info, insert_user_info, sync_offline_messages};
 use crate::utils::global_static_str::{PING, SYSTEM};

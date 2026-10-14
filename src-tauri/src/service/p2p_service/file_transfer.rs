@@ -6,8 +6,8 @@ use log::info;
 use crate::models::bo::p2p_models::{
     P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse,
 };
-use crate::quic_service::center_service::text_msg_service::generate_text_msg;
-use crate::quic_service::p2p_service::p2p_quic_service::get_sender;
+use crate::quic_core::center_service::text_msg_service::generate_text_msg;
+use crate::quic_core::p2p_service::p2p_quic_service::get_sender;
 use crate::utils::message_types::{
     MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST, MSG_TYPE_P2P_FILE_TRANSFER_RESPONSE,
 };

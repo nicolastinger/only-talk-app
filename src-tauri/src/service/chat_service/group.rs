@@ -12,7 +12,7 @@ use crate::models::entity::chat_session::ChatSession;
 use crate::models::entity::group_message_ack::GroupMessageAck;
 use crate::models::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
-use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
+use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::MAX_FILE_UPLOAD_SIZE;

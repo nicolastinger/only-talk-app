@@ -62,7 +62,7 @@ Rust(仓库内、已入库):
 - `src-tauri/src/lib.rs` — desktop/mobile 两个 Builder 都注册 `.plugin(tauri_plugin_notification::init())`
 - `src-tauri/src/service/message_alert.rs` — **新增**:提醒判定 + 发系统通知/横幅事件(含 4s 去抖、标题/正文构造)
 - `src-tauri/src/service/mod.rs` — 注册 `message_alert`
-- `src-tauri/src/quic_service/center_service/process_text_msg_from_server.rs` — 单聊/群聊收消息处调用 `message_alert::on_incoming_message(...)`
+- `src-tauri/src/quic_core/center_service/process_text_msg_from_server.rs` — 单聊/群聊收消息处调用 `message_alert::on_incoming_message(...)`
 - `src-tauri/capabilities/window-default.json` — 新增 `notification:default`(移动端 JS 收点击事件需要)
 
 前端(仓库内、已入库):

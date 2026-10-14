@@ -15,7 +15,7 @@ use crate::models::entity::chat_record_ack::ChatRecordAck;
 use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
 use crate::models::entity::chat_record_send::ChatRecordSend;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
-use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
+use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{PLATFORM, ZERO_UUID};

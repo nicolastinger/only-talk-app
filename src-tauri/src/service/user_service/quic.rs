@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::dao::app_log_db::log_quic_event;
 use crate::models::entity::app_log::LOG_LEVEL_INFO;
-use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
+use crate::quic_core::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::api_service::get_request;
 use crate::service::client_loop::{spawn_client_loop, stop_client_loop};
 use crate::utils::dns::resolve_ipv4;
