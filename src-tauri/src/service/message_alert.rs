@@ -21,10 +21,10 @@ use tauri_plugin_notification::NotificationExt;
 use tokio::sync::Mutex;
 
 use crate::dao::friend_db::query_friend_info_by_id_db;
-use crate::entity::group::Group;
+use crate::models::entity::group::Group;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::time::get_now_time_stamp_as_millis;
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
 
 /// 同一会话两次提醒的最小间隔(毫秒)

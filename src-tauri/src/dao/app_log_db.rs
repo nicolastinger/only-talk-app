@@ -16,7 +16,7 @@
 // 等级: 0=Debug 1=Info 2=Warn 3=Error
 
 use crate::dao::get_db_client;
-use crate::entity::app_log::AppLog;
+use crate::models::entity::app_log::AppLog;
 use crate::utils::time::get_now_time_stamp_as_millis;
 
 /// 插入一条日志，返回自增id

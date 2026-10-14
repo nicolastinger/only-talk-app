@@ -1,9 +1,9 @@
+use crate::models::vo::chat_session_vo::ChatSessionVo;
 use crate::service::chat_service::{
     clear_all_unread_sessions_service, create_chat_session_service, get_chat_session_service,
     hide_chat_session_service, search_chat_session_service, update_last_read_msg_service,
 };
 use crate::utils::session_uuid::single_session_uuid;
-use crate::vo::chat_session_vo::ChatSessionVo;
 
 /// 计算单聊会话标识(与服务端 v5 派生算法一致, 供前端做会话 key / 跳转参数)。
 #[tauri::command]

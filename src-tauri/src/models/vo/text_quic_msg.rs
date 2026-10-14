@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-use crate::entity::text_msg::TextQuicMsg;
+use crate::models::entity::text_msg::TextQuicMsg;
 
 //文本信息消息体
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]

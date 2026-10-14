@@ -2,7 +2,7 @@ use log::info;
 use sqlx::query;
 
 use crate::dao::get_common_db_client;
-use crate::entity::file_record::FileRecord;
+use crate::models::entity::file_record::FileRecord;
 use crate::utils::time::get_now_time_stamp_as_millis;
 
 // 最大下载重试次数

@@ -2,9 +2,9 @@
 
 //! DTO / VO 序列化单元测试。
 
-use app_lib::dto::http_result::HttpResult;
-use app_lib::vo::http_response::Response;
-use app_lib::vo::text_quic_msg::TextQuicMsgVo;
+use app_lib::models::dto::http_result::HttpResult;
+use app_lib::models::vo::http_response::Response;
+use app_lib::models::vo::text_quic_msg::TextQuicMsgVo;
 
 #[test]
 fn http_result_serde_roundtrip() {

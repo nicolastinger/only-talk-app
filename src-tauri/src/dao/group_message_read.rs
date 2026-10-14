@@ -1,5 +1,5 @@
 use crate::dao::get_private_db_client;
-use crate::entity::group_message_read::GroupMessageRead;
+use crate::models::entity::group_message_read::GroupMessageRead;
 
 pub async fn update_group_message_read(record: &GroupMessageRead) -> Result<(), anyhow::Error> {
     let pool_sqlite = get_private_db_client().await?;

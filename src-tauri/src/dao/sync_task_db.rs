@@ -1,5 +1,5 @@
 use crate::dao::get_db_client;
-use crate::entity::sync_task::{
+use crate::models::entity::sync_task::{
     SyncBatchSummary, SyncTask, SYNC_STATUS_FAILED, SYNC_STATUS_PENDING, SYNC_STATUS_RUNNING,
     SYNC_STATUS_SUCCESS,
 };
@@ -30,7 +30,7 @@ pub async fn record_forward_catchup(
     )
     .bind(batch_id)
     .bind(session_uuid)
-    .bind(crate::entity::sync_task::SYNC_KIND_FORWARD)
+    .bind(crate::models::entity::sync_task::SYNC_KIND_FORWARD)
     .bind(status)
     .bind(batches)
     .bind(new_count)

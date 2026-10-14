@@ -3,7 +3,7 @@ use std::sync::Arc;
 use quinn::SendStream;
 use tokio::sync::Mutex;
 
-use crate::entity::p2p_models::P2pChannelType;
+use crate::models::entity::p2p_models::P2pChannelType;
 
 /// P2P发送流
 /// 包含QUIC发送流和通道类型信息

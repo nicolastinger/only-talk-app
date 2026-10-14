@@ -17,13 +17,13 @@ use crate::dao::file_record_db::{
     insert_failed_file_record, insert_file_record, list_all_files, query_file_record_by_id,
     MAX_DOWNLOAD_RETRY_COUNT,
 };
-use crate::dto::http_result::HttpResult;
-use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord as ChatFileRecord};
-use crate::entity::file_record::FileRecord;
+use crate::models::dto::http_result::HttpResult;
+use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord as ChatFileRecord};
+use crate::models::entity::file_record::FileRecord;
+use crate::models::vo::file_vo::{FileVo, LocalFileVo};
 use crate::service::api_service::{get_without_token, post_with_body};
 use crate::utils::global_static_str::MONTHLY_RESOURCE_PATH;
 use crate::utils::uuid_utils;
-use crate::vo::file_vo::{FileVo, LocalFileVo};
 
 /// 从nano_id获取聊天记录中的文件名
 async fn get_file_name_from_nano_id(nano_id: Option<&str>) -> Option<String> {
@@ -37,7 +37,7 @@ async fn get_file_name_from_nano_id(nano_id: Option<&str>) -> Option<String> {
                 match chat_record.text_type {
                     2 => {
                         // 图片消息
-                        if let Ok(image_record) = <crate::entity::chat_record_raw::ImageRecord as ChatRecordRaw>::deserialize(&chat_record.raw) {
+                        if let Ok(image_record) = <crate::models::entity::chat_record_raw::ImageRecord as ChatRecordRaw>::deserialize(&chat_record.raw) {
                             return Some(image_record.file_name);
                         }
                     }

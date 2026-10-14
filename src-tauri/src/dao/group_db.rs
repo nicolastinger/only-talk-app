@@ -1,4 +1,4 @@
-use crate::entity::group::Group;
+use crate::models::entity::group::Group;
 
 pub async fn upsert_group(group: &Group) -> Result<(), anyhow::Error> {
     Group::insert_group(group).await

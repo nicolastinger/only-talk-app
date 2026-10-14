@@ -10,14 +10,14 @@ use tauri::Emitter;
 use tokio::sync::Mutex;
 
 use crate::dao::app_log_db::log_quic_event;
-use crate::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
-use crate::entity::p2p_models::{
+use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
+use crate::models::entity::p2p_models::{
     MediaFrameHeader, MediaFrameType, P2pChannelType, P2pFileTransferRequest,
     P2pFileTransferResponse, P2pMediaConfig, P2pMediaControl, P2pMediaInfo, P2pVideoConfig,
     MEDIA_FRAME_HEADER_SIZE,
 };
-use crate::entity::quic_connection::ConnectionType;
-use crate::entity::text_msg::TextQuicMsg;
+use crate::models::entity::quic_connection::ConnectionType;
+use crate::models::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{

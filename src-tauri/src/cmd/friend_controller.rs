@@ -1,12 +1,12 @@
 use crate::dao::friend_db::{
     query_friend_info_by_id_db, query_friend_info_db, update_friend_profile_db,
 };
+use crate::models::vo::friend_vo::{BlackListVo, FriendVo};
 use crate::service::friend_service::{
     block_friend, delete_friend, get_black_list as get_black_list_service, search_friend_list,
     unblock_friend, update_friend_list,
 };
 use crate::service::user_service::get_user_info;
-use crate::vo::friend_vo::{BlackListVo, FriendVo};
 
 /// 查询好友列表
 #[tauri::command]

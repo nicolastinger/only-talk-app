@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::dto::http_result::HttpResult;
-use crate::dto::update_user_dto::UpdateUserDTO;
-use crate::entity::user_info::UserInfo;
+use crate::models::dto::http_result::HttpResult;
+use crate::models::dto::update_user_dto::UpdateUserDTO;
+use crate::models::entity::user_info::UserInfo;
 use crate::quic_service::connection_state::GLOBAL_QUIC_STATE;
 use crate::service::api_service::{get_with_token, post_json};
 use crate::service::user_service::{disconnect_quic, reconnect_quic};

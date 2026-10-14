@@ -31,13 +31,14 @@ use crate::dao::init_db::init_sqlite;
 use crate::dao::init_private_db::init_private_db;
 use crate::dao::session_db::update_chat_session_db;
 use crate::dao::{get_db_client, get_private_db_client};
-use crate::dto::http_result::HttpResult;
-use crate::entity::app_log::LOG_LEVEL_INFO;
-use crate::entity::chat_record_read::{ChatRecordRead, CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
-use crate::entity::chat_session::ChatSession;
-use crate::entity::group_chat_record::GroupChatRecord;
-use crate::entity::group_message_read::GroupMessageRead;
-use crate::entity::system_notification::SystemNotification;
+use crate::models::dto::http_result::HttpResult;
+use crate::models::entity::app_log::LOG_LEVEL_INFO;
+use crate::models::entity::chat_record_read::{ChatRecordRead, CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
+use crate::models::entity::chat_session::ChatSession;
+use crate::models::entity::group_chat_record::GroupChatRecord;
+use crate::models::entity::group_message_read::GroupMessageRead;
+use crate::models::entity::system_notification::SystemNotification;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::api_service::{get_request, post_request};
 use crate::service::chat_service::process_no_send_success_msg;
@@ -49,7 +50,6 @@ use crate::utils::dns::resolve_ipv4;
 use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
 use crate::utils::session_uuid::single_session_uuid;
 pub use crate::utils::user_state::{add_user_map, get_user_info, get_user_map, insert_user_info};
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{
     SessionControl, APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_PRIVATE_SQL_POOL,
     GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO, GLOBAL_SQL_POOL, MEDIA_DATA_CANCEL_TOKEN,
@@ -634,7 +634,7 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
             let _ = crate::dao::sync_task_db::record_forward_catchup(
                 batch_id,
                 &s.session_uuid,
-                crate::entity::sync_task::SYNC_STATUS_FAILED,
+                crate::models::entity::sync_task::SYNC_STATUS_FAILED,
                 pulled as i64,
                 total_new,
                 Some(&e.to_string()),
@@ -670,7 +670,7 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
                 let _ = crate::dao::sync_task_db::record_forward_catchup(
                     batch_id,
                     &s.session_uuid,
-                    crate::entity::sync_task::SYNC_STATUS_FAILED,
+                    crate::models::entity::sync_task::SYNC_STATUS_FAILED,
                     pulled as i64,
                     total_new,
                     Some(&e.to_string()),
@@ -682,7 +682,7 @@ async fn sync_sessions_forward(sessions: &[SessionListItem]) -> Result<(), anyho
             let _ = crate::dao::sync_task_db::record_forward_catchup(
                 batch_id,
                 &s.session_uuid,
-                crate::entity::sync_task::SYNC_STATUS_SUCCESS,
+                crate::models::entity::sync_task::SYNC_STATUS_SUCCESS,
                 pulled as i64,
                 total_new,
                 None,
@@ -708,7 +708,7 @@ pub struct SyncBatchView {
     pub success: i64,
     pub failed: i64,
     pub pending: i64,
-    pub tasks: Vec<crate::entity::sync_task::SyncTask>,
+    pub tasks: Vec<crate::models::entity::sync_task::SyncTask>,
 }
 
 /// 追平记录历史(任务12: `get_sync_history` 命令): 按轮次(batch_id)聚合 + 明细。

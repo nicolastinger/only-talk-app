@@ -5,7 +5,7 @@ use log::error;
 use nanoid::nanoid;
 use tokio::sync::{Mutex, MutexGuard};
 
-use crate::entity::text_msg::{HeadMsg, TextMsg, TextQuicMsg};
+use crate::models::entity::text_msg::{HeadMsg, TextMsg, TextQuicMsg};
 use crate::utils::message_types::MSG_TYPE_TEXT;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::X25;

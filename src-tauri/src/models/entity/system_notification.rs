@@ -3,7 +3,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row, SqlitePool};
 
-use crate::entity::store::SqliteStore;
+use crate::models::entity::store::SqliteStore;
 use crate::utils::db::get_db_client;
 
 /// 系统通知

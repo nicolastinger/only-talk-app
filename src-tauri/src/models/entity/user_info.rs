@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::entity::store::SqliteStore;
+use crate::models::entity::store::SqliteStore;
 use crate::utils::db::get_common_db_client;
 
 /// 用户信息缓存表结构

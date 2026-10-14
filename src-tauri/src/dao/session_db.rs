@@ -1,9 +1,9 @@
 use log::{error, info};
 
 use crate::dao::get_db_client;
-use crate::entity::chat_session::ChatSession;
+use crate::models::entity::chat_session::ChatSession;
+use crate::models::vo::chat_session_vo::ChatSessionVo;
 use crate::utils::user_state::get_user_info;
-use crate::vo::chat_session_vo::ChatSessionVo;
 
 /// 会话消息更新
 pub async fn update_chat_session_db(chat_session: &ChatSession) -> Result<(), anyhow::Error> {

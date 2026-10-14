@@ -7,9 +7,9 @@ use serde_json::Value;
 use tauri::command;
 
 use crate::cmd::api_controller::{post_request, ApiResponse};
-use crate::dto::http_result::HttpResult;
-use crate::entity::user_info::UserInfo;
-use crate::entity::user_token::UserToken;
+use crate::models::dto::http_result::HttpResult;
+use crate::models::entity::user_info::UserInfo;
+use crate::models::entity::user_token::UserToken;
 use crate::service::p2p_service;
 use crate::service::user_service::{add_user_map, teardown_session, user_login};
 use crate::utils::global_static_str::talk_api_domain;

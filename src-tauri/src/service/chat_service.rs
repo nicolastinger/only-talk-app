@@ -37,17 +37,20 @@ use crate::dao::session_db::{
     query_group_chat_session, search_chat_session_db, update_chat_session_db,
     update_chat_session_local_db,
 };
-use crate::dto::http_result::HttpResult;
-use crate::entity::chat_record::ChatRecord;
-use crate::entity::chat_record_ack::ChatRecordAck;
-use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
-use crate::entity::chat_record_read::ChatRecordRead;
-use crate::entity::chat_record_send::ChatRecordSend;
-use crate::entity::chat_session::ChatSession;
-use crate::entity::group::Group;
-use crate::entity::group_message_ack::GroupMessageAck;
-use crate::entity::group_message_read::GroupMessageRead;
-use crate::entity::Page;
+use crate::models::dto::http_result::HttpResult;
+use crate::models::entity::chat_record::ChatRecord;
+use crate::models::entity::chat_record_ack::ChatRecordAck;
+use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
+use crate::models::entity::chat_record_read::ChatRecordRead;
+use crate::models::entity::chat_record_send::ChatRecordSend;
+use crate::models::entity::chat_session::ChatSession;
+use crate::models::entity::group::Group;
+use crate::models::entity::group_message_ack::GroupMessageAck;
+use crate::models::entity::group_message_read::GroupMessageRead;
+use crate::models::entity::Page;
+use crate::models::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
+use crate::models::vo::group_vo::GroupVo;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::api_service::{get_request, upload_file_with_progress, UploadProgressFn};
 use crate::service::message_convert::normalize_for_target;
@@ -64,9 +67,6 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_RECALL, MSG_TYPE_TEXT,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
-use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
-use crate::vo::group_vo::GroupVo;
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
 #[derive(Debug, Serialize, Deserialize)]

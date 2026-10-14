@@ -1,7 +1,7 @@
 use crate::dao::get_private_db_client;
-use crate::entity::group_chat_record::GroupChatRecord;
+use crate::models::entity::group_chat_record::GroupChatRecord;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::utils::message_types::MSG_TYPE_GROUP_TEXT;
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 pub async fn insert_group_chat_record(record: &GroupChatRecord) -> Result<(), anyhow::Error> {
     GroupChatRecord::insert(record).await.map(|_| ())

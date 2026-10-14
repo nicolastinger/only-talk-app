@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::entity::friend::Friend;
+use crate::models::entity::friend::Friend;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FriendVo {

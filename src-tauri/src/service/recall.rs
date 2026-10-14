@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::entity::chat_record_raw::ChatRecordRaw;
+use crate::models::entity::chat_record_raw::ChatRecordRaw;
 use crate::service::chat_service::GroupTextRecord;
 
 /// 撤回载荷标记 key（带版本号，避免与普通文本误判）。

@@ -3,7 +3,7 @@ use log::info;
 use serde::Serialize;
 use tauri::Emitter;
 
-use crate::entity::system_notification::SystemNotification;
+use crate::models::entity::system_notification::SystemNotification;
 use crate::APP_HANDLE;
 
 /// 未读数量变更事件

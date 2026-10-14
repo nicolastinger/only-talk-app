@@ -1,3 +1,4 @@
+use crate::models::vo::group_vo::{CreateGroupRequest, GroupMemberVo, GroupVo};
 use crate::service::chat_service::{
     create_group_chat_session_service, get_group_chat_session_service,
 };
@@ -7,7 +8,6 @@ use crate::service::group_service::{
     remove_group_member_service, search_local_group_list, sync_group_list, sync_group_members,
     update_local_group_profile,
 };
-use crate::vo::group_vo::{CreateGroupRequest, GroupMemberVo, GroupVo};
 
 /// 获取本地群聊列表
 #[tauri::command]
@@ -115,7 +115,7 @@ pub async fn create_group_chat_session_command(group_id: String) -> Result<(), S
 /// 获取群聊会话列表
 #[tauri::command]
 pub async fn get_group_chat_session_list(
-) -> Result<Vec<crate::vo::chat_session_vo::ChatSessionVo>, String> {
+) -> Result<Vec<crate::models::vo::chat_session_vo::ChatSessionVo>, String> {
     get_group_chat_session_service().await.map_err(|e| e.to_string())
 }
 

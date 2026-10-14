@@ -1,4 +1,4 @@
-use crate::entity::group_member::GroupMember;
+use crate::models::entity::group_member::GroupMember;
 
 pub async fn upsert_group_members(members: &[GroupMember]) -> Result<(), anyhow::Error> {
     GroupMember::upsert_members(members).await

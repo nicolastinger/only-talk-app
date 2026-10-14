@@ -7,12 +7,12 @@ use tauri::{Manager, Runtime};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::config::get_config;
+use crate::models::vo::file_vo::{FileVo, LocalFileVo};
 use crate::service::file_service::{
     delete_local_file_service, get_file_by_biz_id_service, get_local_file_list_service,
     has_local_chat_file_service, open_local_file_service,
 };
 use crate::utils::global_static_str::{talk_api_base, DEFAULT_IMAGE, RESOURCE_PATH};
-use crate::vo::file_vo::{FileVo, LocalFileVo};
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件
 #[tauri::command]

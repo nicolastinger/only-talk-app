@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::entity::store::SqliteStore;
+use crate::models::entity::store::SqliteStore;
 
 /// 任务类型: 正向追平(重连/登录轮)
 pub const SYNC_KIND_FORWARD: i64 = 2;

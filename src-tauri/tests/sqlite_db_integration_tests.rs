@@ -56,28 +56,28 @@ use app_lib::dao::session_db::{
 use app_lib::dao::sync_task_db::{
     history, list_batch_tasks, prune_batches, record_forward_catchup,
 };
-use app_lib::entity::app_log::LOG_LEVEL_INFO;
-use app_lib::entity::chat_record::ChatRecord;
-use app_lib::entity::chat_record_ack::ChatRecordAck;
-use app_lib::entity::chat_record_send::ChatRecordSend;
-use app_lib::entity::chat_session::ChatSession;
-use app_lib::entity::file_record::FileRecord;
-use app_lib::entity::friend::Friend;
-use app_lib::entity::group::Group;
-use app_lib::entity::group_chat_record::GroupChatRecord;
-use app_lib::entity::group_member::GroupMember;
-use app_lib::entity::group_message_ack::GroupMessageAck;
-use app_lib::entity::group_message_read::GroupMessageRead;
-use app_lib::entity::sync_task::{SYNC_STATUS_FAILED, SYNC_STATUS_SUCCESS};
-use app_lib::entity::system_notification::SystemNotification;
-use app_lib::entity::user_info::UserInfo;
-use app_lib::entity::user_token::UserToken;
+use app_lib::models::entity::app_log::LOG_LEVEL_INFO;
+use app_lib::models::entity::chat_record::ChatRecord;
+use app_lib::models::entity::chat_record_ack::ChatRecordAck;
+use app_lib::models::entity::chat_record_send::ChatRecordSend;
+use app_lib::models::entity::chat_session::ChatSession;
+use app_lib::models::entity::file_record::FileRecord;
+use app_lib::models::entity::friend::Friend;
+use app_lib::models::entity::group::Group;
+use app_lib::models::entity::group_chat_record::GroupChatRecord;
+use app_lib::models::entity::group_member::GroupMember;
+use app_lib::models::entity::group_message_ack::GroupMessageAck;
+use app_lib::models::entity::group_message_read::GroupMessageRead;
+use app_lib::models::entity::sync_task::{SYNC_STATUS_FAILED, SYNC_STATUS_SUCCESS};
+use app_lib::models::entity::system_notification::SystemNotification;
+use app_lib::models::entity::user_info::UserInfo;
+use app_lib::models::entity::user_token::UserToken;
 use app_lib::service::user_service::insert_user_info;
 use app_lib::service::chat_service::{
     reconcile_group_recalls, reconcile_single_recalls, resolve_group_recall_target,
     resolve_single_recall_target,
 };
-use app_lib::vo::text_quic_msg::TextQuicMsgVo;
+use app_lib::models::vo::text_quic_msg::TextQuicMsgVo;
 
 use common::{with_common_db, with_private_db, with_user_db};
 use sqlx::Row;

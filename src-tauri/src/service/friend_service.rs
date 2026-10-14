@@ -9,13 +9,13 @@ use crate::dao::friend_db::{
     soft_delete_friend_db, update_friend_info_db,
 };
 use crate::dao::session_db::{hide_chat_session_db, show_chat_session_db};
-use crate::entity::friend::Friend;
-use crate::entity::system_notification::SystemNotification;
+use crate::models::entity::friend::Friend;
+use crate::models::entity::system_notification::SystemNotification;
+use crate::models::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};
+use crate::models::vo::http_response::Response;
 use crate::service::api_service::post_request;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::talk_api_base;
-use crate::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};
-use crate::vo::http_response::Response;
 use crate::APP_HANDLE;
 
 pub async fn process_friend_notify_message(

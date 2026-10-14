@@ -1,5 +1,5 @@
 use crate::emit_app::emit_controller::emit_notify_read;
-use crate::entity::system_notification::{SystemNotification, UnreadCounts};
+use crate::models::entity::system_notification::{SystemNotification, UnreadCounts};
 use crate::service::user_service::get_user_info;
 
 /// 获取系统通知信息

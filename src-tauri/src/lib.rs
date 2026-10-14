@@ -14,15 +14,13 @@ use tokio::sync::{Mutex, RwLock};
 pub mod cmd;
 pub mod config;
 pub mod dao;
-pub mod dto;
 mod emit_app;
-pub mod entity;
 mod init_app;
+pub mod models;
 pub mod service;
 pub mod utils;
-pub mod vo;
 
-use entity::quic_connection::QuicConnection;
+use models::entity::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
     compress_image_to_webp_command, copy_file_to_temp, crop_image_to_webp_command, delete_request,

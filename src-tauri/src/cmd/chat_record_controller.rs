@@ -6,8 +6,9 @@ use tokio::time::timeout;
 use crate::dao::chat_record_db::{delete_chat_record_db, query_chat_record_by_id_from_db};
 use crate::dao::chat_record_send::query_chat_record_send_by_user;
 use crate::dao::group_chat_record_db::delete_group_chat_record_db;
-use crate::entity::chat_record_send::ChatRecordSend;
-use crate::entity::Page;
+use crate::models::entity::chat_record_send::ChatRecordSend;
+use crate::models::entity::Page;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::chat_service::{
     forward_chat_messages_service, get_chat_record_by_type_service, get_chat_record_service,
     get_group_chat_record_service, ignore_send_msg_service, recall_chat_message_service,
@@ -17,7 +18,6 @@ use crate::service::chat_service::{
     send_webrtc_signal_service, update_group_last_read_msg_service, update_last_read_msg_from_db,
 };
 use crate::service::user_service::get_user_info;
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::GLOBAL_MSG_SEND_LOCK;
 
 /// 发送文本消息

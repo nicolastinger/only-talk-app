@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 
 use crate::dao::app_log_db::{clear_app_logs as dao_clear_app_logs, query_app_logs_paged};
-use crate::entity::app_log::AppLog;
+use crate::models::entity::app_log::AppLog;
 use crate::utils::global_static_str::{LOG_FILE_NAME, LOG_PATH};
 
 /// 分页返回的日志数据

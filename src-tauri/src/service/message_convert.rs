@@ -10,7 +10,7 @@
 
 use anyhow::anyhow;
 
-use crate::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
+use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
 use crate::service::chat_service::{GroupFileRecord, GroupImageRecord, GroupTextRecord};
 use crate::utils::message_types::{
     MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE,

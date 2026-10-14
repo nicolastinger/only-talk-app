@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::entity::store::SqliteStore;
+use crate::models::entity::store::SqliteStore;
 use crate::utils::db::get_db_client;
 
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]

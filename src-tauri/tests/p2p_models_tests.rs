@@ -5,7 +5,7 @@
 //! 帧头布局固定 5 字节: [frame_type: u8][data_len: u32(大端序)]，
 //! 与 quic_service 媒体通道协议强相关，改动前必须保证此测试通过。
 
-use app_lib::entity::p2p_models::{
+use app_lib::models::entity::p2p_models::{
     MediaFrameHeader, MediaFrameType, P2pAudioConfig, P2pBufferConfig, P2pChannelType,
     P2pFileTransferRequest, P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMediaInfoType,
     P2pVideoConfig,

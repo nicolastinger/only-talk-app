@@ -1,7 +1,7 @@
 use log::info;
 use tauri::ipc::{InvokeBody, InvokeResponseBody, Request};
 
-use crate::entity::p2p_models::{
+use crate::models::entity::p2p_models::{
     MediaFrameType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse, P2pInitMsg,
 };
 use crate::quic_service::p2p_service::p2p_quic_service::send_media_frame;

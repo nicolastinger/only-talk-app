@@ -1,9 +1,9 @@
 // 本地聊天记录sql
 
 use crate::dao::{get_db_client, get_private_db_client};
-use crate::entity::chat_record_read::ChatRecordRead;
+use crate::models::entity::chat_record_read::ChatRecordRead;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::utils::message_types::MSG_TYPE_RECALL;
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 
 /// 分页获取聊天记录
 pub async fn query_chat_record_from_db(

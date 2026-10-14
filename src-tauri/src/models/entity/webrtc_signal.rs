@@ -2,7 +2,7 @@ use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::entity::store::SqliteStore;
+use crate::models::entity::store::SqliteStore;
 
 /// WebRTC 信令明细（一个会话内的 offer/answer/candidate/end 等步骤）
 #[derive(Debug, Serialize, Deserialize, FromRow)]

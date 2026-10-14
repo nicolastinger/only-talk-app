@@ -20,11 +20,13 @@ use crate::dao::group_message_ack::{
 };
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::send_notify_msg;
-use crate::entity::chat_session::ChatSession;
-use crate::entity::group_chat_record::GroupChatRecord;
-use crate::entity::p2p_models::P2pInitMsg;
-use crate::entity::system_notification::SystemNotification;
-use crate::entity::text_msg::TextQuicMsg;
+use crate::models::entity::chat_session::ChatSession;
+use crate::models::entity::group_chat_record::GroupChatRecord;
+use crate::models::entity::p2p_models::P2pInitMsg;
+use crate::models::entity::system_notification::SystemNotification;
+use crate::models::entity::text_msg::TextQuicMsg;
+use crate::models::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::chat_service::{
     clear_chat_session, create_group_chat_session_service, process_no_send_success_msg,
 };
@@ -42,8 +44,6 @@ use crate::utils::message_types::{
     MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
-use crate::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_USER_INFO};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -265,7 +265,7 @@ fn decode_base64url(input: &str) -> Option<Vec<u8>> {
 }
 
 async fn is_group_message(recv_user: &str) -> bool {
-    crate::entity::group::Group::query_by_group_id(recv_user)
+    crate::models::entity::group::Group::query_by_group_id(recv_user)
         .await
         .map(|g| g.is_some())
         .unwrap_or(false)
