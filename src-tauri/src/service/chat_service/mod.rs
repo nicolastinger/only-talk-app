@@ -31,6 +31,7 @@ pub use group::{
     GroupFileRecord, GroupImageRecord, GroupTextRecord,
 };
 pub use media::{send_file_msg_service, send_image_msg_service};
+pub use message_convert::{group_raw_to_private, normalize_for_target, private_raw_to_group};
 pub use message_dispatch::process_msg;
 pub use recall::{
     recall_chat_message_service, recall_group_chat_message_service, reconcile_group_recalls,
