@@ -110,15 +110,38 @@ const loadPendingGroupCount = async () => {
   }
 };
 
+const syncFriendListFromBackend = async () => {
+  try {
+    await invoke("update_local_friend_list");
+  } catch (e) {
+    console.error("同步好友列表失败", e);
+  }
+};
+
+const syncGroupListFromBackend = async () => {
+  try {
+    await invoke("sync_group_list_command");
+  } catch (e) {
+    console.error("同步群组列表失败", e);
+  }
+};
+
 const onRefresh = async () => {
   refreshing.value = true;
-  await Promise.all([
-    loadFriendList(),
-    loadGroups(),
-    loadPendingRequestCount(),
-    loadPendingGroupCount(),
-  ]);
-  refreshing.value = false;
+  try {
+    await Promise.all([
+      syncFriendListFromBackend(),
+      syncGroupListFromBackend(),
+    ]);
+    await Promise.all([
+      loadFriendList(),
+      loadGroups(),
+      loadPendingRequestCount(),
+      loadPendingGroupCount(),
+    ]);
+  } finally {
+    refreshing.value = false;
+  }
 };
 const handleDelete = async (friend: FriendVo) => {
   try {
