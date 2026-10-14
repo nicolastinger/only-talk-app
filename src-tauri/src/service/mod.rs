@@ -1,11 +1,13 @@
 pub mod api_service;
 pub mod chat_service;
+pub mod client_loop;
 pub mod config_service;
 pub mod file_service;
 pub mod friend_service;
 pub mod group_service;
 pub mod message_alert;
 pub mod message_convert;
+pub mod message_dispatch;
 pub mod p2p_service;
 pub mod recall;
 pub mod send_queue;

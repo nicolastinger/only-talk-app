@@ -19,7 +19,6 @@ use crate::entity::p2p_models::{
 use crate::entity::quic_connection::ConnectionType;
 use crate::entity::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
-use crate::service::user_service::insert_user_info;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
     MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
@@ -29,6 +28,7 @@ use crate::utils::message_types::{
     MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_P2P_VIDEO_CONFIG, MSG_TYPE_P2P_VIDEO_DATA,
     MSG_TYPE_PING,
 };
+use crate::utils::user_state::insert_user_info;
 use crate::{
     APP_HANDLE, GLOBAL_QUIC_USER_INFO, P2P_MEDIA_CHANNELS, P2P_MEDIA_SEND_QUEUES, P2P_STREAM_SENDER,
 };

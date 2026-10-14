@@ -19,7 +19,7 @@ use crate::dao::group_message_ack::{
     query_group_message_ack_by_local_nano_id, update_group_message_ack_status,
 };
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
-use crate::emit_app::emit_controller::{process_p2p_msg, send_notify_msg};
+use crate::emit_app::emit_controller::send_notify_msg;
 use crate::entity::chat_session::ChatSession;
 use crate::entity::group_chat_record::GroupChatRecord;
 use crate::entity::p2p_models::P2pInitMsg;
@@ -28,7 +28,7 @@ use crate::entity::text_msg::TextQuicMsg;
 use crate::service::chat_service::{
     clear_chat_session, create_group_chat_session_service, process_no_send_success_msg,
 };
-use crate::service::p2p_service::{run_p2p_client, run_p2p_server};
+use crate::service::p2p_service::{process_p2p_msg, run_p2p_client, run_p2p_server};
 use crate::service::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
 use crate::service::{friend_service, group_service, message_alert};
