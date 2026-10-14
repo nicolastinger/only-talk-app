@@ -20,11 +20,11 @@ use crate::dao::group_message_ack::{
 };
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
 use crate::emit_app::emit_controller::send_notify_msg;
+use crate::models::bo::p2p_models::P2pInitMsg;
+use crate::models::bo::text_msg::TextQuicMsg;
 use crate::models::entity::chat_session::ChatSession;
 use crate::models::entity::group_chat_record::GroupChatRecord;
-use crate::models::entity::p2p_models::P2pInitMsg;
 use crate::models::entity::system_notification::SystemNotification;
-use crate::models::entity::text_msg::TextQuicMsg;
 use crate::models::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::chat_service::{

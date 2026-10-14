@@ -4,8 +4,8 @@
 
 use app_lib::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
 use app_lib::models::entity::chat_session::ChatSession;
-use app_lib::models::entity::quic_connection::{ConnectionType, FirstQuicMsg};
-use app_lib::models::entity::text_msg::{HeadMsg, TextMsg, TextQuicMsg};
+use app_lib::models::bo::quic_connection::{ConnectionType, FirstQuicMsg};
+use app_lib::models::bo::text_msg::{HeadMsg, TextMsg, TextQuicMsg};
 use app_lib::service::chat_service::{GroupFileRecord, GroupImageRecord, GroupTextRecord};
 use app_lib::service::message_convert::{
     group_raw_to_private, normalize_for_target, private_raw_to_group,

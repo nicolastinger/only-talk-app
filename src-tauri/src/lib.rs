@@ -20,7 +20,7 @@ pub mod models;
 pub mod service;
 pub mod utils;
 
-use models::entity::quic_connection::QuicConnection;
+use models::bo::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
     compress_image_to_webp_command, copy_file_to_temp, crop_image_to_webp_command, delete_request,

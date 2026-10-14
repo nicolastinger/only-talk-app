@@ -9,11 +9,11 @@ use nanoid::nanoid;
 use serde::Deserialize;
 use tauri::Emitter;
 
-use crate::models::entity::p2p_models::{
+use crate::models::bo::p2p_models::{
     MediaFrameType, P2pChannelType, P2pFileData, P2pFileTransferRequest, P2pFileTransferResponse,
     P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMsg, P2pVideoConfig, UserAddressInfo,
 };
-use crate::models::entity::text_msg::TextQuicMsg;
+use crate::models::bo::text_msg::TextQuicMsg;
 use crate::quic_service::center_service::text_msg_service::generate_text_msg;
 use crate::quic_service::p2p_service::p2p_quic_service::{get_sender, send_media_frame};
 use crate::quic_service::p2p_service::p2p_stream_quic_client::run_client;
@@ -555,7 +555,7 @@ pub async fn send_p2p_media_control_service(
 ) -> Result<(), anyhow::Error> {
     info!("发送媒体控制命令: {} = {}", control_type, enabled);
 
-    use crate::models::entity::p2p_models::P2pMediaControlType;
+    use crate::models::bo::p2p_models::P2pMediaControlType;
 
     let control_type_enum = match control_type.as_str() {
         "VideoToggle" => P2pMediaControlType::VideoToggle,
@@ -566,7 +566,7 @@ pub async fn send_p2p_media_control_service(
         _ => return Err(anyhow!("未知的控制类型: {}", control_type)),
     };
 
-    let control = crate::models::entity::p2p_models::P2pMediaControl {
+    let control = crate::models::bo::p2p_models::P2pMediaControl {
         control_type: control_type_enum,
         enabled,
         timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
@@ -615,7 +615,7 @@ pub async fn send_p2p_media_info_service(
 ) -> Result<(), anyhow::Error> {
     info!("发送媒体信息: type={}, target={}", info_type, target_uuid);
 
-    use crate::models::entity::p2p_models::P2pMediaInfoType;
+    use crate::models::bo::p2p_models::P2pMediaInfoType;
 
     let info_type_enum = match info_type.as_str() {
         "ResolutionChange" => P2pMediaInfoType::ResolutionChange,
@@ -683,12 +683,12 @@ pub async fn send_p2p_video_call_invite_service(
     };
 
     // 构造邀请消息
-    let invite = crate::models::entity::p2p_models::P2pVideoCallInvite {
+    let invite = crate::models::bo::p2p_models::P2pVideoCallInvite {
         from_uuid: from_uuid.clone(),
         to_uuid: target_uuid.clone(),
         timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis()
             as u64,
-        media_config: Some(crate::models::entity::p2p_models::P2pMediaConfig::default()),
+        media_config: Some(crate::models::bo::p2p_models::P2pMediaConfig::default()),
         from_name,
     };
 
@@ -743,18 +743,16 @@ pub async fn send_p2p_video_call_response_service(
 
     // 解析媒体配置
     let media_config = if let Some(config_str) = media_config {
-        Some(serde_json::from_str::<crate::models::entity::p2p_models::P2pMediaConfig>(
-            &config_str,
-        )?)
+        Some(serde_json::from_str::<crate::models::bo::p2p_models::P2pMediaConfig>(&config_str)?)
     } else if accept {
         // 如果接受但没有提供配置，使用默认配置
-        Some(crate::models::entity::p2p_models::P2pMediaConfig::default())
+        Some(crate::models::bo::p2p_models::P2pMediaConfig::default())
     } else {
         None
     };
 
     // 构造响应消息
-    let response = crate::models::entity::p2p_models::P2pVideoCallResponse {
+    let response = crate::models::bo::p2p_models::P2pVideoCallResponse {
         from_uuid: from_uuid.clone(),
         to_uuid: target_uuid.clone(),
         accept,

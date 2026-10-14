@@ -12,8 +12,8 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::dao::app_log_db::log_quic_event;
+use crate::models::bo::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
-use crate::models::entity::quic_connection::{ConnectionType, FirstQuicMsg, QuicConnection};
 use crate::quic_service::center_service::text_msg_service::{generate_text_msg, get_text_msg};
 use crate::quic_service::connection_state::{
     current_quic_epoch, invalidate_quic_epoch, QuicConnectionState, GLOBAL_QUIC_STATE,
