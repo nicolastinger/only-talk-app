@@ -854,30 +854,21 @@ pub async fn send_group_image_msg_service(
         .unwrap_or("image")
         .to_string();
 
-    // 0、大小校验
-    ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
-
-    // 1、GIF/WebP/已压缩产物跳过压缩(原图上传), 否则压缩到当月资源目录
-    let upload_path = if should_skip_image_compression(Path::new(&file_path)) {
-        info!("跳过群图片压缩(原图上传): {}", file_path);
-        file_path.clone()
-    } else {
-        emit_chat_send_progress(&nano_id, &file_name, "compressing", 0, 0);
-        compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
+    // 0-3、大小校验 / 压缩 / 尺寸解析 / 大小读取(阻塞线程池, 避免卡住 UI 线程)
+    let (upload_path, img_width, img_height, img_size) = {
+        let file_path = file_path.clone();
+        let nano_id = nano_id.clone();
+        let file_name = file_name.clone();
+        tokio::task::spawn_blocking(move || {
+            prepare_image_for_upload(&file_path, &nano_id, &file_name)
+        })
+        .await
+        .map_err(|e| anyhow!("群图片预处理线程异常: {}", e))??
     };
 
-    // 2、上传图片到文件服务器（使用群聊专用接口, 流式 + 进度）
+    // 4、上传图片到文件服务器（使用群聊专用接口, 流式 + 进度）
     let upload_data =
         upload_group_chat_file_server(&upload_path, &text_quic_msg.recv_user, &nano_id).await?;
-
-    // 3、获取图片尺寸信息
-    let img = ImageReader::open(&file_path)?.decode()?;
-    let img_width = img.width() as i32;
-    let img_height = img.height() as i32;
-
-    // 4、获取文件大小
-    let metadata = std::fs::metadata(&upload_path)?;
-    let img_size = metadata.len() as i32;
 
     // 5、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
@@ -1289,6 +1280,39 @@ fn ensure_within_size_limit(
     Ok(size)
 }
 
+/// 图片上传前的重计算(大小校验/压缩/尺寸解析/大小读取)。
+///
+/// 全部是同步 CPU/IO 操作, 必须在阻塞线程池执行, 否则会占用 tokio worker
+/// 导致其他异步命令(含前端 IPC)排队, 表现为聊天界面卡死。
+/// 返回 `(待上传路径, 宽, 高, 字节大小)`。
+fn prepare_image_for_upload(
+    file_path: &str,
+    nano_id: &str,
+    file_name: &str,
+) -> Result<(String, i32, i32, i32), anyhow::Error> {
+    // 0、大小校验
+    ensure_within_size_limit(file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
+
+    // 1、GIF/WebP/已压缩产物跳过压缩(原图上传), 否则压缩到当月资源目录
+    let upload_path = if should_skip_image_compression(Path::new(file_path)) {
+        info!("跳过图片压缩(原图上传): {}", file_path);
+        file_path.to_string()
+    } else {
+        emit_chat_send_progress(nano_id, file_name, "compressing", 0, 0);
+        compress_image_to_webp(Path::new(file_path))?.to_string_lossy().to_string()
+    };
+
+    // 2、获取图片尺寸信息
+    let img = ImageReader::open(file_path)?.decode()?;
+    let img_width = img.width() as i32;
+    let img_height = img.height() as i32;
+
+    // 3、获取上传文件的字节大小
+    let img_size = std::fs::metadata(&upload_path)?.len() as i32;
+
+    Ok((upload_path, img_width, img_height, img_size))
+}
+
 // 发送图片数据
 pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), anyhow::Error> {
     let file_path = text_quic_msg.raw.clone();
@@ -1299,30 +1323,21 @@ pub async fn send_image_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), 
         .unwrap_or("image")
         .to_string();
 
-    // 0、大小校验
-    ensure_within_size_limit(&file_path, MAX_IMAGE_UPLOAD_SIZE, "图片")?;
-
-    // 1、GIF/WebP/已压缩产物跳过压缩(原图上传), 否则压缩到当月资源目录
-    let upload_path = if should_skip_image_compression(Path::new(&file_path)) {
-        info!("跳过图片压缩(原图上传): {}", file_path);
-        file_path.clone()
-    } else {
-        emit_chat_send_progress(&nano_id, &file_name, "compressing", 0, 0);
-        compress_image_to_webp(Path::new(&file_path))?.to_string_lossy().to_string()
+    // 0-3、大小校验 / 压缩 / 尺寸解析 / 大小读取(阻塞线程池, 避免卡住 UI 线程)
+    let (upload_path, img_width, img_height, img_size) = {
+        let file_path = file_path.clone();
+        let nano_id = nano_id.clone();
+        let file_name = file_name.clone();
+        tokio::task::spawn_blocking(move || {
+            prepare_image_for_upload(&file_path, &nano_id, &file_name)
+        })
+        .await
+        .map_err(|e| anyhow!("图片预处理线程异常: {}", e))??
     };
 
-    // 2、上传图片到文件服务器(流式 + 进度)
+    // 4、上传图片到文件服务器(流式 + 进度)
     let upload_data =
         upload_chat_file_server(&upload_path, &text_quic_msg.recv_user, &nano_id).await?;
-
-    // 3、获取图片尺寸信息
-    let img = ImageReader::open(&file_path)?.decode()?;
-    let img_width = img.width() as i32;
-    let img_height = img.height() as i32;
-
-    // 4、获取文件大小
-    let metadata = std::fs::metadata(&upload_path)?;
-    let img_size = metadata.len() as i32;
 
     // 5、获取第一个 file_info 的 biz_id
     let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
