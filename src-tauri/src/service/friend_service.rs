@@ -5,8 +5,8 @@ use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::dao::friend_db::{
-    query_black_list_db, query_friend_info_db, search_friend_db, set_block_friend_db,
-    soft_delete_friend_db, update_friend_info_db,
+    query_black_list_db, query_friend_info_by_id_db, query_friend_info_db, search_friend_db,
+    set_block_friend_db, soft_delete_friend_db, update_friend_info_db, update_friend_profile_db,
 };
 use crate::dao::session_db::{hide_chat_session_db, show_chat_session_db};
 use crate::models::entity::friend::Friend;
@@ -170,6 +170,32 @@ pub async fn unblock_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     }
 
     Ok(())
+}
+
+/// 获取好友列表(展示 VO)
+pub async fn get_friend_list() -> Result<Vec<FriendVo>, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friends = query_friend_info_db(&me).await?;
+    Ok(friends.into_iter().map(FriendVo::from).collect())
+}
+
+/// 获取单个好友信息(展示 VO)
+pub async fn get_friend_info(friend_uuid: &str) -> Result<FriendVo, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friend = query_friend_info_by_id_db(&me, friend_uuid).await?;
+    Ok(FriendVo::from(friend))
+}
+
+/// 定向回写好友可展示资料(sqlite 单条更新)
+pub async fn update_friend_profile(
+    friend_uuid: &str,
+    account: &str,
+    name: &str,
+    icon: &str,
+    info: &str,
+) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    update_friend_profile_db(&me, friend_uuid, account, name, icon, info).await
 }
 
 /// 获取黑名单列表（优先从本地 is_block=1 的好友读取）

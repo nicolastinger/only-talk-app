@@ -16,8 +16,6 @@ use std::sync::LazyLock;
 
 use log::{error, info};
 use serde::Serialize;
-use tauri::Emitter;
-use tauri_plugin_notification::NotificationExt;
 use tokio::sync::Mutex;
 
 use crate::dao::friend_db::query_friend_info_by_id_db;
@@ -25,7 +23,8 @@ use crate::models::entity::group::Group;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::time::get_now_time_stamp_as_millis;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
+use crate::utils::{app_emit, notify};
+use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 同一会话两次提醒的最小间隔(毫秒)
 const ALERT_DEBOUNCE_MS: i64 = 4000;
@@ -116,32 +115,18 @@ pub async fn on_incoming_message(me: &str, msg: &TextQuicMsgVo, is_group: bool, 
             body: body.clone(),
         })
         .unwrap_or_default();
-        if let Some(app) = APP_HANDLE.get() {
-            let _ = app.emit("alert_incoming_message", payload);
-        }
+        let _ = app_emit::emit("alert_incoming_message", payload);
         return;
     }
 
     // 后台/失焦 → 发系统通知，并携带会话跳转信息(extra.chat)
     info!("发送新消息系统通知: is_group={} target={} title={:?}", is_group, target, title);
-    if let Some(app) = APP_HANDLE.get() {
-        let extra = serde_json::json!({ "chat": ChatExtra { is_group, target } });
-        if let Err(e) = app
-            .notification()
-            .builder()
-            .title(title.as_str())
-            .body(body.as_str())
-            .extra("payload", extra)
-            .auto_cancel()
-            .show()
-        {
-            error!("发送系统通知失败: {}", e);
-        }
-
-        // Windows 托盘提示：窗口隐藏/最小化时短暂闪烁托盘图标
-        #[cfg(desktop)]
-        crate::emit_app::tray::pulse_tray_on_new_message(app);
+    let extra = serde_json::json!({ "chat": ChatExtra { is_group, target } });
+    if let Err(e) = notify::show_system_notification(&title, &body, &extra.to_string()) {
+        error!("发送系统通知失败: {}", e);
     }
+    // Windows 托盘提示：窗口隐藏/最小化时短暂闪烁托盘图标
+    notify::pulse_tray_on_new_message();
 }
 
 /// 判断消息类型是否需要提醒

@@ -42,6 +42,12 @@ pub async fn init_persisted_config() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+/// 读取公共库 `client_config` 全表(供前端启动时加载)。
+pub async fn get_all_configs(
+) -> Result<Vec<crate::models::entity::client_config::ClientConfig>, anyhow::Error> {
+    client_config_db::get_all_configs().await
+}
+
 /// 持久化写配置: 内存 + 公共库 `client_config` 表。
 pub async fn persist_config(key: &str, value: &str) -> Result<(), anyhow::Error> {
     client_config_db::set_config(key, value).await?;

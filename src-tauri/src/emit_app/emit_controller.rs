@@ -14,12 +14,6 @@ pub struct UnreadCountEvent {
     pub count: i32,     // 单条通知的未读数
 }
 
-/// 向前端发送通知消息（完整数据）
-pub fn send_notify_msg(msg: &str) -> Result<(), anyhow::Error> {
-    APP_HANDLE.get().ok_or(anyhow!("无法获取app"))?.emit("listen_notify_msg", msg)?;
-    Ok(())
-}
-
 /// 通知已读/清除后，广播给前端刷新未读角标与通知列表
 pub fn emit_notify_read() -> Result<(), anyhow::Error> {
     APP_HANDLE.get().ok_or(anyhow!("无法获取app"))?.emit("listen_notify_read", "notify_read")?;

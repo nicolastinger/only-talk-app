@@ -8,7 +8,6 @@ use quinn::{ClientConfig, Endpoint};
 use rustls::ClientConfig as RustlsClientConfig;
 use tokio::sync::Mutex;
 
-use crate::dao::app_log_db::log_quic_event;
 use crate::models::bo::p2p_models::P2pChannelType;
 use crate::models::bo::quic_connection::ConnectionType;
 use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO};
@@ -17,6 +16,7 @@ use crate::quic_core::models::TargetSendStream;
 use crate::quic_core::p2p_service::p2p_quic_service::{
     process_media_data_channel, process_rec_msg, send_ping_msg,
 };
+use crate::utils::app_log::log_quic_event;
 use crate::utils::message_types::MSG_TYPE_TEXT;
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 

@@ -23,7 +23,6 @@ use crate::dao::group_message_ack::{
     query_group_message_ack_by_local_nano_id, update_group_message_ack_status,
 };
 use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_db};
-use crate::emit_app::emit_controller::send_notify_msg;
 use crate::models::bo::p2p_models::P2pInitMsg;
 use crate::models::bo::recall::{can_recall, parse_group_recall_target, parse_recall_target};
 use crate::models::bo::text_msg::TextQuicMsg;
@@ -35,6 +34,7 @@ use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::p2p_service::{process_p2p_msg, run_p2p_client, run_p2p_server};
 use crate::service::user_service::{disconnect_quic, get_user_info, insert_user_info};
 use crate::service::{friend_service, group_service};
+use crate::utils::app_emit;
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     CURRENT_SESSION_FRIEND, GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_FORCE_LOGOUT,
@@ -660,7 +660,7 @@ async fn process_notify_message(text_quic_msg: TextQuicMsg) -> Result<(), anyhow
     SystemNotification::insert(&system_notification).await?;
     let payload = serde_json::to_string(&system_notification)?;
     // 发送完整通知数据给前端
-    send_notify_msg(&payload)?;
+    app_emit::emit("listen_notify_msg", &payload)?;
     // 处理对应通知类型
     match system_notification.level1.ok_or(anyhow!("level1为空"))? {
         1 => {

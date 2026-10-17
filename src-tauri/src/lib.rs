@@ -97,6 +97,16 @@ static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();
 // 创建CRC-16/X25计算器
 const X25: Crc<u16> = Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
 
+/// 将 `utils::app_log` 的中性端口绑定到 dao 实现(组合根注册)。
+fn quic_log_sink<'a>(
+    level: i32,
+    source: &'a str,
+    raw: &'a str,
+    remote_addr: &'a str,
+) -> crate::utils::app_log::QuicLogFuture<'a> {
+    Box::pin(crate::dao::app_log_db::log_quic_event(level, source, raw, remote_addr))
+}
+
 /// P2P 媒体数据接收通道（前端注册，用于二进制帧直传）
 /// 使用 `InvokeResponseBody`：`Vec<u8>` 的 `IpcResponse` 实现会序列化为 JSON number 数组，
 /// 而 `InvokeResponseBody::Raw(bytes)` 走二进制 octet-stream。
@@ -178,7 +188,11 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
+            // 初始化全局状态
+            APP_HANDLE.set(app.handle().clone()).expect("初始化app失败");
+            // 注册中性端口的展示层/持久化实现(前端事件、系统通知、托盘、QUIC 日志)
+            crate::emit_app::register_ports();
+            crate::utils::app_log::register_quic_log(quic_log_sink);
             let handle = app.handle().clone();
             let root_path = handle
                 .path()

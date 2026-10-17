@@ -1,33 +1,21 @@
-use crate::dao::friend_db::{
-    query_friend_info_by_id_db, query_friend_info_db, update_friend_profile_db,
-};
 use crate::models::vo::friend_vo::{BlackListVo, FriendVo};
 use crate::service::friend_service::{
-    block_friend, delete_friend, get_black_list as get_black_list_service, search_friend_list,
-    unblock_friend, update_friend_list,
+    block_friend, delete_friend, get_black_list as get_black_list_service,
+    get_friend_info as get_friend_info_service, get_friend_list as get_friend_list_service,
+    search_friend_list, unblock_friend, update_friend_list,
+    update_friend_profile as update_friend_profile_service,
 };
-use crate::service::user_service::get_user_info;
 
 /// 查询好友列表
 #[tauri::command]
 pub async fn get_friend_list() -> Result<Vec<FriendVo>, String> {
-    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
-    let friends = query_friend_info_db(&me).await.map_err(|e| e.to_string())?;
-    let mut friend_vec = vec![];
-    for friend in friends {
-        let friend_vo = FriendVo::from(friend);
-        friend_vec.push(friend_vo);
-    }
-    Ok(friend_vec)
+    get_friend_list_service().await.map_err(|e| e.to_string())
 }
 
 /// 查询当前好友信息
 #[tauri::command]
 pub async fn get_friend_info(friend_uuid: String) -> Result<FriendVo, String> {
-    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
-    let friend = query_friend_info_by_id_db(&me, &friend_uuid).await.map_err(|e| e.to_string())?;
-    let friend_vo = FriendVo::from(friend);
-    Ok(friend_vo)
+    get_friend_info_service(&friend_uuid).await.map_err(|e| e.to_string())
 }
 
 /// 更新本地好友列表
@@ -46,8 +34,7 @@ pub async fn update_friend_profile_command(
     icon: String,
     info: String,
 ) -> Result<(), String> {
-    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
-    update_friend_profile_db(&me, &friend_uuid, &account, &name, &icon, &info)
+    update_friend_profile_service(&friend_uuid, &account, &name, &icon, &info)
         .await
         .map_err(|e| e.to_string())
 }

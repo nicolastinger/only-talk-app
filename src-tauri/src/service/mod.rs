@@ -5,6 +5,7 @@ pub mod config_service;
 pub mod file_service;
 pub mod friend_service;
 pub mod group_service;
+pub mod log_service;
 pub mod p2p_service;
 pub mod send_queue;
 pub mod session_manager;

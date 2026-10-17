@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 
-use crate::dao::app_log_db::{clear_app_logs as dao_clear_app_logs, query_app_logs_paged};
 use crate::models::entity::app_log::AppLog;
+use crate::service::log_service::{
+    clear_app_logs as clear_app_logs_service, get_app_logs as get_app_logs_service,
+};
 use crate::utils::global_static_str::{LOG_FILE_NAME, LOG_PATH};
 
 /// 分页返回的日志数据
@@ -39,7 +41,7 @@ pub async fn get_app_logs(
 ) -> Result<LogPage, String> {
     let page = page.unwrap_or(1).max(1);
     let size = size.unwrap_or(50).clamp(1, 500);
-    let (list, total) = query_app_logs_paged(log_type.as_deref(), level, page, size)
+    let (list, total) = get_app_logs_service(log_type.as_deref(), level, page, size)
         .await
         .map_err(|e| e.to_string())?;
     Ok(LogPage { total, list })
@@ -48,7 +50,7 @@ pub async fn get_app_logs(
 /// 清空 app_log 全部日志，返回删除条数。
 #[tauri::command]
 pub async fn clear_app_logs() -> Result<i64, String> {
-    dao_clear_app_logs().await.map_err(|e| e.to_string()).map(|n| n as i64)
+    clear_app_logs_service().await.map_err(|e| e.to_string()).map(|n| n as i64)
 }
 
 /// 客户端日志目录(fast_log 输出目录, init_app 时写入配置)
