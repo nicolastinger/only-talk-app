@@ -1,0 +1,307 @@
+//! MediaData 轻量帧通道：接收循环、送帧与发送队列。
+
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
+use log::{error, info, warn};
+use quinn::RecvStream;
+use tauri::ipc::InvokeResponseBody;
+
+use super::sender::get_sender;
+use super::MEDIA_SEND_QUEUE_CAPACITY;
+use crate::models::bo::p2p_models::{
+    MediaFrameHeader, MediaFrameType, P2pChannelType, MEDIA_FRAME_HEADER_SIZE,
+};
+use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
+use crate::utils::app_log::log_quic_event;
+use crate::utils::events;
+use crate::{P2P_MEDIA_CHANNELS, P2P_MEDIA_SEND_QUEUES, P2P_STREAM_SENDER};
+
+// ==================== MediaData通道专用帧处理 ====================
+
+/// 处理MediaData通道的接收循环
+/// 使用轻量级MediaFrameHeader协议，替代通用的TextQuicMsg反序列化
+///
+/// # 协议格式
+/// ```text
+/// [frame_type: u8][data_len: u32(大端序)][data: data_len字节]
+/// ```
+///
+/// # 性能优势
+/// - 固定5字节头部，无需bincode反序列化
+/// - 帧体直接读取原始二进制数据
+/// - 避免TextQuicMsg的nano_id/recv_user/send_user/timestamp等冗余字段
+/// - 减少内存分配和拷贝
+///
+/// # 参数
+/// - `recv_stream`: QUIC接收流
+/// - `target_uuid`: 对端用户UUID，用于查找已注册的二进制接收Channel
+pub async fn process_media_data_channel(mut recv_stream: RecvStream, target_uuid: String) {
+    info!("MediaData通道接收循环启动（轻量级帧格式）");
+    let _ = log_quic_event(
+        LOG_LEVEL_INFO,
+        "p2p_service",
+        "MediaData通道接收循环启动（轻量级帧格式）",
+        "",
+    )
+    .await;
+
+    // 创建取消令牌并注册到全局，允许外部停止此接收循环
+    let cancel_token = tokio_util::sync::CancellationToken::new();
+    {
+        let mut guard = crate::MEDIA_DATA_CANCEL_TOKEN.write().await;
+        *guard = Some(cancel_token.clone());
+    }
+
+    // 读取头部用的固定缓冲区
+    let mut header_buf = [0u8; MEDIA_FRAME_HEADER_SIZE];
+
+    // 复用帧体缓冲区（预分配 1MB，resize 复用底层内存，避免每帧零初始化+堆分配）
+    let mut data_buf: Vec<u8> = Vec::with_capacity(1024 * 1024);
+
+    loop {
+        // 使用 tokio::select 同时监听数据到达和取消信号
+        tokio::select! {
+            result = recv_stream.read_exact(&mut header_buf) => {
+                match result {
+                    Ok(()) => {}
+                    Err(quinn::ReadExactError::FinishedEarly) => {
+                        info!("MediaData通道流提前关闭");
+                        let _ = log_quic_event(
+                            LOG_LEVEL_INFO,
+                            "p2p_service",
+                            "MediaData通道流提前关闭",
+                            "",
+                        )
+                        .await;
+                        break;
+                    }
+                    Err(quinn::ReadExactError::ReadError(e)) => {
+                        error!("MediaData通道读取头部失败: {}", e);
+                        let _ = log_quic_event(
+                            LOG_LEVEL_ERROR,
+                            "p2p_service",
+                            &format!("MediaData通道读取头部失败: {}", e),
+                            "",
+                        )
+                        .await;
+                        break;
+                    }
+                }
+            }
+            _ = cancel_token.cancelled() => {
+                info!("MediaData通道收到取消信号，停止接收循环");
+                let _ = log_quic_event(
+                    LOG_LEVEL_INFO,
+                    "p2p_service",
+                    "MediaData通道收到取消信号，停止接收循环",
+                    "",
+                )
+                .await;
+                break;
+            }
+        }
+
+        // 2. 解析帧头部
+        let header = match MediaFrameHeader::from_bytes(&header_buf) {
+            Ok(h) => h,
+            Err(e) => {
+                error!("MediaData通道解析帧头失败: {}", e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "p2p_service",
+                    &format!("MediaData通道解析帧头失败: {}", e),
+                    "",
+                )
+                .await;
+                break;
+            }
+        };
+
+        // 3. 读取帧体数据（复用预分配缓冲区，resize 复用底层内存避免重复分配）
+        data_buf.resize(header.data_len as usize, 0);
+        match recv_stream.read_exact(&mut data_buf).await {
+            Ok(()) => {}
+            Err(e) => {
+                error!("MediaData通道读取帧体失败 (期望{}字节): {}", header.data_len, e);
+                let _ = log_quic_event(
+                    LOG_LEVEL_ERROR,
+                    "p2p_service",
+                    &format!("MediaData通道读取帧体失败 (期望{}字节): {}", header.data_len, e),
+                    "",
+                )
+                .await;
+                break;
+            }
+        }
+        // 热路径：每帧日志降级为 trace，避免高频打印
+        log::trace!("接收到媒体帧 {:?}", header.data_len);
+
+        // 4. 根据帧类型分发处理
+        // 优先走二进制 Channel 直传（消除 JSON 序列化）；未注册 Channel 时回退到 emit
+        match header.frame_type {
+            MediaFrameType::Video => {
+                if let Some(channels) = P2P_MEDIA_CHANNELS.get(&target_uuid) {
+                    if let Err(e) = channels.video.send(InvokeResponseBody::Raw(data_buf.clone())) {
+                        error!("发送video帧Channel失败: {}", e);
+                    }
+                } else if let Err(e) = events::emit("video_frame", &data_buf) {
+                    error!("发送video_frame事件失败: {}", e);
+                }
+            }
+            MediaFrameType::Audio => {
+                if let Some(channels) = P2P_MEDIA_CHANNELS.get(&target_uuid) {
+                    if let Err(e) = channels.audio.send(InvokeResponseBody::Raw(data_buf.clone())) {
+                        error!("发送audio帧Channel失败: {}", e);
+                    }
+                } else if let Err(e) = events::emit("audio_frame", &data_buf) {
+                    error!("发送audio_frame事件失败: {}", e);
+                }
+            }
+        }
+    }
+
+    // 清理全局取消令牌
+    {
+        let mut guard = crate::MEDIA_DATA_CANCEL_TOKEN.write().await;
+        *guard = None;
+    }
+
+    info!("MediaData通道接收循环结束");
+    let _ = log_quic_event(LOG_LEVEL_INFO, "p2p_service", "MediaData通道接收循环结束", "").await;
+}
+
+/// 发送媒体帧到MediaData通道（轻量级格式）
+/// 直接使用MediaFrameHeader构建帧，避免bincode序列化开销
+///
+/// 采用有界队列 + 主动丢帧策略：
+/// - 编码线程仅做非阻塞入队（try_send），网络背压时不会阻塞编码线程
+/// - 队列满时丢弃最旧帧并计数，保证通话实时性
+/// - 后台消费者任务持有发送流，串行写入避免 Mutex 长时间占用
+///
+/// # 参数
+/// - `frame_type`: 帧类型（视频/音频）
+/// - `data`: 帧数据
+/// - `target_uuid`: 目标用户UUID
+pub async fn send_media_frame(
+    frame_type: MediaFrameType,
+    data: Vec<u8>,
+    target_uuid: String,
+) -> Result<(), anyhow::Error> {
+    let frame_data = MediaFrameHeader::build_frame(frame_type, &data);
+
+    // 连接已关闭（P2P_STREAM_SENDER 条目被清理），直接丢弃帧，不再重建队列
+    if !P2P_STREAM_SENDER.contains_key(&target_uuid) {
+        return Ok(());
+    }
+
+    // 获取或创建该用户的发送队列（并首次启动消费者任务）
+    if !P2P_MEDIA_SEND_QUEUES.contains_key(&target_uuid) {
+        init_media_send_queue(target_uuid.clone());
+    }
+
+    if let Some(queue) = P2P_MEDIA_SEND_QUEUES.get(&target_uuid) {
+        if queue.tx.try_send(frame_data).is_err() {
+            // 队列满：主动丢帧，避免阻塞编码线程
+            queue.dropped_frames.fetch_add(1, Ordering::Relaxed);
+        }
+        return Ok(());
+    }
+
+    // 队列初始化尚未完成（极少数竞态），回退到直接发送
+    // 等待MediaData通道就绪（最多等待3秒）
+    for _attempt in 0..6 {
+        match get_sender(&target_uuid, &P2pChannelType::MediaData).await {
+            Ok(sender) => {
+                let mut guard = sender.lock().await;
+                guard.write_all(&frame_data).await?;
+                return Ok(());
+            }
+            Err(_) => {
+                // 短暂等待后重试
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+        }
+    }
+
+    // 如果重试后仍然失败，返回错误（但不阻塞调用方）
+    warn!("MediaData通道未就绪，丢弃媒体帧: type={:?}, size={}", frame_type, data.len());
+    let _ = log_quic_event(
+        LOG_LEVEL_WARN,
+        "p2p_service",
+        &format!("MediaData通道未就绪，丢弃媒体帧: type={:?}, size={}", frame_type, data.len()),
+        "",
+    )
+    .await;
+    Ok(())
+}
+
+/// 初始化某用户的媒体发送队列，并启动后台消费者任务。
+/// 消费者串行读取队列中的帧并写入 MediaData 发送流，网络背压时队列自然积压。
+/// 使用 DashMap entry API 保证并发初始化时只 spawn 一次消费者。
+fn init_media_send_queue(target_uuid: String) {
+    use std::sync::atomic::AtomicU64;
+
+    use crate::MediaSendQueue;
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<u8>>(MEDIA_SEND_QUEUE_CAPACITY);
+    let dropped_frames = Arc::new(AtomicU64::new(0));
+    let dropped_clone = dropped_frames.clone();
+    let target_for_task = target_uuid.clone();
+
+    let entry = P2P_MEDIA_SEND_QUEUES.entry(target_uuid);
+    match entry {
+        dashmap::mapref::entry::Entry::Vacant(v) => {
+            v.insert(MediaSendQueue { tx, dropped_frames });
+            tokio::spawn(async move {
+                info!("媒体发送队列消费者启动: {}", target_for_task);
+                // 待发帧：get_sender 暂未就绪时保留当前帧重试，避免关键帧（首帧）丢失
+                let mut pending_frame: Option<Vec<u8>> = None;
+                loop {
+                    // 取帧：优先发送待发帧；无待发帧时从队列取
+                    let frame_data = if let Some(pf) = pending_frame.take() {
+                        pf
+                    } else {
+                        match rx.recv().await {
+                            Some(f) => f,
+                            None => break, // tx 已 drop（连接关闭）
+                        }
+                    };
+
+                    match get_sender(&target_for_task, &P2pChannelType::MediaData).await {
+                        Ok(sender) => {
+                            let mut guard = sender.lock().await;
+                            if let Err(e) = guard.write_all(&frame_data).await {
+                                error!("媒体帧写入失败: {} target={}", e, target_for_task);
+                                break;
+                            }
+                        }
+                        Err(_) => {
+                            // 连接已关闭（P2P_STREAM_SENDER 条目已被清理）：停止重试并退出
+                            if !P2P_STREAM_SENDER.contains_key(&target_for_task) {
+                                info!(
+                                    "媒体发送队列: 连接已关闭 target={}，停止发送",
+                                    target_for_task
+                                );
+                                break;
+                            }
+                            // 流暂未建立（连接建立初期）：保留当前帧重试，同时允许队列继续积压
+                            log::trace!("媒体发送队列: 找不到发送流 target={}", target_for_task);
+                            pending_frame = Some(frame_data);
+                            tokio::time::sleep(Duration::from_millis(100)).await;
+                        }
+                    }
+                }
+                info!(
+                    "媒体发送队列消费者退出: {} 累计丢帧 {}",
+                    target_for_task,
+                    dropped_clone.load(Ordering::Relaxed)
+                );
+            });
+        }
+        dashmap::mapref::entry::Entry::Occupied(_) => {
+            // 队列已存在，说明消费者已在运行，丢弃本次新建的 tx
+        }
+    }
+}
