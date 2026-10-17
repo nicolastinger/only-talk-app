@@ -7,8 +7,9 @@ use log::debug;
 use crate::config::{remove_config, set_config, DEFAULT_GITHUB_REPO};
 use crate::dao::client_config_db;
 use crate::utils::global_static_str::{
-    talk_api_base, talk_api_domain, CONFIG_APP_AUTO_DOWNLOAD_WIFI, CONFIG_APP_LANGUAGE,
-    CONFIG_APP_THEME, CONFIG_SERVER_API_BASE, CONFIG_SERVER_DOMAIN, CONFIG_UPDATE_GITHUB_REPO,
+    talk_api_base, talk_api_domain, CONFIG_APP_AUTO_DOWNLOAD_CELLULAR,
+    CONFIG_APP_AUTO_DOWNLOAD_WIFI, CONFIG_APP_LANGUAGE, CONFIG_APP_THEME, CONFIG_SERVER_API_BASE,
+    CONFIG_SERVER_DOMAIN, CONFIG_UPDATE_GITHUB_REPO,
 };
 
 /// 初始化并加载持久化配置(公共库 `client_config` 表 → 内存 `GLOBAL_CONFIG`)。
@@ -24,6 +25,7 @@ pub async fn init_persisted_config() -> Result<(), anyhow::Error> {
         (CONFIG_APP_THEME, "light".to_string()),
         (CONFIG_APP_LANGUAGE, "zh-CN".to_string()),
         (CONFIG_APP_AUTO_DOWNLOAD_WIFI, "1".to_string()),
+        (CONFIG_APP_AUTO_DOWNLOAD_CELLULAR, "1".to_string()),
         (CONFIG_UPDATE_GITHUB_REPO, DEFAULT_GITHUB_REPO.to_string()),
     ] {
         if client_config_db::get_config(key).await?.is_none() {

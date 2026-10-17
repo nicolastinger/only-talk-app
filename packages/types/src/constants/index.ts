@@ -12,6 +12,7 @@ export const CLIENT_CONFIG_KEYS = {
   appTheme: "app.theme",
   appLanguage: "app.language",
   autoDownloadWifi: "app.auto_download_wifi",
+  autoDownloadCellular: "app.auto_download_cellular",
 } as const;
 
 /** 客户端配置项 */

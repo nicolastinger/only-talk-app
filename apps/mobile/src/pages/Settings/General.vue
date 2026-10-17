@@ -3,7 +3,9 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   getAutoDownloadOnWifi,
+  getAutoDownloadOnCellular,
   setAutoDownloadOnWifi,
+  setAutoDownloadOnCellular,
 } from "@workspace/services";
 import { useTheme, type ChatsFontSize, type ThemeMode } from "@/stores/theme";
 import { useI18n, type Locale } from "@/i18n";
@@ -22,6 +24,18 @@ getAutoDownloadOnWifi()
 const setAutoDownload = (value: boolean) => {
   autoDownload.value = value;
   setAutoDownloadOnWifi(value).catch(() => {});
+};
+
+const autoDownloadCellular = ref(true);
+getAutoDownloadOnCellular()
+  .then((value) => {
+    autoDownloadCellular.value = value;
+  })
+  .catch(() => {});
+
+const setAutoDownloadCellular = (value: boolean) => {
+  autoDownloadCellular.value = value;
+  setAutoDownloadOnCellular(value).catch(() => {});
 };
 
 const themeOptions: { value: ThemeMode; key: string }[] = [
@@ -119,6 +133,24 @@ const goBack = () => router.back();
           :model-value="autoDownload"
           size="22px"
           @update:model-value="setAutoDownload"
+        />
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="switch-row">
+        <div class="switch-text">
+          <span class="section-title inline">
+            {{ t("settings.generalSettings.autoDownloadCellular") }}
+          </span>
+          <p class="desc inline">
+            {{ t("settings.generalSettings.autoDownloadCellularDesc") }}
+          </p>
+        </div>
+        <van-switch
+          :model-value="autoDownloadCellular"
+          size="22px"
+          @update:model-value="setAutoDownloadCellular"
         />
       </div>
     </div>

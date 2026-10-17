@@ -384,6 +384,8 @@ const messages: LocaleMessages = {
       "fontSizeDesc": "調整聊天文字大小",
       "autoDownload": "自動下載",
       "autoDownloadWifi": "WiFi環境下自動下載圖片和視頻",
+      "autoDownloadCellular": "移動網絡自動下載",
+      "autoDownloadCellularDesc": "移動網絡下自動下載聊天圖片",
       "autoDownloadDesc": "節省流量設置",
       "autoStart": "開機自動啟動",
       "autoStartDesc": "登錄系統後自動啟動應用",

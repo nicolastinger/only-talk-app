@@ -7,8 +7,8 @@ import { getConfig, getConfigFromStore, setConfig } from "../appConfig";
  *
  * - `getNetworkType` 经 Tauri 命令 `get_network_type` 获取当前接入类型（Android 由
  *   ConnectivityManager 判定；桌面端返回 ethernet，视为非计量网络）。
- * - `shouldAutoDownloadImage` 组合「自动下载开关」与「是否非计量网络」，用于聊天图片/视频
- *   是否直接下载；非 WiFi 环境下即使开关勾选也不自动下载，改由用户点击触发。
+ * - `shouldAutoDownloadImage` 按当前网络类型选择对应开关：WiFi/有线看「WiFi 自动下载」开关，
+ *   移动网络看「移动网络自动下载」开关（默认开启）；两者任一关闭或无法判定时改由用户点击触发。
  */
 export type NetworkType =
   | "wifi"
@@ -73,10 +73,35 @@ export const setAutoDownloadOnWifi = async (value: boolean): Promise<void> => {
   await setConfig(CLIENT_CONFIG_KEYS.autoDownloadWifi, value ? "1" : "0");
 };
 
-/** 当前是否应自动下载聊天图片：开关开启且处于非计量网络 */
+/** 读取「移动网络下自动下载聊天图片」开关（默认开启） */
+export const getAutoDownloadOnCellular = async (): Promise<boolean> => {
+  const memory = getConfig(CLIENT_CONFIG_KEYS.autoDownloadCellular);
+  if (memory === "0") return false;
+  if (memory === "1") return true;
+
+  const fromStore = await getConfigFromStore(
+    CLIENT_CONFIG_KEYS.autoDownloadCellular
+  );
+  return fromStore !== "0";
+};
+
+/** 写入移动网络自动下载开关（持久化到 client_config） */
+export const setAutoDownloadOnCellular = async (
+  value: boolean
+): Promise<void> => {
+  await setConfig(CLIENT_CONFIG_KEYS.autoDownloadCellular, value ? "1" : "0");
+};
+
+/** 当前是否应自动下载聊天图片：按当前网络类型取对应开关（移动网络看「移动网络」开关） */
 export const shouldAutoDownloadImage = async (
   force = false
 ): Promise<boolean> => {
-  if (!(await getAutoDownloadOnWifi())) return false;
-  return isUnmeteredNetwork(force);
+  const type = await getNetworkType(force);
+  if (type === "wifi" || type === "ethernet") {
+    return getAutoDownloadOnWifi();
+  }
+  if (type === "cellular") {
+    return getAutoDownloadOnCellular();
+  }
+  return false;
 };

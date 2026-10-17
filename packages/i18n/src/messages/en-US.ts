@@ -384,6 +384,8 @@ const messages: LocaleMessages = {
       "fontSizeDesc": "Adjust chat text size",
       "autoDownload": "Auto Download",
       "autoDownloadWifi": "Auto download images and videos on WiFi",
+      "autoDownloadCellular": "Auto Download on Mobile Network",
+      "autoDownloadCellularDesc": "Auto download chat images on mobile network",
       "autoDownloadDesc": "Data saving settings",
       "autoStart": "Launch on Startup",
       "autoStartDesc": "Automatically launch the app after system login",
