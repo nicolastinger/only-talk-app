@@ -1,6 +1,10 @@
+import { DEFAULT_ICON } from '@/constants';
+import { useAvatarMap } from '@/hooks/useAvatarMap';
+import { UserOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { history } from '@umijs/max';
 import { subscribe } from '@workspace/services';
+import { Avatar } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 
 /**
@@ -14,6 +18,10 @@ interface AlertPayload {
   is_group: boolean;
   target: string;
   title: string;
+  /** 发送者展示名(单聊=好友名；群聊=群昵称) */
+  sender_name?: string;
+  /** 发送者头像 biz_id */
+  icon?: string;
   body: string;
 }
 
@@ -69,6 +77,10 @@ export default function MessageAlertBanner() {
     };
   }, []);
 
+  // 解析发送者头像(biz_id -> 本地可访问 url)
+  const { avatarMap } = useAvatarMap([alert?.icon]);
+  const avatarUrl = alert?.icon ? avatarMap.get(alert.icon) : undefined;
+
   if (!alert) return null;
 
   const openSession = () => {
@@ -78,6 +90,10 @@ export default function MessageAlertBanner() {
     history.push(path);
     setAlert(null);
   };
+
+  const displayName = alert.sender_name || alert.title;
+  const showGroupName =
+    alert.is_group && !!alert.title && alert.title !== displayName;
 
   return (
     <div
@@ -94,7 +110,8 @@ export default function MessageAlertBanner() {
         top: 56,
         right: 16,
         zIndex: 9999,
-        width: 300,
+        width: 320,
+        maxWidth: 'calc(100vw - 32px)',
         padding: '12px 14px',
         borderRadius: 10,
         background: '#ffffff',
@@ -106,28 +123,40 @@ export default function MessageAlertBanner() {
         alignItems: 'flex-start',
       }}
     >
-      <span style={{ fontSize: 18 }}>{alert.is_group ? '👥' : '💬'}</span>
+      <Avatar
+        size={40}
+        shape="square"
+        icon={<UserOutlined />}
+        src={avatarUrl || DEFAULT_ICON}
+        style={{ flexShrink: 0 }}
+      />
       <div style={{ minWidth: 0, flex: 1 }}>
         <div
           style={{
             fontSize: 13,
             fontWeight: 600,
             color: '#111',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            wordBreak: 'break-word',
           }}
         >
-          {alert.title}
+          {displayName}
+          {showGroupName && (
+            <span style={{ color: '#999', fontWeight: 400 }}>
+              {' · '}
+              {alert.title}
+            </span>
+          )}
         </div>
         <div
           style={{
             fontSize: 12,
             color: '#666',
             marginTop: 2,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            wordBreak: 'break-word',
           }}
         >
           {alert.body}

@@ -19,7 +19,9 @@ use serde::Serialize;
 use tokio::sync::Mutex;
 
 use crate::dao::friend_db::query_friend_info_by_id_db;
+use crate::dao::group_member_db::query_group_member;
 use crate::models::entity::group::Group;
+use crate::models::entity::user_info::UserInfo;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::time::get_now_time_stamp_as_millis;
@@ -54,7 +56,20 @@ struct ChatExtra {
 struct BannerPayload {
     is_group: bool,
     target: String,
+    /// 会话标题(单聊=好友名；群聊=群名)
     title: String,
+    /// 发送者展示名(单聊=好友名；群聊=群昵称)
+    sender_name: String,
+    /// 发送者头像 biz_id(群聊无成员头像时回退群头像)
+    icon: String,
+    body: String,
+}
+
+/// 通知横幅的展示内容
+struct BannerContent {
+    title: String,
+    sender_name: String,
+    icon: String,
     body: String,
 }
 
@@ -103,7 +118,7 @@ pub(crate) async fn on_incoming_message(
         last.insert(target.clone(), now);
     }
 
-    let (title, body) = build_title_body(me, msg, is_group).await;
+    let content = build_banner_content(me, msg, is_group).await;
 
     // 前台状态：默认视为前台，避免登录/启动初期误发系统通知
     let foreground = {
@@ -116,8 +131,10 @@ pub(crate) async fn on_incoming_message(
         let payload = serde_json::to_string(&BannerPayload {
             is_group,
             target: target.clone(),
-            title: title.clone(),
-            body: body.clone(),
+            title: content.title.clone(),
+            sender_name: content.sender_name.clone(),
+            icon: content.icon.clone(),
+            body: content.body.clone(),
         })
         .unwrap_or_default();
         let _ = events::emit("alert_incoming_message", payload);
@@ -125,9 +142,13 @@ pub(crate) async fn on_incoming_message(
     }
 
     // 后台/失焦 → 发系统通知，并携带会话跳转信息(extra.chat)
-    info!("发送新消息系统通知: is_group={} target={} title={:?}", is_group, target, title);
+    info!(
+        "发送新消息系统通知: is_group={} target={} title={:?}",
+        is_group, target, content.title
+    );
     let extra = serde_json::json!({ "chat": ChatExtra { is_group, target } });
-    if let Err(e) = notify::show_system_notification(&title, &body, &extra.to_string()) {
+    if let Err(e) = notify::show_system_notification(&content.title, &content.body, &extra.to_string())
+    {
         error!("发送系统通知失败: {}", e);
     }
     // Windows 托盘提示：窗口隐藏/最小化时短暂闪烁托盘图标
@@ -143,21 +164,32 @@ fn is_notifiable_type(text_type: u16, is_group: bool) -> bool {
     }
 }
 
-/// 构建通知标题与正文
-async fn build_title_body(me: &str, msg: &TextQuicMsgVo, is_group: bool) -> (String, String) {
-    let preview = preview_body(msg);
+/// 构建通知横幅的展示内容(标题 / 发送者名 / 头像 / 正文)
+async fn build_banner_content(me: &str, msg: &TextQuicMsgVo, is_group: bool) -> BannerContent {
+    let body = preview_body(msg);
     if is_group {
-        let title = match Group::query_by_group_id(&msg.recv_user).await {
-            Ok(Some(g)) if !g.group_name.is_empty() => g.group_name,
-            _ => "群消息".to_string(),
+        let (title, group_icon) = match Group::query_by_group_id(&msg.recv_user).await {
+            Ok(Some(g)) if !g.group_name.is_empty() => (g.group_name, g.group_icon),
+            _ => ("群消息".to_string(), String::new()),
         };
-        (title, preview)
+        // 发送者在群内的昵称，取不到时回退群名
+        let sender_name = match query_group_member(&msg.recv_user, &msg.send_user).await {
+            Ok(Some(m)) if !m.nickname.is_empty() => m.nickname,
+            _ => title.clone(),
+        };
+        // 发送者头像，取不到时回退群头像
+        let sender_icon = match UserInfo::query_by_uuid(&msg.send_user).await {
+            Ok(Some(u)) => u.icon.unwrap_or_default(),
+            _ => String::new(),
+        };
+        let icon = if sender_icon.is_empty() { group_icon } else { sender_icon };
+        BannerContent { title, sender_name, icon, body }
     } else {
-        let title = match query_friend_info_by_id_db(me, &msg.send_user).await {
-            Ok(f) if !f.friend_name.is_empty() => f.friend_name,
-            _ => "新消息".to_string(),
+        let (title, icon) = match query_friend_info_by_id_db(me, &msg.send_user).await {
+            Ok(f) if !f.friend_name.is_empty() => (f.friend_name, f.friend_icon),
+            _ => ("新消息".to_string(), String::new()),
         };
-        (title, preview)
+        BannerContent { title: title.clone(), sender_name: title, icon, body }
     }
 }
 
