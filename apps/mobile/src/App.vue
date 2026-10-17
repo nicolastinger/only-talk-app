@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { showDialog } from "vant";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { subscribe } from "@workspace/services";
 import { onAction } from "@tauri-apps/plugin-notification";
 import BottomNav from "@/components/BottomNav/index.vue";
 import ConnectionStatusTag from "@/components/ConnectionStatusTag/index.vue";
@@ -29,7 +29,7 @@ const { isLoggedIn, clearAuth } = useAuthStore();
 useTheme();
 useCallManager();
 
-let unlistenForceLogout: UnlistenFn | undefined;
+let unlistenForceLogout: (() => void) | undefined;
 let logoutTask: Promise<void> | undefined;
 
 const showNav = computed(() => {
@@ -153,9 +153,8 @@ onMounted(() => {
   registerNotificationClick();
   setupForegroundTracking();
   // 收到服务端"账号已在其他设备登录"通知:弹窗确认后再退出登录
-  listen<string>("force_logout", (event) => {
-    const reason =
-      event.payload || t("homeLayout.forceLogoutContent");
+  unlistenForceLogout = subscribe("force_logout", (payload) => {
+    const reason = payload || t("homeLayout.forceLogoutContent");
     showDialog({
       title: t("homeLayout.forceLogoutTitle"),
       message: reason,
@@ -169,13 +168,7 @@ onMounted(() => {
         router.replace("/login");
       })
       .catch(() => {});
-  })
-    .then((stop) => {
-      unlistenForceLogout = stop;
-    })
-    .catch((e) => {
-      console.error("force_logout 监听失败:", e);
-    });
+  });
 });
 
 onUnmounted(() => {

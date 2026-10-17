@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { showToast, Tabs, Tab, Badge, Empty } from "vant";
 import {
   get_accept_friend_request_list,
@@ -10,6 +9,7 @@ import {
   get_user_info_with_cache,
   process_friend_request,
   readContactsNotification,
+  subscribe,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useI18n } from "@/i18n";
@@ -222,18 +222,14 @@ const formatRequestTime = (ts?: number) => {
   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-let unlistenRequests: UnlistenFn | undefined;
+let unlistenRequests: (() => void) | undefined;
 
-onMounted(async () => {
+onMounted(() => {
   loadFriendRequests();
-  try {
-    unlistenRequests = await listen("friend_list_changed", () => {
-      loadFriendRequests();
-      refreshFriendCounts();
-    });
-  } catch (e) {
-    console.error("监听好友列表变更失败", e);
-  }
+  unlistenRequests = subscribe("friend_list_changed", () => {
+    loadFriendRequests();
+    refreshFriendCounts();
+  });
 });
 
 onUnmounted(() => {

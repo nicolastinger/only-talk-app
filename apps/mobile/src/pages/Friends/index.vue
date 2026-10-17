@@ -2,7 +2,6 @@
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   showToast,
   showConfirmDialog,
@@ -15,6 +14,7 @@ import {
   get_pending_invitations,
   get_group_list,
   delete_friend,
+  subscribe,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { parseResponse } from "@/utils/api";
@@ -209,23 +209,19 @@ const getGroupAvatar = (group: GroupListItemVo) => {
 
 const hasGroupAvatar = (group: GroupListItemVo) => !!getGroupAvatar(group);
 
-let unlistenFriends: UnlistenFn | undefined;
+let unlistenFriends: (() => void) | undefined;
 
-onMounted(async () => {
+onMounted(() => {
   loadFriendList();
   loadGroups();
   loadPendingRequestCount();
   loadPendingGroupCount();
-  try {
-    unlistenFriends = await listen("friend_list_changed", () => {
-      loadFriendList();
-      loadGroups();
-      loadPendingRequestCount();
-      loadPendingGroupCount();
-    });
-  } catch (e) {
-    console.error("监听好友列表变更失败", e);
-  }
+  unlistenFriends = subscribe("friend_list_changed", () => {
+    loadFriendList();
+    loadGroups();
+    loadPendingRequestCount();
+    loadPendingGroupCount();
+  });
 });
 
 onUnmounted(() => {

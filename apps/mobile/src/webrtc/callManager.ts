@@ -9,7 +9,7 @@
  * 页面（/call）只负责渲染：通过 useCallManager() 取状态与动作。
  */
 import { reactive, ref } from "vue";
-import { listen } from "@tauri-apps/api/event";
+import { subscribe } from "@workspace/services";
 import { showToast } from "vant";
 import { t } from "@/i18n";
 import { WebRTCService } from "./WebRTCService";
@@ -575,24 +575,19 @@ const switchCamera = async () => {
 
 /* ========================= 全局监听 ========================= */
 
-const installGlobalListeners = async () => {
+const installGlobalListeners = () => {
   if (installed) return;
   installed = true;
-  try {
-    await listen<string>("call_control", (event) => {
-      onTextMessage(event.payload).catch((e) =>
-        console.error("[CallManager] call_control 处理失败:", e)
-      );
-    });
-    await listen<string>("webrtc_signal", (event) => {
-      onWebRTCSignal(event.payload).catch((e) =>
-        console.error("[CallManager] webrtc_signal 处理失败:", e)
-      );
-    });
-  } catch (e) {
-    console.error("[CallManager] 安装全局监听失败:", e);
-    installed = false;
-  }
+  subscribe("call_control", (payload) => {
+    onTextMessage(payload).catch((e) =>
+      console.error("[CallManager] call_control 处理失败:", e)
+    );
+  });
+  subscribe("webrtc_signal", (payload) => {
+    onWebRTCSignal(payload).catch((e) =>
+      console.error("[CallManager] webrtc_signal 处理失败:", e)
+    );
+  });
 };
 
 /** 供 /call 页面与 App 使用：单例状态 + 动作 */
