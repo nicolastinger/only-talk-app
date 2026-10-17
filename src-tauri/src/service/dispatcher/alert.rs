@@ -23,7 +23,7 @@ use crate::models::entity::group::Group;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::time::get_now_time_stamp_as_millis;
-use crate::utils::{app_emit, notify};
+use crate::utils::{events, notify};
 use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 同一会话两次提醒的最小间隔(毫秒)
@@ -120,7 +120,7 @@ pub(crate) async fn on_incoming_message(
             body: body.clone(),
         })
         .unwrap_or_default();
-        let _ = app_emit::emit("alert_incoming_message", payload);
+        let _ = events::emit("alert_incoming_message", payload);
         return;
     }
 

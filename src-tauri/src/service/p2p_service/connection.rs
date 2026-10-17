@@ -12,7 +12,7 @@ use crate::models::bo::text_msg::TextQuicMsg;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg;
 use crate::quic_core::p2p_service::p2p_stream_quic_client::run_client;
 use crate::quic_core::p2p_service::p2p_stream_quic_server::{run_server, udp_port_forward};
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::message_types::{MSG_TYPE_P2P, P2P_ACCEPT_REQUEST};
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
@@ -121,7 +121,7 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
     let target_address_info: UserAddressInfo = serde_json::from_slice(&text_quic_msg.raw)?;
     // 打开视频窗口
     let p2p_msg = P2pMsg { r#type: P2P_ACCEPT_REQUEST, raw: target_address_info.uuid.clone() };
-    app_emit::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
+    events::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
     tokio::spawn(async move {
         info!("收到 {:?}", target_address_info);
         // 开启ipv4服务端
@@ -274,7 +274,7 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
                 false => {
                     let p2p_msg =
                         P2pMsg { r#type: 104, raw: serde_json::to_string(&p2p_init_msg)? };
-                    app_emit::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
+                    events::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
                 }
             }
         }
@@ -282,7 +282,7 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
             // 接收到p2p请求
             // 发送数据给前端
             let p2p_msg = P2pMsg { r#type: 102, raw: serde_json::to_string(&p2p_init_msg)? };
-            app_emit::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
+            events::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
         }
         (false, false) => {
             error!("发错人了")

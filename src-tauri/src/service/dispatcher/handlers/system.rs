@@ -7,7 +7,7 @@ use crate::models::bo::text_msg::TextQuicMsg;
 use crate::models::entity::system_notification::SystemNotification;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::{friend_service, group_service};
-use crate::utils::app_emit;
+use crate::utils::events;
 
 // 处理系统信息
 pub(crate) async fn process_system_message(
@@ -18,7 +18,7 @@ pub(crate) async fn process_system_message(
     info!("接收到系统信息 {:?}", msg);
 
     {
-        app_emit::emit("system_message", payload)?;
+        events::emit("system_message", payload)?;
     }
     Ok(())
 }
@@ -33,7 +33,7 @@ pub(crate) async fn process_notify_message(
     SystemNotification::insert(&system_notification).await?;
     let payload = serde_json::to_string(&system_notification)?;
     // 发送完整通知数据给前端
-    app_emit::emit("listen_notify_msg", &payload)?;
+    events::emit("listen_notify_msg", &payload)?;
     // 处理对应通知类型
     match system_notification.level1.ok_or(anyhow!("level1为空"))? {
         1 => {

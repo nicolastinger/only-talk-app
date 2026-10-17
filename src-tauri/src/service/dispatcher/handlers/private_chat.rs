@@ -12,7 +12,7 @@ use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::chat_service::clear_chat_session;
 use crate::service::dispatcher::alert;
 use crate::service::user_service::get_user_info;
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::message_types::CURRENT_SESSION_FRIEND;
 
 /// 处理单聊消息
@@ -39,7 +39,7 @@ pub(crate) async fn process_private_chat_message(
         "emit text_message: is_self={} send_user={} recv_user={} text_type={} nano_id={}",
         is_self, msg.send_user, msg.recv_user, msg.text_type, msg.nano_id
     );
-    app_emit::emit("text_message", payload)?;
+    events::emit("text_message", payload)?;
 
     // 视频通话控制消息(12-15)不在此提前返回：仍更新会话列表，
     // 便于会话列表预览 [视频通话邀请]/[已接听]/[已拒绝]/[通话结束]（前端聊天窗对 12-15 不渲染气泡）

@@ -4,7 +4,7 @@ use log::info;
 
 use crate::models::bo::text_msg::TextQuicMsg;
 use crate::service::user_service::disconnect_quic;
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::jwt::current_token_jti;
 use crate::GLOBAL_QUIC_USER_INFO;
 
@@ -25,7 +25,7 @@ pub(crate) async fn process_force_logout(text_quic_msg: TextQuicMsg) -> Result<(
     disconnect_quic().await?;
     GLOBAL_QUIC_USER_INFO.write().await.clear();
 
-    app_emit::emit("force_logout", reason)?;
+    events::emit("force_logout", reason)?;
     Ok(())
 }
 

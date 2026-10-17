@@ -2,7 +2,7 @@
 
 //! 入站消息分发(`service::dispatcher`)集成测试。
 //!
-//! 通过捕获型 `utils::app_emit` 端口断言「在正确时机发出正确事件」, 并用
+//! 通过捕获型 `utils::events` 端口断言「在正确时机发出正确事件」, 并用
 //! `tests/common` 脚手架提供 user/private 库, 覆盖各消息类型的落库 + 事件路径。
 //!
 //! 所有用例串行执行(全局 emit 端口 + 全局连接池均为进程级)。
@@ -26,7 +26,7 @@ use app_lib::models::entity::group::Group;
 use app_lib::models::entity::group_message_ack::GroupMessageAck;
 use app_lib::service::dispatcher::process_msg;
 use app_lib::service::user_service::{get_user_info, insert_user_info};
-use app_lib::utils::app_emit;
+use app_lib::utils::events;
 use app_lib::utils::global_static_str::SYSTEM;
 use app_lib::GLOBAL_QUIC_USER_INFO;
 
@@ -63,7 +63,7 @@ static TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 /// 注册捕获型 emit 实现(仅首次生效)并清空历史事件。
 async fn init_sink() {
     SINK.get_or_init(|| {
-        app_emit::register_emit(|event, payload| {
+        events::register_emit(|event, payload| {
             EVENTS.lock().expect("锁定事件失败").push((event.to_string(), payload.to_string()));
             Ok(())
         });

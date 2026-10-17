@@ -4,12 +4,12 @@ use anyhow::anyhow;
 use tauri::Emitter;
 use tauri_plugin_notification::NotificationExt;
 
-use crate::utils::{app_emit, notify};
+use crate::utils::{events, notify};
 use crate::APP_HANDLE;
 
 /// 注册前端事件 / 系统通知 / 托盘脉冲 的展示层实现。
 pub fn register_ports() {
-    app_emit::register_emit(|event, payload| {
+    events::register_emit(|event, payload| {
         APP_HANDLE.get().ok_or(anyhow!("无法获取app"))?.emit(event, payload)?;
         Ok(())
     });

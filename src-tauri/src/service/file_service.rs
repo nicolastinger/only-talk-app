@@ -23,7 +23,7 @@ use crate::models::entity::file_record::FileRecord;
 use crate::models::vo::file_vo::{FileVo, LocalFileVo};
 use crate::service::api_service::{get_without_token, post_with_body};
 use crate::utils::global_static_str::MONTHLY_RESOURCE_PATH;
-use crate::utils::{app_emit, uuid_utils};
+use crate::utils::{events, uuid_utils};
 
 /// 从nano_id获取聊天记录中的文件名
 async fn get_file_name_from_nano_id(nano_id: Option<&str>) -> Option<String> {
@@ -203,7 +203,7 @@ struct ChatFileDownloadProgress {
 
 /// 上报聊天文件下载进度(前端按 bizId 匹配对应消息; 前端未就绪时静默忽略)。
 fn emit_chat_file_progress(biz_id: &str, file_name: &str, downloaded: u64, total: u64) {
-    let _ = app_emit::emit(
+    let _ = events::emit(
         "chat_file_download_progress",
         ChatFileDownloadProgress {
             biz_id: biz_id.to_string(),

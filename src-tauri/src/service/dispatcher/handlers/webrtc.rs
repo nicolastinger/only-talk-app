@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::models::bo::text_msg::TextQuicMsg;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::user_service::get_user_info;
-use crate::utils::app_emit;
+use crate::utils::events;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebRTCSignalMessage {
@@ -91,7 +91,7 @@ pub(crate) async fn process_webrtc_signal(text_quic_msg: TextQuicMsg) -> Result<
 
     // 转发给前端（保持原始信令格式）；纯实时信令，不落库（服务端只转发不存储）
     let payload = serde_json::to_string(&msg)?;
-    app_emit::emit("webrtc_signal", payload)?;
+    events::emit("webrtc_signal", payload)?;
 
     Ok(())
 }

@@ -12,7 +12,7 @@ use super::send::send_text_msg_service;
 use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord};
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::api_service::{upload_file_with_progress, UploadProgressFn};
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::global_static_str::{
     talk_api_base, MAX_FILE_UPLOAD_SIZE, MAX_IMAGE_UPLOAD_SIZE, PLATFORM, ZERO_UUID,
 };
@@ -57,7 +57,7 @@ struct ChatFileUploadProgress {
 
 /// 上报发送进度(前端按 nano_id 匹配对应消息; 前端未就绪时静默忽略)。
 fn emit_chat_send_progress(nano_id: &str, file_name: &str, phase: &str, uploaded: u64, total: u64) {
-    let _ = app_emit::emit(
+    let _ = events::emit(
         "chat_file_upload_progress",
         ChatFileUploadProgress {
             nano_id: nano_id.to_string(),

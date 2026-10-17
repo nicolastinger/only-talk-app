@@ -18,7 +18,7 @@ use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::global_static_str::MAX_FILE_UPLOAD_SIZE;
 use crate::GLOBAL_QUIC_SERVER_LIST;
 
@@ -125,7 +125,7 @@ async fn update_group_session_after_send(
         let chat_session_event =
             ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
-        app_emit::emit("chat_session", payload)?;
+        events::emit("chat_session", payload)?;
     } else {
         // 更新现有会话
         let mut chat_session = group_session.remove(0);
@@ -141,7 +141,7 @@ async fn update_group_session_after_send(
         let chat_session_event =
             ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
-        app_emit::emit("chat_session", payload)?;
+        events::emit("chat_session", payload)?;
     }
 
     Ok(())

@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager, Runtime};
 
 use crate::config::DEFAULT_GITHUB_REPO;
 use crate::models::vo::update_vo::UpdateInfo;
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::http_client::{http_client_30, http_client_600};
 
 fn github_repo() -> String {
@@ -194,7 +194,7 @@ pub async fn download_update_package<R: Runtime>(
         downloaded += chunk.len() as u64;
         // 节流: 最快每 100ms 上报一次, 避免高频事件
         if last_emit.elapsed() >= Duration::from_millis(100) {
-            let _ = app_emit::emit(
+            let _ = events::emit(
                 "update_download_progress",
                 DownloadProgress { file_name: file_name.clone(), downloaded, total },
             );
@@ -203,7 +203,7 @@ pub async fn download_update_package<R: Runtime>(
     }
     file.flush().with_context(|| "写入更新包失败")?;
     // 完成时补发一次最终进度
-    let _ = app_emit::emit(
+    let _ = events::emit(
         "update_download_progress",
         DownloadProgress { file_name: file_name.clone(), downloaded, total },
     );

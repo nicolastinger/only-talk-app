@@ -4,7 +4,7 @@ use crate::dao::session_db::update_chat_session_db;
 use crate::models::entity::chat_session::ChatSession;
 use crate::models::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::service::user_service::get_user_info;
-use crate::utils::app_emit;
+use crate::utils::events;
 
 // 更新会话列表
 pub(crate) async fn update_session_list(chat_session: ChatSession) -> Result<(), anyhow::Error> {
@@ -20,7 +20,7 @@ pub(crate) async fn update_session_list(chat_session: ChatSession) -> Result<(),
         ChatSessionEvent { r#type: 1, data: ChatSessionVo::from(chat_session.to_canonical(&me)) };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
-        app_emit::emit("chat_session", payload)?;
+        events::emit("chat_session", payload)?;
     }
     Ok(())
 }

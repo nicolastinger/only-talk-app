@@ -17,8 +17,8 @@ use crate::models::bo::quic_connection::ConnectionType;
 use crate::models::bo::text_msg::TextQuicMsg;
 use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_WARN};
 use crate::quic_core::center_service::text_msg_service::{generate_text_msg, get_text_msg};
-use crate::utils::app_emit;
 use crate::utils::app_log::log_quic_event;
+use crate::utils::events;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{
     MSG_TYPE_P2P_AUDIO_DATA, MSG_TYPE_P2P_FILE_DATA, MSG_TYPE_P2P_FILE_TRANSFER_REQUEST,
@@ -120,7 +120,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到视频通话邀请 {:?}", msg);
                 // 解析邀请消息
                 let invite_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("video_call_invite", invite_str)?;
+                events::emit("video_call_invite", invite_str)?;
             }
 
             // 视频通话接受
@@ -128,7 +128,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             MSG_TYPE_P2P_VIDEO_CALL_ACCEPT => {
                 info!("对方接受了视频通话邀请 {:?}", msg);
                 let response_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("video_call_accept", response_str)?;
+                events::emit("video_call_accept", response_str)?;
             }
 
             // 视频通话拒绝
@@ -136,7 +136,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             MSG_TYPE_P2P_VIDEO_CALL_REJECT => {
                 info!("对方拒绝了视频通话邀请 {:?}", msg);
                 let response_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("video_call_reject", response_str)?;
+                events::emit("video_call_reject", response_str)?;
             }
 
             // 视频通话结束
@@ -151,7 +151,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                         token.cancel();
                     }
                 }
-                app_emit::emit("video_call_end", msg.send_user)?;
+                events::emit("video_call_end", msg.send_user)?;
             }
 
             // ==================== 媒体数据处理 ====================
@@ -166,7 +166,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                     accept_user
                 };
                 if accept_user == msg.send_user {
-                    app_emit::emit("video_frame", msg.raw)?;
+                    events::emit("video_frame", msg.raw)?;
                 }
             }
 
@@ -174,13 +174,13 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             // 直接转发给前端显示
             MSG_TYPE_P2P_VIDEO_DATA => {
                 info!("接收到p2p视频帧数据 {}", msg.raw.len());
-                app_emit::emit("video_frame", msg.raw)?;
+                events::emit("video_frame", msg.raw)?;
             }
 
             // 音频帧数据
             // 直接转发给前端播放
             MSG_TYPE_P2P_AUDIO_DATA => {
-                app_emit::emit("audio_frame", msg.raw)?;
+                events::emit("audio_frame", msg.raw)?;
             }
 
             // ==================== 配置和控制处理 ====================
@@ -204,7 +204,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 insert_user_info(&key, &media_str).await?;
                 // 转为JSON字符串emit，避免Vec<u8>被序列化为number[]
                 let config_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("media_config", config_str)?;
+                events::emit("media_config", config_str)?;
             }
 
             // 媒体控制
@@ -214,7 +214,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 let _control = serde_json::from_slice::<P2pMediaControl>(&msg.raw)?;
                 // 转为JSON字符串emit，避免Vec<u8>被序列化为number[]
                 let control_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("media_control", control_str)?;
+                events::emit("media_control", control_str)?;
             }
 
             // 媒体信息
@@ -225,7 +225,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 let _media_info = serde_json::from_slice::<P2pMediaInfo>(&msg.raw)?;
                 // 转为JSON字符串emit，避免Vec<u8>被序列化为number[]
                 let info_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("media_info", info_str)?;
+                events::emit("media_info", info_str)?;
             }
 
             // 媒体接收就绪
@@ -234,7 +234,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             MSG_TYPE_P2P_MEDIA_READY => {
                 info!("接收到媒体接收就绪信号: {:?}", msg);
                 // 发送就绪事件给前端，包含发送者的UUID
-                app_emit::emit("media_receiver_ready", &msg.send_user)?;
+                events::emit("media_receiver_ready", &msg.send_user)?;
             }
 
             // ==================== 文件传输处理 ====================
@@ -244,7 +244,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
             MSG_TYPE_P2P_FILE_DATA => {
                 info!("接收到p2p文件数据分片 {:?}", msg);
                 let data_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("p2p_file_data", data_str)?;
+                events::emit("p2p_file_data", data_str)?;
             }
 
             // 文件传输请求
@@ -253,7 +253,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到p2p文件传输请求 {:?}", msg);
                 let _request = serde_json::from_slice::<P2pFileTransferRequest>(&msg.raw)?;
                 let request_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("p2p_file_transfer_request", request_str)?;
+                events::emit("p2p_file_transfer_request", request_str)?;
             }
 
             // 文件传输响应
@@ -262,7 +262,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 info!("接收到p2p文件传输响应 {:?}", msg);
                 let _response = serde_json::from_slice::<P2pFileTransferResponse>(&msg.raw)?;
                 let response_str = String::from_utf8_lossy(&msg.raw).to_string();
-                app_emit::emit("p2p_file_transfer_response", response_str)?;
+                events::emit("p2p_file_transfer_response", response_str)?;
             }
 
             // ==================== 文本消息处理 ====================
@@ -278,7 +278,7 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                     "text": text,
                     "timestamp": msg.timestamp,
                 });
-                app_emit::emit("p2p_text_message", p2p_text_msg.to_string())?;
+                events::emit("p2p_text_message", p2p_text_msg.to_string())?;
             }
 
             // 心跳消息
@@ -472,7 +472,7 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream, target_uuid
                     if let Err(e) = channels.video.send(InvokeResponseBody::Raw(data_buf.clone())) {
                         error!("发送video帧Channel失败: {}", e);
                     }
-                } else if let Err(e) = app_emit::emit("video_frame", &data_buf) {
+                } else if let Err(e) = events::emit("video_frame", &data_buf) {
                     error!("发送video_frame事件失败: {}", e);
                 }
             }
@@ -481,7 +481,7 @@ pub async fn process_media_data_channel(mut recv_stream: RecvStream, target_uuid
                     if let Err(e) = channels.audio.send(InvokeResponseBody::Raw(data_buf.clone())) {
                         error!("发送audio帧Channel失败: {}", e);
                     }
-                } else if let Err(e) = app_emit::emit("audio_frame", &data_buf) {
+                } else if let Err(e) = events::emit("audio_frame", &data_buf) {
                     error!("发送audio_frame事件失败: {}", e);
                 }
             }

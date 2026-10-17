@@ -6,7 +6,7 @@ use crate::dao::friend_db::is_blocked_db;
 use crate::models::bo::text_msg::TextQuicMsg;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::user_service::get_user_info;
-use crate::utils::app_emit;
+use crate::utils::events;
 
 /// 处理视频通话控制消息（CallControlLifecycle，12-15）
 ///
@@ -36,6 +36,6 @@ pub(crate) async fn process_call_control(text_quic_msg: TextQuicMsg) -> Result<(
         "emit call_control: send_user={} recv_user={} text_type={} nano_id={}",
         msg.send_user, msg.recv_user, msg.text_type, msg.nano_id
     );
-    app_emit::emit("call_control", payload)?;
+    events::emit("call_control", payload)?;
     Ok(())
 }

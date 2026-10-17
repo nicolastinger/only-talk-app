@@ -10,8 +10,8 @@ use crate::models::entity::app_log::LOG_LEVEL_INFO;
 use crate::quic_core::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::api_service::get_request;
 use crate::service::client_loop::{spawn_client_loop, stop_client_loop};
-use crate::utils::app_emit;
 use crate::utils::dns::resolve_ipv4;
+use crate::utils::events;
 use crate::utils::global_static_str::{talk_api_base, talk_api_domain};
 use crate::utils::user_state::insert_user_info;
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
@@ -27,7 +27,7 @@ pub async fn disconnect_quic() -> Result<(), anyhow::Error> {
 
     // 手动断开时主动通知前端，触发 topbar 断连提示
     // （run_client 检测到 Idle 会直接返回，不会进入 Disconnected 广播 quic_disconnected）
-    let _ = app_emit::emit("quic_disconnected", "QUIC 连接已手动断开");
+    let _ = events::emit("quic_disconnected", "QUIC 连接已手动断开");
 
     // 清除服务器连接列表
     {

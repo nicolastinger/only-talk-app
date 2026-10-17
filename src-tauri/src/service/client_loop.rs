@@ -20,7 +20,7 @@ use crate::quic_core::connection_state::{
 use crate::quic_core::safe_configuration::configure_client;
 use crate::service::dispatcher::process_msg;
 use crate::service::user_service::{get_user_info, insert_user_info, sync_offline_messages};
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{MSG_TYPE_PING, MSG_TYPE_TTL};
 use crate::utils::time::get_now_time_stamp_as_millis;
@@ -125,7 +125,7 @@ pub async fn run_client(
             )
             .await;
             // 发送重连事件到前端
-            let _ = app_emit::emit("quic_reconnecting", "QUIC 正在重连");
+            let _ = events::emit("quic_reconnecting", "QUIC 正在重连");
         }
 
         // 尝试连接（可被取消：取消时丢弃 in-flight 握手与 endpoint；
@@ -180,14 +180,14 @@ pub async fn run_client(
                     )
                     .await;
                     // 发送已连接事件到前端
-                    let _ = app_emit::emit("quic_connected", "QUIC 连接已恢复");
+                    let _ = events::emit("quic_connected", "QUIC 连接已恢复");
                     // 后台拉取离线消息
                     tokio::spawn(async move {
                         // 通知前端开始同步
-                        let _ = app_emit::emit("quic_sync_start", "开始同步离线消息");
+                        let _ = events::emit("quic_sync_start", "开始同步离线消息");
                         sync_offline_messages().await;
                         // 通知前端同步完成
-                        let _ = app_emit::emit("quic_sync_complete", "离线消息同步完成");
+                        let _ = events::emit("quic_sync_complete", "离线消息同步完成");
                     });
                     // 消费离线发送队列（重连期间入队的消息，慢速逐条补发）
                     tokio::spawn(async move {
@@ -260,7 +260,7 @@ pub async fn run_client(
                             break; // 状态变更，停止广播
                         }
                     }
-                    let _ = app_emit::emit("quic_disconnected", "QUIC 连接已断开，请检查网络环境");
+                    let _ = events::emit("quic_disconnected", "QUIC 连接已断开，请检查网络环境");
                     tokio::time::sleep(Duration::from_secs(DISCONNECT_BROADCAST_SECS)).await;
                 }
             });

@@ -19,7 +19,7 @@ use crate::models::entity::chat_session::ChatSession;
 use crate::models::entity::group_chat_record::GroupChatRecord;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::chat_service::{clear_chat_session, process_no_send_success_msg};
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::GLOBAL_MSG_SEND_LOCK;
 
 /// 处理ack消息
@@ -73,7 +73,7 @@ pub(crate) async fn process_ack_type(text_quic_msg: TextQuicMsg) -> Result<(), a
 
     // 发送消息给前端
     {
-        app_emit::emit("text_message", payload)?;
+        events::emit("text_message", payload)?;
     }
 
     // 清除未读计数
@@ -132,7 +132,7 @@ pub(crate) async fn process_group_ack_type(
 
     // emit 给前端：通知消息已送达
     let payload = serde_json::to_string(&msg)?;
-    app_emit::emit("group_message_ack", payload)?;
+    events::emit("group_message_ack", payload)?;
 
     Ok(())
 }

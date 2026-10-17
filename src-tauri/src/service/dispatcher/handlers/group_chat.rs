@@ -15,7 +15,7 @@ use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::chat_service::{clear_chat_session, create_group_chat_session_service};
 use crate::service::dispatcher::alert;
 use crate::service::user_service::get_user_info;
-use crate::utils::app_emit;
+use crate::utils::events;
 use crate::utils::message_types::CURRENT_SESSION_FRIEND;
 
 /// 处理群聊消息
@@ -51,7 +51,7 @@ pub(crate) async fn process_group_chat_message(
     insert_group_chat_record(&record).await?;
 
     let payload = serde_json::to_string(&msg)?;
-    app_emit::emit("text_message", payload)?;
+    events::emit("text_message", payload)?;
 
     let group_id = &msg.recv_user;
     let current_session = get_user_info(CURRENT_SESSION_FRIEND).await;

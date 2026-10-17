@@ -1,9 +1,9 @@
 pub mod android_utils;
-pub mod app_emit;
 pub mod app_log;
 pub mod db;
 pub mod device_info;
 pub mod dns;
+pub mod events;
 pub mod global_static_str;
 pub mod http_client;
 pub mod image_utils;
