@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { getVersion } from "@tauri-apps/api/app";
 import { UpdateInfo } from "@workspace/types";
+import { subscribe } from "../eventHub";
 
 /** 检查更新结果 */
 export interface UpdateCheckResult {
@@ -64,9 +64,8 @@ export const downloadUpdatePackage = async (
 ): Promise<string> => {
   let unlisten: (() => void) | undefined;
   if (onProgress) {
-    unlisten = await listen<UpdateDownloadProgress>(
-      "update_download_progress",
-      (event) => onProgress(event.payload)
+    unlisten = subscribe("update_download_progress", (payload) =>
+      onProgress(payload)
     );
   }
   try {

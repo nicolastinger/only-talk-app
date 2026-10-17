@@ -1,7 +1,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { FileVo, Page, TextQuicMsgVo } from "@workspace/types";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { type UnlistenFn } from "@tauri-apps/api/event";
+import { subscribe } from "../eventHub";
 
 /**
  * 本地文件记录 + 前端运行时追加的 tauri 路径。
@@ -48,10 +49,10 @@ export interface ChatFileUploadProgress {
  */
 export const listenChatFileUploadProgress = (
   onProgress: (progress: ChatFileUploadProgress) => void
-): Promise<UnlistenFn> =>
-  listen<ChatFileUploadProgress>("chat_file_upload_progress", (event) => {
-    onProgress(event.payload);
-  });
+): Promise<UnlistenFn> => {
+  const off = subscribe("chat_file_upload_progress", onProgress);
+  return Promise.resolve(off);
+};
 
 /**
  * 读取本地文件大小(字节), 用于上传前大小预校验。
@@ -177,12 +178,9 @@ export const getChatFileByBizId = async (
 ): Promise<FileVoLocal[] | null> => {
   let unlisten: (() => void) | undefined;
   if (onProgress) {
-    unlisten = await listen<ChatFileDownloadProgress>(
-      "chat_file_download_progress",
-      (event) => {
-        if (event.payload.bizId === bizId) onProgress(event.payload);
-      }
-    );
+    unlisten = subscribe("chat_file_download_progress", (payload) => {
+      if (payload.bizId === bizId) onProgress(payload);
+    });
   }
   try {
     let files = [] as FileVoLocal[];
