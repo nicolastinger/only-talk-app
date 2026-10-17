@@ -1,8 +1,7 @@
-import { getUnreadNotificationCounts } from '@workspace/services';
-import { SystemNotification } from '@workspace/types';
-import { useEffect } from 'react';
-import { useBackendEvent } from './useBackendEvent';
+import { onNotifyChange } from '@/events/notifyRouter';
 import { useBearStore } from '@/store/store';
+import { getUnreadNotificationCounts } from '@workspace/services';
+import { useEffect } from 'react';
 
 // 监听系统通知
 const useSystemNotify = (recvUuid: string) => {
@@ -32,33 +31,9 @@ const useSystemNotify = (recvUuid: string) => {
       return;
     }
     refreshUnreadCounts();
+    return onNotifyChange(() => refreshUnreadCounts());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recvUuid]);
-
-  useBackendEvent(
-    'listen_notify_msg',
-    (payload) => {
-      try {
-        const notify = JSON.parse(payload) as SystemNotification;
-        // 只处理当前用户的通知
-        if (notify.user_id === recvUuid) {
-          refreshUnreadCounts();
-        }
-      } catch (e) {
-        console.log('解析通知消息失败', e);
-      }
-    },
-    recvUuid !== '',
-  );
-
-  // 任意位置标记已读/清空未读后，刷新角标
-  useBackendEvent(
-    'listen_notify_read',
-    () => {
-      refreshUnreadCounts();
-    },
-    recvUuid !== '',
-  );
 };
 
 export { useSystemNotify };

@@ -3,12 +3,13 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { showToast, Tabs, Tab, Badge, Empty, Button } from "vant";
-import { clearUnreadByLevel, subscribe } from "@workspace/services";
+import { clearUnreadByLevel } from "@workspace/services";
 import {
   NOTIFICATION_LEVEL2,
   type NotificationCategoryKey,
 } from "@workspace/types";
 import { useUnreadStore } from "@/stores/unread";
+import { onNotifyChange } from "@/events/notifyRouter";
 import { useI18n } from "@/i18n";
 import type { SystemNotification } from "@workspace/types";
 
@@ -226,8 +227,7 @@ const handleNotifyEvent = () => {
 };
 
 const setupListeners = () => {
-  unlisteners.push(subscribe("listen_notify_msg", handleNotifyEvent));
-  unlisteners.push(subscribe("listen_notify_read", handleNotifyEvent));
+  unlisteners.push(onNotifyChange(handleNotifyEvent));
 };
 
 onMounted(() => {

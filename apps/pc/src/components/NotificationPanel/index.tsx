@@ -1,3 +1,4 @@
+import { onNotifyChange } from '@/events/notifyRouter';
 import { useBearStore } from '@/store/store';
 import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
@@ -5,7 +6,6 @@ import { useIntl } from '@umijs/max';
 import {
   clearUnreadByLevel,
   getUnreadNotificationCounts,
-  subscribe,
 } from '@workspace/services';
 import { NotificationCategoryKey, SystemNotification } from '@workspace/types';
 import { Badge, Button, Empty, Modal, Tabs, Tag } from 'antd';
@@ -74,18 +74,11 @@ const NotificationPanel = ({
     loadNotifications();
     refreshUnreadCounts();
     // 面板打开期间实时刷新列表与未读角标
-    const offMsg = subscribe('listen_notify_msg', () => {
+    const off = onNotifyChange(() => {
       loadNotifications();
       refreshUnreadCounts();
     });
-    const offRead = subscribe('listen_notify_read', () => {
-      loadNotifications();
-      refreshUnreadCounts();
-    });
-    return () => {
-      offMsg();
-      offRead();
-    };
+    return () => off();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 

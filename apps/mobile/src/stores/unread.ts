@@ -7,12 +7,12 @@ import {
   subscribe,
 } from "@workspace/services";
 import { getMyUuid, parseResponse } from "@/utils/api";
+import { onNotifyChange } from "@/events/notifyRouter";
 import type {
   ChatSessionVo,
   ChatSessionEvent,
   FriendRequestInfo,
   FriendRequestInfoDTO,
-  SystemNotification,
 } from "@workspace/types";
 
 const sortSessions = (list: ChatSessionVo[]): ChatSessionVo[] =>
@@ -182,21 +182,8 @@ const setupRealtimeListeners = () => {
   // 断线重连/离线补拉完成后刷新未读
   unlisteners.push(subscribe("quic_connected", refreshAll));
   unlisteners.push(subscribe("quic_sync_complete", refreshAll));
-  // 系统通知到达(含交友广场心动/匹配、动态点赞/评论)，刷新未读
-  unlisteners.push(
-    subscribe("listen_notify_msg", async (payload) => {
-      try {
-        const notify: SystemNotification = JSON.parse(payload);
-        const uuid = await getMyUuid();
-        if (notify.user_id && notify.user_id !== uuid) return;
-        await refreshAll();
-      } catch (e) {
-        console.error("处理 listen_notify_msg 事件失败:", e);
-      }
-    })
-  );
-  // 任意位置标记已读/清空未读后，刷新未读
-  unlisteners.push(subscribe("listen_notify_read", refreshAll));
+  // 系统通知到达/已读（经 notifyRouter 单点订阅后扇出），刷新未读
+  unlisteners.push(onNotifyChange(refreshAll));
 };
 
 const startMonitor = async () => {
