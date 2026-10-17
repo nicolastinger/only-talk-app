@@ -1,10 +1,10 @@
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { WindowOptions } from '@tauri-apps/api/window';
+import { subscribe } from '@workspace/services';
 import { TextQuicMsgVo } from '@workspace/types';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -184,49 +184,38 @@ const useWebRTCIncomingCall = () => {
 
   useEffect(() => {
     if (!meUuid) return;
-    let unlisten: (() => void) | undefined;
 
-    const setupListener = async () => {
+    const off = subscribe('call_control', async (payload) => {
+      const text: TextQuicMsgVo = JSON.parse(payload);
+      if (text.recv_user !== meUuid) return;
+      // 自己发给自己的邀请(self-echo)：忽略，避免打开自呼窗口形成本端自连
+      if (text.send_user === meUuid) return;
+      if (text.text_type !== 12) return; // MSG_TYPE_P2P_VIDEO_CALL_INVITE
+
+      let sessionId = '';
       try {
-        unlisten = await listen<string>('call_control', async (event) => {
-          const text: TextQuicMsgVo = JSON.parse(event.payload);
-          if (text.recv_user !== meUuid) return;
-          // 自己发给自己的邀请(self-echo)：忽略，避免打开自呼窗口形成本端自连
-          if (text.send_user === meUuid) return;
-          if (text.text_type !== 12) return; // MSG_TYPE_P2P_VIDEO_CALL_INVITE
-
-          let sessionId = '';
-          try {
-            const parsed = JSON.parse(text.raw);
-            sessionId = parsed.sessionId || '';
-          } catch {
-            // 忽略解析失败
-          }
-
-          console.log(
-            `[WebRTC] 收到来电邀请 - 发起方: ${text.send_user}, sessionId: ${sessionId}`,
-          );
-          await openWebRTCChatHandler(
-            text.send_user,
-            meUuid,
-            false,
-            undefined,
-            sessionId,
-          ).catch((e) => {
-            console.error('[WebRTC] 打开被叫窗口失败:', e);
-          });
-        });
-        console.log('[WebRTC] ✅ 来电监听已设置');
-      } catch (e) {
-        console.error('[WebRTC] ❌ 设置来电监听失败:', e);
+        const parsed = JSON.parse(text.raw);
+        sessionId = parsed.sessionId || '';
+      } catch {
+        // 忽略解析失败
       }
-    };
 
-    setupListener();
+      console.log(
+        `[WebRTC] 收到来电邀请 - 发起方: ${text.send_user}, sessionId: ${sessionId}`,
+      );
+      await openWebRTCChatHandler(
+        text.send_user,
+        meUuid,
+        false,
+        undefined,
+        sessionId,
+      ).catch((e) => {
+        console.error('[WebRTC] 打开被叫窗口失败:', e);
+      });
+    });
+    console.log('[WebRTC] ✅ 来电监听已设置');
 
-    return () => {
-      if (unlisten) unlisten();
-    };
+    return () => off();
   }, [meUuid]);
 
   return undefined;

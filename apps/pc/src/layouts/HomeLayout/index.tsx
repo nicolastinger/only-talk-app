@@ -23,7 +23,6 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { Window } from '@tauri-apps/api/window';
 import { Outlet, history, useIntl } from '@umijs/max';
 import {
@@ -31,6 +30,7 @@ import {
   getApiBase,
   get_cached_user_info,
   list_auth_factors,
+  subscribe,
 } from '@workspace/services';
 import {
   AuthFactorType,
@@ -59,18 +59,12 @@ const HomeLayout = () => {
   const { isConnected, resetConnection, statusTag } = useQuicDisconnect();
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
     // 收到服务端"账号已在其他设备登录"通知后弹出确认框，
     // 由用户点击"退出登录"确认后再执行登出（避免误触自动下线）。
-    listen<string>('force_logout', (event) => {
-      setForceLogoutReason(event.payload || '');
+    return subscribe('force_logout', (payload) => {
+      setForceLogoutReason(payload || '');
       setForceLogoutVisible(true);
-    })
-      .then((stop) => {
-        unlisten = stop;
-      })
-      .catch(console.error);
-    return () => unlisten?.();
+    });
   }, []);
 
   // 确认强制退出：先关闭弹窗，再执行登出（无论登出成功与否弹窗都能关闭）

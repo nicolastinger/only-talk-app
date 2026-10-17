@@ -1,11 +1,11 @@
 import { useBearStore } from '@/store/store';
 import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
 import {
   clearUnreadByLevel,
   getUnreadNotificationCounts,
+  subscribe,
 } from '@workspace/services';
 import { NotificationCategoryKey, SystemNotification } from '@workspace/types';
 import { Badge, Button, Empty, Modal, Tabs, Tag } from 'antd';
@@ -74,24 +74,17 @@ const NotificationPanel = ({
     loadNotifications();
     refreshUnreadCounts();
     // 面板打开期间实时刷新列表与未读角标
-    const unlisteners: Array<() => void> = [];
-    const setup = async () => {
-      unlisteners.push(
-        await listen('listen_notify_msg', () => {
-          loadNotifications();
-          refreshUnreadCounts();
-        }),
-      );
-      unlisteners.push(
-        await listen('listen_notify_read', () => {
-          loadNotifications();
-          refreshUnreadCounts();
-        }),
-      );
-    };
-    setup().catch((e) => console.log('监听通知事件失败', e));
+    const offMsg = subscribe('listen_notify_msg', () => {
+      loadNotifications();
+      refreshUnreadCounts();
+    });
+    const offRead = subscribe('listen_notify_read', () => {
+      loadNotifications();
+      refreshUnreadCounts();
+    });
     return () => {
-      unlisteners.forEach((fn) => fn());
+      offMsg();
+      offRead();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);

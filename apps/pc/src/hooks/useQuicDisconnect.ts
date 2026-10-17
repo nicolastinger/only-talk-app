@@ -1,6 +1,6 @@
-import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState } from 'react';
 import { useBearStore } from '@/store/store';
+import { useBackendEvent } from './useBackendEvent';
 
 type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected';
 
@@ -60,68 +60,53 @@ const useQuicDisconnect = () => {
     }
   };
 
+  useBackendEvent('quic_disconnected', (payload) => {
+    setDisconnectState({
+      isConnected: false,
+      connectionState: 'disconnected',
+      message: payload || 'QUIC连接已断开',
+      statusTag: wasConnectedRef.current ? 'offline' : null,
+    });
+    // 重复广播不降级：重连中不回退为已离线
+    if (wasConnectedRef.current) {
+      wasConnectedRef.current = false;
+      showStatusTag('offline');
+    }
+  });
+
+  useBackendEvent('quic_connected', () => {
+    wasConnectedRef.current = true;
+    setDisconnectState({
+      isConnected: true,
+      connectionState: 'connected',
+      message: '',
+      statusTag: 'online',
+    });
+    showStatusTag('online');
+  });
+
+  // 进入重连尝试：显示重连中
+  useBackendEvent('quic_reconnecting', () => {
+    showStatusTag('reconnecting');
+  });
+
+  // 开始同步：打开加载遮罩，设置超时
+  useBackendEvent('quic_sync_start', () => {
+    setIsSyncing(true);
+    clearSyncTimer();
+    syncTimerRef.current = setTimeout(() => {
+      setIsSyncing(false);
+    }, SYNC_TIMEOUT_MS);
+  });
+
+  // 同步完成：立即关闭遮罩
+  useBackendEvent('quic_sync_complete', () => {
+    clearSyncTimer();
+    setIsSyncing(false);
+  });
+
   useEffect(() => {
-    let unlistenDisconnected: (() => void) | undefined;
-    let unlistenConnected: (() => void) | undefined;
-    let unlistenReconnecting: (() => void) | undefined;
-    let unlistenSyncStart: (() => void) | undefined;
-    let unlistenSyncComplete: (() => void) | undefined;
-
-    const setupListeners = async () => {
-      unlistenDisconnected = await listen<string>('quic_disconnected', (event) => {
-        setDisconnectState({
-          isConnected: false,
-          connectionState: 'disconnected',
-          message: event.payload || 'QUIC连接已断开',
-          statusTag: wasConnectedRef.current ? 'offline' : null,
-        });
-        // 重复广播不降级：重连中不回退为已离线
-        if (wasConnectedRef.current) {
-          wasConnectedRef.current = false;
-          showStatusTag('offline');
-        }
-      });
-
-      unlistenConnected = await listen<string>('quic_connected', (_event) => {
-        wasConnectedRef.current = true;
-        setDisconnectState({
-          isConnected: true,
-          connectionState: 'connected',
-          message: '',
-          statusTag: 'online',
-        });
-        showStatusTag('online');
-      });
-
-      // 进入重连尝试：显示重连中
-      unlistenReconnecting = await listen<string>('quic_reconnecting', () => {
-        showStatusTag('reconnecting');
-      });
-
-      // 开始同步：打开加载遮罩，设置超时
-      unlistenSyncStart = await listen<string>('quic_sync_start', () => {
-        setIsSyncing(true);
-        clearSyncTimer();
-        syncTimerRef.current = setTimeout(() => {
-          setIsSyncing(false);
-        }, SYNC_TIMEOUT_MS);
-      });
-
-      // 同步完成：立即关闭遮罩
-      unlistenSyncComplete = await listen<string>('quic_sync_complete', () => {
-        clearSyncTimer();
-        setIsSyncing(false);
-      });
-    };
-
-    setupListeners().catch(console.error);
-
     return () => {
-      if (unlistenDisconnected) unlistenDisconnected();
-      if (unlistenConnected) unlistenConnected();
-      if (unlistenReconnecting) unlistenReconnecting();
-      if (unlistenSyncStart) unlistenSyncStart();
-      if (unlistenSyncComplete) unlistenSyncComplete();
       clearSyncTimer();
       clearStatusTagTimer();
     };

@@ -6,8 +6,8 @@
  */
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { useIntl, useLocation } from '@umijs/max';
+import { subscribe } from '@workspace/services';
 import { VideoCallInvite } from '@workspace/types';
 import { message } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -80,49 +80,42 @@ export function usePrivacyChat() {
 
   // 监听 P2P 事件（文本消息 / 视频邀请 / 视频结束）
   useEffect(() => {
-    const setupListeners = async () => {
-      const unlistenText = await listen<string>('p2p_text_message', (event) => {
-        console.log('收到p2p文本消息:', event.payload);
-        try {
-          const p2pMsg: P2pTextMessage = JSON.parse(event.payload);
-          const newMessage: ChatMessageItem = {
-            id: `${Date.now()}_${Math.random()}`,
-            text: p2pMsg.text,
-            isMine: false,
-            timestamp: p2pMsg.timestamp || Date.now(),
-            senderName: friendName,
-          };
-          setMessages((prev) => [...prev, newMessage]);
-        } catch (e) {
-          console.error('解析p2p消息失败:', e);
-        }
-      });
+    const unlistenText = subscribe('p2p_text_message', (payload) => {
+      console.log('收到p2p文本消息:', payload);
+      try {
+        const p2pMsg: P2pTextMessage = JSON.parse(payload);
+        const newMessage: ChatMessageItem = {
+          id: `${Date.now()}_${Math.random()}`,
+          text: p2pMsg.text,
+          isMine: false,
+          timestamp: p2pMsg.timestamp || Date.now(),
+          senderName: friendName,
+        };
+        setMessages((prev) => [...prev, newMessage]);
+      } catch (e) {
+        console.error('解析p2p消息失败:', e);
+      }
+    });
 
-      const unlistenInvite = await listen<string>(
-        'video_call_invite',
-        (event) => {
-          console.log('收到视频通话邀请:', event.payload);
-          try {
-            const invite: VideoCallInvite = JSON.parse(event.payload);
-            setIncomingCallInvite(invite);
-            setShowIncomingCallModal(true);
-          } catch (e) {
-            console.error('解析视频通话邀请失败:', e);
-          }
-        },
-      );
+    const unlistenInvite = subscribe('video_call_invite', (payload) => {
+      console.log('收到视频通话邀请:', payload);
+      try {
+        const invite: VideoCallInvite = JSON.parse(payload);
+        setIncomingCallInvite(invite);
+        setShowIncomingCallModal(true);
+      } catch (e) {
+        console.error('解析视频通话邀请失败:', e);
+      }
+    });
 
-      const unlistenEnd = await listen<string>('video_call_end', (event) => {
-        console.log('视频通话已结束:', event.payload);
-        setIsVideoCallActive(false);
-        setIncomingCallInvite(null);
-        setShowIncomingCallModal(false);
-      });
+    const unlistenEnd = subscribe('video_call_end', (payload) => {
+      console.log('视频通话已结束:', payload);
+      setIsVideoCallActive(false);
+      setIncomingCallInvite(null);
+      setShowIncomingCallModal(false);
+    });
 
-      unlistenRef.current = [unlistenText, unlistenInvite, unlistenEnd];
-    };
-
-    setupListeners();
+    unlistenRef.current = [unlistenText, unlistenInvite, unlistenEnd];
 
     return () => {
       unlistenRef.current.forEach((unlisten) => unlisten());

@@ -1,10 +1,10 @@
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
 import { useBearStore } from '@/store/store';
-import { listen } from '@tauri-apps/api/event';
 import { WebviewOptions } from '@tauri-apps/api/webview';
 import type { WindowOptions } from '@tauri-apps/api/window';
 import { P2pInitMsg, P2pMsg } from '@workspace/types';
 import { useEffect, useMemo, useState } from 'react';
+import { useBackendEvent } from './useBackendEvent';
 
 // TODO p2p通信后续不再默认视频通话，支持文本表情图片文件等
 // 接受到p2p请求，打开视频接收组件，
@@ -82,30 +82,13 @@ const useP2pMessageApi = () => {
   };
 
   console.log('渲染了p2p组件');
-  useEffect(() => {
-    console.log('开始监听函数');
-    let unlisten: () => void;
+  useBackendEvent('listen_p2p_request', (payload) => {
+    console.log('接收到的数据', payload);
+    const p2pMsg = JSON.parse(payload) as P2pMsg;
+    console.log('接受到p2p信息', p2pMsg);
 
-    const setupListener = async () => {
-      try {
-        unlisten = await listen<string>('listen_p2p_request', (event) => {
-          console.log('接收到的数据', event.payload);
-          const p2pMsg = JSON.parse(event.payload) as P2pMsg;
-          console.log('接受到p2p信息', p2pMsg);
-
-          processP2pMsg(p2pMsg);
-        });
-      } catch (e) {
-        console.log('接受信息错误', e);
-      }
-    };
-
-    setupListener().catch(console.error);
-
-    return () => {
-      if (unlisten) unlisten(); // 组件卸载时取消订阅
-    };
-  }, []);
+    processP2pMsg(p2pMsg);
+  });
 
   return useMemo(() => ({ state }), [state]);
 };

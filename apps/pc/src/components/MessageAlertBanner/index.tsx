@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { history } from '@umijs/max';
+import { subscribe } from '@workspace/services';
 import { useEffect, useRef, useState } from 'react';
 
 /**
@@ -49,13 +49,12 @@ export default function MessageAlertBanner() {
 
   // 监听新消息提醒
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listen<string>('alert_incoming_message', (event) => {
+    const off = subscribe('alert_incoming_message', (payloadRaw) => {
       try {
         const payload: AlertPayload =
-          typeof event.payload === 'string'
-            ? JSON.parse(event.payload)
-            : (event.payload as AlertPayload);
+          typeof payloadRaw === 'string'
+            ? JSON.parse(payloadRaw)
+            : (payloadRaw as AlertPayload);
         if (!payload?.target) return;
         setAlert(payload);
         if (timerRef.current) clearTimeout(timerRef.current);
@@ -63,13 +62,9 @@ export default function MessageAlertBanner() {
       } catch (e) {
         console.error('解析新消息提醒失败', e);
       }
-    })
-      .then((stop) => {
-        unlisten = stop;
-      })
-      .catch(console.error);
+    });
     return () => {
-      unlisten?.();
+      off();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);

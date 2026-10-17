@@ -9,7 +9,6 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
 import {
   clearUnreadByLevel,
@@ -21,6 +20,7 @@ import {
   isHttpSuccess,
   process_friend_request,
   readContactsNotification,
+  subscribe,
 } from '@workspace/services';
 import {
   FriendRequestInfo,
@@ -77,17 +77,9 @@ const FriendRequestsModal = ({
   useEffect(() => {
     if (!visible) return;
 
-    let unlisten: (() => void) | undefined;
-    const setupListener = async () => {
-      unlisten = await listen<string>('friend_list_changed', () => {
-        fetchData();
-      });
-    };
-    setupListener().catch(console.error);
-
-    return () => {
-      if (unlisten) unlisten();
-    };
+    return subscribe('friend_list_changed', () => {
+      fetchData();
+    });
   }, [visible]);
 
   const fetchData = async () => {

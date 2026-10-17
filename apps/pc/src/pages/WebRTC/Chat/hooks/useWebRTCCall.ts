@@ -14,8 +14,8 @@ import { initWebRTCConsoleCapture, useWebRTCLogs } from '@/services/webrtcLog';
 import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { useIntl, useLocation } from '@umijs/max';
+import { subscribe } from '@workspace/services';
 import { WebRTCSignalMessage } from '@workspace/types';
 import { message } from 'antd';
 import { nanoid } from 'nanoid';
@@ -381,16 +381,16 @@ export const useWebRTCCall = () => {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
-    const setupListener = async () => {
+    const setupListener = () => {
       try {
         console.log(
           `[WebRTCChat] useEffect(setupListener) - 开始设置信令事件监听...`,
         );
 
-        unlisten = await listen<string>('webrtc_signal', async (event) => {
+        unlisten = subscribe('webrtc_signal', async (payload) => {
           console.log(`[WebRTCChat.onWebRTCSignal] 📡 收到WebRTC信令事件`);
           try {
-            const msgVo: TextQuicMsgVo = JSON.parse(event.payload);
+            const msgVo: TextQuicMsgVo = JSON.parse(payload);
             console.log(
               `[WebRTCChat.onWebRTCSignal] QUIC消息已解析 - nano_id: ${msgVo.nano_id}, text_type: ${msgVo.text_type}`,
             );
@@ -499,10 +499,10 @@ export const useWebRTCCall = () => {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
-    const setupListener = async () => {
+    const setupListener = () => {
       try {
-        unlisten = await listen<string>('call_control', async (event) => {
-          const text: TextQuicMsgVo = JSON.parse(event.payload);
+        unlisten = subscribe('call_control', async (payload) => {
+          const text: TextQuicMsgVo = JSON.parse(payload);
           if (text.recv_user !== localUserId || text.send_user !== friendId) {
             return;
           }

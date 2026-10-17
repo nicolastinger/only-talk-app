@@ -6,7 +6,7 @@
  * 改由 `start_video_channel` 注册的 Channel 二进制直传（见 registerP2pMediaChannels）。
  */
 import { Channel } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { subscribe } from '@workspace/services';
 import { MediaControl, MediaInfo } from '@workspace/types';
 import { startVideoChannel } from '../transport/p2pTransport';
 
@@ -61,48 +61,37 @@ export async function registerP2pMediaChannels(
 export async function registerP2pMediaEvents(
   handlers: P2pMediaEventHandlers,
 ): Promise<Array<() => void>> {
-
-  const unlistenControl = await listen<string>('media_control', (event) => {
+  const unlistenControl = subscribe('media_control', (payload) => {
     try {
-      // 兼容处理：payload 可能是 string 或 object（Tauri 序列化差异）
-      let controlStr: string;
-      if (typeof event.payload === 'string') {
-        controlStr = event.payload;
-      } else {
-        controlStr = JSON.stringify(event.payload);
-      }
-      handlers.onMediaControl(JSON.parse(controlStr));
+      handlers.onMediaControl(JSON.parse(payload));
     } catch (error) {
       console.error('处理媒体控制失败:', error);
     }
   });
 
-  const unlistenAccept = await listen<string>('video_call_accept', (event) => {
-    handlers.onVideoCallAccept(event.payload);
+  const unlistenAccept = subscribe('video_call_accept', (payload) => {
+    handlers.onVideoCallAccept(payload);
   });
 
-  const unlistenReject = await listen<string>('video_call_reject', (event) => {
-    handlers.onVideoCallReject(event.payload);
+  const unlistenReject = subscribe('video_call_reject', (payload) => {
+    handlers.onVideoCallReject(payload);
   });
 
-  const unlistenEnd = await listen<string>('video_call_end', (event) => {
-    handlers.onVideoCallEnd(event.payload);
+  const unlistenEnd = subscribe('video_call_end', (payload) => {
+    handlers.onVideoCallEnd(payload);
   });
 
-  const unlistenMediaInfo = await listen<string>('media_info', (event) => {
+  const unlistenMediaInfo = subscribe('media_info', (payload) => {
     try {
-      handlers.onMediaInfo(JSON.parse(event.payload));
+      handlers.onMediaInfo(JSON.parse(payload));
     } catch (error) {
       console.error('处理媒体信息失败:', error);
     }
   });
 
-  const unlistenMediaReady = await listen<string>(
-    'media_receiver_ready',
-    (event) => {
-      handlers.onMediaReady(event.payload);
-    },
-  );
+  const unlistenMediaReady = subscribe('media_receiver_ready', (payload) => {
+    handlers.onMediaReady(payload);
+  });
 
   return [
     unlistenControl,

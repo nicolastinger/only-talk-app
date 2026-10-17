@@ -1,5 +1,5 @@
-import { listen } from '@tauri-apps/api/event';
 import { useIntl } from '@umijs/max';
+import { subscribe } from '@workspace/services';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './style/VideoReceiver.module.css';
 
@@ -33,17 +33,17 @@ const VideoReceiver = () => {
         let initFlag = false;
 
         // 监听视频帧事件
-        unlistenRef.current = await listen<number[]>('video_frame', (event) => {
-          console.log('流长度', event.payload.length);
+        unlistenRef.current = subscribe('video_frame', (payload) => {
+          console.log('流长度', payload.length);
           if (!sourceBufferRef.current) {
             console.warn('MediaSource 未就绪或已关闭');
             return;
           }
 
           // 开始信号
-          if (!initFlag && event.payload.length === 7) {
-            console.log('初始化信息', event.payload);
-            const isSignal = event.payload.find((item) => item === 1);
+          if (!initFlag && payload.length === 7) {
+            console.log('初始化信息', payload);
+            const isSignal = payload.find((item) => item === 1);
             if (isSignal === undefined) {
               console.log('收到开始信号，开始接收视频数据');
               initFlag = true;
@@ -53,8 +53,8 @@ const VideoReceiver = () => {
           }
 
           // 结束信号
-          if (initFlag && event.payload.length === 8) {
-            const isSignal = event.payload.find((item) => item === 1);
+          if (initFlag && payload.length === 8) {
+            const isSignal = payload.find((item) => item === 1);
             if (isSignal === undefined) {
               console.log('收到停止信号，停止接收视频数据');
               // 重置状态，准备接收下一次开始信号
@@ -64,10 +64,10 @@ const VideoReceiver = () => {
             }
           }
 
-          if (initFlag && event.payload.length > 0) {
+          if (initFlag && payload.length > 0) {
             try {
               // 将数据转换为 ArrayBuffer
-              const arrayBuffer = new Uint8Array(event.payload).buffer;
+              const arrayBuffer = new Uint8Array(payload).buffer;
 
               // 如果 SourceBuffer 正在更新，等待它完成
               if (sourceBufferRef.current.updating) {
