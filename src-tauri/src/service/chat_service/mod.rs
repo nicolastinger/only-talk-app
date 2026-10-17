@@ -10,16 +10,12 @@
 //! - [`media`]：图片/文件上传与压缩
 //! - [`forward`]：消息转发
 //! - [`recall`]：撤回与本地撤回核对
-//! - [`message_dispatch`]：入站消息分发
 //! - [`message_convert`]：单聊/群聊 raw 互转
-//! - [`message_alert`]：新消息到达提醒
 
 mod forward;
 mod group;
 mod media;
-mod message_alert;
 mod message_convert;
-mod message_dispatch;
 mod recall;
 mod record;
 mod send;
@@ -32,7 +28,6 @@ pub use group::{
 };
 pub use media::{send_file_msg_service, send_image_msg_service};
 pub use message_convert::{group_raw_to_private, normalize_for_target, private_raw_to_group};
-pub use message_dispatch::process_msg;
 pub use recall::{
     recall_chat_message_service, recall_group_chat_message_service, reconcile_group_recalls,
     reconcile_single_recalls, resolve_group_recall_target, resolve_single_recall_target,

@@ -19,7 +19,7 @@ use crate::quic_core::connection_state::{
     current_quic_epoch, invalidate_quic_epoch, QuicConnectionState, GLOBAL_QUIC_STATE,
 };
 use crate::quic_core::safe_configuration::configure_client;
-use crate::service::chat_service::process_msg;
+use crate::service::dispatcher::process_msg;
 use crate::service::user_service::{get_user_info, insert_user_info, sync_offline_messages};
 use crate::utils::global_static_str::{PING, SYSTEM};
 use crate::utils::message_types::{MSG_TYPE_PING, MSG_TYPE_TTL};

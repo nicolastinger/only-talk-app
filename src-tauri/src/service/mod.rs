@@ -2,6 +2,7 @@ pub mod api_service;
 pub mod chat_service;
 pub mod client_loop;
 pub mod config_service;
+pub mod dispatcher;
 pub mod file_service;
 pub mod friend_service;
 pub mod group_service;
