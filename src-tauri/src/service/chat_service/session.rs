@@ -19,7 +19,7 @@ use crate::models::entity::group_message_read::GroupMessageRead;
 use crate::models::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::models::vo::group_vo::GroupVo;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
-use crate::service::api_service::get_request;
+use crate::service::api_service::{get_request, parse_http_result};
 use crate::service::user_service::{get_user_info, get_user_map};
 use crate::utils::events;
 use crate::utils::global_static_str::talk_api_base;
@@ -314,8 +314,7 @@ pub async fn create_group_chat_session_service(group_id: String) -> Result<(), a
     if group.is_none() {
         let url = format!("{}/group/chat/info/{}", talk_api_base(), group_id);
         let result = get_request(url).await.map_err(|e| anyhow!(e))?;
-        let response: HttpResult =
-            serde_json::from_str(&result.body).map_err(|e| anyhow!("解析响应失败: {}", e))?;
+        let response: HttpResult = parse_http_result(&result.body)?;
 
         if response.code != 200 {
             return Err(anyhow!("群聊不存在"));

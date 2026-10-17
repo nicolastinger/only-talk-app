@@ -10,6 +10,7 @@ use crate::cmd::api_controller::{post_request, ApiResponse};
 use crate::models::dto::http_result::HttpResult;
 use crate::models::entity::user_info::UserInfo;
 use crate::models::entity::user_token::UserToken;
+use crate::service::api_service::parse_http_result;
 use crate::service::p2p_service;
 use crate::service::user_service::{add_user_map, teardown_session, user_login};
 use crate::utils::global_static_str::talk_api_domain;
@@ -60,8 +61,7 @@ async fn finish_login(
         None => format!("{}://{}/user/me", scheme, host),
     };
 
-    let sign_in_result: HttpResult =
-        serde_json::from_str(response_body).map_err(|e| e.to_string())?;
+    let sign_in_result: HttpResult = parse_http_result(response_body).map_err(|e| e.to_string())?;
     let data = sign_in_result.data.as_object().ok_or("sign_in data 不是 JSON 对象")?;
     let access_token =
         data.get("access_token").and_then(|v| v.as_str()).ok_or("缺少 access_token")?;
@@ -148,7 +148,7 @@ pub async fn github_login(url: String, app: tauri::AppHandle) -> Result<ApiRespo
         .await
         .map_err(|e| e.to_string())?;
     let resp_body = resp.text().await.map_err(|e| e.to_string())?;
-    let result: HttpResult = serde_json::from_str(&resp_body).map_err(|_| resp_body.clone())?;
+    let result: HttpResult = parse_http_result(&resp_body).map_err(|_| resp_body.clone())?;
     if result.code != 200 {
         return Err(resp_body);
     }
@@ -232,7 +232,7 @@ pub async fn github_login(url: String, app: tauri::AppHandle) -> Result<ApiRespo
     let status = resp.status().as_u16();
     let response_body = resp.text().await.map_err(|e| e.to_string())?;
     let cb_result: HttpResult =
-        serde_json::from_str(&response_body).map_err(|_| response_body.clone())?;
+        parse_http_result(&response_body).map_err(|_| response_body.clone())?;
     if cb_result.code != 200 {
         return Err(response_body);
     }

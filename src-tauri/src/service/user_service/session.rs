@@ -18,7 +18,7 @@ use crate::dao::init_private_db::init_private_db;
 use crate::models::dto::http_result::HttpResult;
 use crate::models::entity::app_log::LOG_LEVEL_INFO;
 use crate::quic_core::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
-use crate::service::api_service::post_request;
+use crate::service::api_service::{parse_http_result, post_request};
 use crate::service::chat_service::process_no_send_success_msg;
 use crate::service::client_loop::spawn_client_loop;
 use crate::service::friend_service::update_friend_list;
@@ -39,7 +39,7 @@ async fn fetch_private_db_key() -> Result<String, anyhow::Error> {
         crate::utils::device_info::device_fingerprint()
     );
     let result = post_request(url, body).await.map_err(|e| anyhow!(e))?;
-    let response: HttpResult = serde_json::from_str(&result.body)?;
+    let response: HttpResult = parse_http_result(&result.body)?;
     if response.code != 200 {
         return Err(anyhow!("获取数据库密钥失败: {}", response.message));
     }

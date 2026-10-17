@@ -19,8 +19,7 @@ use crate::dao::group_message_read::{
 use crate::models::dto::http_result::HttpResult;
 use crate::models::entity::chat_record_read::{CHAT_TYPE_GROUP, CHAT_TYPE_SINGLE};
 use crate::models::entity::system_notification::SystemNotification;
-use crate::service::api_service::post_request;
-use crate::service::group_service::parse_http_result;
+use crate::service::api_service::{parse_http_result, post_request};
 use crate::utils::global_static_str::talk_api_base;
 use crate::utils::session_uuid::single_session_uuid;
 use crate::utils::user_state::get_user_info;
@@ -179,7 +178,7 @@ pub async fn send_notify_read_message(key: String) -> Result<(), anyhow::Error> 
                 .expect("序列化通知已读失败");
             match post_request(format!("{}/notify/mark_read", talk_api_base()), body).await {
                 Ok(m) => {
-                    let result = match serde_json::from_str::<HttpResult>(&m.body) {
+                    let result = match parse_http_result(&m.body) {
                         Ok(r) => r,
                         Err(parse_err) => {
                             // 响应体不是预期 JSON(如 404/500 的文本页): 带上状态码与原文便于定位
@@ -220,7 +219,7 @@ pub async fn get_unread_notification() -> Result<(), anyhow::Error> {
     let url = format!("{}/notify/get_user_unread_notification", talk_api_base());
     let result = post_request(url, String::new()).await.map_err(|e| anyhow!(e))?;
     let data = result.body;
-    let result = serde_json::from_str::<HttpResult>(&data)?;
+    let result = parse_http_result(&data)?;
     if result.code != 200 {
         error!("获取未读通知失败 {}", result.message);
         return Ok(());

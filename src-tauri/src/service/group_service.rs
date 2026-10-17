@@ -12,14 +12,10 @@ use crate::models::entity::system_notification::SystemNotification;
 use crate::models::vo::group_vo::{
     CreateGroupApiRequest, CreateGroupRequest, GroupMemberVo, GroupVo,
 };
-use crate::service::api_service::{get_request, post_request};
+use crate::service::api_service::{get_request, parse_http_result, post_request};
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::talk_api_base;
 use crate::utils::time::get_now_time_stamp_as_millis;
-
-pub(crate) fn parse_http_result(data: &str) -> Result<HttpResult, anyhow::Error> {
-    serde_json::from_str::<HttpResult>(data).map_err(|e| anyhow!("解析响应失败: {}", e))
-}
 
 /// 同步群聊列表
 pub async fn sync_group_list() -> Result<(), anyhow::Error> {

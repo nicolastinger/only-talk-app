@@ -15,6 +15,7 @@ use serde_json::Value;
 use tokio::io::{AsyncRead, ReadBuf};
 use tokio_util::io::ReaderStream;
 
+use crate::models::dto::http_result::HttpResult;
 use crate::utils::http_client::{
     http_client, http_client_120, http_client_30, http_client_300, http_client_600,
 };
@@ -27,10 +28,20 @@ pub struct ApiResponse {
     pub body: String,
 }
 
+/// 当前 access_token(取自 `GLOBAL_QUIC_USER_INFO`), 缺失时为空串。
+pub async fn current_token() -> String {
+    let empty = String::new();
+    GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty).clone()
+}
+
+/// 解析响应体 JSON 为 `HttpResult`。
+pub fn parse_http_result(data: &str) -> Result<HttpResult, anyhow::Error> {
+    serde_json::from_str::<HttpResult>(data).map_err(|e| anyhow!("解析响应失败: {}", e))
+}
+
 /// 构造带 `Authorization` 头的请求头(token 取自 `GLOBAL_QUIC_USER_INFO`)。
 async fn auth_headers() -> Result<HeaderMap, String> {
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
     let mut headers = HeaderMap::new();
     headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
     Ok(headers)
@@ -154,8 +165,7 @@ pub async fn post_with_body(
 ) -> Result<Response, anyhow::Error> {
     let client = http_client_30();
 
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
     let mut headers = HeaderMap::new();
     headers.insert("Authorization", token.parse()?);
 
@@ -166,8 +176,7 @@ pub async fn post_with_body(
 pub async fn post_json<T: Serialize>(url: String, body: &T) -> Result<Response, anyhow::Error> {
     let client = http_client_30();
 
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
     let mut headers = HeaderMap::new();
     headers.insert("Authorization", token.parse()?);
 
@@ -178,8 +187,7 @@ pub async fn post_json<T: Serialize>(url: String, body: &T) -> Result<Response, 
 pub async fn get_with_token(url: String) -> Result<Response, anyhow::Error> {
     let client = http_client_30();
 
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
     let mut headers = HeaderMap::new();
     headers.insert("Authorization", token.parse()?);
 
@@ -223,8 +231,7 @@ pub async fn upload_file_with_fields(
 
     let client = http_client_120();
 
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
 
     info!(
         "upload_file_with_fields - URL: {}, Token length: {}, Token preview: {}",
@@ -278,8 +285,7 @@ pub async fn upload_file_with_progress(
 
     let client = http_client_120();
 
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
 
     let mut request = client.post(url);
     if !token.is_empty() {
@@ -344,8 +350,7 @@ pub async fn upload_multiple_files_with_fields(
 
     let client = http_client_300();
 
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
 
     let mut request = client.post(url);
 
@@ -392,8 +397,7 @@ pub async fn post_form_data(
 ) -> Result<Response, anyhow::Error> {
     let client = http_client_30();
 
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
+    let token = current_token().await;
 
     let mut request = client.post(url);
 

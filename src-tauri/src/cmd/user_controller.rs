@@ -7,7 +7,7 @@ use crate::models::dto::http_result::HttpResult;
 use crate::models::dto::update_user_dto::UpdateUserDTO;
 use crate::models::entity::user_info::UserInfo;
 use crate::quic_core::connection_state::GLOBAL_QUIC_STATE;
-use crate::service::api_service::{get_with_token, post_json};
+use crate::service::api_service::{get_with_token, parse_http_result, post_json};
 use crate::service::user_service::{disconnect_quic, reconnect_quic};
 use crate::utils::global_static_str::talk_api_base;
 use crate::GLOBAL_QUIC_USER_INFO;
@@ -109,7 +109,7 @@ pub async fn get_user_info_with_cache(uuid: String) -> Result<UserInfoWithCache,
         return Err(format!("HTTP错误: {}", status));
     }
 
-    let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    let http_result: HttpResult = parse_http_result(&body).map_err(|e| e.to_string())?;
 
     if http_result.code != 200 {
         return Err(http_result.message);
@@ -141,7 +141,7 @@ pub async fn refresh_user_info(uuid: String) -> Result<UserInfo, String> {
         return Err(format!("HTTP错误: {}", status));
     }
 
-    let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    let http_result: HttpResult = parse_http_result(&body).map_err(|e| e.to_string())?;
 
     if http_result.code != 200 {
         return Err(http_result.message);
@@ -167,7 +167,7 @@ pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<Strin
     let body = response.text().await.map_err(|e| e.to_string())?;
 
     if status.is_success() {
-        let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+        let http_result: HttpResult = parse_http_result(&body).map_err(|e| e.to_string())?;
         // 后端 update 走 success_empty()，业务成功码为 204（无数据），与 200 同样视为成功
         if http_result.code == 200 || http_result.code == 204 {
             if let Some(uuid) = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned() {
