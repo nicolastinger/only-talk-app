@@ -9,7 +9,7 @@ use log::{info, warn};
 
 use crate::models::bo::p2p_models::{P2pChannelType, P2pVideoConfig};
 use crate::quic_core::center_service::text_msg_service::generate_text_msg;
-use crate::quic_core::p2p_service::p2p_quic_service::get_sender;
+use crate::quic_core::p2p::io::get_sender;
 use crate::service::user_service::get_user_info;
 use crate::utils::message_types::{
     MSG_TYPE_P2P_MEDIA_READY, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,

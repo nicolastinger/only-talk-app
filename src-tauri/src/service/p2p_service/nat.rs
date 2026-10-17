@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use log::{info, warn};
 use serde::Deserialize;
 
-use crate::quic_core::p2p_service::p2p_stream_quic_server::{
+use crate::quic_core::p2p::server::{
     get_user_address_info, udp_port_forward, udp_port_forward_ipv6,
 };
 use crate::service::api_service::get_request;
