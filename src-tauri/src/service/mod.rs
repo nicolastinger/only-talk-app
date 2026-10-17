@@ -1,4 +1,5 @@
 pub mod api_service;
+pub mod auth_service;
 pub mod chat_service;
 pub mod client_loop;
 pub mod config_service;
