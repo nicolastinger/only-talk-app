@@ -13,12 +13,12 @@
     "build:all": "pnpm build:types && pnpm build:services && pnpm build && pnpm build:mobile",
     "typecheck": "pnpm -r typecheck",
     "tauri": "tauri",
-    "android:build:split": "tauri android build --apk --split-per-abi --target aarch64 --target armv7",
+    "android:build:split": "tauri android build --apk true --aab false --split-per-abi --target aarch64 --target armv7",
     "lint": "prettier --cache --write .",
     "prepare": "husky install"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.0.0-rc.18",
+    "@tauri-apps/cli": "2.9.5",
     "husky": "^9",
     "lint-staged": "^13.2.0",
     "prettier": "^2.8.7",
