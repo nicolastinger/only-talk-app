@@ -23,6 +23,8 @@ type MineChatBoxProps = {
   icon?: string;
   friendUuid: string;
   currentBizId?: string;
+  /** 该消息是否正在上传（上传期间不启动 ACK 超时） */
+  uploading?: boolean;
   /** 上传进度百分比 0-100（发送中展示） */
   uploadProgress?: number;
   /** 发送阶段：reading/compressing/uploading */
@@ -68,7 +70,9 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       timerRef.current = null;
     }
 
-    if (isAck !== undefined && !isAck) {
+    // 文件/图片上传期间不计入 ACK 超时：上传完成后(不再 uploading)才开始计时，
+    // 避免大文件上传耗时被误判为发送失败。
+    if (isAck !== undefined && !isAck && !props.uploading) {
       timerRef.current = setTimeout(() => {
         setAckFlag(1);
       }, 10000);
@@ -82,7 +86,7 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         timerRef.current = null;
       }
     };
-  }, [isAck]);
+  }, [isAck, props.uploading]);
 
   const getUserIcon = async (iconBizId: string) => {
     try {

@@ -614,7 +614,6 @@ const selectAndSend = async (
     messages.value.push(ui);
     await nextTick();
     scrollToBottom(true);
-    startAckTimer(textMsg.nano_id);
 
     const patch = (p: Partial<UiChatMessage>) => {
       const i = messages.value.findIndex(
@@ -664,6 +663,8 @@ const selectAndSend = async (
 
     try {
       await invoke(command, { textQuicMsg: textMsg });
+      // 上传/发送完成后才开始等待服务端 ACK，避免上传耗时被误判为超时
+      startAckTimer(textMsg.nano_id);
     } catch (e) {
       console.error("发送媒体失败:", e);
       patch({
@@ -709,9 +710,9 @@ const handleRetry = async (msg: UiChatMessage) => {
   if (msg.textMsg.text_type === MSG_TYPE_FILE && idx !== -1) {
     messages.value[idx].sendingFile = true;
   }
-  startAckTimer(msg.textMsg.nano_id);
   try {
     await invoke("retry_send_msg", { sendId: msg.textMsg.nano_id });
+    startAckTimer(msg.textMsg.nano_id);
     bumpPendingRefresh();
     return;
   } catch {
@@ -726,6 +727,7 @@ const handleRetry = async (msg: UiChatMessage) => {
   try {
     if (command) await invoke(command, { textQuicMsg: msg.textMsg });
     else throw new Error("不支持的类型");
+    startAckTimer(msg.textMsg.nano_id);
   } catch (e) {
     console.error("重发失败:", e);
     update(true, undefined);

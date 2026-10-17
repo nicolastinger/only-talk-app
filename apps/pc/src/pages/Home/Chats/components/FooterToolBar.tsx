@@ -30,8 +30,8 @@ interface FooterToolBarProps {
   friendUuid: string;
   onEmojiSelect?: (emoji: string) => void;
   onMessageSent?: (message: string) => void;
-  onUploadStart?: () => void;
-  onUploadEnd?: () => void;
+  onUploadStart?: (nanoId?: string) => void;
+  onUploadEnd?: (nanoId?: string) => void;
 }
 
 const EMOJI_LIST = [
@@ -164,11 +164,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
 
         // 先上屏(展示气泡与上传进度)，再执行发送
         onMessageSent?.(JSON.stringify(temp));
-        onUploadStart?.();
+        onUploadStart?.(text_msg_raw.nano_id);
         try {
           await invoke('send_image_msg', { textQuicMsg: text_msg_raw });
         } finally {
-          onUploadEnd?.();
+          onUploadEnd?.(text_msg_raw.nano_id);
         }
       }
     } catch (e) {
@@ -215,11 +215,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
 
         // 先上屏(展示气泡与上传进度)，再执行发送
         onMessageSent?.(JSON.stringify(temp));
-        onUploadStart?.();
+        onUploadStart?.(text_msg_raw.nano_id);
         try {
           await invoke('send_file_msg', { textQuicMsg: text_msg_raw });
         } finally {
-          onUploadEnd?.();
+          onUploadEnd?.(text_msg_raw.nano_id);
         }
       }
     } catch (e) {

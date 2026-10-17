@@ -18,8 +18,8 @@ const { TextArea } = Input;
 interface ChatFooterProps {
   friendUuid: string;
   onMessageSent: (message: string) => void;
-  onUploadStart?: () => void;
-  onUploadEnd?: () => void;
+  onUploadStart?: (nanoId?: string) => void;
+  onUploadEnd?: (nanoId?: string) => void;
 }
 
 const ChatFooter: React.FC<ChatFooterProps> = ({

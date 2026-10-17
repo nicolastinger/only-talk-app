@@ -21,6 +21,8 @@ interface MessageListProps {
   onToggleSelect?: (msg: ChatMessage) => void;
   /** 发送进度：nano_id -> { percent, phase } */
   uploadProgressMap?: Record<string, { percent: number; phase: string }>;
+  /** 正在上传的消息 nano_id（上传期间不计入 ACK 超时） */
+  uploadingIds?: Set<string>;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -38,6 +40,7 @@ const MessageList: React.FC<MessageListProps> = ({
   onMessageContext,
   onToggleSelect,
   uploadProgressMap,
+  uploadingIds,
 }) => {
   const intl = useIntl();
   const getMessageAnimationClass = (nanoId: string): string => {
@@ -144,6 +147,7 @@ const MessageList: React.FC<MessageListProps> = ({
                   isAck={msg.ack}
                   friendUuid={friendUuid}
                   currentBizId={currentBizId}
+                  uploading={uploadingIds?.has(message.nano_id) ?? false}
                   uploadProgress={uploadProgressMap?.[message.nano_id]?.percent}
                   sendPhase={uploadProgressMap?.[message.nano_id]?.phase}
                 />
@@ -183,6 +187,7 @@ export default React.memo(MessageList, (prevProps, nextProps) => {
 
   if (
     prevProps.uploadProgressMap !== nextProps.uploadProgressMap ||
+    prevProps.uploadingIds !== nextProps.uploadingIds ||
     prevProps.selectMode !== nextProps.selectMode ||
     prevProps.selectedIds !== nextProps.selectedIds ||
     prevProps.friendName !== nextProps.friendName ||

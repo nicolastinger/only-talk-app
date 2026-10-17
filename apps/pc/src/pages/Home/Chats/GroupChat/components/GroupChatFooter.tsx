@@ -32,8 +32,8 @@ const MSG_TYPE_GROUP_FILE = 2003;
 interface GroupChatFooterProps {
   groupUuid: string;
   onMessageSent: (message: string) => void;
-  onUploadStart?: () => void;
-  onUploadEnd?: () => void;
+  onUploadStart?: (nanoId?: string) => void;
+  onUploadEnd?: (nanoId?: string) => void;
 }
 
 const EMOJI_LIST = [
@@ -198,11 +198,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
 
         // 先上屏(展示气泡与上传进度)，再执行发送
         onMessageSent(JSON.stringify(temp));
-        onUploadStart?.();
+        onUploadStart?.(text_msg_raw.nano_id);
         try {
           await invoke('send_group_image_msg', { textQuicMsg: text_msg_raw });
         } finally {
-          onUploadEnd?.();
+          onUploadEnd?.(text_msg_raw.nano_id);
         }
       }
     } catch (e) {
@@ -247,11 +247,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
 
         // 先上屏(展示气泡与上传进度)，再执行发送
         onMessageSent(JSON.stringify(temp));
-        onUploadStart?.();
+        onUploadStart?.(text_msg_raw.nano_id);
         try {
           await invoke('send_group_file_msg', { textQuicMsg: text_msg_raw });
         } finally {
-          onUploadEnd?.();
+          onUploadEnd?.(text_msg_raw.nano_id);
         }
       }
     } catch (e) {

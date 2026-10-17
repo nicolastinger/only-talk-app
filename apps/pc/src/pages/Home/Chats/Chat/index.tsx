@@ -60,6 +60,8 @@ const ChatPage: React.FC = () => {
   const [uploadProgressMap, setUploadProgressMap] = useState<
     Record<string, { percent: number; phase: string }>
   >({});
+  /** 正在上传的乐观消息 nano_id：上传期间不计入 ACK 超时，上传完成后才开始等待回执 */
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
   const [pendingBarVisible, setPendingBarVisible] = useState(false);
   const [pendingRefreshSignal, setPendingRefreshSignal] = useState(0);
 
@@ -608,14 +610,25 @@ const ChatPage: React.FC = () => {
     }, 300);
   };
 
-  const handleUploadStart = () => {
+  const handleUploadStart = (nanoId?: string) => {
     setIsUploading(true);
     setUploadPercent(0);
+    if (nanoId) {
+      setUploadingIds((prev) => new Set(prev).add(nanoId));
+    }
   };
 
-  const handleUploadEnd = () => {
+  const handleUploadEnd = (nanoId?: string) => {
     setUploadPercent(100);
     setIsUploading(false);
+    if (nanoId) {
+      setUploadingIds((prev) => {
+        if (!prev.has(nanoId)) return prev;
+        const next = new Set(prev);
+        next.delete(nanoId);
+        return next;
+      });
+    }
   };
 
   return (
@@ -671,6 +684,7 @@ const ChatPage: React.FC = () => {
             onMessageContext={handleMessageContext}
             onToggleSelect={handleToggleSelect}
             uploadProgressMap={uploadProgressMap}
+            uploadingIds={uploadingIds}
           />
           <div id="anchor"></div>
         </div>

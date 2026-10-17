@@ -616,7 +616,6 @@ const selectAndSendGroup = async (
     messages.value.push(ui);
     await nextTick();
     scrollToBottom(true);
-    startAckTimer(textMsg.nano_id);
 
     const patch = (p: Partial<UiChatMessage>) => {
       const i = messages.value.findIndex(
@@ -736,7 +735,6 @@ const handleRetry = async (msg: UiChatMessage) => {
   messages.value.push(ui);
   await nextTick();
   scrollToBottom(true);
-  startAckTimer(textMsg.nano_id);
 
   const command =
     type === MSG_TYPE_GROUP_TEXT
