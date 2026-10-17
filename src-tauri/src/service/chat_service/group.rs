@@ -3,7 +3,6 @@ use std::path::Path;
 use anyhow::anyhow;
 use log::info;
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
 
 use super::media::{
     ensure_within_size_limit, prepare_image_for_upload, upload_group_chat_file_server,
@@ -19,8 +18,9 @@ use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
+use crate::utils::app_emit;
 use crate::utils::global_static_str::MAX_FILE_UPLOAD_SIZE;
-use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST};
+use crate::GLOBAL_QUIC_SERVER_LIST;
 
 /// 发送群聊文本消息（简化版，无prev_id和锁机制，写入群消息 ack 表）
 pub async fn send_group_text_msg_service(
@@ -125,7 +125,7 @@ async fn update_group_session_after_send(
         let chat_session_event =
             ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
-        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
+        app_emit::emit("chat_session", payload)?;
     } else {
         // 更新现有会话
         let mut chat_session = group_session.remove(0);
@@ -141,7 +141,7 @@ async fn update_group_session_after_send(
         let chat_session_event =
             ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
-        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
+        app_emit::emit("chat_session", payload)?;
     }
 
     Ok(())

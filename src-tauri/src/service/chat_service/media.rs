@@ -6,18 +6,18 @@ use anyhow::anyhow;
 use image::ImageReader;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
 use tokio::time::timeout;
 
 use super::send::send_text_msg_service;
 use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord};
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::api_service::{upload_file_with_progress, UploadProgressFn};
+use crate::utils::app_emit;
 use crate::utils::global_static_str::{
     talk_api_base, MAX_FILE_UPLOAD_SIZE, MAX_IMAGE_UPLOAD_SIZE, PLATFORM, ZERO_UUID,
 };
 use crate::utils::image_utils::{compress_image_to_webp, should_skip_image_compression};
-use crate::{APP_HANDLE, GLOBAL_MSG_SEND_LOCK};
+use crate::GLOBAL_MSG_SEND_LOCK;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct FileInfo {
@@ -55,20 +55,18 @@ struct ChatFileUploadProgress {
     total: u64,
 }
 
-/// 上报发送进度(前端按 nano_id 匹配对应消息; 无 AppHandle 时忽略)。
+/// 上报发送进度(前端按 nano_id 匹配对应消息; 前端未就绪时静默忽略)。
 fn emit_chat_send_progress(nano_id: &str, file_name: &str, phase: &str, uploaded: u64, total: u64) {
-    if let Some(handle) = APP_HANDLE.get() {
-        let _ = handle.emit(
-            "chat_file_upload_progress",
-            ChatFileUploadProgress {
-                nano_id: nano_id.to_string(),
-                file_name: file_name.to_string(),
-                phase: phase.to_string(),
-                uploaded,
-                total,
-            },
-        );
-    }
+    let _ = app_emit::emit(
+        "chat_file_upload_progress",
+        ChatFileUploadProgress {
+            nano_id: nano_id.to_string(),
+            file_name: file_name.to_string(),
+            phase: phase.to_string(),
+            uploaded,
+            total,
+        },
+    );
 }
 
 /// 构造以 nano_id 为键的上传进度回调(phase = uploading)。

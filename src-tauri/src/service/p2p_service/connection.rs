@@ -5,7 +5,6 @@ use std::time::Duration;
 use anyhow::anyhow;
 use log::{error, info};
 use nanoid::nanoid;
-use tauri::Emitter;
 
 use super::nat::check_user_ip_type;
 use crate::models::bo::p2p_models::{P2pInitMsg, P2pMsg, UserAddressInfo};
@@ -13,8 +12,9 @@ use crate::models::bo::text_msg::TextQuicMsg;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg;
 use crate::quic_core::p2p_service::p2p_stream_quic_client::run_client;
 use crate::quic_core::p2p_service::p2p_stream_quic_server::{run_server, udp_port_forward};
+use crate::utils::app_emit;
 use crate::utils::message_types::{MSG_TYPE_P2P, P2P_ACCEPT_REQUEST};
-use crate::{APP_HANDLE, GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
 
 /// 发送p2p初始化信息
 pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error> {
@@ -120,10 +120,8 @@ pub async fn access_p2p_request(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::
 pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Error> {
     let target_address_info: UserAddressInfo = serde_json::from_slice(&text_quic_msg.raw)?;
     // 打开视频窗口
-    if let Some(handle) = APP_HANDLE.get() {
-        let p2p_msg = P2pMsg { r#type: P2P_ACCEPT_REQUEST, raw: target_address_info.uuid.clone() };
-        handle.emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
-    }
+    let p2p_msg = P2pMsg { r#type: P2P_ACCEPT_REQUEST, raw: target_address_info.uuid.clone() };
+    app_emit::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
     tokio::spawn(async move {
         info!("收到 {:?}", target_address_info);
         // 开启ipv4服务端
@@ -276,10 +274,7 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
                 false => {
                     let p2p_msg =
                         P2pMsg { r#type: 104, raw: serde_json::to_string(&p2p_init_msg)? };
-                    APP_HANDLE
-                        .get()
-                        .ok_or(anyhow!("无法获取app"))?
-                        .emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
+                    app_emit::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
                 }
             }
         }
@@ -287,10 +282,7 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
             // 接收到p2p请求
             // 发送数据给前端
             let p2p_msg = P2pMsg { r#type: 102, raw: serde_json::to_string(&p2p_init_msg)? };
-            APP_HANDLE
-                .get()
-                .ok_or(anyhow!("无法获取app"))?
-                .emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
+            app_emit::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
         }
         (false, false) => {
             error!("发错人了")

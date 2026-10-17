@@ -1,6 +1,6 @@
-use crate::emit_app::emit_controller::emit_notify_read;
 use crate::models::entity::system_notification::{SystemNotification, UnreadCounts};
 use crate::service::user_service::get_user_info;
+use crate::utils::app_emit;
 
 /// 获取系统通知信息
 #[tauri::command]
@@ -19,7 +19,7 @@ pub async fn batch_read_system_notification(read_ids: Vec<String>) -> Result<i32
     let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
     let res = SystemNotification::batch_read(&me, read_ids).await.map_err(|e| e.to_string())?;
     if res > 0 {
-        let _ = emit_notify_read();
+        let _ = app_emit::emit("listen_notify_read", "notify_read");
     }
     Ok(res)
 }
@@ -29,7 +29,7 @@ pub async fn batch_read_system_notification(read_ids: Vec<String>) -> Result<i32
 pub async fn clear_all_unread_notifications() -> Result<(), String> {
     let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
     SystemNotification::clear_all_unread(&me).await.map_err(|e| e.to_string())?;
-    let _ = emit_notify_read();
+    let _ = app_emit::emit("listen_notify_read", "notify_read");
     Ok(())
 }
 
@@ -47,7 +47,7 @@ pub async fn clear_unread_by_level(
         .await
         .map_err(|e| e.to_string())?;
     if res > 0 {
-        let _ = emit_notify_read();
+        let _ = app_emit::emit("listen_notify_read", "notify_read");
     }
     Ok(res)
 }

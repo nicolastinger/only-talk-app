@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use log::{error, info, warn};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use tauri::{Emitter, Runtime};
+use tauri::Runtime;
 
 use crate::config::get_config;
 use crate::dao::chat_record_db::query_chat_record_by_id_from_db;
@@ -23,7 +23,7 @@ use crate::models::entity::file_record::FileRecord;
 use crate::models::vo::file_vo::{FileVo, LocalFileVo};
 use crate::service::api_service::{get_without_token, post_with_body};
 use crate::utils::global_static_str::MONTHLY_RESOURCE_PATH;
-use crate::utils::uuid_utils;
+use crate::utils::{app_emit, uuid_utils};
 
 /// 从nano_id获取聊天记录中的文件名
 async fn get_file_name_from_nano_id(nano_id: Option<&str>) -> Option<String> {
@@ -201,19 +201,17 @@ struct ChatFileDownloadProgress {
     total: u64,
 }
 
-/// 上报聊天文件下载进度(前端按 bizId 匹配对应消息; 无 AppHandle 时忽略)。
+/// 上报聊天文件下载进度(前端按 bizId 匹配对应消息; 前端未就绪时静默忽略)。
 fn emit_chat_file_progress(biz_id: &str, file_name: &str, downloaded: u64, total: u64) {
-    if let Some(handle) = crate::APP_HANDLE.get() {
-        let _ = handle.emit(
-            "chat_file_download_progress",
-            ChatFileDownloadProgress {
-                biz_id: biz_id.to_string(),
-                file_name: file_name.to_string(),
-                downloaded,
-                total,
-            },
-        );
-    }
+    let _ = app_emit::emit(
+        "chat_file_download_progress",
+        ChatFileDownloadProgress {
+            biz_id: biz_id.to_string(),
+            file_name: file_name.to_string(),
+            downloaded,
+            total,
+        },
+    );
 }
 
 /**

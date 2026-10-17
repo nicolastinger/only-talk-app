@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use log::{error, info};
 use serde_json::Value;
-use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::dao::friend_db::{
@@ -15,8 +14,8 @@ use crate::models::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};
 use crate::models::vo::http_response::Response;
 use crate::service::api_service::post_request;
 use crate::service::user_service::get_user_info;
+use crate::utils::app_emit;
 use crate::utils::global_static_str::talk_api_base;
-use crate::APP_HANDLE;
 
 pub async fn process_friend_notify_message(
     system_notification: SystemNotification,
@@ -26,9 +25,7 @@ pub async fn process_friend_notify_message(
         1 => {
             // 好友发起请求通知
             info!("好友发起请求通知 {:?}", system_notification);
-            if let Some(handle) = APP_HANDLE.get() {
-                let _ = handle.emit("friend_list_changed", "request_received");
-            }
+            let _ = app_emit::emit("friend_list_changed", "request_received");
         }
         2 => {
             // 处理好友通知

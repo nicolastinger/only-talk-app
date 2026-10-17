@@ -1,6 +1,5 @@
 use anyhow::anyhow;
 use log::{error, info};
-use tauri::Emitter;
 
 use crate::dao::chat_record_db::query_last_chat_record;
 use crate::dao::chat_record_read::update_last_read_msg;
@@ -22,10 +21,11 @@ use crate::models::vo::group_vo::GroupVo;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::api_service::get_request;
 use crate::service::user_service::{get_user_info, get_user_map};
+use crate::utils::app_emit;
 use crate::utils::global_static_str::talk_api_base;
 use crate::utils::message_types::MSG_TYPE_P2P;
 use crate::utils::time::get_now_time_stamp_as_millis;
-use crate::{APP_HANDLE, GLOBAL_QUIC_USER_INFO};
+use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 获取会话列表
 pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
@@ -68,7 +68,7 @@ pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow:
         ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session.to_canonical(&me)) };
     let payload = serde_json::to_string(&chat_session_event)?;
     {
-        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
+        app_emit::emit("chat_session", payload)?;
     }
     Ok(())
 }
@@ -127,7 +127,7 @@ pub async fn update_group_last_read_msg_service(
         let chat_session_event =
             ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
         let payload = serde_json::to_string(&chat_session_event)?;
-        APP_HANDLE.get().ok_or(anyhow!("获取app失败"))?.emit("chat_session", payload)?;
+        app_emit::emit("chat_session", payload)?;
     }
 
     Ok(())

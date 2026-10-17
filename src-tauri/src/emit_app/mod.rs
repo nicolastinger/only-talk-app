@@ -1,4 +1,3 @@
-pub mod emit_controller;
 mod ports;
 #[cfg(desktop)]
 pub mod tray;
