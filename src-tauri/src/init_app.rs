@@ -5,15 +5,14 @@ use chrono::Local;
 use fast_log::plugin::file_split::{DateType, KeepType, Rolling, RollingType};
 use fast_log::plugin::packer::LogPacker;
 use fast_log::Config;
-use log::{error, info, LevelFilter};
-use tauri::{Manager, Wry};
+use log::{info, LevelFilter};
+use tauri::Wry;
 
 use crate::config::set_config;
 use crate::dao::init_common_db::init_common_sqlite;
 use crate::service::config_service::init_persisted_config;
 use crate::utils::global_static_str::{
-    get_env, APP_PATH, DEFAULT_IMAGE, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH,
-    RESOURCE_PATH, SQLITE_PATH,
+    get_env, APP_PATH, LOG_FILE_NAME, LOG_PATH, MONTHLY_RESOURCE_PATH, RESOURCE_PATH, SQLITE_PATH,
 };
 
 pub async fn init_app(
@@ -82,91 +81,10 @@ pub async fn init_app(
     // 初始化并加载持久化配置(client_config 表 → 内存), 供 talk_api_base()/主题/语言解析
     init_persisted_config().await.expect("初始化持久化配置失败!");
 
-    // // 复制打包的资源文件到可访问目录（移动平台需要）
-    // if let Some(handle) = app_handle {
-    //     copy_resources_to_app_dir(&handle, &resource_path).await;
-    // }
-
     // 监测ipv6是否支持延后到登录成功后执行(check_ipv6_support)，
     // 因为 NAT UDP 端口需登录后从 API 动态获取
     info!("应用启动成功");
     Ok(())
-}
-
-/// 复制打包的资源文件到应用可访问的目录
-#[allow(dead_code)]
-async fn copy_resources_to_app_dir(app_handle: &tauri::AppHandle<Wry>, target_dir: &Path) {
-    use tauri::path::BaseDirectory;
-
-    info!("开始复制资源文件...");
-
-    // 尝试从资源目录复制默认图片
-    let resource_file_path = match app_handle
-        .path()
-        .resolve(format!("{}/{}", RESOURCE_PATH, DEFAULT_IMAGE), BaseDirectory::Resource)
-    {
-        Ok(path) => {
-            info!("解析到的资源文件路径: {:?}", path);
-            path
-        }
-        Err(e) => {
-            error!("解析资源文件路径失败: {}", e);
-            return;
-        }
-    };
-
-    let source_path = Path::new(&resource_file_path);
-    let target_path = target_dir.join(DEFAULT_IMAGE);
-
-    info!("源资源路径: {:?}", source_path);
-    info!("目标资源路径: {:?}", target_path);
-    info!("源文件是否存在: {}", source_path.exists());
-    info!("目标文件是否存在: {}", target_path.exists());
-
-    // 如果目标文件已存在，跳过复制
-    if target_path.exists() {
-        info!("资源文件已存在，跳过复制");
-        return;
-    }
-
-    // 尝试复制文件
-    if source_path.exists() {
-        match fs::copy(source_path, &target_path) {
-            Ok(bytes) => {
-                info!("成功复制资源文件: {:?} ({} bytes)", target_path, bytes);
-            }
-            Err(e) => {
-                error!("复制资源文件失败: {}", e);
-                // 尝试列出打包目录中的文件
-                if let Ok(resource_dir) =
-                    app_handle.path().resolve(RESOURCE_PATH, BaseDirectory::Resource)
-                {
-                    info!("资源目录: {:?}", resource_dir);
-                    if let Ok(entries) = fs::read_dir(&resource_dir) {
-                        for entry in entries.flatten() {
-                            info!("资源目录中的文件: {:?}", entry.path());
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        error!("源资源文件不存在: {:?}", source_path);
-        // 尝试列出资源目录
-        if let Ok(resource_dir) = app_handle.path().resolve(RESOURCE_PATH, BaseDirectory::Resource)
-        {
-            info!("尝试列出资源目录: {:?}", resource_dir);
-            if resource_dir.exists() {
-                if let Ok(entries) = fs::read_dir(&resource_dir) {
-                    for entry in entries.flatten() {
-                        info!("找到文件: {:?}", entry.path());
-                    }
-                }
-            } else {
-                error!("资源目录不存在: {:?}", resource_dir);
-            }
-        }
-    }
 }
 
 // 启动时把上一次运行遗留的日志(修改日期早于今天)按最后修改时间重命名,

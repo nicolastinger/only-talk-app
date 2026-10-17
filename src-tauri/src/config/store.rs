@@ -18,15 +18,6 @@ pub fn get_config(key: &str) -> Option<String> {
     GLOBAL_CONFIG.get(key).map(|v| v.value().clone())
 }
 
-/// 获取配置项（带默认值）
-#[allow(dead_code)]
-pub fn get_config_or_default(key: &str, default: &str) -> String {
-    get_config(key).unwrap_or_else(|| {
-        debug!("配置项 {} 不存在，使用默认值: {}", key, default);
-        default.to_string()
-    })
-}
-
 /// 删除配置项
 #[allow(dead_code)]
 pub fn remove_config(key: &str) {
@@ -96,12 +87,6 @@ pub fn set_config_if_missing(key: &str, default_value: &str) {
         set_config(key, default_value);
         debug!("设置默认配置: {} = {}", key, default_value);
     }
-}
-
-/// 更新配置（存在则更新，不存在则设置）
-#[allow(dead_code)]
-pub fn update_config(key: &str, value: &str) {
-    set_config(key, value);
 }
 
 /// 导出配置为JSON字符串
