@@ -13,12 +13,10 @@ use crate::dao::session_db::{query_chat_session_by_user_db, update_chat_session_
 use crate::models::entity::chat_record_raw::ChatRecordRaw;
 use crate::models::entity::chat_session::ChatSession;
 use crate::models::entity::group_message_ack::GroupMessageAck;
-use crate::models::vo::chat_session_vo::{ChatSessionEvent, ChatSessionVo};
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
 use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
-use crate::utils::events;
 use crate::utils::global_static_str::MAX_FILE_UPLOAD_SIZE;
 use crate::GLOBAL_QUIC_SERVER_LIST;
 
@@ -122,10 +120,7 @@ async fn update_group_session_after_send(
         update_chat_session_db(&chat_session).await?;
 
         // 发送会话事件到前端
-        let chat_session_event =
-            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
-        let payload = serde_json::to_string(&chat_session_event)?;
-        events::emit("chat_session", payload)?;
+        super::emit_chat_session_event(chat_session, 0).await?;
     } else {
         // 更新现有会话
         let mut chat_session = group_session.remove(0);
@@ -138,10 +133,7 @@ async fn update_group_session_after_send(
         update_chat_session_db(&chat_session).await?;
 
         // 发送会话事件到前端
-        let chat_session_event =
-            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
-        let payload = serde_json::to_string(&chat_session_event)?;
-        events::emit("chat_session", payload)?;
+        super::emit_chat_session_event(chat_session, 0).await?;
     }
 
     Ok(())

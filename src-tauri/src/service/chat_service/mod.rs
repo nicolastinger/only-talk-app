@@ -44,7 +44,7 @@ pub use send::{
 };
 pub use session::{
     clear_all_unread_sessions_service, clear_chat_session, create_chat_session_service,
-    create_group_chat_session_service, get_chat_session_service, get_group_chat_session_service,
-    hide_chat_session_service, search_chat_session_service, update_group_last_read_msg_service,
-    update_last_read_msg_from_db, update_last_read_msg_service,
+    create_group_chat_session_service, emit_chat_session_event, get_chat_session_service,
+    get_group_chat_session_service, hide_chat_session_service, search_chat_session_service,
+    update_group_last_read_msg_service, update_last_read_msg_from_db, update_last_read_msg_service,
 };

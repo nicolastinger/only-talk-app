@@ -27,6 +27,20 @@ use crate::utils::message_types::MSG_TYPE_P2P;
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::GLOBAL_QUIC_USER_INFO;
 
+/// 统一向前端广播会话事件(`chat_session`)。
+///
+/// `event_type`: 0 = 清未读/普通更新, 1 = 新消息置顶。
+pub async fn emit_chat_session_event(
+    chat_session: ChatSession,
+    event_type: i32,
+) -> Result<(), anyhow::Error> {
+    let payload = serde_json::to_string(&ChatSessionEvent {
+        r#type: event_type,
+        data: ChatSessionVo::from(chat_session),
+    })?;
+    events::emit("chat_session", payload)
+}
+
 /// 获取会话列表
 pub async fn get_chat_session_service() -> Result<Vec<ChatSessionVo>, anyhow::Error> {
     let uuid =
@@ -64,12 +78,7 @@ pub async fn clear_chat_session(chat_session: ChatSession) -> Result<(), anyhow:
     // 清空/清理会话事件统一为规范方向（send_user=对方、recv_user=我），
     // 避免 ack 等路径把方向写反、前端误判
     let me = get_user_info("uuid").await?;
-    let chat_session_event =
-        ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session.to_canonical(&me)) };
-    let payload = serde_json::to_string(&chat_session_event)?;
-    {
-        events::emit("chat_session", payload)?;
-    }
+    emit_chat_session_event(chat_session.to_canonical(&me), 0).await?;
     Ok(())
 }
 
@@ -124,10 +133,7 @@ pub async fn update_group_last_read_msg_service(
         chat_session.unread_count = 0;
         update_chat_session_local_db(&chat_session).await?;
 
-        let chat_session_event =
-            ChatSessionEvent { r#type: 0, data: ChatSessionVo::from(chat_session) };
-        let payload = serde_json::to_string(&chat_session_event)?;
-        events::emit("chat_session", payload)?;
+        emit_chat_session_event(chat_session, 0).await?;
     }
 
     Ok(())
