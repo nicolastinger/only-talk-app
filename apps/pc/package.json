@@ -9,6 +9,8 @@
     "build": "max build",
     "dev": "max dev",
     "typecheck": "max setup && tsc --noEmit",
+    "lint": "max lint --eslint-only && max lint --stylelint-only",
+    "lint:fix": "max lint --fix --eslint-only && max lint --fix --stylelint-only",
     "format": "prettier --cache --write .",
     "postinstall": "max setup",
     "prepare": "husky",

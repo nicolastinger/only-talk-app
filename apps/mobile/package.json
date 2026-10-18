@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint src --ext .ts,.vue",
+    "lint:fix": "eslint src --ext .ts,.vue --fix",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
@@ -32,13 +34,18 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.9.5",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-vue": "^5.0.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-vue": "^9.33.0",
     "less": "^4.2.0",
     "prettier": "^2.8.7",
     "prettier-plugin-organize-imports": "^3.2.2",
     "prettier-plugin-packagejson": "^2.4.3",
     "typescript": "^5.0.3",
     "vite": "^5.0.0",
+    "vue-eslint-parser": "^9.4.3",
     "vue-tsc": "^2.0.0"
   }
 }

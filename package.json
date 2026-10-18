@@ -12,10 +12,17 @@
     "build:services": "pnpm --filter @workspace/services build",
     "build:all": "pnpm build:types && pnpm build:services && pnpm build && pnpm build:mobile",
     "typecheck": "pnpm -r typecheck",
+    "lint:pc": "pnpm --filter @workspace/app-pc lint",
+    "lint:mobile": "pnpm --filter @workspace/app-mobile lint",
+    "lint:web": "pnpm --filter @workspace/app-web lint",
+    "lint:fe": "pnpm lint:pc && pnpm lint:mobile && pnpm lint:web",
+    "lint:rust:fmt": "cd src-tauri && cargo +nightly fmt --all --check",
+    "lint:rust:clippy": "cd src-tauri && cargo +stable clippy --all-targets",
+    "lint:rust": "pnpm lint:rust:fmt && pnpm lint:rust:clippy",
     "tauri": "tauri",
     "android:build:split": "tauri android build --apk true --aab false --split-per-abi --target aarch64 --target armv7",
     "lint": "prettier --cache --write .",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.9.5",
@@ -29,5 +36,10 @@
   "engines": {
     "node": ">=16.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "table>ajv": "8.17.1"
+    }
   }
 }

@@ -1,0 +1,4 @@
+# 推送前保护钩子: 前端 lint + src-tauri fmt/clippy
+# 具体检查项与范围判定见 scripts/pre-push.mjs
+# 跳过: git push --no-verify 或 SKIP_GIT_HOOKS=1 git push
+node "$(dirname -- "$0")/../scripts/pre-push.mjs"
