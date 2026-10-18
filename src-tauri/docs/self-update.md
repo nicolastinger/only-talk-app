@@ -100,6 +100,13 @@ GitHub Actions (client-ci.yml)
 - PC 端「设置-关于」与 Mobile 端「设置-关于」都走这个 helper, 初值即为构建期版本, 挂载后再用运行时
   版本校正(不会闪一下旧版本号)。
 
+> **权限坑(历史 bug)**: PC 登录后主界面在 `home` 窗口(登录窗才是 `main`), 而 `tauri.conf.json` 的
+> `app.security.capabilities` 只启用了 `window-default`(`windows: ["*"]`) 与 `pc-autostart`。
+> 因此 `window-default` 必须显式放开 **`core:app:allow-version`**(已在 `capabilities/window-default.json`),
+> 否则 `getVersion()` 会被 ACL 拒绝: PC 端「关于」页只能显示兜底版本(曾长期显示写死的 1.0.0),
+> 「检查更新」也会把当前版本当成 0.0.0 从而永远提示有新版本。
+> Android 端用的是 `mobile-default`(含 `core:default`), 不受影响。
+
 ### 4.3 NSIS 安装器钩子(`installer.nsi`)
 
 ```nsi
