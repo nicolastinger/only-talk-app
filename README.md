@@ -159,8 +159,24 @@ pnpm tauri build
 ### 5. 其他常用命令
 
 ```bash
-# 代码格式化
+# 代码格式化（全仓库 prettier --write）
 pnpm lint
+
+# 各端代码检查（只检查、不修改）
+pnpm lint:fe        # = lint:pc + lint:mobile + lint:web
+pnpm lint:pc        # apps/pc      eslint + stylelint
+pnpm lint:mobile    # apps/mobile  eslint
+pnpm lint:web       # apps/web     eslint
+
+# src-tauri 检查
+pnpm lint:rust      # = lint:rust:fmt + lint:rust:clippy
+pnpm lint:rust:fmt  # cargo +nightly fmt --all --check
+pnpm lint:rust:clippy
+
+# 自动修复前端问题
+pnpm --filter @workspace/app-pc lint:fix
+pnpm --filter @workspace/app-mobile lint:fix
+pnpm --filter @workspace/app-web lint:fix
 
 # 构建 types 包
 pnpm build:types
@@ -168,6 +184,8 @@ pnpm build:types
 # 构建 services 包
 pnpm build:services
 ```
+
+> 推送前 Git 钩子会自动执行对应端的 lint / fmt / clippy，详见 [docs/lint-and-git-hooks.md](docs/lint-and-git-hooks.md)。
 
 ## 本地运行环境与数据目录
 
@@ -281,8 +299,10 @@ pnpm tauri dev
 
 ### 代码规范
 
-- 使用 Prettier 格码格式化
-- 使用 Husky + lint-staged 进行提交前检查
+- 使用 Prettier 进行代码格式化（`pnpm lint` 为全仓库 `prettier --write`）
+- 使用 ESLint 做静态检查：apps/pc 走 Umi Max 预设（含 stylelint），apps/mobile / apps/web 走 `eslint:recommended + plugin:vue/vue3-essential + @typescript-eslint/recommended`
+- src-tauri 使用 `cargo +nightly fmt`（rustfmt.toml 含 nightly 专属选项）与 `cargo clippy` 检查
+- Husky 推送前钩子（pre-push）按改动范围自动跑上述检查，见 [docs/lint-and-git-hooks.md](docs/lint-and-git-hooks.md)
 - TypeScript 严格模式
 
 ## 文档资源
