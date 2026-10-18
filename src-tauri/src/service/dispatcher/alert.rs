@@ -142,12 +142,10 @@ pub(crate) async fn on_incoming_message(
     }
 
     // 后台/失焦 → 发系统通知，并携带会话跳转信息(extra.chat)
-    info!(
-        "发送新消息系统通知: is_group={} target={} title={:?}",
-        is_group, target, content.title
-    );
+    info!("发送新消息系统通知: is_group={} target={} title={:?}", is_group, target, content.title);
     let extra = serde_json::json!({ "chat": ChatExtra { is_group, target } });
-    if let Err(e) = notify::show_system_notification(&content.title, &content.body, &extra.to_string())
+    if let Err(e) =
+        notify::show_system_notification(&content.title, &content.body, &extra.to_string())
     {
         error!("发送系统通知失败: {}", e);
     }
