@@ -17,11 +17,11 @@
     "format": "prettier --cache --write ."
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.5.0",
-    "@tauri-apps/plugin-dialog": "^2.4.2",
-    "@tauri-apps/plugin-fs": "^2.5.1",
-    "@tauri-apps/plugin-notification": "^2.4.0",
-    "@tauri-apps/plugin-opener": "^2.5.3",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
+    "@tauri-apps/plugin-fs": "^2.7.1",
+    "@tauri-apps/plugin-notification": "^2.7.0",
+    "@tauri-apps/plugin-opener": "^2.7.2",
     "@workspace/i18n": "workspace:*",
     "@workspace/services": "workspace:*",
     "@workspace/types": "workspace:*",
@@ -33,7 +33,7 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.9.5",
+    "@tauri-apps/cli": "2.12.3",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-vue": "^5.0.0",

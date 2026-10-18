@@ -25,7 +25,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.9.5",
+    "@tauri-apps/cli": "2.12.3",
     "husky": "^9",
     "lint-staged": "^13.2.0",
     "prettier": "^2.8.7",
