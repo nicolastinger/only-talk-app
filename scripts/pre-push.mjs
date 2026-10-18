@@ -60,11 +60,15 @@ function readPushedRefs() {
 }
 
 /**
- * 本次推送涉及的文件列表; 返回 null 表示无法确定范围(调用方按全量处理)
+ * 本次推送涉及的文件列表
+ * - 返回 null 表示无法确定范围(调用方按全量处理)
+ * - 返回空集合表示本次推送没有内容(例如远端已是最新), 无需检查
  */
 function collectChangedFiles() {
   const refs = readPushedRefs();
-  if (!refs || refs.length === 0) return null;
+  // 手动执行脚本(无推送信息)按全量处理; git 传来空输入则说明没有待推送内容
+  if (refs === null) return null;
+  if (refs.length === 0) return new Set();
 
   const files = new Set();
   let unknown = false;
@@ -147,6 +151,13 @@ function main() {
   }
 
   const files = collectChangedFiles();
+
+  // git 传了推送信息但没有内容(远端已是最新等): 无需跑任何检查
+  if (files && files.size === 0) {
+    log('[pre-push] 本次推送没有待检查的改动, 跳过');
+    return 0;
+  }
+
   const targets = pickTargets(files);
   const checks = buildChecks(targets);
 
