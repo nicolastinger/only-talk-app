@@ -36,6 +36,9 @@ jobs:
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
 
+      - name: 代码检查 (lint:web)
+        run: pnpm --filter @workspace/app-web lint
+
       - name: 构建官网
         run: pnpm --filter @workspace/app-web build
 

@@ -35,6 +35,11 @@ jobs:
       - name: 类型检查
         run: pnpm --filter @workspace/app-pc typecheck
 
+      # 前端静态检查: apps/pc(eslint + stylelint) + apps/mobile + apps/web
+      # 与本地 pre-push 钩子用同一套命令(scripts/pre-push.mjs -> pnpm lint:fe)
+      - name: 代码检查 (lint:fe)
+        run: pnpm lint:fe
+
       - name: 构建前端
         run: pnpm --filter @workspace/app-pc build
 
