@@ -45,15 +45,64 @@ struct GitHubAsset {
 const FORCE_UPDATE_MARKER: &str = "<!-- force-update -->";
 
 /// 按平台筛选安装包资产:
-/// - Android: `.apk`, universal 单包优先
+/// - Android: `.apk`, 按当前进程 ABI 精确匹配分包, universal 兜底
 /// - Windows: `.exe`(NSIS) 优先, 其次 `.msi`
 /// - 其他桌面平台: 暂不支持自动安装, 返回 None
 #[cfg(target_os = "android")]
 fn pick_asset(assets: &[GitHubAsset]) -> Option<GitHubAsset> {
-    let mut list: Vec<GitHubAsset> =
-        assets.iter().filter(|a| a.name.to_lowercase().ends_with(".apk")).cloned().collect();
-    list.sort_by_key(|a| if a.name.to_lowercase().contains("universal") { 0 } else { 1 });
-    list.into_iter().next()
+    // 每个分包 APK 只带自己那份 .so, 因此运行时二进制架构 == 当前安装包的 ABI
+    pick_apk_for_arch(assets, std::env::consts::ARCH)
+}
+
+/// 资产文件名里是否带"可识别的架构信息"(用于判断历史单包资产能否直接使用)
+#[cfg(any(target_os = "android", test))]
+fn has_arch_token(name: &str) -> bool {
+    const TOKENS: [&str; 6] = ["arm64", "aarch64", "armeabi", "armv7", "x86_64", "x86"];
+    let n = name.to_ascii_lowercase();
+    TOKENS.iter().any(|t| n.contains(t))
+}
+
+/// 资产文件名是否匹配目标架构(大小写不敏感)。
+/// 注意 `arm64` 也包含子串 `arm`, `x86_64` 也包含 `x86`, 因此必须先判断 64 位再判断 32 位。
+#[cfg(any(target_os = "android", test))]
+fn asset_matches_arch(name: &str, arch: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    match arch {
+        "aarch64" => n.contains("arm64") || n.contains("aarch64"),
+        // 分包产物名为 armeabi-v7a; 兼容历史产物名(app-arm-release.apk)
+        "arm" => {
+            (n.contains("armeabi") || n.contains("armv7") || n.contains("arm-"))
+                && !n.contains("arm64")
+        }
+        "x86_64" => n.contains("x86_64"),
+        "x86" => n.contains("x86") && !n.contains("x86_64"),
+        _ => false,
+    }
+}
+
+/// 从 release 资产里挑出匹配当前架构的 APK(优先级从高到低):
+///   1. 与当前 ABI 精确匹配的分包(如 `Only.Talk_1.0.4_arm64-v8a.apk`)
+///   2. universal 包(包含全部 ABI, 体积大但一定能装)
+///   3. 名称里完全没有架构信息的单个 APK(历史上传的单包形态)
+///
+/// 都不满足则返回 None: 宁可提示"已是最新", 也不要把错误 ABI 的包装到设备上
+/// (64 位设备装 32 位包会因 ABI 不兼容而安装失败)。
+#[cfg(any(target_os = "android", test))]
+fn pick_apk_for_arch(assets: &[GitHubAsset], arch: &str) -> Option<GitHubAsset> {
+    let apks: Vec<&GitHubAsset> =
+        assets.iter().filter(|a| a.name.to_ascii_lowercase().ends_with(".apk")).collect();
+
+    if let Some(a) = apks.iter().find(|a| asset_matches_arch(&a.name, arch)) {
+        return Some((*a).clone());
+    }
+    if let Some(a) = apks.iter().find(|a| a.name.to_ascii_lowercase().contains("universal")) {
+        return Some((*a).clone());
+    }
+    let unknown: Vec<&&GitHubAsset> = apks.iter().filter(|a| !has_arch_token(&a.name)).collect();
+    if let [only] = unknown.as_slice() {
+        return Some((**only).clone());
+    }
+    None
 }
 
 #[cfg(windows)]
@@ -245,4 +294,97 @@ pub async fn install_update<R: Runtime>(app: AppHandle<R>, path: String) -> Resu
 #[cfg(all(desktop, not(windows)))]
 pub async fn install_update<R: Runtime>(_app: AppHandle<R>, _path: String) -> Result<(), String> {
     Err("当前平台暂不支持自动更新安装".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn asset(name: &str) -> GitHubAsset {
+        GitHubAsset {
+            name: name.to_string(),
+            browser_download_url: format!("https://example.com/{name}"),
+            size: Some(1),
+            digest: None,
+        }
+    }
+
+    fn pick(names: &[&str], arch: &str) -> Option<String> {
+        let assets: Vec<GitHubAsset> = names.iter().map(|n| asset(n)).collect();
+        pick_apk_for_arch(&assets, arch).map(|a| a.name)
+    }
+
+    /// 新命名(Only.Talk_<版本>_<架构>.apk): 按设备 ABI 精确挑选
+    #[test]
+    fn picks_split_apk_matching_device_abi() {
+        let assets = [
+            "Only.Talk_1.0.4_armeabi-v7a.apk",
+            "Only.Talk_1.0.4_arm64-v8a.apk",
+            "Only.Talk_1.0.4_universal.apk",
+            "Only.Talk_1.0.4_x64-setup.exe",
+        ];
+        assert_eq!(pick(&assets, "aarch64").as_deref(), Some("Only.Talk_1.0.4_arm64-v8a.apk"));
+        assert_eq!(pick(&assets, "arm").as_deref(), Some("Only.Talk_1.0.4_armeabi-v7a.apk"));
+    }
+
+    /// 顺序无关: 32 位分包排在前面时, 64 位设备也必须拿到 64 位包(历史 bug)
+    #[test]
+    fn picks_by_abi_regardless_of_asset_order() {
+        let assets = ["app-arm-release.apk", "app-arm64-release.apk"];
+        assert_eq!(pick(&assets, "aarch64").as_deref(), Some("app-arm64-release.apk"));
+        assert_eq!(pick(&assets, "arm").as_deref(), Some("app-arm-release.apk"));
+    }
+
+    /// 历史产物名(app-arm64-release.apk / app-arm-release.apk)兼容
+    #[test]
+    fn supports_legacy_asset_names() {
+        let assets = ["Only.Talk_1.0.4_aarch64.apk", "Only.Talk_1.0.4_armv7.apk"];
+        assert_eq!(pick(&assets, "aarch64").as_deref(), Some("Only.Talk_1.0.4_aarch64.apk"));
+        assert_eq!(pick(&assets, "arm").as_deref(), Some("Only.Talk_1.0.4_armv7.apk"));
+    }
+
+    /// x86 与 x86_64 不能互相误判
+    #[test]
+    fn distinguishes_x86_from_x86_64() {
+        let assets = ["Only.Talk_1.0.4_x86.apk", "Only.Talk_1.0.4_x86_64.apk"];
+        assert_eq!(pick(&assets, "x86_64").as_deref(), Some("Only.Talk_1.0.4_x86_64.apk"));
+        assert_eq!(pick(&assets, "x86").as_deref(), Some("Only.Talk_1.0.4_x86.apk"));
+    }
+
+    /// 没有匹配的分包时回退到 universal(全 ABI)
+    #[test]
+    fn falls_back_to_universal() {
+        let assets = ["Only.Talk_1.0.4_armeabi-v7a.apk", "Only.Talk_1.0.4_universal.apk"];
+        assert_eq!(pick(&assets, "aarch64").as_deref(), Some("Only.Talk_1.0.4_universal.apk"));
+    }
+
+    /// 精确匹配优先于 universal
+    #[test]
+    fn prefers_exact_abi_over_universal() {
+        let assets = ["Only.Talk_1.0.4_universal.apk", "Only.Talk_1.0.4_arm64-v8a.apk"];
+        assert_eq!(pick(&assets, "aarch64").as_deref(), Some("Only.Talk_1.0.4_arm64-v8a.apk"));
+    }
+
+    /// 只有其它 ABI 的包时不返回任何结果(宁可提示最新, 也不装错 ABI)
+    #[test]
+    fn refuses_mismatched_abi() {
+        let assets = ["Only.Talk_1.0.4_armeabi-v7a.apk"];
+        assert_eq!(pick(&assets, "aarch64"), None);
+    }
+
+    /// 名称里没有架构信息的历史单包仍可使用, 但有多个时不做猜测
+    #[test]
+    fn uses_single_apk_without_arch_token_only() {
+        assert_eq!(pick(&["OnlyTalk.apk"], "aarch64").as_deref(), Some("OnlyTalk.apk"));
+        assert_eq!(pick(&["a.apk", "b.apk"], "aarch64"), None);
+    }
+
+    /// 没有 apk 资产时返回 None
+    #[test]
+    fn ignores_non_apk_assets() {
+        assert_eq!(
+            pick(&["Only.Talk_1.0.4_x64-setup.exe", "Only.Talk_1.0.4_amd64.deb"], "aarch64"),
+            None
+        );
+    }
 }

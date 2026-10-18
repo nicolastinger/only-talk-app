@@ -245,12 +245,21 @@ git push origin develop && git push origin v1.0.4
 # 0. 确认 src-tauri/tauri.conf.json 的 version 与 bundle.android.versionCode 已按新版本更新
 #    (构建时 CLI 会据此生成 gen/android/app/tauri.properties 的 versionName/versionCode)
 
-# 1. 本机打 universal APK(仓库根目录; 两个文件就位即自动签名)
-pnpm tauri android build
-# 产物: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+# 1. 本机按 ABI 分包构建(仓库根目录; 两个文件就位即自动签名)
+pnpm android:build:split
+# 产物(已含版本号与架构, 命名规则见 docs/安卓APK按ABI分包打包策略.md):
+#   src-tauri/gen/android/app/build/outputs/apk/arm64/release/Only.Talk_1.0.4_arm64-v8a.apk
+#   src-tauri/gen/android/app/build/outputs/apk/arm/release/Only.Talk_1.0.4_armeabi-v7a.apk
+# 需要全 ABI 兜底包时(约 110MB, 不分包即 universal): pnpm tauri android build --apk true --aab false
+#   -> src-tauri/gen/android/app/build/outputs/apk/universal/release/Only.Talk_1.0.4_universal.apk
 
-# 2. 附到同名 tag 的 Release(Windows 的 CI 已建好 vX.Y.Z)
-gh release upload v1.0.2 src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+# 2. 附到同名 tag 的 Release(Windows/Linux 的 CI 已建好 vX.Y.Z)
+#    两个分包都要传: 客户端按设备 ABI 选包(见 docs/安卓APK按ABI分包打包策略.md §2.4),
+#    缺哪个 ABI, 对应设备就收不到更新; --clobber 允许覆盖同名资产(重发同版本时必需)
+gh release upload v1.0.4 `
+  src-tauri/gen/android/app/build/outputs/apk/arm64/release/Only.Talk_1.0.4_arm64-v8a.apk `
+  src-tauri/gen/android/app/build/outputs/apk/arm/release/Only.Talk_1.0.4_armeabi-v7a.apk `
+  --clobber
 ```
 
 ### 7.3 强制更新

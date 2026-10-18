@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 import java.io.File
 import java.util.Properties
 
@@ -39,6 +40,9 @@ val tauriProperties = Properties().apply {
         propFile.inputStream().use { load(it) }
     }
 }
+
+/// 打包产物命名用的版本号(AGP 不提供公开的产物改名 API, 见文件末尾 android{} 内的说明)
+val androidVersionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
 
 android {
     compileSdk = 34
@@ -107,12 +111,33 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    // ---- 打包产物命名: Only.Talk_<version>_<arch>[_<buildType>].apk ----
+    // 默认产物名(app-arm64-release.apk)既看不出版本也看不出架构, 客户端自动更新也无法按 ABI 精确挑选。
+    // 统一为: Only.Talk_1.0.4_arm64-v8a.apk / Only.Talk_1.0.4_armeabi-v7a.apk / Only.Talk_1.0.4_universal.apk
+    // 注意: 自动更新(src-tauri/src/service/update_service.rs)按"当前进程 ABI"匹配文件名中的架构, 改名后需保持
+    // 架构标识(arm64-v8a/armeabi-v7a/x86/x86_64/universal)不变; 该文件被 `tauri android init` 重新生成后需重新应用本段。
+    // AGP 8.5 没有公开的产物改名 API(VariantOutput 无 outputFileName), 故用内部 BaseVariantOutputImpl,
+    // 待 AGP 提供公开 API 后应换成 androidComponents.onVariants。
+    applicationVariants.all {
+        val flavor = flavorName.ifBlank { "universal" }
+        val archLabel = when (flavor) {
+            "arm64" -> "arm64-v8a"
+            "arm" -> "armeabi-v7a"
+            else -> flavor
+        }
+        val buildTypeSuffix = if (buildType.name == "release") "" else "_${buildType.name}"
+        outputs.all {
+            val output = this as BaseVariantOutputImpl
+            val abi = output.getFilter("ABI") ?: archLabel
+            output.outputFileName = "Only.Talk_${androidVersionName}_${abi}${buildTypeSuffix}.apk"
+        }
+    }
 }
 
 rust {
     rootDirRel = "../../../"
 }
-
 dependencies {
     implementation("androidx.webkit:webkit:1.6.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
