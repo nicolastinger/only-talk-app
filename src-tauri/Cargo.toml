@@ -73,6 +73,8 @@ tauri = { version = "2.5.1", features = [ "image-ico", "tray-icon", "protocol-as
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2.0.0-rc"
 machine-uid = "0.6"
+# 单实例：PC 端同一时间只允许运行一个进程，重复启动时聚焦已有窗口
+tauri-plugin-single-instance = "2"
 
 [target.'cfg(target_os = "android")'.dependencies]
 # 通过 ConnectivityManager 识别 WiFi/蜂窝，用于「WiFi 下自动下载」
