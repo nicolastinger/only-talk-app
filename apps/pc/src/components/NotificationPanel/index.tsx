@@ -88,29 +88,6 @@ const NotificationPanel = ({
     loadNotifications();
   };
 
-  // 单类型模式: 只构建该分类的 tab, 清除按钮只清该 level
-  const typeTabItems = () => {
-    if (!type) return null;
-    const map: Record<
-      NotificationCategoryKey,
-      { level2: number; labelKey: string }
-    > = {
-      friend: { level2: 1, labelKey: 'notification.tab.friend' },
-      group: { level2: 3, labelKey: 'notification.tab.group' },
-      plaza: { level2: 4, labelKey: 'notification.tab.plaza' },
-      moments: { level2: 5, labelKey: 'notification.tab.moments' },
-    };
-    const meta = map[type];
-    if (!meta) return null;
-    return [
-      {
-        key: type,
-        label: intl.formatMessage({ id: meta.labelKey }),
-        children: renderTabContent(1, meta.level2, meta.level2),
-      },
-    ];
-  };
-
   const handleMarkRead = async (id: string, isUnread: boolean) => {
     try {
       if (isUnread) {
@@ -247,6 +224,29 @@ const NotificationPanel = ({
         )}
       </div>
     );
+  };
+
+  // 单类型模式: 只构建该分类的 tab, 清除按钮只清该 level
+  const typeTabItems = () => {
+    if (!type) return null;
+    const map: Record<
+      NotificationCategoryKey,
+      { level2: number; labelKey: string }
+    > = {
+      friend: { level2: 1, labelKey: 'notification.tab.friend' },
+      group: { level2: 3, labelKey: 'notification.tab.group' },
+      plaza: { level2: 4, labelKey: 'notification.tab.plaza' },
+      moments: { level2: 5, labelKey: 'notification.tab.moments' },
+    };
+    const meta = map[type];
+    if (!meta) return null;
+    return [
+      {
+        key: type,
+        label: intl.formatMessage({ id: meta.labelKey }),
+        children: renderTabContent(1, meta.level2, meta.level2),
+      },
+    ];
   };
 
   const tabItems = [

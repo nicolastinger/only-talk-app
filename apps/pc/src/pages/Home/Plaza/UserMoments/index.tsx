@@ -33,7 +33,11 @@ const UserMoments = () => {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <button className={styles.backBtn} onClick={() => history.back()}>
+        <button
+          type="button"
+          className={styles.backBtn}
+          onClick={() => history.back()}
+        >
           <ArrowLeftOutlined />
         </button>
         <img

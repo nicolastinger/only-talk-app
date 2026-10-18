@@ -98,7 +98,7 @@ export const useBearStore = create<BearState>()((set) => ({
         chats: Math.max(0, state.chats + chats),
       }));
     } else {
-      set((_) => ({
+      set(() => ({
         chats: Math.max(0, chats),
       }));
     }

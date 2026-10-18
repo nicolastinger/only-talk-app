@@ -8,7 +8,7 @@ export default function NotFound() {
     // 查看用户是否登录
     try {
       let uuid = (await invoke('get_user_map', { key: 'uuid' })) as string;
-      if (uuid != null && uuid !== '') {
+      if (uuid !== null && uuid !== undefined && uuid !== '') {
         history.push('/home');
       } else {
         history.push('/signIn');

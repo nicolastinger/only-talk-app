@@ -37,10 +37,11 @@ export function usePrivacyChat() {
     useState<VideoCallInvite | null>(null);
   const [showIncomingCallModal, setShowIncomingCallModal] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [friendName, setFriendName] = useState<string>(
+  // 名称仅读取展示，无需 setter
+  const [friendName] = useState<string>(
     intl.formatMessage({ id: 'privacyChat.other' }),
   );
-  const [myName, setMyName] = useState<string>(
+  const [myName] = useState<string>(
     intl.formatMessage({ id: 'privacyChat.me' }),
   );
 

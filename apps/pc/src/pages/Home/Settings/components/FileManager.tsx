@@ -57,6 +57,38 @@ const formatTime = (ms: number): string => {
   return new Date(ms).toLocaleString();
 };
 
+const typeColorMap = (type: string): string => {
+  switch (type) {
+    case 'video':
+      return '#722ed1';
+    case 'audio':
+      return '#13c2c2';
+    case 'document':
+      return '#52c41a';
+    case 'archive':
+      return '#fa8c16';
+    default:
+      return '#8c8c8c';
+  }
+};
+
+const typeIcon = (type: string) => {
+  switch (type) {
+    case 'video':
+      return <VideoCameraOutlined />;
+    case 'audio':
+      return <AudioOutlined />;
+    case 'document':
+      return <FileTextOutlined />;
+    case 'archive':
+      return <FileZipOutlined />;
+    case 'image':
+      return <FileImageOutlined />;
+    default:
+      return <FolderOutlined />;
+  }
+};
+
 const FileManager = () => {
   const intl = useIntl();
   const [files, setFiles] = useState<LocalFileVo[]>([]);
@@ -297,38 +329,6 @@ const FileManager = () => {
       />
     </div>
   );
-};
-
-const typeColorMap = (type: string): string => {
-  switch (type) {
-    case 'video':
-      return '#722ed1';
-    case 'audio':
-      return '#13c2c2';
-    case 'document':
-      return '#52c41a';
-    case 'archive':
-      return '#fa8c16';
-    default:
-      return '#8c8c8c';
-  }
-};
-
-const typeIcon = (type: string) => {
-  switch (type) {
-    case 'video':
-      return <VideoCameraOutlined />;
-    case 'audio':
-      return <AudioOutlined />;
-    case 'document':
-      return <FileTextOutlined />;
-    case 'archive':
-      return <FileZipOutlined />;
-    case 'image':
-      return <FileImageOutlined />;
-    default:
-      return <FolderOutlined />;
-  }
 };
 
 export default FileManager;

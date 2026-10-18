@@ -62,9 +62,18 @@ const LoginPage: React.FC = () => {
   const [showQuickLogin, setShowQuickLogin] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  useEffect(() => {
-    loadQuickUsers();
-  }, []);
+  const loadUserAvatar = async (user: QuickLoginUser) => {
+    if (user.icon) {
+      try {
+        const fileVos = await getFiles(user.icon);
+        if (fileVos && fileVos.length > 0 && fileVos[0].tauri_file_path) {
+          setAvatarUrl(fileVos[0].tauri_file_path);
+          return;
+        }
+      } catch {}
+    }
+    setAvatarUrl('');
+  };
 
   const loadQuickUsers = async () => {
     try {
@@ -79,18 +88,9 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const loadUserAvatar = async (user: QuickLoginUser) => {
-    if (user.icon) {
-      try {
-        const fileVos = await getFiles(user.icon);
-        if (fileVos && fileVos.length > 0 && fileVos[0].tauri_file_path) {
-          setAvatarUrl(fileVos[0].tauri_file_path);
-          return;
-        }
-      } catch {}
-    }
-    setAvatarUrl('');
-  };
+  useEffect(() => {
+    loadQuickUsers();
+  }, []);
 
   const handlePrevUser = () => {
     if (quickUsers.length <= 1) return;
@@ -223,15 +223,6 @@ const LoginPage: React.FC = () => {
     return true;
   };
 
-  const handleUserCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setUserCode(value);
-    if (userCodeError) {
-      validateUserCode(value);
-    }
-    loadAvatarByAccount(value);
-  };
-
   const loadAvatarByAccount = (account: string) => {
     if (!account) {
       setAvatarUrl('');
@@ -245,6 +236,15 @@ const LoginPage: React.FC = () => {
     } else {
       setAvatarUrl('');
     }
+  };
+
+  const handleUserCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setUserCode(value);
+    if (userCodeError) {
+      validateUserCode(value);
+    }
+    loadAvatarByAccount(value);
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,7 +288,7 @@ const LoginPage: React.FC = () => {
         );
       }
     } catch (error: unknown) {
-      if (error != null && typeof error === 'string') {
+      if (error !== null && error !== undefined && typeof error === 'string') {
         try {
           const result = JSON.parse(error);
           if (result.code === 500) {
@@ -360,7 +360,7 @@ const LoginPage: React.FC = () => {
         );
       }
     } catch (error: unknown) {
-      if (error != null && typeof error === 'string') {
+      if (error !== null && error !== undefined && typeof error === 'string') {
         try {
           const result = JSON.parse(error);
           if (result.message) {
@@ -472,6 +472,7 @@ const LoginPage: React.FC = () => {
               </div>
             )}
             <button
+              type="button"
               className={styles.loginBtn}
               onClick={handleQuickLogin}
               disabled={quickLoginLoading}
@@ -576,6 +577,7 @@ const LoginPage: React.FC = () => {
               </div>
 
               <button
+                type="button"
                 className={styles.loginBtn}
                 onClick={onFinish}
                 disabled={loading}
@@ -588,6 +590,7 @@ const LoginPage: React.FC = () => {
               </button>
 
               <button
+                type="button"
                 className={styles.githubBtn}
                 onClick={handleGithubLogin}
                 disabled={githubLoading}

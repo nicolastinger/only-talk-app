@@ -62,7 +62,7 @@ const ChatPage: React.FC = () => {
   >({});
   /** 正在上传的乐观消息 nano_id：上传期间不计入 ACK 超时，上传完成后才开始等待回执 */
   const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
-  const [pendingBarVisible, setPendingBarVisible] = useState(false);
+  const [, setPendingBarVisible] = useState(false);
   const [pendingRefreshSignal, setPendingRefreshSignal] = useState(0);
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -70,6 +70,161 @@ const ChatPage: React.FC = () => {
   const params = new URLSearchParams(location.search);
   const friendUuid = params.get('currentFriend') || '';
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
+
+  /* 供下方 effect / 回调引用, 提前声明以满足 no-use-before-define */
+  const scrollToBottom = () => {
+    const container = messageContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  };
+
+  const markRead = async (last_read_record: string) => {
+    try {
+      let lastList = [] as string[];
+      if (last_read_record) {
+        lastList.push(last_read_record);
+      }
+      const data: ResponseData = await invoke('mark_read', {
+        textQuicMsgVec: lastList,
+      });
+      console.log('已读', data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const markReadFriend = async (friendUuid: string) => {
+    if (!friendUuid) {
+      return;
+    }
+    try {
+      const data: ResponseData = await invoke('mark_read_chat_session', {
+        friendUuid,
+      });
+      console.log('已读好友会话', data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const getFriendInfo = async (friendUuid: string) => {
+    try {
+      const data: FriendVo = await invoke('get_friend_info', {
+        friendUuid,
+      });
+      console.log('好友信息', data);
+      setCurrentFriend(data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const setCurrentFriendSession = async (friend: string) => {
+    try {
+      const res = await invoke('add_user_map', {
+        map: {
+          current_session_friend: friend,
+        },
+      });
+      console.log('设置当前好友会话', res);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const loadChatRecordFromStore = async (
+    meUuid: string,
+    friendUuid: string,
+    page: number,
+    isInitial: boolean = false,
+  ) => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const textRawText: TextQuicMsgVo = {
+        nano_id: '',
+        raw: '',
+        recv_user: meUuid,
+        send_user: friendUuid,
+        text_type: 0,
+        timestamp: 0,
+      };
+      const pageParam: Page = {
+        size: PAGE_SIZE,
+        current: page,
+        total: 0,
+      };
+      const data: TextQuicMsgVo[] = await invoke('get_chat_record_from_store', {
+        textQuicMsg: textRawText,
+        page: pageParam,
+      });
+
+      if (data.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const chatMessages: ChatMessage[] = data
+        .filter((item) => !isTransientType(item.text_type))
+        .map((item) => {
+          const from =
+            item.send_user === meUuid ? MessageFrom.Mine : MessageFrom.Friend;
+          const temp: ChatMessage = {
+            from,
+            text_msg_raw: item,
+            ack: undefined,
+          };
+          return temp;
+        });
+
+      if (isInitial) {
+        setMessageList(chatMessages);
+        setIsInitialLoad(false);
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+        if (chatMessages.length > 0) {
+          const last_read_record = chatMessages.reduce((latest, current) =>
+            latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
+              ? latest
+              : current,
+          )?.text_msg_raw.nano_id;
+          markRead(last_read_record);
+        }
+      } else {
+        const container = messageContainerRef.current;
+        const prevScrollHeight = container?.scrollHeight || 0;
+
+        const newIds = new Set(
+          chatMessages.map((msg) => msg.text_msg_raw.nano_id),
+        );
+        setLoadedMessageIds(newIds);
+
+        setMessageList((prev) => [...chatMessages, ...prev]);
+
+        setTimeout(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - prevScrollHeight;
+          }
+        }, 0);
+
+        setTimeout(() => {
+          setLoadedMessageIds(new Set());
+        }, 300);
+      }
+
+      if (data.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   /* ===== 多选 / 删除 / 转发 ===== */
   const {
@@ -342,153 +497,6 @@ const ChatPage: React.FC = () => {
     };
   }, [meUuid, friendUuid]);
 
-  const setCurrentFriendSession = async (friend: string) => {
-    try {
-      const res = await invoke('add_user_map', {
-        map: {
-          current_session_friend: friend,
-        },
-      });
-      console.log('设置当前好友会话', res);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const markReadFriend = async (friendUuid: string) => {
-    if (friendUuid == null || friendUuid === '') {
-      return;
-    }
-    try {
-      const data: ResponseData = await invoke('mark_read_chat_session', {
-        friendUuid,
-      });
-      console.log('已读好友会话', data);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const markRead = async (last_read_record: string) => {
-    try {
-      let lastList = [] as string[];
-      if (last_read_record) {
-        lastList.push(last_read_record);
-      }
-      const data: ResponseData = await invoke('mark_read', {
-        textQuicMsgVec: lastList,
-      });
-      console.log('已读', data);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const getFriendInfo = async (friendUuid: string) => {
-    try {
-      const data: FriendVo = await invoke('get_friend_info', {
-        friendUuid,
-      });
-      console.log('好友信息', data);
-      setCurrentFriend(data);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const loadChatRecordFromStore = async (
-    meUuid: string,
-    friendUuid: string,
-    page: number,
-    isInitial: boolean = false,
-  ) => {
-    if (isLoading) return;
-
-    setIsLoading(true);
-    try {
-      const textRawText: TextQuicMsgVo = {
-        nano_id: '',
-        raw: '',
-        recv_user: meUuid,
-        send_user: friendUuid,
-        text_type: 0,
-        timestamp: 0,
-      };
-      const pageParam: Page = {
-        size: PAGE_SIZE,
-        current: page,
-        total: 0,
-      };
-      const data: TextQuicMsgVo[] = await invoke('get_chat_record_from_store', {
-        textQuicMsg: textRawText,
-        page: pageParam,
-      });
-
-      if (data.length === 0) {
-        setHasMore(false);
-        return;
-      }
-
-      const chatMessages: ChatMessage[] = data
-        .filter((item) => !isTransientType(item.text_type))
-        .map((item) => {
-          const from =
-            item.send_user == meUuid ? MessageFrom.Mine : MessageFrom.Friend;
-          const temp: ChatMessage = {
-            from,
-            text_msg_raw: item,
-            ack: undefined,
-          };
-          return temp;
-        });
-
-      if (isInitial) {
-        setMessageList(chatMessages);
-        setIsInitialLoad(false);
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
-        if (chatMessages.length > 0) {
-          const last_read_record = chatMessages.reduce((latest, current) =>
-            latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
-              ? latest
-              : current,
-          )?.text_msg_raw.nano_id;
-          markRead(last_read_record);
-        }
-      } else {
-        const container = messageContainerRef.current;
-        const prevScrollHeight = container?.scrollHeight || 0;
-
-        const newIds = new Set(
-          chatMessages.map((msg) => msg.text_msg_raw.nano_id),
-        );
-        setLoadedMessageIds(newIds);
-
-        setMessageList((prev) => [...chatMessages, ...prev]);
-
-        setTimeout(() => {
-          if (container) {
-            const newScrollHeight = container.scrollHeight;
-            container.scrollTop = newScrollHeight - prevScrollHeight;
-          }
-        }, 0);
-
-        setTimeout(() => {
-          setLoadedMessageIds(new Set());
-        }, 300);
-      }
-
-      if (data.length < PAGE_SIZE) {
-        setHasMore(false);
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleScroll = useCallback(() => {
     const container = messageContainerRef.current;
     if (!container || isLoading || !hasMore || isInitialLoad) return;
@@ -523,7 +531,7 @@ const ChatPage: React.FC = () => {
       // 实时消息：通话控制(12-15)/信令(100) 走独立事件 call_control/webrtc_signal，
       // 不会进入 text_message，此处仅处理文本/图片/文件等历史消息类型。
       let from = MessageFrom.Customer;
-      if (textMessage.send_user == SYSTEM_ACCOUNT) {
+      if (textMessage.send_user === SYSTEM_ACCOUNT) {
         from = MessageFrom.System;
       } else if (textMessage.send_user === meUuid) {
         // 自己其他端发送的消息(self-echo)回推, 渲染为己方气泡
@@ -588,13 +596,6 @@ const ChatPage: React.FC = () => {
       }, 100);
     }
   }, [textMessage]);
-
-  const scrollToBottom = () => {
-    const container = messageContainerRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  };
 
   const handleMessageSent = (message: string) => {
     const temp: ChatMessage = JSON.parse(message);

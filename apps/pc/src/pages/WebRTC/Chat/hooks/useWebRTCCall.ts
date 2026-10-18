@@ -162,16 +162,6 @@ export const useWebRTCCall = () => {
     setCallStage('connecting');
   };
 
-  // 被叫方/发起方：拒绝
-  const handleReject = async () => {
-    const service = getWebRTCService();
-    const sessionId = service?.sessionId || urlSessionId;
-    await sendControlMsg(14, 'reject', sessionId);
-    setCallStage('rejected');
-    // 短暂提示后自动关闭窗口
-    setTimeout(() => closeWebRTCWindow(), 2000);
-  };
-
   // 关闭当前WebRTC窗口（不发送结束信令，用于未接通时的退出）
   const closeWebRTCWindow = async () => {
     try {
@@ -181,6 +171,16 @@ export const useWebRTCCall = () => {
     } catch (e) {
       console.error('[WebRTCChat] 关闭窗口失败:', e);
     }
+  };
+
+  // 被叫方/发起方：拒绝
+  const handleReject = async () => {
+    const service = getWebRTCService();
+    const sessionId = service?.sessionId || urlSessionId;
+    await sendControlMsg(14, 'reject', sessionId);
+    setCallStage('rejected');
+    // 短暂提示后自动关闭窗口
+    setTimeout(() => closeWebRTCWindow(), 2000);
   };
 
   const scrollToBottom = () => {

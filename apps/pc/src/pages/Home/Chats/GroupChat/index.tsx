@@ -50,7 +50,7 @@ const GroupChatPage: React.FC = () => {
   const intl = useIntl();
   const [messageList, setMessageList] = useState<ChatMessage[]>([]);
   const [groupInfo, setGroupInfo] = useState<GroupVo | null>(null);
-  const [footerHeight, setFooterHeight] = useState(180);
+  const [footerHeight] = useState(180);
   const [realFootHeight, setRealFooterHeight] = useState(186);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -76,6 +76,146 @@ const GroupChatPage: React.FC = () => {
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(null, groupId);
   const { groupAckMessage } = useGroupMessageAckApi(groupId);
+
+  /* 供下方 effect / 回调引用, 提前声明以满足 no-use-before-define */
+  const scrollToBottom = () => {
+    const container = messageContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  };
+
+  const setCurrentGroupSession = async (group: string) => {
+    try {
+      await invoke('add_user_map', {
+        map: { current_session_friend: group },
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const getGroupInfo = async (groupId: string) => {
+    try {
+      const data: GroupVo = await invoke('get_group_info_command', {
+        groupId,
+      });
+      setGroupInfo(data);
+    } catch (err) {
+      console.log('获取群信息失败，从本地加载', err);
+      try {
+        const localGroups: GroupVo[] = await invoke('get_group_list');
+        const found = localGroups.find((g) => g.group_uuid === groupId);
+        if (found) setGroupInfo(found);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  };
+
+  const markRead = async (nano_id: string, timestamp: number) => {
+    try {
+      await invoke('mark_group_read', {
+        groupUuid: groupId,
+        nanoId: nano_id,
+        timestamp: timestamp,
+      });
+      console.log('群消息已读', nano_id);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const loadChatRecord = async (
+    groupId: string,
+    page: number,
+    isInitial: boolean = false,
+  ) => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const pageParam: Page = {
+        size: PAGE_SIZE,
+        current: page,
+        total: 0,
+      };
+      const data: TextQuicMsgVo[] = await invoke(
+        'get_group_chat_record_from_store',
+        {
+          groupId,
+          page: pageParam,
+        },
+      );
+
+      if (data.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const chatMessages: ChatMessage[] = data
+        .filter((item) => !isTransientType(item.text_type))
+        .map((item) => {
+          const from =
+            item.send_user === meUuid ? MessageFrom.Mine : MessageFrom.Customer;
+          const temp: ChatMessage = {
+            from,
+            text_msg_raw: item,
+            ack: undefined,
+            sender_uuid: item.send_user,
+          };
+          return temp;
+        });
+
+      if (isInitial) {
+        setMessageList(chatMessages);
+        setIsInitialLoad(false);
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+        if (chatMessages.length > 0) {
+          const last_read_msg = chatMessages.reduce((latest, current) =>
+            latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
+              ? latest
+              : current,
+          );
+          markRead(
+            last_read_msg.text_msg_raw.nano_id,
+            last_read_msg.text_msg_raw.timestamp,
+          );
+        }
+      } else {
+        const container = messageContainerRef.current;
+        const prevScrollHeight = container?.scrollHeight || 0;
+
+        const newIds = new Set(
+          chatMessages.map((msg) => msg.text_msg_raw.nano_id),
+        );
+        setLoadedMessageIds(newIds);
+
+        setMessageList((prev) => [...chatMessages, ...prev]);
+
+        setTimeout(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - prevScrollHeight;
+          }
+        }, 0);
+
+        setTimeout(() => {
+          setLoadedMessageIds(new Set());
+        }, 300);
+      }
+
+      if (data.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   /* ===== 多选 / 删除 / 转发 ===== */
   const {
@@ -358,138 +498,6 @@ const GroupChatPage: React.FC = () => {
     };
   }, [groupId]);
 
-  const setCurrentGroupSession = async (group: string) => {
-    try {
-      await invoke('add_user_map', {
-        map: { current_session_friend: group },
-      });
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const getGroupInfo = async (groupId: string) => {
-    try {
-      const data: GroupVo = await invoke('get_group_info_command', {
-        groupId,
-      });
-      setGroupInfo(data);
-    } catch (err) {
-      console.log('获取群信息失败，从本地加载', err);
-      try {
-        const localGroups: GroupVo[] = await invoke('get_group_list');
-        const found = localGroups.find((g) => g.group_uuid === groupId);
-        if (found) setGroupInfo(found);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-  };
-
-  const markRead = async (nano_id: string, timestamp: number) => {
-    try {
-      await invoke('mark_group_read', {
-        groupUuid: groupId,
-        nanoId: nano_id,
-        timestamp: timestamp,
-      });
-      console.log('群消息已读', nano_id);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const loadChatRecord = async (
-    groupId: string,
-    page: number,
-    isInitial: boolean = false,
-  ) => {
-    if (isLoading) return;
-
-    setIsLoading(true);
-    try {
-      const pageParam: Page = {
-        size: PAGE_SIZE,
-        current: page,
-        total: 0,
-      };
-      const data: TextQuicMsgVo[] = await invoke(
-        'get_group_chat_record_from_store',
-        {
-          groupId,
-          page: pageParam,
-        },
-      );
-
-      if (data.length === 0) {
-        setHasMore(false);
-        return;
-      }
-
-      const chatMessages: ChatMessage[] = data
-        .filter((item) => !isTransientType(item.text_type))
-        .map((item) => {
-          const from =
-            item.send_user === meUuid ? MessageFrom.Mine : MessageFrom.Customer;
-          const temp: ChatMessage = {
-            from,
-            text_msg_raw: item,
-            ack: undefined,
-            sender_uuid: item.send_user,
-          };
-          return temp;
-        });
-
-      if (isInitial) {
-        setMessageList(chatMessages);
-        setIsInitialLoad(false);
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
-        if (chatMessages.length > 0) {
-          const last_read_msg = chatMessages.reduce((latest, current) =>
-            latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
-              ? latest
-              : current,
-          );
-          markRead(
-            last_read_msg.text_msg_raw.nano_id,
-            last_read_msg.text_msg_raw.timestamp,
-          );
-        }
-      } else {
-        const container = messageContainerRef.current;
-        const prevScrollHeight = container?.scrollHeight || 0;
-
-        const newIds = new Set(
-          chatMessages.map((msg) => msg.text_msg_raw.nano_id),
-        );
-        setLoadedMessageIds(newIds);
-
-        setMessageList((prev) => [...chatMessages, ...prev]);
-
-        setTimeout(() => {
-          if (container) {
-            const newScrollHeight = container.scrollHeight;
-            container.scrollTop = newScrollHeight - prevScrollHeight;
-          }
-        }, 0);
-
-        setTimeout(() => {
-          setLoadedMessageIds(new Set());
-        }, 300);
-      }
-
-      if (data.length < PAGE_SIZE) {
-        setHasMore(false);
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleScroll = useCallback(() => {
     const container = messageContainerRef.current;
     if (!container || isLoading || !hasMore || isInitialLoad) return;
@@ -589,13 +597,6 @@ const GroupChatPage: React.FC = () => {
       }, 100);
     }
   }, [groupAckMessage]);
-
-  const scrollToBottom = () => {
-    const container = messageContainerRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  };
 
   const handleMessageSent = (message: string) => {
     const temp: ChatMessage = JSON.parse(message);

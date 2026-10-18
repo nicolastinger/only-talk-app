@@ -52,7 +52,7 @@ const openPrivacyChatHandler = async (uuid: string) => {
 };
 
 const useP2pMessageApi = () => {
-  const [state, setState] = useState<boolean>(false);
+  const [state] = useState<boolean>(false);
 
   const setRequestMediaMsg = useBearStore((state) => state.setRequestMediaMsg);
   const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);

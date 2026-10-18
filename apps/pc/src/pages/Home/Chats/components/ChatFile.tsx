@@ -78,7 +78,6 @@ const ChatFile: React.FC<ChatFileProps> = ({
   fileSize,
   fileType,
   nanoId,
-  loading = false,
   sending = false,
   uploadProgress = 0,
   sendPhase,

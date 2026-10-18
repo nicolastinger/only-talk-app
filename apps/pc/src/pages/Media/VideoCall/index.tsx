@@ -3,7 +3,6 @@ import VideoReceiver from '@/components/Media/VideoReceiver';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
-import { VideoConfig } from '@workspace/types';
 import { Button } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
@@ -26,16 +25,26 @@ const VideoCallPage: React.FC = () => {
   }>(null);
   const [isReceiver, setIsReceiver] = useState(false);
 
-  useEffect(() => {
-    // 获取对方的视频流配置
-    getTargetVideoConfig();
-  }, []);
+  const getVideoConfig = async (uuid: string): Promise<string | null> => {
+    try {
+      const data: string = await invoke('get_user_map', {
+        key: 'p2p_video_config_' + uuid,
+      });
+      console.log('视频配置', data);
+      return data;
+    } catch (e) {
+      console.log('获取视频配置失败:', e);
+      return null;
+    }
+  };
 
   // 获取对方的视频流配置
   const getTargetVideoConfig = async () => {
     let flag = false;
     for (let i = 0; i < 50; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 200);
+      });
       // 调用方法获取flag的值
       let data = await getVideoConfig(friendId);
       if (data !== null) {
@@ -50,18 +59,10 @@ const VideoCallPage: React.FC = () => {
     }
   };
 
-  const getVideoConfig = async (uuid: string): Promise<string | null> => {
-    try {
-      const data: string = await invoke('get_user_map', {
-        key: 'p2p_video_config_' + uuid,
-      });
-      console.log('视频配置', data);
-      return data;
-    } catch (e) {
-      console.log('获取视频配置失败:', e);
-      return null;
-    }
-  };
+  useEffect(() => {
+    // 获取对方的视频流配置
+    getTargetVideoConfig();
+  }, []);
 
   const handleStreamReady = (stream: MediaStream) => {
     console.log('摄像头流已就绪:', stream);
@@ -77,16 +78,6 @@ const VideoCallPage: React.FC = () => {
     if (cameraRef.current) {
       cameraRef.current.stopCamera();
     }
-  };
-
-  const handleSwitchCamera = () => {
-    if (cameraRef.current) {
-      cameraRef.current.switchCamera();
-    }
-  };
-
-  const handleVideoConfig = (config: VideoConfig) => {
-    console.log('对方视频配置:', config);
   };
 
   return (

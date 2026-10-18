@@ -25,9 +25,6 @@ interface GroupMessageListProps {
   uploadingIds?: Set<string>;
 }
 
-const MSG_TYPE_GROUP_TEXT = 2001;
-const MSG_TYPE_GROUP_IMAGE = 2002;
-const MSG_TYPE_GROUP_FILE = 2003;
 const MSG_TYPE_GROUP_NOTIFICATION = 2004;
 
 const TEN_MINUTES = 10 * 60 * 1000;

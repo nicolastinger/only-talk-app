@@ -89,8 +89,8 @@
   background-color: #000;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 50%);
+  border: 2px solid rgba(255, 255, 255, 20%);
   z-index: 10;
 }
 
@@ -105,7 +105,7 @@
   bottom: 8px;
   left: 8px;
   padding: 4px 8px;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 60%);
   color: #fff;
   font-size: 12px;
   border-radius: 4px;
@@ -120,7 +120,7 @@
   justify-content: center;
   gap: 16px;
   padding: 12px 24px;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 60%);
   backdrop-filter: blur(10px);
   border-radius: 30px;
   z-index: 20;
@@ -159,7 +159,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 15%);
     border-radius: 2px;
   }
 }
@@ -168,14 +168,15 @@
   display: flex;
   justify-content: flex-end;
   margin-bottom: 12px;
-  animation: slideIn 0.3s ease;
+  animation: slide-in 0.3s ease;
 }
 
-@keyframes slideIn {
+@keyframes slide-in {
   from {
     opacity: 0;
     transform: translateX(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -211,12 +212,12 @@
   font-size: 13px;
   line-height: 1.5;
   max-width: 100%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 10%);
 }
 
 .mineBubble {
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  color: #ffffff;
+  color: #fff;
 }
 
 .friendBubble {
@@ -274,27 +275,28 @@
   background: var(--ant-color-bg-elevated);
   border: 1px solid var(--ant-color-border);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 15%);
   padding: 8px;
   overflow-y: auto;
   z-index: 1000;
-  animation: fadeIn 0.2s ease;
+  animation: fade-in 0.2s ease;
 
   &::-webkit-scrollbar {
     width: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 15%);
     border-radius: 2px;
   }
 }
 
-@keyframes fadeIn {
+@keyframes fade-in {
   from {
     opacity: 0;
     transform: translateY(5px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -319,7 +321,7 @@
   justify-content: center;
 
   &:hover {
-    background: rgba(24, 144, 255, 0.1);
+    background: rgba(24, 144, 255, 10%);
     transform: scale(1.15);
   }
 }
@@ -339,7 +341,7 @@
 
   &:focus {
     border-color: var(--ant-color-primary);
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 10%);
   }
 }
 
@@ -449,7 +451,7 @@
 .logBody {
   flex: 1;
   overflow-y: auto;
-  font-family: 'Consolas', 'Menlo', monospace;
+  font-family: Consolas, Menlo, monospace;
   font-size: 12px;
   line-height: 1.5;
   background-color: var(--ant-color-bg-layout);

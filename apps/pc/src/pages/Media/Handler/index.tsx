@@ -21,7 +21,6 @@ import styles from './index.less';
 //用户视频接收处理组件
 const MediaPage: React.FC = () => {
   const intl = useIntl();
-  const setRequestMediaMsg = useBearStore((state) => state.setRequestMediaMsg);
   const requestMediaMsg = useBearStore((state) => state.requestMediaMsg);
 
   console.log('requestMediaMsg', requestMediaMsg);
@@ -29,7 +28,8 @@ const MediaPage: React.FC = () => {
   const [localP2pInitMsg, setLocalP2pInitMsg] = useState<P2pInitMsg | null>(
     null,
   );
-  const [localMediaType, setLocalMediaType] = useState<number>(0);
+  // 仅写入未被读取，省略解构位以避免未使用变量
+  const [, setLocalMediaType] = useState<number>(0);
 
   const currentWindow = window.getCurrentWindow();
 

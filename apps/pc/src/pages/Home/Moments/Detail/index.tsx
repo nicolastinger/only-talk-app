@@ -55,7 +55,11 @@ const MomentDetail = () => {
           const files = await getFiles(m.icon);
           if (mounted) setAvatar(files?.[0]?.tauri_file_path || null);
         }
-        if (m.image_count == null || m.image_count > 0) {
+        if (
+          m.image_count === null ||
+          m.image_count === undefined ||
+          m.image_count > 0
+        ) {
           const imgFiles = await getFiles(momentUuid);
           if (mounted) {
             setImages(
@@ -91,6 +95,8 @@ const MomentDetail = () => {
       setLiking(false);
     }
   };
+
+  const isMine = !!myUuid && moment?.author_uuid === myUuid;
 
   const handleFollow = async () => {
     if (following || isMine) return;
@@ -132,12 +138,14 @@ const MomentDetail = () => {
     });
   };
 
-  const isMine = !!myUuid && moment?.author_uuid === myUuid;
-
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <button className={styles.backBtn} onClick={() => history.back()}>
+        <button
+          type="button"
+          className={styles.backBtn}
+          onClick={() => history.back()}
+        >
           <ArrowLeftOutlined />
         </button>
         <span className={styles.headerTitle}>
@@ -185,6 +193,7 @@ const MomentDetail = () => {
             </div>
             {!isMine && (
               <button
+                type="button"
                 className={`${styles.followBtn} ${
                   isFollowing ? styles.followed : ''
                 }`}
@@ -197,7 +206,11 @@ const MomentDetail = () => {
               </button>
             )}
             {isMine && (
-              <button className={styles.deleteBtn} onClick={handleDelete}>
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={handleDelete}
+              >
                 {intl.formatMessage({ id: 'moments.delete' })}
               </button>
             )}
@@ -211,6 +224,7 @@ const MomentDetail = () => {
 
           <div className={styles.actions}>
             <button
+              type="button"
               className={`${styles.actionBtn} ${liked ? styles.active : ''}`}
               onClick={handleLike}
             >
@@ -225,7 +239,11 @@ const MomentDetail = () => {
                 {likeCount}
               </span>
             </button>
-            <button className={styles.actionBtn} onClick={handleCommentJump}>
+            <button
+              type="button"
+              className={styles.actionBtn}
+              onClick={handleCommentJump}
+            >
               💬 {commentCount}
             </button>
           </div>

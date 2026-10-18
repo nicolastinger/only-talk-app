@@ -61,6 +61,7 @@ const MomentMedia = (props: { images: string[]; onMediaLoad?: () => void }) => {
       {images.length > 1 && (
         <>
           <button
+            type="button"
             className={`${styles.arrow} ${styles.arrowLeft}`}
             disabled={imgIndex === 0}
             onClick={(e) => {
@@ -71,6 +72,7 @@ const MomentMedia = (props: { images: string[]; onMediaLoad?: () => void }) => {
             ‹
           </button>
           <button
+            type="button"
             className={`${styles.arrow} ${styles.arrowRight}`}
             disabled={imgIndex === images.length - 1}
             onClick={(e) => {

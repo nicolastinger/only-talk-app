@@ -26,7 +26,7 @@
   justify-content: center;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 4%);
 }
 
 .headerTool {
@@ -45,7 +45,7 @@
 
   :global {
     .ant-segmented {
-      background: rgba(0, 0, 0, 0.04);
+      background: rgba(0, 0, 0, 4%);
       padding: 3px;
       border-radius: 10px;
     }
@@ -65,7 +65,7 @@
       );
       color: #fff;
       font-weight: 500;
-      box-shadow: 0 2px 8px rgba(64, 150, 255, 0.3);
+      box-shadow: 0 2px 8px rgba(64, 150, 255, 30%);
     }
 
     .ant-segmented-thumb {
@@ -83,7 +83,7 @@
   width: 280px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  border-right: 1px solid rgba(0, 0, 0, 0.04);
+  border-right: 1px solid rgba(0, 0, 0, 4%);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -103,14 +103,14 @@
   background: linear-gradient(135deg, var(--color-primary) 0%, #4096ff 100%);
   color: #fff;
   font-size: 18px;
-  box-shadow: 0 4px 14px rgba(64, 150, 255, 0.35);
+  box-shadow: 0 4px 14px rgba(64, 150, 255, 35%);
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 10;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(64, 150, 255, 0.45);
+    box-shadow: 0 6px 20px rgba(64, 150, 255, 45%);
   }
 
   &:active {
@@ -142,15 +142,15 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 10%);
     border-radius: 3px;
     transition: background 0.3s ease;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 20%);
     }
   }
 
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  scrollbar-color: rgba(0, 0, 0, 10%) transparent;
 }

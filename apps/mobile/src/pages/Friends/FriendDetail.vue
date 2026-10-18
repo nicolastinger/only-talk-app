@@ -47,10 +47,14 @@ const loadDetail = async () => {
   try {
     try {
       userInfo = await get_cached_user_info(friendId);
-    } catch {}
+    } catch {
+      // 本地缓存未命中: 忽略, 下面还有远端接口兜底
+    }
     try {
       friendVo = (await get_friend_info(friendId)) as FriendVo | null;
-    } catch {}
+    } catch {
+      // 取好友资料失败: 忽略, 非好友或已删除时本就没有 friendVo
+    }
   } catch {
     loadError.value = true;
   }

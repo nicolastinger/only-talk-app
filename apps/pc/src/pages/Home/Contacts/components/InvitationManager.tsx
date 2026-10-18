@@ -85,12 +85,6 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (visible) {
-      loadAll();
-    }
-  }, [visible]);
-
   const loadAll = async () => {
     try {
       const [received, sent] = await Promise.all([
@@ -106,6 +100,12 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({
       );
     }
   };
+
+  useEffect(() => {
+    if (visible) {
+      loadAll();
+    }
+  }, [visible]);
 
   const handleClearUnread = async () => {
     await clearUnreadByLevel(1, 3, 1, -1);

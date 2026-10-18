@@ -62,6 +62,21 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
     message.info(intl.formatMessage({ id: 'chat.topBar.muteDeveloping' }));
   };
 
+  const handleUnblock = async () => {
+    if (!friendInfo?.friend_id) return;
+
+    try {
+      await unblock_friend(friendInfo.friend_id);
+      message.success(
+        intl.formatMessage({ id: 'chat.topBar.unblockedSuccess' }),
+      );
+      triggerRefresh();
+    } catch (error) {
+      message.error(intl.formatMessage({ id: 'chat.topBar.unblockedFailed' }));
+      console.error('取消拉黑失败:', error);
+    }
+  };
+
   const handleBlock = () => {
     if (friendInfo?.is_block === 1) {
       handleUnblock();
@@ -81,21 +96,6 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
     } catch (error) {
       message.error(intl.formatMessage({ id: 'chat.topBar.blockedFailed' }));
       console.error('拉黑好友失败:', error);
-    }
-  };
-
-  const handleUnblock = async () => {
-    if (!friendInfo?.friend_id) return;
-
-    try {
-      await unblock_friend(friendInfo.friend_id);
-      message.success(
-        intl.formatMessage({ id: 'chat.topBar.unblockedSuccess' }),
-      );
-      triggerRefresh();
-    } catch (error) {
-      message.error(intl.formatMessage({ id: 'chat.topBar.unblockedFailed' }));
-      console.error('取消拉黑失败:', error);
     }
   };
 

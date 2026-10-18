@@ -11,16 +11,6 @@ const FriendList = () => {
   const refreshFlag = useBearStore((state) => state.refreshFlag);
   const location = useLocation();
 
-  useEffect(() => {
-    getFriendList();
-  }, []);
-
-  useEffect(() => {
-    if (refreshFlag > 0) {
-      getFriendList();
-    }
-  }, [refreshFlag]);
-
   // 获取朋友列表
   const getFriendList = async () => {
     try {
@@ -31,6 +21,16 @@ const FriendList = () => {
       console.error(error);
     }
   };
+
+  useEffect(() => {
+    getFriendList();
+  }, []);
+
+  useEffect(() => {
+    if (refreshFlag > 0) {
+      getFriendList();
+    }
+  }, [refreshFlag]);
 
   const selectedFriendId =
     new URLSearchParams(location.search).get('friendId') || '';

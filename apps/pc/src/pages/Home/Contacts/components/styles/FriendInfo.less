@@ -21,7 +21,7 @@
       ),
       radial-gradient(
         ellipse at 80% 80%,
-        rgba(100, 200, 255, 0.03) 0%,
+        rgba(100, 200, 255, 3%) 0%,
         transparent 50%
       );
     pointer-events: none;
@@ -43,18 +43,19 @@
   position: relative;
   overflow: hidden auto;
   scrollbar-width: none;
-  animation: cardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 
   &::-webkit-scrollbar {
     display: none;
   }
 }
 
-@keyframes cardIn {
+@keyframes card-in {
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -72,7 +73,7 @@
     content: '';
     position: absolute;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 16%);
   }
 
   &::before {
@@ -87,7 +88,7 @@
     height: 90px;
     bottom: -50px;
     left: 18px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 10%);
   }
 }
 

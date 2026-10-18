@@ -97,7 +97,6 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
       text_msg_raw: { raw, text_type, timestamp, nano_id },
     },
     isAck = true,
-    icon,
     groupUuid,
     currentBizId,
   } = props;

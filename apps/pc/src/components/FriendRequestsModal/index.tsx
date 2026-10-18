@@ -48,7 +48,7 @@ const FriendRequestsModal = ({
     [],
   );
   const [sentRequests, setSentRequests] = useState<RequestWithUserInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const setMenuUnread = useBearStore((state) => state.setMenuUnread);
 
   const refreshUnreadCounts = async () => {
@@ -65,29 +65,6 @@ const FriendRequestsModal = ({
       });
     } catch (e) {
       console.log('刷新未读通知数量失败', e);
-    }
-  };
-
-  useEffect(() => {
-    if (visible) {
-      fetchData();
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    if (!visible) return;
-
-    return subscribe('friend_list_changed', () => {
-      fetchData();
-    });
-  }, [visible]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([getAcceptFriendRequestList(), getFriendRequestList()]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -169,6 +146,29 @@ const FriendRequestsModal = ({
     }
   };
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([getAcceptFriendRequestList(), getFriendRequestList()]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) {
+      fetchData();
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    return subscribe('friend_list_changed', () => {
+      fetchData();
+    });
+  }, [visible]);
+
   const getStatusConfig = (status?: number) => {
     switch (status) {
       case 0:
@@ -204,6 +204,14 @@ const FriendRequestsModal = ({
     await fetchData();
   };
 
+  const update_local_friend_list = async () => {
+    try {
+      await invoke('update_local_friend_list', {});
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   const handleAccept = async (requestUserId: string | undefined) => {
     if (!requestUserId) return;
     let friendRequestInfoDTO: FriendRequestInfoDTO = {
@@ -217,14 +225,6 @@ const FriendRequestsModal = ({
     if (res.netSuccess && isHttpSuccess(res.res.status)) {
       await update_local_friend_list();
       await getAcceptFriendRequestList();
-    }
-  };
-
-  const update_local_friend_list = async () => {
-    try {
-      await invoke('update_local_friend_list', {});
-    } catch (err) {
-      console.log(err);
     }
   };
 

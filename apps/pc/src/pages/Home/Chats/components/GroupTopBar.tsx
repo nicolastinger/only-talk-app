@@ -1,6 +1,6 @@
 import { history, useIntl } from '@umijs/max';
-import { Avatar, Dropdown, Modal, Typography } from 'antd';
-import { UserOutlined, MoreOutlined, WarningOutlined } from '@ant-design/icons';
+import { Dropdown, Modal } from 'antd';
+import { MoreOutlined, WarningOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { invoke } from '@tauri-apps/api/core';
 import { useState } from 'react';
@@ -14,11 +14,7 @@ interface GroupTopBarProps {
   memberCount: number;
 }
 
-const GroupTopBar: React.FC<GroupTopBarProps> = ({
-  title,
-  groupId,
-  memberCount,
-}) => {
+const GroupTopBar: React.FC<GroupTopBarProps> = ({ title, groupId }) => {
   const intl = useIntl();
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const handleLeaveGroup = () => {

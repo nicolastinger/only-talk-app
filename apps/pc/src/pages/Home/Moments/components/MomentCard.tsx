@@ -53,7 +53,11 @@ const MomentCard = (props: {
         setAvatar(files?.[0]?.tauri_file_path || null);
       }
       // 仅在明确 0 图时跳过; undefined(旧后端)也尝试拉取, 保证图片展示
-      if (moment.image_count == null || moment.image_count > 0) {
+      if (
+        moment.image_count === null ||
+        moment.image_count === undefined ||
+        moment.image_count > 0
+      ) {
         const imgFiles = await getFiles(moment.uuid);
         setImages(
           (imgFiles || []).map((f) => f.tauri_file_path || '').filter(Boolean),
@@ -168,6 +172,7 @@ const MomentCard = (props: {
         <div className={styles.actions}>
           {!isMine && (
             <button
+              type="button"
               className={`${styles.followBtn} ${
                 isFollowing ? styles.followed : ''
               }`}
@@ -180,17 +185,23 @@ const MomentCard = (props: {
             </button>
           )}
           {isMine && onDeleted && (
-            <button className={styles.deleteBtn} onClick={handleDelete}>
+            <button
+              type="button"
+              className={styles.deleteBtn}
+              onClick={handleDelete}
+            >
               {intl.formatMessage({ id: 'moments.delete' })}
             </button>
           )}
           <button
+            type="button"
             className={`${styles.actionBtn} ${liked ? styles.active : ''}`}
             onClick={handleLike}
           >
             {liked ? '♥' : '♡'} {likeCount}
           </button>
           <button
+            type="button"
             className={styles.actionBtn}
             onClick={(e) => {
               e.stopPropagation();
@@ -201,6 +212,7 @@ const MomentCard = (props: {
           </button>
           {!isMine && (
             <button
+              type="button"
               className={styles.actionBtn}
               onClick={(e) => {
                 e.stopPropagation();

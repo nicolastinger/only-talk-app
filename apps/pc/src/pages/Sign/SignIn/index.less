@@ -32,7 +32,7 @@
     var(--gradient-blue-accent) 300deg,
     var(--gradient-blue-dark) 360deg
   );
-  animation: rotateGradient 15s linear infinite;
+  animation: rotate-gradient 15s linear infinite;
   filter: blur(80px);
   opacity: 0.6;
 }
@@ -45,28 +45,30 @@
     ),
     radial-gradient(
       ellipse at 70% 80%,
-      rgba(100, 180, 255, 0.6) 0%,
+      rgba(100, 180, 255, 60%) 0%,
       transparent 40%
     ),
     radial-gradient(ellipse at 50% 50%, var(--bg-white-30) 0%, transparent 50%);
-  animation: pulseGlow 4s ease-in-out infinite;
+  animation: pulse-glow 4s ease-in-out infinite;
 }
 
-@keyframes rotateGradient {
+@keyframes rotate-gradient {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
 }
 
-@keyframes pulseGlow {
+@keyframes pulse-glow {
   0%,
   100% {
     opacity: 0.6;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1);
@@ -178,9 +180,9 @@
   overflow: hidden;
   background: var(--bg-white-20);
   padding: 3px;
-  box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 0.3),
-    0 0 60px rgba(100, 180, 255, 0.2);
-  animation: avatarGlow 3s ease-in-out infinite alternate;
+  box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 30%),
+    0 0 60px rgba(100, 180, 255, 20%);
+  animation: avatar-glow 3s ease-in-out infinite alternate;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,13 +201,14 @@
   }
 }
 
-@keyframes avatarGlow {
+@keyframes avatar-glow {
   0% {
-    box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 0.3);
+    box-shadow: var(--shadow-glow), 0 0 40px rgba(100, 180, 255, 30%);
   }
+
   100% {
-    box-shadow: 0 0 30px rgba(100, 180, 255, 0.8),
-      0 0 60px rgba(100, 180, 255, 0.5), 0 0 80px rgba(100, 180, 255, 0.3);
+    box-shadow: 0 0 30px rgba(100, 180, 255, 80%),
+      0 0 60px rgba(100, 180, 255, 50%), 0 0 80px rgba(100, 180, 255, 30%);
   }
 }
 
@@ -257,8 +260,8 @@
 
 .inputGroup:focus-within {
   background: var(--color-white);
-  box-shadow: 0 4px 16px rgba(26, 92, 255, 0.2),
-    0 0 20px rgba(100, 180, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(26, 92, 255, 20%),
+    0 0 20px rgba(100, 180, 255, 30%);
   border: 1px solid var(--input-border-focus);
 }
 
@@ -343,7 +346,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: var(--shadow-primary), 0 0 20px rgba(100, 180, 255, 0.2);
+  box-shadow: var(--shadow-primary), 0 0 20px rgba(100, 180, 255, 20%);
   letter-spacing: 1px;
   position: relative;
   overflow: hidden;
@@ -362,13 +365,14 @@
     var(--bg-white-30),
     transparent
   );
-  animation: btnShine 3s ease-in-out infinite;
+  animation: btn-shine 3s ease-in-out infinite;
 }
 
-@keyframes btnShine {
+@keyframes btn-shine {
   0% {
     left: -100%;
   }
+
   50%,
   100% {
     left: 100%;
@@ -377,7 +381,7 @@
 
 .loginBtn:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-primary-lg), 0 0 30px rgba(100, 180, 255, 0.4);
+  box-shadow: var(--shadow-primary-lg), 0 0 30px rgba(100, 180, 255, 40%);
   background: var(--btn-gradient-primary-hover);
 }
 
@@ -533,7 +537,7 @@
 
 .dotActive {
   background: var(--color-white);
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 50%);
 }
 
 .switchToPassword {
@@ -564,7 +568,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 77, 79, 0.9);
+  background: rgba(255, 77, 79, 90%);
   color: var(--color-white);
   font-size: 11px;
   cursor: pointer;

@@ -101,7 +101,7 @@
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-light);
   border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 12%);
 }
 
 .contextMenuItem {
@@ -116,7 +116,7 @@
   transition: background 0.2s ease;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.08);
+    background: rgba(239, 68, 68, 8%);
   }
 
   .deleteIcon {
@@ -137,7 +137,7 @@
   flex-shrink: 0;
 
   &:hover {
-    background: rgba(249, 115, 22, 0.1) !important;
+    background: rgba(249, 115, 22, 10%) !important;
   }
 
   :global(.ant-btn-icon svg) {
@@ -167,6 +167,7 @@
   100% {
     transform: scale(1.1);
   }
+
   50% {
     transform: scale(1.15);
   }

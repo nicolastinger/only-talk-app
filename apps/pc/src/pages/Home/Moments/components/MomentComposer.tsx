@@ -160,6 +160,7 @@ const MomentComposer = (props: {
         </div>
         <div className={styles.imageArea}>
           <button
+            type="button"
             className={styles.addBtn}
             disabled={uploading}
             onClick={handleSelect}
@@ -174,6 +175,7 @@ const MomentComposer = (props: {
                 <div key={i} className={styles.previewItem}>
                   <img src={img} alt="" className={styles.previewImg} />
                   <button
+                    type="button"
                     className={styles.removeBtn}
                     onClick={() => {
                       setImages((prev) => prev.filter((_, idx) => idx !== i));

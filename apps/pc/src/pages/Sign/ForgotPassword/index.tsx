@@ -292,6 +292,7 @@ const ForgotPasswordPage: React.FC = () => {
                   onBlur={() => validateCode(verificationCode)}
                 />
                 <button
+                  type="button"
                   className={styles.codeBtn}
                   onClick={handleSendCode}
                   disabled={sending || countdown > 0}
@@ -371,6 +372,7 @@ const ForgotPasswordPage: React.FC = () => {
             </div>
 
             <button
+              type="button"
               className={styles.submitBtn}
               onClick={onSubmit}
               disabled={submitting}

@@ -34,15 +34,6 @@ const CameraControl = React.forwardRef(
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
     const videoConfig = useBearStore((state) => state.videoConfig);
-    const setVideoConfig = useBearStore((state) => state.setVideoConfig);
-
-    // 暴露方法给父组件
-    React.useImperativeHandle(ref, () => ({
-      startCamera,
-      stopCamera,
-      switchCamera,
-      isCameraOn: () => isCameraOn,
-    }));
 
     useEffect(() => {
       console.log('videoConfig', videoConfig, uuid);
@@ -196,6 +187,14 @@ const CameraControl = React.forwardRef(
       }
     };
 
+    // 暴露方法给父组件
+    React.useImperativeHandle(ref, () => ({
+      startCamera,
+      stopCamera,
+      switchCamera,
+      isCameraOn: () => isCameraOn,
+    }));
+
     // 处理远程视频流
     useEffect(() => {
       if (isReceiver && remoteStream && videoRef.current) {
@@ -232,6 +231,7 @@ const CameraControl = React.forwardRef(
             <div className={styles.controls}>
               {false && (
                 <button
+                  type="button"
                   onClick={isCameraOn ? stopCamera : startCamera}
                   className={styles.controlButton}
                 >
@@ -242,7 +242,11 @@ const CameraControl = React.forwardRef(
               )}
 
               {isCameraOn && availableCameras.length > 1 && (
-                <button onClick={switchCamera} className={styles.controlButton}>
+                <button
+                  type="button"
+                  onClick={switchCamera}
+                  className={styles.controlButton}
+                >
                   {intl.formatMessage({ id: 'media.switchCamera' })}
                 </button>
               )}

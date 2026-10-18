@@ -387,7 +387,9 @@ const onLogin = async () => {
           showToast({ message: t("login.invalidCredentials"), icon: "fail" });
           return;
         }
-      } catch {}
+      } catch {
+        // 非 JSON 错误体: 按网络错误处理
+      }
     }
     showToast({ message: t("login.networkError"), icon: "fail" });
   } finally {

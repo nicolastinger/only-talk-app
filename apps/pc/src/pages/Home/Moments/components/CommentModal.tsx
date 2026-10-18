@@ -26,14 +26,6 @@ const CommentModal = (props: {
   const [submitting, setSubmitting] = useState(false);
   const [avatars, setAvatars] = useState<{ [key: string]: string }>({});
 
-  useEffect(() => {
-    if (open && momentUuid) {
-      setCommentText('');
-      setComments([]);
-      loadComments();
-    }
-  }, [open, momentUuid]);
-
   const loadComments = async () => {
     setLoading(true);
     try {
@@ -56,6 +48,14 @@ const CommentModal = (props: {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (open && momentUuid) {
+      setCommentText('');
+      setComments([]);
+      loadComments();
+    }
+  }, [open, momentUuid]);
 
   const handleSubmit = async () => {
     const trimmed = commentText.trim();

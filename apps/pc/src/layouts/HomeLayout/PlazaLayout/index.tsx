@@ -59,7 +59,11 @@ const PlazaLayout = () => {
             count={menuUnread.plaza}
             onClick={() => setNotifyVisible(true)}
           />
-          <button className={styles.manageBtn} onClick={routeToSettings}>
+          <button
+            type="button"
+            className={styles.manageBtn}
+            onClick={routeToSettings}
+          >
             <SettingOutlined />
             <span>{intl.formatMessage({ id: 'plaza.manage' })}</span>
           </button>

@@ -25,14 +25,6 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   const [friendList, setFriendList] = useState<FriendVo[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (visible) {
-      loadFriends();
-      setGroupName('');
-      setSelectedFriends([]);
-    }
-  }, [visible]);
-
   const loadFriends = async () => {
     try {
       const friends = await get_friend_list();
@@ -41,6 +33,14 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       console.log('获取好友列表失败', err);
     }
   };
+
+  useEffect(() => {
+    if (visible) {
+      loadFriends();
+      setGroupName('');
+      setSelectedFriends([]);
+    }
+  }, [visible]);
 
   const handleCreate = async () => {
     if (!groupName.trim()) {

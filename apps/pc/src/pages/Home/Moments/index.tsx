@@ -38,6 +38,7 @@ const Moments = () => {
             onClick={() => setNotifyVisible(true)}
           />
           <button
+            type="button"
             className={styles.publishBtn}
             onClick={() => setComposerOpen(true)}
           >

@@ -14,12 +14,12 @@
     inset: 0;
     background: radial-gradient(
         ellipse at 15% 15%,
-        rgba(64, 150, 255, 0.06) 0%,
+        rgba(64, 150, 255, 6%) 0%,
         transparent 50%
       ),
       radial-gradient(
         ellipse at 85% 80%,
-        rgba(138, 90, 224, 0.06) 0%,
+        rgba(138, 90, 224, 6%) 0%,
         transparent 50%
       );
     pointer-events: none;
@@ -45,21 +45,22 @@
   font-weight: 700;
   color: var(--text-color);
   letter-spacing: 0.5px;
-  animation: fadeInDown 0.35s ease backwards;
+  animation: fade-in-down 0.35s ease backwards;
 }
 
 .subtitle {
   margin-top: 4px;
   font-size: 13px;
   color: var(--text-color-secondary);
-  animation: fadeInDown 0.45s ease 0.05s backwards;
+  animation: fade-in-down 0.45s ease 0.05s backwards;
 }
 
-@keyframes fadeInDown {
+@keyframes fade-in-down {
   from {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -81,7 +82,7 @@
   padding: 8px 16px;
   border: none;
   border-radius: 999px;
-  background: rgba(64, 150, 255, 0.12);
+  background: rgba(64, 150, 255, 12%);
   color: var(--color-primary);
   font-size: 13px;
   font-weight: 500;
@@ -89,7 +90,7 @@
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(64, 150, 255, 0.2);
+    background: rgba(64, 150, 255, 20%);
     transform: translateY(-1px);
   }
 
@@ -122,15 +123,15 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 10%);
     border-radius: 3px;
     transition: background 0.3s ease;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 20%);
     }
   }
 
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  scrollbar-color: rgba(0, 0, 0, 10%) transparent;
 }

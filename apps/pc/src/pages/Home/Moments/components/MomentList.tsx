@@ -78,12 +78,6 @@ const MomentList = (props: {
     return () => ro.disconnect();
   }, [scheduleMeasure]);
 
-  useEffect(() => {
-    setPage(1);
-    load(1, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, authorUuid, feed]);
-
   const load = async (p: number, reset: boolean) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
@@ -100,6 +94,12 @@ const MomentList = (props: {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setPage(1);
+    load(1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, authorUuid, feed]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const hasMore = moments.length < total;

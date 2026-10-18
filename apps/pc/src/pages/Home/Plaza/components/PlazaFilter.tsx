@@ -37,7 +37,7 @@ const PlazaFilter = (props: {
     value.gender === 2 ? 'male' : value.gender === 3 ? 'female' : 'all';
 
   const ageValue =
-    value.age_min != null
+    value.age_min !== null && value.age_min !== undefined
       ? value.age_min >= 36
         ? '36plus'
         : value.age_min >= 26

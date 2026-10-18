@@ -72,12 +72,6 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
   }, [members, memberInfoMap]);
   const { avatarMap } = useAvatarMap(memberIconBizIds);
 
-  useEffect(() => {
-    if (inviteModalOpen) {
-      loadFriends();
-    }
-  }, [inviteModalOpen]);
-
   const loadFriends = async () => {
     try {
       const friends: FriendVo[] = await invoke('get_friend_list');
@@ -90,6 +84,12 @@ const MembersManage: React.FC<Props> = ({ groupInfo, members, onUpdate }) => {
       );
     }
   };
+
+  useEffect(() => {
+    if (inviteModalOpen) {
+      loadFriends();
+    }
+  }, [inviteModalOpen]);
 
   const handleInvite = async () => {
     if (selectedFriends.length === 0) {

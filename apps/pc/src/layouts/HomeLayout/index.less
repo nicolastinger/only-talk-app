@@ -55,18 +55,18 @@
   padding: 0 16px;
   background: linear-gradient(
     90deg,
-    rgba(255, 77, 79, 0.15) 0%,
-    rgba(255, 77, 79, 0.08) 100%
+    rgba(255, 77, 79, 15%) 0%,
+    rgba(255, 77, 79, 8%) 100%
   );
-  border: 1px solid rgba(255, 77, 79, 0.3);
+  border: 1px solid rgba(255, 77, 79, 30%);
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.2);
-  animation: tipPulse 2s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 20%);
+  animation: tip-pulse 2s ease-in-out infinite;
   z-index: 10;
 
   .tipIcon {
     font-size: 14px;
-    animation: tipIconBounce 1.5s ease-in-out infinite;
+    animation: tip-icon-bounce 1.5s ease-in-out infinite;
   }
 
   .tipText {
@@ -92,7 +92,7 @@
 
     &:hover {
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(245, 87, 108, 0.4);
+      box-shadow: 0 2px 8px rgba(245, 87, 108, 40%);
     }
 
     &:active {
@@ -145,29 +145,31 @@
   height: calc(100% - 40px);
 }
 
-@keyframes tipPulse {
+@keyframes tip-pulse {
   0%,
   100% {
     background: linear-gradient(
       90deg,
-      rgba(255, 77, 79, 0.1) 0%,
-      rgba(255, 77, 79, 0.05) 100%
+      rgba(255, 77, 79, 10%) 0%,
+      rgba(255, 77, 79, 5%) 100%
     );
   }
+
   50% {
     background: linear-gradient(
       90deg,
-      rgba(255, 77, 79, 0.15) 0%,
-      rgba(255, 77, 79, 0.08) 100%
+      rgba(255, 77, 79, 15%) 0%,
+      rgba(255, 77, 79, 8%) 100%
     );
   }
 }
 
-@keyframes tipIconBounce {
+@keyframes tip-icon-bounce {
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.2);
   }

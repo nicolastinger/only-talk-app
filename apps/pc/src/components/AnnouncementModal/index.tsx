@@ -92,7 +92,7 @@ const AnnouncementModal = ({
     >
       {announcement && (
         <div className={styles.wrap}>
-          <button className={styles.closeBtn} onClick={onClose}>
+          <button type="button" className={styles.closeBtn} onClick={onClose}>
             <CloseOutlined />
           </button>
 

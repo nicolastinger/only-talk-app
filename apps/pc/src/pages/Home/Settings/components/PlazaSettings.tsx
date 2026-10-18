@@ -36,10 +36,6 @@ const PlazaSettings = () => {
   const [mottoLoading, setMottoLoading] = useState(false);
   const [tagsLoading, setTagsLoading] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
   const loadProfile = async () => {
     try {
       const profile = await get_plaza_profile();
@@ -53,6 +49,10 @@ const PlazaSettings = () => {
       );
     }
   };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
   const handleAllowDiscoverChange = async (checked: boolean) => {
     const prev = allowDiscover;

@@ -325,6 +325,7 @@ const FastSignUp: React.FC = () => {
                 onBlur={() => validateCode(verificationCode)}
               />
               <button
+                type="button"
                 className={styles.codeBtn}
                 onClick={handleSendCode}
                 disabled={loading || countdown > 0}
@@ -346,6 +347,7 @@ const FastSignUp: React.FC = () => {
           </div>
 
           <button
+            type="button"
             className={styles.submitBtn}
             onClick={handleNext}
             disabled={loading}
@@ -458,6 +460,7 @@ const FastSignUp: React.FC = () => {
 
           <div className={styles.btnRow}>
             <button
+              type="button"
               className={styles.prevBtn}
               onClick={handlePrev}
               disabled={loading}
@@ -465,6 +468,7 @@ const FastSignUp: React.FC = () => {
               {intl.formatMessage({ id: 'signUp.prev' })}
             </button>
             <button
+              type="button"
               className={styles.submitBtn}
               onClick={onFinish}
               disabled={loading}

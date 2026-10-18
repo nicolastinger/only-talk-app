@@ -49,7 +49,6 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
       text_msg_raw: { raw, text_type, timestamp, nano_id },
     },
     isAck = true,
-    icon,
     friendUuid,
   } = props;
   const sending = isAck === false;

@@ -105,6 +105,7 @@ const PlazaCard = (props: {
         </div>
         {showCrush && (
           <button
+            type="button"
             className={`${styles.crushBtn} ${liked ? styles.crushActive : ''}`}
             onClick={handleCrush}
             title={intl.formatMessage({

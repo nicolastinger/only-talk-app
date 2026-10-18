@@ -48,13 +48,6 @@ const GroupInfoPage = () => {
   const [groupIcon, setGroupIcon] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (groupId) {
-      loadGroupInfo();
-      loadMembers();
-    }
-  }, [groupId]);
-
   const loadGroupInfo = async () => {
     setLoading(true);
     // 1) 先用本地 sqlite 群组行秒开资料卡, 再 HTTP 拉权威数据覆盖
@@ -107,6 +100,13 @@ const GroupInfoPage = () => {
       console.error('获取群成员失败', error);
     }
   };
+
+  useEffect(() => {
+    if (groupId) {
+      loadGroupInfo();
+      loadMembers();
+    }
+  }, [groupId]);
 
   const routeToChat = async () => {
     try {

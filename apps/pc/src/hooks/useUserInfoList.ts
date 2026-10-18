@@ -2,6 +2,9 @@ import { get_user_info_with_cache, refresh_user_info } from '@workspace/services
 import { UserInfo } from '@workspace/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+// 模块级缓存，跨组件共享，避免重复请求
+const memberInfoCache = new Map<string, UserInfo>();
+
 /**
  * 批量获取用户信息
  * 1. 先去本地 common.db (SQLite) 查询用户信息
@@ -46,46 +49,48 @@ export const useUserInfoList = (uuids: string[]) => {
         return;
       }
 
+      // 单个用户的获取逻辑抽到循环外，
+      // 避免循环内闭包引用 cancelled 触发 no-loop-func
+      const fetchOne = async (uuid: string) => {
+        if (cancelled) return;
+        if (fetchingRef.current.has(uuid)) return;
+
+        fetchingRef.current.add(uuid);
+
+        try {
+          // get_user_info_with_cache: 先查本地 common.db → 未命中则调 API → 缓存到本地
+          const result = await get_user_info_with_cache(uuid);
+
+          memberInfoCache.set(uuid, result.user_info);
+
+          if (!cancelled) {
+            setUserInfoMap(new Map(memberInfoCache));
+          }
+
+          // 如果来自缓存，后台静默刷新以保持数据新鲜
+          if (result.from_cache) {
+            refresh_user_info(uuid)
+              .then((freshUser) => {
+                memberInfoCache.set(uuid, freshUser);
+                if (!cancelled) {
+                  setUserInfoMap(new Map(memberInfoCache));
+                }
+              })
+              .catch(() => {});
+          }
+        } catch (err) {
+          console.error('[useUserInfoList] 获取用户信息失败:', uuid, err);
+          // 标记失败的不再重试（本生命周期内）
+        }
+      };
+
       // 并行批量获取，每批最多 5 个并发
       const BATCH_SIZE = 5;
       for (let i = 0; i < needFetch.length; i += BATCH_SIZE) {
         if (cancelled) break;
         const batch = needFetch.slice(i, i + BATCH_SIZE);
 
-        await Promise.all(
-          batch.map(async (uuid) => {
-            if (cancelled) return;
-            if (fetchingRef.current.has(uuid)) return;
-
-            fetchingRef.current.add(uuid);
-
-            try {
-              // get_user_info_with_cache: 先查本地 common.db → 未命中则调 API → 缓存到本地
-              const result = await get_user_info_with_cache(uuid);
-
-              memberInfoCache.set(uuid, result.user_info);
-
-              if (!cancelled) {
-                setUserInfoMap(new Map(memberInfoCache));
-              }
-
-              // 如果来自缓存，后台静默刷新以保持数据新鲜
-              if (result.from_cache) {
-                refresh_user_info(uuid)
-                  .then((freshUser) => {
-                    memberInfoCache.set(uuid, freshUser);
-                    if (!cancelled) {
-                      setUserInfoMap(new Map(memberInfoCache));
-                    }
-                  })
-                  .catch(() => {});
-              }
-            } catch (err) {
-              console.error('[useUserInfoList] 获取用户信息失败:', uuid, err);
-              // 标记失败的不再重试（本生命周期内）
-            }
-          })
-        );
+        await Promise.all(batch.map(fetchOne));
       }
 
       if (!cancelled) {
@@ -110,6 +115,3 @@ export const useUserInfoList = (uuids: string[]) => {
 
   return { userInfoMap, loading, getCached };
 };
-
-// 模块级缓存，跨组件共享，避免重复请求
-const memberInfoCache = new Map<string, UserInfo>();

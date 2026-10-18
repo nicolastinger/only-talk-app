@@ -34,15 +34,6 @@ const ContactsLayout = () => {
     }
   };
 
-  // 右下角悬浮按钮: 好友 tab 添加好友, 群组 tab 添加群组
-  const handleFabClick = () => {
-    if (activeTab === 'friends') {
-      openAddFriendWindow();
-    } else {
-      setCreateGroupVisible(true);
-    }
-  };
-
   const openAddFriendWindow = async () => {
     const webviewOptions: WebviewOptions = {
       x: 0,
@@ -59,6 +50,15 @@ const ContactsLayout = () => {
       webviewOptions,
       config,
     );
+  };
+
+  // 右下角悬浮按钮: 好友 tab 添加好友, 群组 tab 添加群组
+  const handleFabClick = () => {
+    if (activeTab === 'friends') {
+      openAddFriendWindow();
+    } else {
+      setCreateGroupVisible(true);
+    }
   };
 
   const tabOptions = [

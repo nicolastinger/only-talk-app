@@ -134,7 +134,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
           filePath: croppedPath,
           fieldName: 'file',
         }),
-        new Promise<never>((_, reject) =>
+        new Promise<never>((_, reject) => {
           setTimeout(
             () =>
               reject(
@@ -143,8 +143,8 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ visible, onClose }) => {
                 ),
               ),
             TIMEOUT_MS,
-          ),
-        ),
+          );
+        }),
       ]);
 
       window.dispatchEvent(new CustomEvent('uploadEnd'));

@@ -168,6 +168,7 @@ const SearchFriend = () => {
               <List.Item
                 actions={[
                   <Button
+                    key={item.uuid}
                     type="primary"
                     onClick={() =>
                       showModal(item.uuid || '', item.username || '')

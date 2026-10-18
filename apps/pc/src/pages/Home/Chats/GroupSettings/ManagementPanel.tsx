@@ -1,9 +1,8 @@
 import { useBearStore } from '@/store/store';
-import { get_friend_list, invite_group_members, quit_group, dissolve_group, set_member_role } from '@workspace/services';
-import { FriendVo, GroupMemberVo, GroupVo } from '@workspace/types';
+import { quit_group, dissolve_group, set_member_role } from '@workspace/services';
+import { GroupMemberVo, GroupVo } from '@workspace/types';
 import { Button, Modal, Select, message } from 'antd';
 import { history } from '@umijs/max';
-import { useState } from 'react';
 import styles from './index.module.less';
 
 interface Props {

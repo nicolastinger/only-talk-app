@@ -105,7 +105,6 @@ export class NatDetector {
       const tempConnection = new RTCPeerConnection(config);
 
       let hasHostCandidate = false;
-      let candidateCount = 0;
       // 收集所有srflx候选的映射地址和端口，用于检测对称NAT
       const srflxMappings: { ip: string; port: number }[] = [];
 
@@ -116,7 +115,6 @@ export class NatDetector {
       // 收集ICE候选以分析NAT类型
       tempConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          candidateCount++;
           const type = event.candidate.type;
           console.log(
             `[WebRTCService.detectNATType] 收到候选 - 类型: ${type}, 地址: ${event.candidate.address}, 端口: ${event.candidate.port}`,
@@ -143,10 +141,12 @@ export class NatDetector {
       await tempConnection.setLocalDescription(offer);
 
       // 等待一段时间收集候选
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000);
+      });
 
       // 分析NAT类型
-      this.analyzeNATType(hasHostCandidate, srflxMappings, candidateCount);
+      this.analyzeNATType(hasHostCandidate, srflxMappings);
 
       // 清理临时连接
       tempConnection.close();
@@ -169,7 +169,6 @@ export class NatDetector {
   private analyzeNATType(
     hasHost: boolean,
     srflxMappings: { ip: string; port: number }[],
-    count: number,
   ): void {
     let natType: string;
     const hasSrflx = srflxMappings.length > 0;

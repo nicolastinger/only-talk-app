@@ -79,11 +79,12 @@ const GroupSettingsPage = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (groupId) {
-      loadData();
-    }
-  }, [groupId]);
+  // 管理权限与数据加载函数被下方 useEffect / 事件回调引用, 提前声明
+  const isOwner = groupInfo?.owner_uuid === userInfo?.uuid;
+  const isAdmin = members.some(
+    (m) => m.user_uuid === userInfo?.uuid && m.role >= 1,
+  );
+  const canManage = isOwner || isAdmin;
 
   const loadData = async () => {
     setLoading(true);
@@ -124,6 +125,12 @@ const GroupSettingsPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (groupId) {
+      loadData();
+    }
+  }, [groupId]);
 
   const handleAvatarClick = async () => {
     if (!canManage || avatarUploading) return;
@@ -205,18 +212,11 @@ const GroupSettingsPage = () => {
     }
   };
 
-  const isOwner = groupInfo?.owner_uuid === userInfo?.uuid;
-  const isAdmin = members.some(
-    (m) => m.user_uuid === userInfo?.uuid && m.role >= 1,
-  );
-  const canManage = isOwner || isAdmin;
-
   const memberUuids = useMemo(
     () => members.map((m) => m.user_uuid).filter(Boolean),
     [members],
   );
-  const { userInfoMap: memberInfoMap, loading: memberInfoLoading } =
-    useUserInfoList(memberUuids);
+  const { userInfoMap: memberInfoMap } = useUserInfoList(memberUuids);
 
   // 收集所有成员的 icon bizId，批量转换为可用的头像 URL
   const memberIconBizIds = useMemo(() => {

@@ -62,10 +62,61 @@ const FriendInfo = (props: { uuid: string }) => {
     5: intl.formatMessage({ id: 'userInfo.genderTypes.other' }),
   };
 
-  useEffect(() => {
-    console.log('uuid', uuid);
-    initUserData(uuid);
-  }, [uuid]);
+  const getUserIcon = async (icon: string): Promise<string> => {
+    try {
+      const FileVos = await getFiles(icon);
+      return FileVos?.[0]?.tauri_file_path || '';
+    } catch (error) {
+      message.error(intl.formatMessage({ id: 'friendInfo.avatarError' }));
+      console.log(error);
+      return '';
+    }
+  };
+
+  // HTTP 新资料到手后, 定向回写本地好友表(sqlite 单条), 失败静默
+  const writebackFriendProfile = async (friendUuid: string, u: UserInfo) => {
+    try {
+      await invoke('update_friend_profile_command', {
+        friendUuid,
+        account: u.account || '',
+        name: u.username || '',
+        icon: u.icon || '',
+        info: u.info || '',
+      });
+    } catch (e) {
+      console.log('回写好友资料到本地失败', e);
+    }
+  };
+
+  const refreshUserInfo = async (uuid: string) => {
+    try {
+      const freshUser = await refresh_user_info(uuid);
+      console.log('用户信息已刷新:', freshUser);
+      setUserInfo(freshUser);
+
+      const friendVo: FriendVo = {
+        timestamp: 0,
+        friend_id: freshUser.uuid,
+        friend_account: freshUser.account || '',
+        friend_name: freshUser.username || '',
+        friend_icon: freshUser.icon || '',
+        friend_status: 0,
+        is_del: false,
+        is_block: 0,
+        is_mute: 0,
+        is_top: 0,
+        is_show: 1,
+      };
+      setCurrentFriend(friendVo);
+
+      const icon = await getUserIcon(freshUser.icon || '');
+      setFriendIcon(icon);
+
+      writebackFriendProfile(uuid, freshUser);
+    } catch (err) {
+      console.log('后台刷新用户信息失败', err);
+    }
+  };
 
   const initUserData = async (uuid: string) => {
     setLoading(true);
@@ -120,61 +171,10 @@ const FriendInfo = (props: { uuid: string }) => {
     }
   };
 
-  // HTTP 新资料到手后, 定向回写本地好友表(sqlite 单条), 失败静默
-  const writebackFriendProfile = async (friendUuid: string, u: UserInfo) => {
-    try {
-      await invoke('update_friend_profile_command', {
-        friendUuid,
-        account: u.account || '',
-        name: u.username || '',
-        icon: u.icon || '',
-        info: u.info || '',
-      });
-    } catch (e) {
-      console.log('回写好友资料到本地失败', e);
-    }
-  };
-
-  const refreshUserInfo = async (uuid: string) => {
-    try {
-      const freshUser = await refresh_user_info(uuid);
-      console.log('用户信息已刷新:', freshUser);
-      setUserInfo(freshUser);
-
-      const friendVo: FriendVo = {
-        timestamp: 0,
-        friend_id: freshUser.uuid,
-        friend_account: freshUser.account || '',
-        friend_name: freshUser.username || '',
-        friend_icon: freshUser.icon || '',
-        friend_status: 0,
-        is_del: false,
-        is_block: 0,
-        is_mute: 0,
-        is_top: 0,
-        is_show: 1,
-      };
-      setCurrentFriend(friendVo);
-
-      const icon = await getUserIcon(freshUser.icon || '');
-      setFriendIcon(icon);
-
-      writebackFriendProfile(uuid, freshUser);
-    } catch (err) {
-      console.log('后台刷新用户信息失败', err);
-    }
-  };
-
-  const getUserIcon = async (icon: string): Promise<string> => {
-    try {
-      const FileVos = await getFiles(icon);
-      return FileVos?.[0]?.tauri_file_path || '';
-    } catch (error) {
-      message.error(intl.formatMessage({ id: 'friendInfo.avatarError' }));
-      console.log(error);
-      return '';
-    }
-  };
+  useEffect(() => {
+    console.log('uuid', uuid);
+    initUserData(uuid);
+  }, [uuid]);
 
   const routeToChat = async () => {
     try {

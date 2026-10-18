@@ -32,11 +32,6 @@ const GroupInfoPage: React.FC = () => {
   const groupId = params.get('groupId') || '';
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
 
-  useEffect(() => {
-    loadGroupInfo();
-    loadMembers();
-  }, [groupId]);
-
   const loadGroupIcon = async (avatar?: string) => {
     if (!avatar) return;
     try {
@@ -95,6 +90,11 @@ const GroupInfoPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadGroupInfo();
+    loadMembers();
+  }, [groupId]);
 
   const handleLeaveGroup = () => {
     Modal.confirm({

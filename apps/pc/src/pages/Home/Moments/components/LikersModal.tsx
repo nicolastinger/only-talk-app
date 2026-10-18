@@ -106,6 +106,7 @@ const LikersModal = (props: {
           ))}
           {hasMore && (
             <button
+              type="button"
               className={styles.loadMore}
               onClick={() => load(page + 1, false)}
             >

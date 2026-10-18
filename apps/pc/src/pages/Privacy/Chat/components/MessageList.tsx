@@ -31,7 +31,6 @@ const MessageList: React.FC<MessageListProps> = ({
 
   const renderMessage = (msg: ChatMessageItem) => {
     const meText = intl.formatMessage({ id: 'privacyChat.me' });
-    const otherText = intl.formatMessage({ id: 'privacyChat.other' });
     const displayName = msg.isMine
       ? `${msg.senderName || myName}(${meText})`
       : msg.senderName || friendName;

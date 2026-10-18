@@ -262,6 +262,7 @@ const PendingSendBar: React.FC<PendingSendBarProps> = ({
                 {formatRaw(record)}
               </span>
               <button
+                type="button"
                 className={`${styles.actionBtn} ${styles.resendBtn}`}
                 title={intl.formatMessage({ id: 'chat.pendingBar.resend' })}
                 disabled={isActing}
@@ -274,6 +275,7 @@ const PendingSendBar: React.FC<PendingSendBarProps> = ({
                 )}
               </button>
               <button
+                type="button"
                 className={`${styles.actionBtn} ${styles.ignoreBtn}`}
                 title={intl.formatMessage({ id: 'chat.pendingBar.ignore' })}
                 disabled={isActing}
@@ -286,6 +288,7 @@ const PendingSendBar: React.FC<PendingSendBarProps> = ({
         })}
       </div>
       <button
+        type="button"
         className={styles.collapseBtn}
         title={intl.formatMessage({ id: 'chat.pendingBar.collapse' })}
         onClick={() => setCollapsed(true)}

@@ -183,10 +183,6 @@ const LeftAside = () => {
     );
   };
 
-  useEffect(() => {
-    getUserIcon();
-  }, [userInfo]);
-
   // 获取用户头像
   const getUserIcon = async () => {
     try {
@@ -197,6 +193,10 @@ const LeftAside = () => {
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    getUserIcon();
+  }, [userInfo]);
 
   // 组件卸载时清理 URL 对象
   useEffect(() => {

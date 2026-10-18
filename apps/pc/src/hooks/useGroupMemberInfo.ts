@@ -18,37 +18,44 @@ export const useGroupMemberInfo = (uuids: string[]) => {
 
     let cancelled = false;
 
+    // 单个成员的获取逻辑抽到循环外，
+    // 避免循环内闭包引用 cancelled 触发 no-loop-func
+    const fetchOne = async (uuid: string) => {
+      if (cancelled) return;
+      if (fetchingRef.current.has(uuid)) return;
+
+      fetchingRef.current.add(uuid);
+
+      try {
+        const result = await get_user_info_with_cache(uuid);
+
+        memberInfoCache.set(uuid, result.user_info);
+
+        if (!cancelled) {
+          setMemberInfoMap(new Map(memberInfoCache));
+          setVersion((v) => v + 1);
+        }
+
+        if (result.from_cache) {
+          refresh_user_info(uuid)
+            .then((freshUser) => {
+              memberInfoCache.set(uuid, freshUser);
+              if (!cancelled) {
+                setMemberInfoMap(new Map(memberInfoCache));
+                setVersion((v) => v + 1);
+              }
+            })
+            .catch(() => {});
+        }
+      } catch (err) {
+        console.error('[useGroupMemberInfo] 获取成员信息失败:', uuid, err);
+      }
+    };
+
     const doFetch = async () => {
       for (const uuid of targetUuids) {
         if (cancelled) return;
-        if (fetchingRef.current.has(uuid)) continue;
-
-        fetchingRef.current.add(uuid);
-
-        try {
-          const result = await get_user_info_with_cache(uuid);
-
-          memberInfoCache.set(uuid, result.user_info);
-
-          if (!cancelled) {
-            setMemberInfoMap(new Map(memberInfoCache));
-            setVersion((v) => v + 1);
-          }
-
-          if (result.from_cache) {
-            refresh_user_info(uuid)
-              .then((freshUser) => {
-                memberInfoCache.set(uuid, freshUser);
-                if (!cancelled) {
-                  setMemberInfoMap(new Map(memberInfoCache));
-                  setVersion((v) => v + 1);
-                }
-              })
-              .catch(() => {});
-          }
-        } catch (err) {
-          console.error('[useGroupMemberInfo] 获取成员信息失败:', uuid, err);
-        }
+        await fetchOne(uuid);
       }
     };
 

@@ -130,7 +130,7 @@ const MatchModal = (props: { user: PlazaUser | null; onClose: () => void }) => {
                 : intl.formatMessage({ id: 'plaza.addFriend' })}
             </Button>
           </div>
-          <button className={styles.closeBtn} onClick={onClose}>
+          <button type="button" className={styles.closeBtn} onClick={onClose}>
             {intl.formatMessage({ id: 'plaza.continue' })}
           </button>
         </div>

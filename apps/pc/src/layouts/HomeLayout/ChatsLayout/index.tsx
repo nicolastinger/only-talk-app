@@ -152,6 +152,20 @@ const ChatsLayout = () => {
     });
   }, [chatSessionEvent]);
 
+  const get_chat_session = async () => {
+    try {
+      const res = (await invoke(
+        'get_chat_session_from_store',
+        {},
+      )) as ChatSessionVo[];
+      console.log('get_chat_session', res);
+      const sortedList = res.sort((a, b) => b.timestamp - a.timestamp);
+      setChatSessionList(sortedList);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
   useEffect(() => {
     get_chat_session();
   }, []);
@@ -181,20 +195,6 @@ const ChatsLayout = () => {
   useEffect(() => {
     console.log('chatSessionList', chatSessionList);
   }, [chatSessionList]);
-
-  const get_chat_session = async () => {
-    try {
-      const res = (await invoke(
-        'get_chat_session_from_store',
-        {},
-      )) as ChatSessionVo[];
-      console.log('get_chat_session', res);
-      const sortedList = res.sort((a, b) => b.timestamp - a.timestamp);
-      setChatSessionList(sortedList);
-    } catch (e) {
-      console.log(e);
-    }
-  };
 
   const handleClearAllUnread = async () => {
     await clearAllUnreadSessions();

@@ -326,6 +326,7 @@ const HomeLayout = () => {
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button
+              type="button"
               onClick={hideToTray}
               style={{
                 padding: '8px 24px',
@@ -338,6 +339,7 @@ const HomeLayout = () => {
               {intl.formatMessage({ id: 'homeLayout.minimizeToTray' })}
             </button>
             <button
+              type="button"
               onClick={quitApp}
               style={{
                 padding: '8px 24px',

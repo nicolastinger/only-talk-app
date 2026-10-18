@@ -13,11 +13,11 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 10%);
     border-radius: 2px;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.18);
+      background: rgba(0, 0, 0, 18%);
     }
   }
 }
@@ -39,7 +39,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(64, 150, 255, 0.05), transparent);
+    background: linear-gradient(90deg, rgba(64, 150, 255, 5%), transparent);
     opacity: 0;
     transition: opacity 0.3s ease;
     border-radius: 10px;
@@ -48,8 +48,8 @@
 
   &:hover {
     background: var(--glass-bg-dark);
-    box-shadow: inset 0 0 20px rgba(64, 150, 255, 0.05),
-      0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: inset 0 0 20px rgba(64, 150, 255, 5%),
+      0 2px 8px rgba(0, 0, 0, 4%);
     transform: translateX(2px);
 
     &::before {
@@ -81,12 +81,12 @@
   font-size: 16px;
   font-weight: 600;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 10%);
   transition: all 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 255, 255, 80%);
 
   .invitation-item:hover & {
-    box-shadow: 0 4px 12px rgba(64, 150, 255, 0.25);
+    box-shadow: 0 4px 12px rgba(64, 150, 255, 25%);
     transform: scale(1.05);
     border-color: var(--color-primary);
   }
@@ -155,5 +155,5 @@
   color: #fff;
   background: linear-gradient(135deg, var(--color-primary) 0%, #4096ff 100%);
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(64, 150, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(64, 150, 255, 30%);
 }

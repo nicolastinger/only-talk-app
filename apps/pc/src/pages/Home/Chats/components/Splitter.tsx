@@ -26,8 +26,6 @@ const Splitter: React.FC<SplitterProps> = ({
 
       const containerHeight = window.innerHeight;
       const mouseY = e.clientY;
-      const containerTop =
-        splitterRef.current?.getBoundingClientRect().top || 0;
 
       // 计算相对于容器的高度百分比
       const heightPercent =

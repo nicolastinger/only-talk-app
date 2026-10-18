@@ -1,6 +1,6 @@
 // Footer 容器样式
 .footer {
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 5%);
   width: 100%;
   height: 100%;
   background: var(--glass-bg);
@@ -74,13 +74,14 @@
   padding: 12px;
   overflow-y: auto;
   z-index: 1000;
-  animation: slideUp 0.3s ease;
+  animation: slide-up 0.3s ease;
 
-  @keyframes slideUp {
+  @keyframes slide-up {
     from {
       opacity: 0;
       transform: translateY(10px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -92,16 +93,16 @@
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 5%);
     border-radius: 3px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 20%);
     border-radius: 3px;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 30%);
     }
   }
 }
@@ -124,7 +125,7 @@
   justify-content: center;
 
   &:hover {
-    background: rgba(64, 150, 255, 0.15);
+    background: rgba(64, 150, 255, 15%);
     transform: scale(1.2) rotate(10deg);
   }
 
@@ -137,7 +138,7 @@
 .footerMessage {
   width: 100%;
   overflow: auto;
-  padding: 8px 12px 16px 12px;
+  padding: 8px 12px 16px;
   min-height: 20px;
   height: calc(100% - 50px);
   position: relative;
@@ -154,8 +155,8 @@
   &::-webkit-scrollbar-thumb {
     background: linear-gradient(
       180deg,
-      rgba(64, 150, 255, 0.3),
-      rgba(64, 150, 255, 0.15)
+      rgba(64, 150, 255, 30%),
+      rgba(64, 150, 255, 15%)
     );
     border-radius: 3px;
     transition: all 0.3s ease;
@@ -164,8 +165,8 @@
   &::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(
       180deg,
-      rgba(64, 150, 255, 0.5),
-      rgba(64, 150, 255, 0.25)
+      rgba(64, 150, 255, 50%),
+      rgba(64, 150, 255, 25%)
     );
   }
 }
@@ -179,6 +180,7 @@
   min-height: 100%;
   max-height: 100%;
   background: var(--input-bg);
+  // stylelint-disable-next-line declaration-block-no-duplicate-properties -- 先用 border: none 清掉 textarea 默认边框，再用主题变量覆盖实际边框；前后值不同，保留以免变量缺失时出现默认边框
   border: 1px solid var(--input-border);
   border-radius: 12px;
   padding: 12px 14px;
@@ -189,8 +191,8 @@
 
   &:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1),
-      0 2px 8px rgba(64, 150, 255, 0.1);
+    box-shadow: 0 0 0 2px rgba(64, 150, 255, 10%),
+      0 2px 8px rgba(64, 150, 255, 10%);
     background: var(--input-bg-focus);
   }
 
@@ -207,8 +209,8 @@
 
   &:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1),
-      0 2px 8px rgba(64, 150, 255, 0.1);
+    box-shadow: 0 0 0 2px rgba(64, 150, 255, 10%),
+      0 2px 8px rgba(64, 150, 255, 10%);
   }
 }
 
@@ -236,8 +238,8 @@
 .footerTextArea::-webkit-scrollbar-thumb {
   background: linear-gradient(
     180deg,
-    rgba(64, 150, 255, 0.3),
-    rgba(64, 150, 255, 0.15)
+    rgba(64, 150, 255, 30%),
+    rgba(64, 150, 255, 15%)
   );
   border-radius: 3px;
   transition: all 0.3s ease;
@@ -246,15 +248,15 @@
 .footerTextArea::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     180deg,
-    rgba(64, 150, 255, 0.5),
-    rgba(64, 150, 255, 0.25)
+    rgba(64, 150, 255, 50%),
+    rgba(64, 150, 255, 25%)
   );
 }
 
 .footerTextArea:global(.ant-input-outlined:focus-within) {
   border: 1px solid var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1),
-    0 2px 8px rgba(64, 150, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(64, 150, 255, 10%),
+    0 2px 8px rgba(64, 150, 255, 10%);
 }
 
 // 发送按钮

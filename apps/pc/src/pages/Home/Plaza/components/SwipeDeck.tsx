@@ -240,6 +240,7 @@ const SwipeDeck = () => {
 
           <div className={styles.actions}>
             <button
+              type="button"
               className={`${styles.actionBtn} ${styles.skipBtn}`}
               disabled={!canSwipe}
               onClick={() => swipe('left')}
@@ -248,6 +249,7 @@ const SwipeDeck = () => {
               <CloseOutlined />
             </button>
             <button
+              type="button"
               className={`${styles.actionBtn} ${styles.likeBtn}`}
               disabled={!canSwipe}
               onClick={() => swipe('right')}

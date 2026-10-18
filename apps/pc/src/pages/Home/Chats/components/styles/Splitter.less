@@ -1,10 +1,10 @@
 .splitter {
   position: relative;
-  height: 0px;
+  height: 0;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(64, 150, 255, 0.1) 50%,
+    rgba(64, 150, 255, 10%) 50%,
     transparent 100%
   );
   cursor: row-resize;
@@ -17,7 +17,7 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(64, 150, 255, 0.2) 50%,
+      rgba(64, 150, 255, 20%) 50%,
       transparent 100%
     );
     height: 4px;
@@ -28,7 +28,7 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(64, 150, 255, 0.3) 50%,
+      rgba(64, 150, 255, 30%) 50%,
       transparent 100%
     );
     height: 4px;
@@ -51,6 +51,6 @@
   .splitter.dragging & {
     height: 4px;
     background: var(--color-primary);
-    box-shadow: 0 0 12px rgba(64, 150, 255, 0.4);
+    box-shadow: 0 0 12px rgba(64, 150, 255, 40%);
   }
 }

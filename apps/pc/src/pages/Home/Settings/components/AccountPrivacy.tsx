@@ -1,15 +1,11 @@
 import UserTypeTag from '@/components/UserTypeTag';
-import { openNewWindow } from '@/components/Window/OpenWindow';
 import { DEFAULT_ICON } from '@/constants';
 import { useBearStore } from '@/store/store';
 import { calcAgeFromBirthday } from '@/utils/format';
 import { LockOutlined, StopOutlined, UserOutlined } from '@ant-design/icons';
-import { invoke } from '@tauri-apps/api/core';
-import { WebviewOptions } from '@tauri-apps/api/webview';
-import { Window, WindowOptions } from '@tauri-apps/api/window';
 import { history, useIntl } from '@umijs/max';
 import { getFiles } from '@workspace/services';
-import { Button, Card, Checkbox, Divider, Typography, message } from 'antd';
+import { Button, Card, Checkbox, Divider, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from '../Settings.less';
 import ChangePasswordModal from './ChangePasswordModal';
@@ -18,8 +14,6 @@ const { Title, Text } = Typography;
 
 const AccountPrivacy = () => {
   const intl = useIntl();
-  const setIsLogin = useBearStore((state) => state.setIsLogin);
-  const setUserInfo = useBearStore((state) => state.setUserInfo);
   const userInfo = useBearStore((state) => state.userInfo);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [changePwdOpen, setChangePwdOpen] = useState(false);
@@ -53,47 +47,6 @@ const AccountPrivacy = () => {
     if (gender === 3)
       return intl.formatMessage({ id: 'settings.accountPrivacy.female' });
     return '-';
-  };
-
-  const handleLogout = async () => {
-    try {
-      const res = await invoke('logout');
-      console.log('登出结果:', res);
-
-      setIsLogin(false);
-      setUserInfo({ uuid: '' });
-
-      await invoke('clear_user_info');
-
-      history.push('/signIn');
-
-      const webviewOptions: WebviewOptions = {
-        x: 0,
-        y: 0,
-        url: `/signIn`,
-        height: 480,
-        width: 380,
-      };
-      const config: WindowOptions = {
-        title: 'Only Talk',
-        resizable: true,
-        fullscreen: false,
-        decorations: false,
-        center: true,
-      };
-
-      const configs: WebviewOptions | WindowOptions = {
-        ...config,
-        ...webviewOptions,
-      };
-      let currentWindow = Window.getCurrent();
-      await openNewWindow('main', configs, currentWindow);
-    } catch (error) {
-      console.error('登出失败:', error);
-      message.error(
-        intl.formatMessage({ id: 'settings.accountPrivacy.logoutFailed' }),
-      );
-    }
   };
 
   return (

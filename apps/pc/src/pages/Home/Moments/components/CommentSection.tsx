@@ -27,7 +27,7 @@ const CommentSection = (props: {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [, setLoadingMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [text, setText] = useState('');
   const [avatars, setAvatars] = useState<{ [key: string]: string }>({});
@@ -39,7 +39,11 @@ const CommentSection = (props: {
   const loadComments = async (p: number, reset: boolean) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
-    reset ? setLoading(true) : setLoadingMore(true);
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
       const res = await get_moment_comments(momentUuid, p, PAGE_SIZE);
       setTotal(res.total);
@@ -129,6 +133,7 @@ const CommentSection = (props: {
                   </span>
                   {item.author_uuid !== myUuid && (
                     <button
+                      type="button"
                       className={styles.reportBtn}
                       onClick={() => setReportComment(item)}
                     >
@@ -146,6 +151,7 @@ const CommentSection = (props: {
             </div>
           ) : hasMore ? (
             <button
+              type="button"
               className={styles.loadMore}
               onClick={() => loadComments(page + 1, false)}
             >

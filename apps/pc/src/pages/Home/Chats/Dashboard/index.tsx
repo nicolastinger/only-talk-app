@@ -3,8 +3,6 @@ import chatSvg from '@/assets/svg/chat.svg';
 import CreateGroupModal from '@/pages/Home/Chats/components/CreateGroupModal';
 import { useBearStore } from '@/store/store';
 import { useIntl } from '@umijs/max';
-import { Button } from 'antd';
-import { TeamOutlined } from '@ant-design/icons';
 import styles from './index.less';
 
 const DashboardPage: React.FC = () => {

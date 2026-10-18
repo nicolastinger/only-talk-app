@@ -5,11 +5,11 @@
   padding: 0 8px;
   box-sizing: border-box;
   position: relative;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), var(--glass-bg));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 92%), var(--glass-bg));
   backdrop-filter: var(--glass-blur);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 5%);
   overflow: hidden;
-  animation: pendingBarIn 0.25s ease;
+  animation: pending-bar-in 0.25s ease;
   transition: height 0.2s ease;
 
   // 拖拽拉伸中关闭高度动画，跟手
@@ -29,7 +29,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(64, 150, 255, 0.35),
+      rgba(64, 150, 255, 35%),
       transparent
     );
   }
@@ -56,7 +56,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(64, 150, 255, 0.5),
+      rgba(64, 150, 255, 50%),
       transparent
     );
     opacity: 0.6;
@@ -92,7 +92,7 @@
 
   // 左右两块的分隔竖线
   & + .pane {
-    border-left: 1px solid rgba(64, 150, 255, 0.08);
+    border-left: 1px solid rgba(64, 150, 255, 8%);
   }
 
   &::-webkit-scrollbar {
@@ -106,8 +106,8 @@
   &::-webkit-scrollbar-thumb {
     background: linear-gradient(
       180deg,
-      rgba(64, 150, 255, 0.3),
-      rgba(64, 150, 255, 0.15)
+      rgba(64, 150, 255, 30%),
+      rgba(64, 150, 255, 15%)
     );
     border-radius: 2px;
   }
@@ -134,13 +134,13 @@
 
 .paneSending .paneTitle::before {
   background: var(--color-primary);
-  box-shadow: 0 0 4px rgba(64, 150, 255, 0.6);
-  animation: pulseDot 1.6s ease-in-out infinite;
+  box-shadow: 0 0 4px rgba(64, 150, 255, 60%);
+  animation: pulse-dot 1.6s ease-in-out infinite;
 }
 
 .paneFailed .paneTitle::before {
   background: var(--color-error);
-  box-shadow: 0 0 4px rgba(255, 77, 79, 0.5);
+  box-shadow: 0 0 4px rgba(255, 77, 79, 50%);
 }
 
 .item {
@@ -157,11 +157,11 @@
 }
 
 .sendingItem:hover {
-  background: rgba(64, 150, 255, 0.05);
+  background: rgba(64, 150, 255, 5%);
 }
 
 .failedItem:hover {
-  background: rgba(255, 77, 79, 0.06);
+  background: rgba(255, 77, 79, 6%);
 }
 
 // 操作中（重发/忽略进行时）的条目
@@ -230,7 +230,7 @@
   }
 
   &:hover img {
-    filter: drop-shadow(0 0 3px rgba(64, 150, 255, 0.6));
+    filter: drop-shadow(0 0 3px rgba(64, 150, 255, 60%));
   }
 }
 
@@ -239,7 +239,7 @@
 
   &:hover {
     color: var(--color-error);
-    background: rgba(255, 77, 79, 0.08);
+    background: rgba(255, 77, 79, 8%);
   }
 }
 
@@ -285,12 +285,12 @@
   justify-content: space-between;
   padding: 0 10px;
   box-sizing: border-box;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), var(--glass-bg));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 92%), var(--glass-bg));
   backdrop-filter: var(--glass-blur);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 5%);
   position: relative;
   cursor: pointer;
-  animation: pendingBarIn 0.25s ease;
+  animation: pending-bar-in 0.25s ease;
   transition: background 0.2s ease;
 
   // 顶部蓝色渐变装饰线
@@ -304,7 +304,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(64, 150, 255, 0.35),
+      rgba(64, 150, 255, 35%),
       transparent
     );
   }
@@ -312,7 +312,7 @@
   &:hover {
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.97),
+      rgba(255, 255, 255, 97%),
       var(--glass-bg)
     );
 
@@ -336,7 +336,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--color-error);
-  box-shadow: 0 0 4px rgba(255, 77, 79, 0.5);
+  box-shadow: 0 0 4px rgba(255, 77, 79, 50%);
 }
 
 .collapsedBadge {
@@ -363,22 +363,24 @@
   transition: all 0.2s ease;
 }
 
-@keyframes pendingBarIn {
+@keyframes pending-bar-in {
   from {
     opacity: 0;
     transform: translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes pulseDot {
+@keyframes pulse-dot {
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.4;
   }

@@ -76,19 +76,11 @@ export const waitForIceGathering = (
       `[WebRTCService.waitForIceGathering] ⏳ 等待ICE候选收集，当前状态: ${connection.iceGatheringState}`,
     );
 
-    // 设置超时
-    const timer = setTimeout(() => {
-      console.log('[WebRTCService.waitForIceGathering] ⏰ 等待超时，继续执行');
-      // 清理监听器，避免内存泄漏
-      connection.removeEventListener(
-        'icegatheringstatechange',
-        onGatheringStateChange,
-      );
-      resolve();
-    }, timeout);
+    // 处理器与超时定时器互相引用，先用 let 声明 timer 占位以打破循环依赖
+    let timer: ReturnType<typeof setTimeout>;
 
     // 使用addEventListener而非直接赋值，避免覆盖已有的处理器
-    const onGatheringStateChange = () => {
+    function onGatheringStateChange() {
       if (connection.iceGatheringState === 'complete') {
         console.log('[WebRTCService.waitForIceGathering] ✅ ICE候选收集完成');
         clearTimeout(timer);
@@ -98,7 +90,18 @@ export const waitForIceGathering = (
         );
         resolve();
       }
-    };
+    }
+
+    // 设置超时
+    timer = setTimeout(() => {
+      console.log('[WebRTCService.waitForIceGathering] ⏰ 等待超时，继续执行');
+      // 清理监听器，避免内存泄漏
+      connection.removeEventListener(
+        'icegatheringstatechange',
+        onGatheringStateChange,
+      );
+      resolve();
+    }, timeout);
 
     connection.addEventListener(
       'icegatheringstatechange',

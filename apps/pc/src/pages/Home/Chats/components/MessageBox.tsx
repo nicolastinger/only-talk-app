@@ -68,27 +68,6 @@ const MessageBox = (
     return message;
   }, [message, text_type]);
 
-  // 只在 img 真正变化时重新获取图片
-  useEffect(() => {
-    if (!img) return;
-
-    // 检查缓存
-    if (imageCache.has(img)) {
-      setFriendIcon(imageCache.get(img)!);
-      return;
-    }
-
-    setLoading(true);
-    getUserIcon(img)
-      .then((icon) => {
-        setFriendIcon(icon);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  }, [img]);
-
   // 获取用户头像
   const getUserIcon = async (icon: string): Promise<string> => {
     try {
@@ -109,6 +88,27 @@ const MessageBox = (
       return '';
     }
   };
+
+  // 只在 img 真正变化时重新获取图片
+  useEffect(() => {
+    if (!img) return;
+
+    // 检查缓存
+    if (imageCache.has(img)) {
+      setFriendIcon(imageCache.get(img)!);
+      return;
+    }
+
+    setLoading(true);
+    getUserIcon(img)
+      .then((icon) => {
+        setFriendIcon(icon);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
+  }, [img]);
 
   const timeStr = formatMessageTime(time);
   return (

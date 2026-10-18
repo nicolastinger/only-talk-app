@@ -7,60 +7,6 @@ import { Badge, message } from 'antd';
 import { useEffect, useState } from 'react';
 import styles from './styles/GroupList.less';
 
-const GroupList = () => {
-  const intl = useIntl();
-  const [groups, setGroups] = useState<GroupListItemVo[]>([]);
-  const refreshFlag = useBearStore((state) => state.refreshFlag);
-  const location = useLocation();
-
-  const selectedGroupId =
-    new URLSearchParams(location.search).get('groupId') || '';
-
-  useEffect(() => {
-    getGroupList();
-  }, []);
-
-  useEffect(() => {
-    if (refreshFlag > 0) {
-      getGroupList();
-    }
-  }, [refreshFlag]);
-
-  const getGroupList = async () => {
-    try {
-      const groupList = await get_group_list();
-      console.log('群组列表', groupList);
-      setGroups(groupList || []);
-    } catch (error) {
-      console.error('获取群组列表失败', error);
-      message.error(
-        intl.formatMessage({ id: 'contacts.groupList.fetchError' }),
-      );
-    }
-  };
-
-  const routeToGroupInfo = (groupId: string) => {
-    history.push('/home/contacts/group?groupId=' + groupId);
-  };
-
-  return (
-    <div className={styles.container}>
-      <div className={styles.listContent}>
-        {groups.length > 0
-          ? groups.map((group) => (
-              <GroupBox
-                key={group.group_uuid}
-                group={group}
-                isSelected={selectedGroupId === group.group_uuid}
-                onClick={() => routeToGroupInfo(group.group_uuid)}
-              />
-            ))
-          : null}
-      </div>
-    </div>
-  );
-};
-
 interface GroupBoxProps {
   group: GroupListItemVo;
   isSelected?: boolean;
@@ -109,6 +55,60 @@ const GroupBox = ({ group, isSelected, onClick }: GroupBoxProps) => {
           {group.member_count}{' '}
           {intl.formatMessage({ id: 'contacts.groupList.members' })}
         </div>
+      </div>
+    </div>
+  );
+};
+
+const GroupList = () => {
+  const intl = useIntl();
+  const [groups, setGroups] = useState<GroupListItemVo[]>([]);
+  const refreshFlag = useBearStore((state) => state.refreshFlag);
+  const location = useLocation();
+
+  const selectedGroupId =
+    new URLSearchParams(location.search).get('groupId') || '';
+
+  const getGroupList = async () => {
+    try {
+      const groupList = await get_group_list();
+      console.log('群组列表', groupList);
+      setGroups(groupList || []);
+    } catch (error) {
+      console.error('获取群组列表失败', error);
+      message.error(
+        intl.formatMessage({ id: 'contacts.groupList.fetchError' }),
+      );
+    }
+  };
+
+  useEffect(() => {
+    getGroupList();
+  }, []);
+
+  useEffect(() => {
+    if (refreshFlag > 0) {
+      getGroupList();
+    }
+  }, [refreshFlag]);
+
+  const routeToGroupInfo = (groupId: string) => {
+    history.push('/home/contacts/group?groupId=' + groupId);
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.listContent}>
+        {groups.length > 0
+          ? groups.map((group) => (
+              <GroupBox
+                key={group.group_uuid}
+                group={group}
+                isSelected={selectedGroupId === group.group_uuid}
+                onClick={() => routeToGroupInfo(group.group_uuid)}
+              />
+            ))
+          : null}
       </div>
     </div>
   );

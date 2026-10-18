@@ -43,7 +43,7 @@ export interface RouteInfo {
  * @param routeInfo 路由信息
  */
 export const handleRouteChange = (routeInfo: RouteInfo) => {
-  const { location, routes, action } = routeInfo;
+  const { location, action } = routeInfo;
 
   // 只在非开发环境或路由真正变化时记录日志
   if (process.env.NODE_ENV !== 'development' || action === 'PUSH') {
@@ -111,5 +111,7 @@ export const checkPermission = (
 
   // 这里可以实现更复杂的权限验证逻辑
   // 例如：根据路由路径和用户权限列表进行匹配
+  // 预留：后续基于 permissions 实现真正的匹配逻辑
+  void permissions;
   return true; // 默认允许访问
 };
