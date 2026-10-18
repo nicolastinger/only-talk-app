@@ -17,6 +17,9 @@ pub const MSG_TYPE_IMAGE: u16 = 2;
 /// 文件消息
 pub const MSG_TYPE_FILE: u16 = 3;
 
+/// 语音消息(单聊): 录音文件以附件形式上传, raw 为 VoiceRecord JSON
+pub const MSG_TYPE_VOICE: u16 = 21;
+
 /// JSON消息
 pub const MSG_TYPE_JSON: u16 = 88;
 
@@ -151,6 +154,9 @@ pub const MSG_TYPE_GROUP_NOTIFICATION: u16 = 2004;
 /// 群消息已读回执
 pub const MSG_TYPE_GROUP_READ: u16 = 2005;
 
+/// 群语音消息: 录音文件以附件形式上传, raw 为外层 GroupTextRecord(内层 GroupVoiceRecord)
+pub const MSG_TYPE_GROUP_VOICE: u16 = 2006;
+
 /// 群消息接收成功回执
 pub const GROUP_MSG_TYPE_RECALL_SUCCESS: u16 = 2201;
 
@@ -158,7 +164,7 @@ pub const GROUP_MSG_TYPE_RECALL_SUCCESS: u16 = 2201;
 
 /// 单聊消息撤回（伪撤回）：发送一条携带目标消息 nano_id 的控制消息。
 ///
-/// 服务端将除群聊/心跳外的任意类型按单聊流程透传，故新增此类型无需改服务端。
-/// 群聊撤回不新增类型（服务端仅识别 2001/2004 为群类型），改为以
-/// `MSG_TYPE_GROUP_TEXT(2001)` 承载撤回载荷，见 `models::bo::recall`。
+/// 服务端将非群聊/心跳类型按单聊流程透传，故新增此类型无需改服务端。
+/// 群聊撤回以 `MSG_TYPE_GROUP_TEXT(2001)` 承载撤回载荷（撤回无需新增群类型），
+/// 见 `models::bo::recall`。
 pub const MSG_TYPE_RECALL: u16 = 3001;

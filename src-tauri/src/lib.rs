@@ -37,7 +37,8 @@ use crate::cmd::chat_record_controller::{
     get_chat_record_from_store, get_group_chat_record_from_store, get_pending_send_records,
     ignore_send_msg, mark_group_read, mark_read, recall_chat_message, recall_group_chat_message,
     retry_send_msg, send_call_control_msg, send_file_msg, send_group_file_msg,
-    send_group_image_msg, send_group_text_msg, send_image_msg, send_text_msg, send_webrtc_signal,
+    send_group_image_msg, send_group_text_msg, send_group_voice_msg, send_image_msg, send_text_msg,
+    send_voice_msg, send_webrtc_signal,
 };
 use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store, hide_chat_session,
@@ -50,7 +51,7 @@ use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
     debug_resource_paths, delete_local_file, get_chat_file_by_biz_id, get_file_by_biz_id,
     get_local_file, get_local_file_list, get_local_file_size, has_local_chat_file,
-    open_external_url, open_local_file,
+    open_external_url, open_local_file, save_voice_temp_file,
 };
 use crate::cmd::friend_controller::{
     block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
@@ -237,6 +238,7 @@ pub fn run() {
             send_group_text_msg,
             send_group_image_msg,
             send_group_file_msg,
+            send_group_voice_msg,
             get_request,
             post_request,
             put_request,
@@ -249,6 +251,7 @@ pub fn run() {
             compress_image_to_webp_command,
             crop_image_to_webp_command,
             copy_file_to_temp,
+            save_voice_temp_file,
             get_device_info,
             get_network_type,
             get_local_file_size,
@@ -335,6 +338,7 @@ pub fn run() {
             debug_resource_paths,
             send_image_msg,
             send_file_msg,
+            send_voice_msg,
             disconnect_quic_command,
             reconnect_quic_command,
             get_quic_connection_state,

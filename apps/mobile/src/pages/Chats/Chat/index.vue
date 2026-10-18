@@ -36,6 +36,7 @@ import {
   MSG_TYPE_IMAGE,
   MSG_TYPE_RECALL_FAILURE,
   MSG_TYPE_RECALL_SUCCESS,
+  MSG_TYPE_VOICE,
   RELOAD_ON_ACK_TYPES,
 } from "@/chat/messageTypes";
 import {
@@ -47,9 +48,11 @@ import {
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
 import { useMessageSelection } from "@/chat/useMessageSelection";
+import type { VoiceRecordingResult } from "@/chat/useVoiceRecorder";
 import MessageList from "@/components/chat/MessageList.vue";
 import MessageInputBar from "@/components/chat/MessageInputBar.vue";
 import type { InputTool } from "@/components/chat/MessageInputBar.vue";
+import VoiceRecordOverlay from "@/components/chat/VoiceRecordOverlay.vue";
 import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 import PendingSendBar from "@/components/chat/PendingSendBar.vue";
 import MessageSelectionBar from "@/components/chat/MessageSelectionBar.vue";
@@ -93,13 +96,20 @@ const allowImageAutoDownload = ref(false);
 /** 顶部全局上传进度条：是否有正在上传的消息 */
 const globalUploading = computed(() =>
   messages.value.some(
-    (m) => (m.sendingImage || m.sendingFile) && m.ack === false && !m.failed
+    (m) =>
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
+      m.ack === false &&
+      !m.failed
   )
 );
 const globalUploadPercent = computed(() => {
   let max = 0;
   for (const m of messages.value) {
-    if ((m.sendingImage || m.sendingFile) && m.ack === false && !m.failed) {
+    if (
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
+      m.ack === false &&
+      !m.failed
+    ) {
       max = Math.max(max, m.uploadProgress ?? 0);
     }
   }
@@ -109,7 +119,7 @@ const globalUploadPercent = computed(() => {
 const globalUploadIndeterminate = computed(() =>
   messages.value.some(
     (m) =>
-      (m.sendingImage || m.sendingFile) &&
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
       m.ack === false &&
       !m.failed &&
       m.sendPhase !== "uploading"
@@ -695,6 +705,72 @@ const sendImage = () =>
   selectAndSend("image", MSG_TYPE_IMAGE, "send_image_msg");
 const sendFile = () => selectAndSend("file", 3, "send_file_msg");
 
+/* ============ 语音消息 ============ */
+const showVoiceRecord = ref(false);
+const openVoiceRecord = () => {
+  showVoiceRecord.value = true;
+};
+
+/** 录音完成 → 先上屏(展示进度)再上传发送；成功后等待 ACK */
+const sendVoice = async (result: VoiceRecordingResult) => {
+  const textMsg: TextQuicMsgVo = {
+    nano_id: genNanoId(),
+    text_type: MSG_TYPE_VOICE,
+    raw: result.path,
+    recv_user: friendId,
+    send_user: "",
+    timestamp: Date.now(),
+  };
+  const ui: UiChatMessage = {
+    from: "mine",
+    textMsg,
+    ack: false,
+    failed: false,
+    showTime:
+      messages.value.length === 0 ||
+      needTimeDivider(
+        messages.value[messages.value.length - 1].textMsg.timestamp,
+        Date.now()
+      ),
+    senderUuid: meUuid.value,
+    uploadProgress: 0,
+    sendPhase: "reading",
+    sendingVoice: true,
+    voiceDuration: result.duration,
+  };
+  messages.value.push(ui);
+  await nextTick();
+  scrollToBottom(true);
+
+  const patch = (p: Partial<UiChatMessage>) => {
+    const i = messages.value.findIndex(
+      (m) => m.textMsg.nano_id === textMsg.nano_id
+    );
+    if (i !== -1) Object.assign(messages.value[i], p);
+  };
+
+  try {
+    await invoke("send_voice_msg", {
+      textQuicMsg: textMsg,
+      duration: result.duration,
+    });
+    patch({ sendingVoice: false });
+    startAckTimer(textMsg.nano_id);
+  } catch (e) {
+    console.error("发送语音失败:", e);
+    patch({
+      failed: true,
+      sendingVoice: false,
+      sendPhase: undefined,
+      uploadProgress: undefined,
+    });
+    const errText = typeof e === "string" ? e : (e as Error)?.message;
+    showToast({ message: errText || t("chat.voice.failed"), icon: "fail" });
+  } finally {
+    bumpPendingRefresh();
+  }
+};
+
 /** 失败消息重发：优先走 Rust 补发，若不存在发送记录则直接重发 */
 const handleRetry = async (msg: UiChatMessage) => {
   const idx = messages.value.findIndex(
@@ -709,6 +785,9 @@ const handleRetry = async (msg: UiChatMessage) => {
   update(false, false);
   if (msg.textMsg.text_type === MSG_TYPE_FILE && idx !== -1) {
     messages.value[idx].sendingFile = true;
+  }
+  if (msg.textMsg.text_type === MSG_TYPE_VOICE && idx !== -1) {
+    messages.value[idx].sendingVoice = true;
   }
   try {
     await invoke("retry_send_msg", { sendId: msg.textMsg.nano_id });
@@ -725,8 +804,16 @@ const handleRetry = async (msg: UiChatMessage) => {
   };
   const command = commandMap[msg.textMsg.text_type];
   try {
-    if (command) await invoke(command, { textQuicMsg: msg.textMsg });
-    else throw new Error("不支持的类型");
+    if (msg.textMsg.text_type === MSG_TYPE_VOICE) {
+      await invoke("send_voice_msg", {
+        textQuicMsg: msg.textMsg,
+        duration: msg.voiceDuration || 0,
+      });
+    } else if (command) {
+      await invoke(command, { textQuicMsg: msg.textMsg });
+    } else {
+      throw new Error("不支持的类型");
+    }
     startAckTimer(msg.textMsg.nano_id);
   } catch (e) {
     console.error("重发失败:", e);
@@ -875,7 +962,14 @@ const handleStartCall = async (media: "audio" | "video") => {
   await startCall(friendId, media);
 };
 
-const friendTools: InputTool[] = ["emoji", "image", "file", "audio", "video"];
+const friendTools: InputTool[] = [
+  "emoji",
+  "image",
+  "file",
+  "voice",
+  "audio",
+  "video",
+];
 const selfTools: InputTool[] = ["emoji", "image"];
 
 /** 点击消息头像：自己→我的资料，对方→好友资料卡 */
@@ -1003,8 +1097,11 @@ const handleAvatarClick = ({
         @send="sendText"
         @pick-image="sendImage"
         @pick-file="sendFile"
+        @record-voice="openVoiceRecord"
         @call="handleStartCall"
       />
+
+      <VoiceRecordOverlay v-model:show="showVoiceRecord" @send="sendVoice" />
     </template>
 
     <van-action-sheet

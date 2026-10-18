@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 
 use super::send::send_text_msg_service;
-use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord};
+use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, VoiceRecord};
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::api_service::{upload_file_with_progress, UploadProgressFn};
 use crate::utils::events;
@@ -303,4 +303,69 @@ pub async fn send_file_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<(), a
     }
 
     Ok(())
+}
+
+/// 发送语音数据(单聊)。
+///
+/// `text_quic_msg.raw` 为录音文件的本地绝对路径(与图片/文件一致), 上传成功后
+/// 组装 `VoiceRecord`(含 `duration` 秒数)并走持久化文本管道发送。
+/// `duration` 由前端在停止录音时统计并透传。
+pub async fn send_voice_msg_service(
+    text_quic_msg: TextQuicMsgVo,
+    duration: i32,
+) -> Result<(), anyhow::Error> {
+    let file_path = text_quic_msg.raw.clone();
+    let path = Path::new(&file_path);
+    let nano_id = text_quic_msg.nano_id.clone();
+
+    // 1、获取文件名和文件扩展名
+    let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or("voice").to_string();
+    let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
+
+    // 2、获取文件大小(含大小限制校验)
+    let file_size = ensure_within_size_limit(&file_path, MAX_FILE_UPLOAD_SIZE, "语音")? as i64;
+
+    // 3、上传录音到文件服务器(流式 + 进度)
+    let upload_data =
+        upload_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
+
+    // 4、获取第一个 file_info 的 biz_id
+    let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
+    let biz_id = file_info.biz_id.clone();
+
+    // 5、组装 VoiceRecord
+    let voice_record = VoiceRecord {
+        prev_id: ZERO_UUID.to_string(),
+        biz_id,
+        file_name,
+        file_size,
+        file_type,
+        duration,
+        platform: PLATFORM,
+    };
+
+    let voice_raw = voice_record.json_serialize()?;
+
+    // 6、创建新的 TextQuicMsgVo 用于发送
+    let mut voice_msg = text_quic_msg.clone();
+    voice_msg.raw = voice_raw;
+
+    // 7、调用 send_text_msg_service 发送消息(全局发送锁 + 10s 超时)
+    let result = timeout(Duration::from_secs(10), async {
+        let _lock = GLOBAL_MSG_SEND_LOCK.lock().await;
+        send_text_msg_service(voice_msg).await
+    })
+    .await;
+
+    match result {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(e)) => {
+            error!("获取锁时发生意外错误,{}", e);
+            Err(anyhow!("获取锁时发生意外错误,{}", e))
+        }
+        Err(elapsed) => {
+            error!("超时：10秒内未能获取锁 {}", elapsed);
+            Err(anyhow!("超时：10秒内未能获取锁 {}", elapsed))
+        }
+    }
 }

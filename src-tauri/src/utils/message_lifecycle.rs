@@ -7,7 +7,7 @@
 
 use crate::utils::message_types::{
     MSG_TYPE_FILE, MSG_TYPE_IMAGE, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END,
-    MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_TEXT,
+    MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_TEXT, MSG_TYPE_VOICE,
     MSG_TYPE_WEBRTC_SIGNAL,
 };
 
@@ -48,7 +48,7 @@ pub trait MessageLifecycle: Sync {
 pub struct TextLifecycle;
 impl MessageLifecycle for TextLifecycle {
     fn matches(text_type: u16) -> bool {
-        matches!(text_type, MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE)
+        matches!(text_type, MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE | MSG_TYPE_VOICE)
     }
 
     const PERSIST_SENDER_LOCAL: bool = true;

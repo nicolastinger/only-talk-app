@@ -554,14 +554,18 @@ const ChatPage: React.FC = () => {
             if (textMessage.nano_id) {
               prevState[index].text_msg_raw.nano_id = textMessage.nano_id;
             }
-            // 检查被 ack 的消息是否是图片(text_type=2)或文件(text_type=3)
+            // 检查被 ack 的消息是否是图片(text_type=2)/文件(text_type=3)/语音(text_type=21)
             const ackedMessage = prevState[index];
             const ackedMessageType = ackedMessage.text_msg_raw.text_type;
-            if (ackedMessageType === 2 || ackedMessageType === 3) {
+            if (
+              ackedMessageType === 2 ||
+              ackedMessageType === 3 ||
+              ackedMessageType === 21
+            ) {
               // 重新加载当前窗口的聊天记录
               console.log(
-                `检测到图片/文件消息 ${
-                  ackedMessageType === 2 ? '图片' : '文件'
+                `检测到图片/文件/语音消息 ${
+                  ackedMessageType === 2 ? '图片' : ackedMessageType === 3 ? '文件' : '语音'
                 } 的ack，重新加载聊天记录`,
               );
               setCurrentPage(1);

@@ -236,6 +236,50 @@ pub async fn send_group_file_msg_service(
     Ok(())
 }
 
+/// 发送群聊语音消息（无 prev_id 和锁机制）。
+///
+/// `text_quic_msg.raw` 为录音文件本地路径, 上传成功后组装 `GroupVoiceRecord`,
+/// 再以 `MSG_TYPE_GROUP_VOICE(2006)` 走群聊发送管道。
+pub async fn send_group_voice_msg_service(
+    text_quic_msg: TextQuicMsgVo,
+    duration: i32,
+) -> Result<(), anyhow::Error> {
+    let sender = get_user_info("uuid").await?;
+    let file_path = text_quic_msg.raw.clone();
+    let path = Path::new(&file_path);
+    let nano_id = text_quic_msg.nano_id.clone();
+
+    // 1、获取文件名和文件扩展名
+    let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or("voice").to_string();
+    let file_type = path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
+
+    // 2、获取文件大小(含大小限制校验)
+    let file_size = ensure_within_size_limit(&file_path, MAX_FILE_UPLOAD_SIZE, "语音")? as i64;
+
+    // 3、上传录音到文件服务器（使用群聊专用接口, 流式 + 进度）
+    let upload_data =
+        upload_group_chat_file_server(&file_path, &text_quic_msg.recv_user, &nano_id).await?;
+
+    // 4、获取第一个 file_info 的 biz_id
+    let file_info = upload_data.file_infos.first().ok_or(anyhow!("file_infos 为空"))?;
+    let biz_id = file_info.biz_id.clone();
+
+    // 5、组装 GroupVoiceRecord
+    let group_voice_record =
+        GroupVoiceRecord { biz_id, file_name, file_size, file_type, duration, send_user: sender };
+
+    let voice_raw = group_voice_record.json_serialize()?;
+
+    // 6、创建新的 TextQuicMsgVo 用于发送（text_type 保持前端传入的 2006）
+    let mut voice_msg = text_quic_msg.clone();
+    voice_msg.raw = voice_raw;
+
+    // 7、调用 send_group_text_msg_service 发送消息（无锁）
+    send_group_text_msg_service(voice_msg).await?;
+
+    Ok(())
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GroupTextRecord {
     pub text: String,
@@ -294,6 +338,33 @@ pub struct GroupFileRecord {
 impl ChatRecordRaw for GroupFileRecord {
     fn deserialize(data: &str) -> Result<Self, anyhow::Error> {
         let record: GroupFileRecord = serde_json::from_str(data)?;
+        Ok(record)
+    }
+
+    fn json_serialize(&self) -> Result<String, anyhow::Error> {
+        Ok(serde_json::to_string(self)?)
+    }
+
+    fn set_prev_id(&mut self, _prev_id: String) {
+        // 群聊消息不需要 prev_id
+    }
+}
+
+/// 群聊语音消息内层记录：录音文件以附件形式上传, `duration` 为录音时长(秒)。
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GroupVoiceRecord {
+    pub biz_id: String,
+    pub file_name: String,
+    pub file_size: i64,
+    pub file_type: String,
+    /// 录音时长(秒)
+    pub duration: i32,
+    pub send_user: String,
+}
+
+impl ChatRecordRaw for GroupVoiceRecord {
+    fn deserialize(data: &str) -> Result<Self, anyhow::Error> {
+        let record: GroupVoiceRecord = serde_json::from_str(data)?;
         Ok(record)
     }
 

@@ -104,3 +104,40 @@ impl ChatRecordRaw for FileRecord {
         }
     }
 }
+
+/// 单聊语音消息记录：录音文件以附件形式上传, `biz_id` 指向服务端文件,
+/// `duration` 为录音时长(秒)。结构与 `FileRecord` 一致并额外携带时长,
+/// 便于前端渲染语音气泡(播放按钮 + 时长)。
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct VoiceRecord {
+    pub prev_id: String,
+    pub biz_id: String,
+    pub file_name: String,
+    pub file_size: i64,
+    pub file_type: String,
+    /// 录音时长(秒)
+    pub duration: i32,
+    pub platform: u8,
+}
+
+impl ChatRecordRaw for VoiceRecord {
+    fn set_prev_id(&mut self, prev_id: String) {
+        self.prev_id = prev_id;
+    }
+
+    fn json_serialize(&self) -> Result<String, anyhow::Error> {
+        let res = serde_json::to_string(&self);
+        match res {
+            Ok(s) => Ok(s),
+            Err(e) => Err(anyhow!("语音消息序列化失败: {}", e)),
+        }
+    }
+
+    fn deserialize(raw: &str) -> Result<Self, anyhow::Error> {
+        let res = serde_json::from_str(raw);
+        match res {
+            Ok(r) => Ok(r),
+            Err(e) => Err(anyhow!("语音消息反序列化失败: {}", e)),
+        }
+    }
+}

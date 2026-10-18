@@ -2,8 +2,10 @@ import type {
   FileRecord,
   GroupFileRecord,
   GroupImageRecord,
+  GroupVoiceRecord,
   ImageRecord,
   TextQuicMsgVo,
+  VoiceRecord,
 } from "@workspace/types";
 import {
   MSG_TYPE_FILE,
@@ -11,6 +13,7 @@ import {
   MSG_TYPE_GROUP_IMAGE,
   MSG_TYPE_GROUP_NOTIFICATION,
   MSG_TYPE_GROUP_TEXT,
+  MSG_TYPE_GROUP_VOICE,
   MSG_TYPE_IMAGE,
   MSG_TYPE_P2P,
   MSG_TYPE_P2P_VIDEO_CALL,
@@ -20,6 +23,7 @@ import {
   MSG_TYPE_P2P_VIDEO_CALL_REJECT,
   MSG_TYPE_RECALL,
   MSG_TYPE_TEXT,
+  MSG_TYPE_VOICE,
   MSG_TYPE_WEBRTC_SIGNAL,
 } from "./messageTypes";
 import { t } from "@/i18n";
@@ -61,7 +65,7 @@ export const extensionOf = (fileName: string): string => {
   return dot >= 0 ? fileName.slice(dot + 1) : "";
 };
 
-/* ==================== 单聊（text_type 1/2/3） ==================== */
+/* ==================== 单聊（text_type 1/2/3/21） ==================== */
 
 /** 单聊文本：raw = {"text":"...","prev_id":"","platform":0} */
 export const parsePrivateText = (raw: string): string => {
@@ -82,7 +86,13 @@ export const parsePrivateFileRecord = (raw: string): FileRecord | null => {
   return tryParseJson<FileRecord>(raw);
 };
 
-/* ==================== 群聊（text_type 2001/2002/2003） ==================== */
+/** 单聊语音：raw = VoiceRecord JSON */
+export const parsePrivateVoiceRecord = (raw: string): VoiceRecord | null => {
+  if (isLocalFilePath(raw)) return null;
+  return tryParseJson<VoiceRecord>(raw);
+};
+
+/* ==================== 群聊（text_type 2001/2002/2003/2006） ==================== */
 
 /**
  * 解一层群聊外层 JSON：{"text":"<内容字符串>","send_user":"..."}
@@ -124,6 +134,14 @@ export const parseGroupFileRecord = (raw: string): GroupFileRecord | null => {
   const outer = unwrapGroupOuter(raw);
   const inner = outer?.text ?? raw;
   return tryParseJson<GroupFileRecord>(inner);
+};
+
+/** 群聊语音内层：raw 双层 JSON → GroupVoiceRecord */
+export const parseGroupVoiceRecord = (raw: string): GroupVoiceRecord | null => {
+  if (isLocalFilePath(raw)) return null;
+  const outer = unwrapGroupOuter(raw);
+  const inner = outer?.text ?? raw;
+  return tryParseJson<GroupVoiceRecord>(inner);
 };
 
 /* ==================== 通知/系统 ==================== */
@@ -197,6 +215,9 @@ export const getMessageDisplayText = (
     case MSG_TYPE_FILE:
     case MSG_TYPE_GROUP_FILE:
       return t("chat.typeFile");
+    case MSG_TYPE_VOICE:
+    case MSG_TYPE_GROUP_VOICE:
+      return t("chat.typeVoice");
     case MSG_TYPE_P2P:
       return t("chat.typePrivate");
     case MSG_TYPE_P2P_VIDEO_CALL:

@@ -7,10 +7,11 @@ import {
   getFiles,
   shouldAutoDownloadImage,
 } from '@workspace/services';
-import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
+import { ChatMessage, FileRecord, ImageRecord, VoiceRecord } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import ChatFile from './ChatFile';
 import ChatImage from './ChatImage';
+import ChatVoice from './ChatVoice';
 import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/CustomerChatBox.less';
 import { TextBox } from './TextBox';
@@ -27,6 +28,7 @@ interface CustomerChatBoxProps extends ChatMessage {
 const MSG_TYPE_TEXT = 1;
 const MSG_TYPE_IMAGE = 2;
 const MSG_TYPE_FILE = 3;
+const MSG_TYPE_VOICE = 21;
 const MSG_TYPE_PRIVACY = 4;
 
 const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
@@ -45,6 +47,7 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
   const [imageBizId, setImageBizId] = useState<string>('');
+  const [voiceRecord, setVoiceRecord] = useState<VoiceRecord | null>(null);
   const [autoDownload, setAutoDownload] = useState(true);
 
   // 加载好友头像
@@ -81,6 +84,14 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
           setFileRecord(record);
         } catch (error) {
           console.error('CustomerChatBox - Error parsing file record:', error);
+        }
+      }
+      if (text_type === MSG_TYPE_VOICE) {
+        try {
+          const record: VoiceRecord = JSON.parse(raw);
+          setVoiceRecord(record);
+        } catch (error) {
+          console.error('CustomerChatBox - Error parsing voice record:', error);
         }
       }
       return;
@@ -168,6 +179,15 @@ const CustomerChatBox: React.FC<CustomerChatBoxProps> = (
         );
       }
       return <div className={styles.container}>[文件]</div>;
+    }
+    if (text_type === MSG_TYPE_VOICE) {
+      return (
+        <ChatVoice
+          bizId={voiceRecord?.biz_id}
+          duration={voiceRecord?.duration || 0}
+          nanoId={nano_id}
+        />
+      );
     }
     switch (text_type) {
       case MSG_TYPE_PRIVACY:

@@ -43,6 +43,8 @@ const formatRaw = (record: ChatRecordSend): string => {
         const parsed = JSON.parse(record.raw);
         return parsed.file_name ?? '[文件]';
       }
+      case 21:
+        return '[语音]';
       default:
         return record.raw;
     }

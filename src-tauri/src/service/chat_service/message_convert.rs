@@ -10,17 +10,22 @@
 
 use anyhow::anyhow;
 
-use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
-use crate::service::chat_service::{GroupFileRecord, GroupImageRecord, GroupTextRecord};
+use crate::models::entity::chat_record_raw::{
+    ChatRecordRaw, FileRecord, ImageRecord, TextRecord, VoiceRecord,
+};
+use crate::service::chat_service::{
+    GroupFileRecord, GroupImageRecord, GroupTextRecord, GroupVoiceRecord,
+};
 use crate::utils::message_types::{
-    MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE,
-    MSG_TYPE_TEXT,
+    MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT,
+    MSG_TYPE_GROUP_VOICE, MSG_TYPE_IMAGE, MSG_TYPE_TEXT, MSG_TYPE_VOICE,
 };
 
 /// 私聊消息类型集合
-pub const PRIVATE_TYPES: [u16; 3] = [MSG_TYPE_TEXT, MSG_TYPE_IMAGE, MSG_TYPE_FILE];
+pub const PRIVATE_TYPES: [u16; 4] = [MSG_TYPE_TEXT, MSG_TYPE_IMAGE, MSG_TYPE_FILE, MSG_TYPE_VOICE];
 /// 群聊消息类型集合
-pub const GROUP_TYPES: [u16; 3] = [MSG_TYPE_GROUP_TEXT, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_FILE];
+pub const GROUP_TYPES: [u16; 4] =
+    [MSG_TYPE_GROUP_TEXT, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_VOICE];
 
 /// 单聊 raw -> 群聊内层 raw，并返回群聊 text_type。
 pub fn private_raw_to_group(
@@ -55,6 +60,18 @@ pub fn private_raw_to_group(
                 send_user: send_user.to_string(),
             };
             Ok((MSG_TYPE_GROUP_FILE, group.json_serialize()?))
+        }
+        MSG_TYPE_VOICE => {
+            let record = VoiceRecord::deserialize(raw)?;
+            let group = GroupVoiceRecord {
+                biz_id: record.biz_id,
+                file_name: record.file_name,
+                file_size: record.file_size,
+                file_type: record.file_type,
+                duration: record.duration,
+                send_user: send_user.to_string(),
+            };
+            Ok((MSG_TYPE_GROUP_VOICE, group.json_serialize()?))
         }
         other => Err(anyhow!("不支持转发到群聊的单聊消息类型: {}", other)),
     }
@@ -93,6 +110,19 @@ pub fn group_raw_to_private(text_type: u16, raw: &str) -> Result<(u16, String), 
                 platform: 0,
             };
             Ok((MSG_TYPE_FILE, record.json_serialize()?))
+        }
+        MSG_TYPE_GROUP_VOICE => {
+            let group = GroupVoiceRecord::deserialize(&outer.text)?;
+            let record = VoiceRecord {
+                prev_id: String::new(),
+                biz_id: group.biz_id,
+                file_name: group.file_name,
+                file_size: group.file_size,
+                file_type: group.file_type,
+                duration: group.duration,
+                platform: 0,
+            };
+            Ok((MSG_TYPE_VOICE, record.json_serialize()?))
         }
         other => Err(anyhow!("不支持转发到单聊的群聊消息类型: {}", other)),
     }

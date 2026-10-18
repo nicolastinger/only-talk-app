@@ -1,6 +1,7 @@
 import { openWebRTCChatHandler } from '@/hooks/useWebRTCSignalApi';
 import { useBearStore } from '@/store/store';
 import {
+  AudioOutlined,
   ApiOutlined,
   LockOutlined,
   PaperClipOutlined,
@@ -24,6 +25,8 @@ import {
 import { message } from 'antd';
 import { nanoid } from 'nanoid';
 import React, { useEffect, useRef, useState } from 'react';
+import type { VoiceRecordingResult } from '@/utils/voiceRecorder';
+import VoiceRecordModal from './VoiceRecordModal';
 import styles from './styles/FooterToolBar.less';
 
 interface FooterToolBarProps {
@@ -110,6 +113,7 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
 }) => {
   const intl = useIntl();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showVoiceRecord, setShowVoiceRecord] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const userInfo = useBearStore((state) => state.userInfo);
 
@@ -228,6 +232,38 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
     }
   };
 
+  const sendVoice = async (recording: VoiceRecordingResult) => {
+    const text_msg_raw: TextQuicMsgVo = {
+      nano_id: nanoid(),
+      text_type: 21,
+      raw: recording.path,
+      recv_user: friendUuid,
+      send_user: '',
+      timestamp: new Date().getTime(),
+    };
+
+    const temp: ChatMessage = {
+      from: MessageFrom.Mine,
+      text_msg_raw,
+      ack: false,
+    };
+
+    // 先上屏(展示气泡与上传进度)，再执行发送
+    onMessageSent?.(JSON.stringify(temp));
+    onUploadStart?.(text_msg_raw.nano_id);
+    try {
+      await invoke('send_voice_msg', {
+        textQuicMsg: text_msg_raw,
+        duration: recording.duration,
+      });
+    } catch (e) {
+      console.log('发送语音失败', e);
+      message.error(intl.formatMessage({ id: 'chat.voice.failed' }));
+    } finally {
+      onUploadEnd?.(text_msg_raw.nano_id);
+    }
+  };
+
   const sendRequestToP2p = async () => {
     try {
       const res: string = await invoke('send_init_p2p_udp');
@@ -314,6 +350,13 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
       </div>
       <div
         className={styles.footerBtn}
+        onClick={() => setShowVoiceRecord(true)}
+        title={intl.formatMessage({ id: 'chat.voice.sendVoice' })}
+      >
+        <AudioOutlined />
+      </div>
+      <div
+        className={styles.footerBtn}
         onClick={sendRequestToP2p}
         title={intl.formatMessage({ id: 'chat.footer.privateChat' })}
       >
@@ -326,6 +369,11 @@ const FooterToolBar: React.FC<FooterToolBarProps> = ({
       >
         <ApiOutlined />
       </div>
+      <VoiceRecordModal
+        open={showVoiceRecord}
+        onCancel={() => setShowVoiceRecord(false)}
+        onSend={sendVoice}
+      />
     </div>
   );
 };

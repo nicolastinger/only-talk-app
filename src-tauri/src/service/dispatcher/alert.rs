@@ -35,14 +35,16 @@ const ALERT_DEBOUNCE_MS: i64 = 4000;
 static LAST_ALERT: LazyLock<Mutex<HashMap<String, i64>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// 单聊文本 / 图片 / 文件 类型
+/// 单聊文本 / 图片 / 文件 / 语音 类型
 const SINGLE_TEXT: u16 = 1;
 const SINGLE_IMAGE: u16 = 2;
 const SINGLE_FILE: u16 = 3;
-/// 群聊文本 / 图片 / 文件 类型
+const SINGLE_VOICE: u16 = 21;
+/// 群聊文本 / 图片 / 文件 / 语音 类型
 const GROUP_TEXT: u16 = 2001;
 const GROUP_IMAGE: u16 = 2002;
 const GROUP_FILE: u16 = 2003;
+const GROUP_VOICE: u16 = 2006;
 
 /// 系统通知 extra 里携带的会话跳转信息
 #[derive(Serialize, Clone)]
@@ -156,9 +158,9 @@ pub(crate) async fn on_incoming_message(
 /// 判断消息类型是否需要提醒
 fn is_notifiable_type(text_type: u16, is_group: bool) -> bool {
     if is_group {
-        matches!(text_type, GROUP_TEXT | GROUP_IMAGE | GROUP_FILE)
+        matches!(text_type, GROUP_TEXT | GROUP_IMAGE | GROUP_FILE | GROUP_VOICE)
     } else {
-        matches!(text_type, SINGLE_TEXT | SINGLE_IMAGE | SINGLE_FILE)
+        matches!(text_type, SINGLE_TEXT | SINGLE_IMAGE | SINGLE_FILE | SINGLE_VOICE)
     }
 }
 
@@ -196,6 +198,7 @@ fn preview_body(msg: &TextQuicMsgVo) -> String {
     match msg.text_type {
         SINGLE_IMAGE | GROUP_IMAGE => "[图片]".to_string(),
         SINGLE_FILE | GROUP_FILE => "[文件]".to_string(),
+        SINGLE_VOICE | GROUP_VOICE => "[语音]".to_string(),
         _ => {
             // 文本类(单聊/群聊)，raw 可能多层嵌套 JSON，向下挖掘 “text” 字段
             match serde_json::from_str::<serde_json::Value>(&msg.raw) {

@@ -269,6 +269,43 @@ pub async fn delete_local_file(id: i64) -> Result<(), String> {
     delete_local_file_service(id).await.map_err(|e| e.to_string())
 }
 
+/// 将前端录音产生的音频字节写入应用临时目录, 返回 Rust 可读的绝对路径。
+///
+/// 前端 WebView 的 MediaRecorder 只能得到 Blob(blob: URL), Rust 侧无法直接读取,
+/// 故先落盘为真实文件再由 `send_voice_msg` / `send_group_voice_msg` 走附件上传管道。
+/// `ext` 为容器扩展名(如 webm/ogg/m4a), 决定服务端 MIME 识别与文件名。
+#[tauri::command]
+pub async fn save_voice_temp_file<R: Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    bytes: Vec<u8>,
+    ext: String,
+) -> Result<String, String> {
+    if bytes.is_empty() {
+        return Err("录音数据为空".to_string());
+    }
+
+    // 仅保留字母数字, 避免路径注入; 缺省 webm
+    let safe_ext: String =
+        ext.chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_lowercase();
+    let safe_ext = if safe_ext.is_empty() { "webm".to_string() } else { safe_ext };
+
+    let base_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let temp_dir = base_dir.join("umi_gitee_temp");
+    fs::create_dir_all(&temp_dir).map_err(|e| format!("创建临时目录失败: {}", e))?;
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let file_name = format!("voice_{}_{}.{}", timestamp, nanoid::nanoid!(8), safe_ext);
+    let file_path = temp_dir.join(file_name);
+
+    fs::write(&file_path, &bytes).map_err(|e| format!("写入录音文件失败: {}", e))?;
+    info!("录音文件已保存: {} ({} 字节)", file_path.display(), bytes.len());
+
+    Ok(file_path.to_string_lossy().to_string())
+}
+
 /// 调试命令：列出所有资源路径和文件
 #[tauri::command]
 pub async fn debug_resource_paths<R: Runtime>(

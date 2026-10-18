@@ -22,6 +22,10 @@ export interface UiChatMessage {
   sendingImage?: boolean;
   /** 文件上传中(展示上传动画) */
   sendingFile?: boolean;
+  /** 语音上传中(展示上传进度) */
+  sendingVoice?: boolean;
+  /** 语音录音时长（秒，用于失败重发） */
+  voiceDuration?: number;
   /** 上传进度百分比 0-100(上传中展示进度条) */
   uploadProgress?: number;
   /** 发送阶段: reading/compressing/uploading(发送中展示对应动画) */

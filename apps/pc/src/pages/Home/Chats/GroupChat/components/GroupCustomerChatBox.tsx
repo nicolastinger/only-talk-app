@@ -12,10 +12,12 @@ import {
   ChatMessage,
   GroupFileRecord,
   GroupImageRecord,
+  GroupVoiceRecord,
 } from '@workspace/types';
 import React, { useEffect, useState } from 'react';
 import ChatFile from '../../components/ChatFile';
 import ChatImage from '../../components/ChatImage';
+import ChatVoice from '../../components/ChatVoice';
 import styles from '../../components/styles/CustomerChatBox.less';
 import { TextBox } from '../../components/TextBox';
 
@@ -34,6 +36,7 @@ interface GroupCustomerChatBoxProps {
 const MSG_TYPE_GROUP_TEXT = 2001;
 const MSG_TYPE_GROUP_IMAGE = 2002;
 const MSG_TYPE_GROUP_FILE = 2003;
+const MSG_TYPE_GROUP_VOICE = 2006;
 
 /**
  * 解析群聊消息的 text 字段
@@ -83,6 +86,23 @@ const parseGroupFileRecord = (raw: string): GroupFileRecord | null => {
   }
 };
 
+/**
+ * 解析群聊语音消息
+ * 群聊语音消息 raw 是双层 JSON: {"text":"{...GroupVoiceRecord...}","send_user":"..."}
+ */
+const parseGroupVoiceRecord = (raw: string): GroupVoiceRecord | null => {
+  try {
+    let parsed = JSON.parse(raw);
+    if (parsed.text) {
+      parsed = JSON.parse(parsed.text);
+    }
+    return parsed as GroupVoiceRecord;
+  } catch (error) {
+    console.error('GroupCustomerChatBox - Error parsing voice record:', error);
+    return null;
+  }
+};
+
 const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
   const {
     msg: {
@@ -100,6 +120,7 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<GroupFileRecord | null>(null);
+  const [voiceRecord, setVoiceRecord] = useState<GroupVoiceRecord | null>(null);
   const [imageBizId, setImageBizId] = useState<string>('');
   const [autoDownload, setAutoDownload] = useState(true);
 
@@ -135,6 +156,12 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
         const record = parseGroupFileRecord(raw);
         if (record) {
           setFileRecord(record);
+        }
+      }
+      if (text_type === MSG_TYPE_GROUP_VOICE) {
+        const record = parseGroupVoiceRecord(raw);
+        if (record) {
+          setVoiceRecord(record);
         }
       }
       return;
@@ -221,6 +248,15 @@ const GroupCustomerChatBox: React.FC<GroupCustomerChatBoxProps> = (props) => {
         );
       }
       return <div className={styles.container}>[文件]</div>;
+    }
+    if (text_type === MSG_TYPE_GROUP_VOICE) {
+      return (
+        <ChatVoice
+          bizId={voiceRecord?.biz_id}
+          duration={voiceRecord?.duration || 0}
+          nanoId={nano_id}
+        />
+      );
     }
     return TextBox(raw);
   };

@@ -46,6 +46,9 @@ const formatMessage = (message: string, textType: number): string => {
   if (textType === 3 || textType === 2003) {
     return '[文件]';
   }
+  if (textType === 21 || textType === 2006) {
+    return '[语音]';
+  }
   if (textType === 5) {
     return '[视频通话]';
   }

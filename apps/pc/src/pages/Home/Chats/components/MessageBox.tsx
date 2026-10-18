@@ -51,6 +51,10 @@ const MessageBox = (
       return '[文件]';
     }
 
+    if (text_type === 21 || text_type === 2006) {
+      return '[语音]';
+    }
+
     if (text_type === 2004) {
       return '[群通知]';
     }

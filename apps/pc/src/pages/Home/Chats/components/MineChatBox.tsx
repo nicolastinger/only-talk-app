@@ -7,10 +7,11 @@ import {
   getChatFileByBizId,
   getFiles,
 } from '@workspace/services';
-import { ChatMessage, FileRecord, ImageRecord } from '@workspace/types';
+import { ChatMessage, FileRecord, ImageRecord, VoiceRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
 import ChatFile from './ChatFile';
 import ChatImage from './ChatImage';
+import ChatVoice from './ChatVoice';
 import PrivacyModeMessage from './PrivacyModeMessage';
 import styles from './styles/MineChatBox.less';
 import { TextBox } from './TextBox';
@@ -35,6 +36,7 @@ type MineChatBoxProps = {
 const MSG_TYPE_TEXT = 1;
 const MSG_TYPE_IMAGE = 2;
 const MSG_TYPE_FILE = 3;
+const MSG_TYPE_VOICE = 21;
 const MSG_TYPE_PRIVACY = 4;
 
 const isLocalFilePath = (raw: string): boolean => {
@@ -57,6 +59,8 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageBizId, setImageBizId] = useState<string>('');
   const [fileRecord, setFileRecord] = useState<FileRecord | null>(null);
+  const [voiceRecord, setVoiceRecord] = useState<VoiceRecord | null>(null);
+  const [voiceLocalPath, setVoiceLocalPath] = useState<string>('');
 
   const userInfo = useBearStore((state) => state.userInfo);
   const [ackFlag, setAckFlag] = React.useState(0);
@@ -186,6 +190,20 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         console.error('MineChatBox - Error parsing file record:', error);
       }
     }
+
+    // 处理语音消息（私聊：单层 JSON，发送中为本地路径）
+    if (text_type === MSG_TYPE_VOICE) {
+      if (isLocalFilePath(raw)) {
+        setVoiceLocalPath(raw);
+        return;
+      }
+      try {
+        const record: VoiceRecord = JSON.parse(raw);
+        setVoiceRecord(record);
+      } catch (error) {
+        console.error('MineChatBox - Error parsing voice record:', error);
+      }
+    }
   }, [raw, text_type, nano_id]);
 
   const renderMessage = () => {
@@ -226,6 +244,19 @@ const MineChatBox: React.FC<MineChatBoxProps> = (props: MineChatBoxProps) => {
         );
       }
       return <div className={styles.container}>[文件]</div>;
+    }
+    if (text_type === MSG_TYPE_VOICE) {
+      return (
+        <ChatVoice
+          bizId={voiceRecord?.biz_id}
+          duration={voiceRecord?.duration || 0}
+          localPath={voiceLocalPath}
+          nanoId={nano_id}
+          sending={sending}
+          uploadProgress={props.uploadProgress}
+          sendPhase={props.sendPhase}
+        />
+      );
     }
     switch (text_type) {
       case MSG_TYPE_PRIVACY:

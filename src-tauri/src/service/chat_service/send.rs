@@ -12,7 +12,9 @@ use crate::dao::chat_record_send::{
     update_chat_record_send, update_chat_record_send_status,
 };
 use crate::models::entity::chat_record_ack::ChatRecordAck;
-use crate::models::entity::chat_record_raw::{ChatRecordRaw, FileRecord, ImageRecord, TextRecord};
+use crate::models::entity::chat_record_raw::{
+    ChatRecordRaw, FileRecord, ImageRecord, TextRecord, VoiceRecord,
+};
 use crate::models::entity::chat_record_send::ChatRecordSend;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
@@ -22,7 +24,7 @@ use crate::utils::global_static_str::{PLATFORM, ZERO_UUID};
 use crate::utils::message_lifecycle::{CallControlLifecycle, MessageLifecycle};
 use crate::utils::message_types::{
     MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
-    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_RECALL, MSG_TYPE_TEXT,
+    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_RECALL, MSG_TYPE_TEXT, MSG_TYPE_VOICE,
 };
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::GLOBAL_QUIC_SERVER_LIST;
@@ -268,6 +270,11 @@ pub fn set_prev_id(raw: &str, text_type: u16, prev_id: String) -> Result<String,
         }
         3 => {
             let mut chat_record_raw = <FileRecord as ChatRecordRaw>::deserialize(raw)?;
+            chat_record_raw.set_prev_id(prev_id);
+            chat_record_raw.json_serialize()
+        }
+        MSG_TYPE_VOICE => {
+            let mut chat_record_raw = <VoiceRecord as ChatRecordRaw>::deserialize(raw)?;
             chat_record_raw.set_prev_id(prev_id);
             chat_record_raw.json_serialize()
         }

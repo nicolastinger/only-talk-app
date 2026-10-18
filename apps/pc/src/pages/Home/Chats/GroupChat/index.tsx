@@ -551,8 +551,12 @@ const GroupChatPage: React.FC = () => {
             prevState[index].ack = true;
             const ackedMessage = prevState[index];
             const ackedMessageType = ackedMessage.text_msg_raw.text_type;
-            // 群聊图片消息类型是 2002，文件消息类型是 2003
-            if (ackedMessageType === 2002 || ackedMessageType === 2003) {
+            // 群聊图片消息类型是 2002，文件消息类型是 2003，语音消息类型是 2006
+            if (
+              ackedMessageType === 2002 ||
+              ackedMessageType === 2003 ||
+              ackedMessageType === 2006
+            ) {
               setCurrentPage(1);
               setHasMore(true);
               setIsInitialLoad(true);

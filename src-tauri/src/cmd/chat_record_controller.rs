@@ -12,8 +12,9 @@ use crate::service::chat_service::{
     get_pending_send_records_service, ignore_send_msg_service, mark_read_service,
     recall_chat_message_service, recall_group_chat_message_service, retry_send_msg_service,
     send_call_control_msg_service, send_file_msg_service, send_group_file_msg_service,
-    send_group_image_msg_service, send_group_text_msg_service, send_image_msg_service,
-    send_text_msg_service, send_webrtc_signal_service, update_group_last_read_msg_service,
+    send_group_image_msg_service, send_group_text_msg_service, send_group_voice_msg_service,
+    send_image_msg_service, send_text_msg_service, send_voice_msg_service,
+    send_webrtc_signal_service, update_group_last_read_msg_service,
 };
 use crate::GLOBAL_MSG_SEND_LOCK;
 
@@ -88,6 +89,15 @@ pub async fn send_group_file_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), Str
     send_group_file_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
+/// 发送群聊语音消息（无锁机制）。`duration` 为录音时长(秒)。
+#[tauri::command]
+pub async fn send_group_voice_msg(
+    text_quic_msg: TextQuicMsgVo,
+    duration: i32,
+) -> Result<(), String> {
+    send_group_voice_msg_service(text_quic_msg, duration).await.map_err(|e| e.to_string())
+}
+
 // 发送图片数据
 #[tauri::command]
 pub async fn send_image_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
@@ -98,6 +108,12 @@ pub async fn send_image_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> 
 #[tauri::command]
 pub async fn send_file_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
     send_file_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
+}
+
+// 发送语音数据(单聊)。`duration` 为录音时长(秒)。
+#[tauri::command]
+pub async fn send_voice_msg(text_quic_msg: TextQuicMsgVo, duration: i32) -> Result<(), String> {
+    send_voice_msg_service(text_quic_msg, duration).await.map_err(|e| e.to_string())
 }
 
 /// 已读当前记录

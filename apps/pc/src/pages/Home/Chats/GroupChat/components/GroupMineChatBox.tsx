@@ -7,10 +7,11 @@ import {
   getChatFileByBizId,
   getFiles,
 } from '@workspace/services';
-import { ChatMessage, GroupFileRecord } from '@workspace/types';
+import { ChatMessage, GroupFileRecord, GroupVoiceRecord } from '@workspace/types';
 import React, { useEffect, useRef, useState } from 'react';
 import ChatFile from '../../components/ChatFile';
 import ChatImage from '../../components/ChatImage';
+import ChatVoice from '../../components/ChatVoice';
 import styles from '../../components/styles/MineChatBox.less';
 import { TextBox } from '../../components/TextBox';
 
@@ -34,6 +35,7 @@ type GroupMineChatBoxProps = {
 const MSG_TYPE_GROUP_TEXT = 2001;
 const MSG_TYPE_GROUP_IMAGE = 2002;
 const MSG_TYPE_GROUP_FILE = 2003;
+const MSG_TYPE_GROUP_VOICE = 2006;
 
 const isLocalFilePath = (raw: string): boolean => {
   // JSON 格式的 raw 不是本地文件路径（群聊消息 raw 始终是 JSON）
@@ -91,6 +93,23 @@ const parseGroupFileRecord = (raw: string): GroupFileRecord | null => {
   }
 };
 
+/**
+ * 解析群聊语音消息
+ * 群聊语音消息 raw 是双层 JSON: {"text":"{...GroupVoiceRecord...}","send_user":"..."}
+ */
+const parseGroupVoiceRecord = (raw: string): GroupVoiceRecord | null => {
+  try {
+    let parsed = JSON.parse(raw);
+    if (parsed.text) {
+      parsed = JSON.parse(parsed.text);
+    }
+    return parsed as GroupVoiceRecord;
+  } catch (error) {
+    console.error('GroupMineChatBox - Error parsing voice record:', error);
+    return null;
+  }
+};
+
 const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
   const {
     msg: {
@@ -105,6 +124,8 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fileRecord, setFileRecord] = useState<GroupFileRecord | null>(null);
+  const [voiceRecord, setVoiceRecord] = useState<GroupVoiceRecord | null>(null);
+  const [voiceLocalPath, setVoiceLocalPath] = useState<string>('');
   const [imageBizId, setImageBizId] = useState<string>('');
 
   const userInfo = useBearStore((state) => state.userInfo);
@@ -233,6 +254,18 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
         setFileRecord(record);
       }
     }
+
+    // 处理语音消息
+    if (text_type === MSG_TYPE_GROUP_VOICE) {
+      if (isLocalFilePath(raw)) {
+        setVoiceLocalPath(raw);
+        return;
+      }
+      const record = parseGroupVoiceRecord(raw);
+      if (record) {
+        setVoiceRecord(record);
+      }
+    }
   }, [raw, text_type, currentBizId, nano_id]);
 
   const renderMessage = () => {
@@ -274,6 +307,19 @@ const GroupMineChatBox: React.FC<GroupMineChatBoxProps> = (props) => {
         );
       }
       return <div className={styles.container}>[文件]</div>;
+    }
+    if (text_type === MSG_TYPE_GROUP_VOICE) {
+      return (
+        <ChatVoice
+          bizId={voiceRecord?.biz_id}
+          duration={voiceRecord?.duration || 0}
+          localPath={voiceLocalPath}
+          nanoId={nano_id}
+          sending={sending}
+          uploadProgress={props.uploadProgress}
+          sendPhase={props.sendPhase}
+        />
+      );
     }
     return TextBox(raw);
   };

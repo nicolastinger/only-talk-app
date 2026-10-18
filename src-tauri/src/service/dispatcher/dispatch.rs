@@ -11,11 +11,11 @@ use crate::service::p2p_service::{process_p2p_msg, run_p2p_client, run_p2p_serve
 use crate::utils::global_static_str::SYSTEM;
 use crate::utils::message_types::{
     GROUP_MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_FILE, MSG_TYPE_FORCE_LOGOUT, MSG_TYPE_GROUP_FILE,
-    MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE, MSG_TYPE_JSON, MSG_TYPE_P2P,
-    MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER, MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
-    MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE, MSG_TYPE_P2P_VIDEO_CALL_REJECT,
-    MSG_TYPE_PING, MSG_TYPE_RECALL, MSG_TYPE_RECALL_SUCCESS, MSG_TYPE_SYSTEM, MSG_TYPE_TEXT,
-    MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
+    MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT, MSG_TYPE_GROUP_VOICE, MSG_TYPE_IMAGE, MSG_TYPE_JSON,
+    MSG_TYPE_P2P, MSG_TYPE_P2P_USER_CLIENT, MSG_TYPE_P2P_USER_SERVER,
+    MSG_TYPE_P2P_VIDEO_CALL_ACCEPT, MSG_TYPE_P2P_VIDEO_CALL_END, MSG_TYPE_P2P_VIDEO_CALL_INVITE,
+    MSG_TYPE_P2P_VIDEO_CALL_REJECT, MSG_TYPE_PING, MSG_TYPE_RECALL, MSG_TYPE_RECALL_SUCCESS,
+    MSG_TYPE_SYSTEM, MSG_TYPE_TEXT, MSG_TYPE_VOICE, MSG_TYPE_WEBRTC_SIGNAL, NOTIFY_TYPE_MSG,
 };
 
 /// 处理消息
@@ -23,8 +23,8 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
     info!("处理消息 {:?}", text_vec);
     for msg in text_vec {
         match msg.text_type {
-            // 单聊消息（文本/图片/文件）
-            MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE => {
+            // 单聊消息（文本/图片/文件/语音）
+            MSG_TYPE_TEXT | MSG_TYPE_IMAGE | MSG_TYPE_FILE | MSG_TYPE_VOICE => {
                 private_chat::process_private_chat_message(msg).await?;
             }
             // 单聊消息撤回（伪撤回）：校验后清除目标消息，再按普通消息落库/上屏
@@ -39,7 +39,8 @@ pub async fn process_msg(text_vec: Vec<TextQuicMsg>) -> Result<(), anyhow::Error
                 call_control::process_call_control(msg).await?;
             }
             // 群聊消息
-            MSG_TYPE_GROUP_TEXT | MSG_TYPE_GROUP_IMAGE | MSG_TYPE_GROUP_FILE => {
+            MSG_TYPE_GROUP_TEXT | MSG_TYPE_GROUP_IMAGE | MSG_TYPE_GROUP_FILE
+            | MSG_TYPE_GROUP_VOICE => {
                 group_chat::process_group_chat_message(msg).await?;
             }
             // JSON信息

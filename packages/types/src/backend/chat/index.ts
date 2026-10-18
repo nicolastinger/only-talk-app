@@ -24,13 +24,24 @@ interface FileRecord {
   platform: number;
 }
 
+/** 单聊语音消息记录(raw, text_type=21)：录音文件以附件形式上传, biz_id 指向服务端文件 */
+interface VoiceRecord {
+  prev_id: string;
+  biz_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: string; // 录音容器扩展名(webm/ogg/m4a…)
+  duration: number; // 录音时长(秒)
+  platform: number;
+}
+
 /**
  * QUIC 实时消息体 — 镜像 rs common::utils::TextQuicMsg / src-tauri TextQuicMsgVo。
  * text_type 语义(见 rs message_types.rs):
- *   1 文本, 2 图片, 3 文件, 5/6/7/12-15 P2P 视频, 100 WebRTC 信令,
+ *   1 文本, 2 图片, 3 文件, 21 语音, 5/6/7/12-15 P2P 视频, 100 WebRTC 信令,
  *   201/202 发送回执, 203/204 P2P 角色, 99 心跳,
  *   1024 系统通知(raw 为 JSON SystemNotification), 10001 系统消息, 10002 强制下线,
- *   2001 群文本, 2002 群图片, 2003 群文件, 2004 群系统通知, 2201 群发送回执
+ *   2001 群文本, 2002 群图片, 2003 群文件, 2006 群语音, 2004 群系统通知, 2201 群发送回执
  */
 interface TextQuicMsgVo {
   nano_id: string; //消息id
@@ -79,6 +90,16 @@ interface GroupFileRecord {
   send_user: string;
 }
 
+/** 群聊语音消息内层记录(raw 外层 GroupTextRecord 的 text, text_type=2006) */
+interface GroupVoiceRecord {
+  biz_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  duration: number; // 录音时长(秒)
+  send_user: string;
+}
+
 interface ChatRecordSend {
   id: number;
   send_id: string;
@@ -99,8 +120,10 @@ export type {
   ChatMessageRecord,
   ImageRecord,
   FileRecord,
+  VoiceRecord,
   GroupTextRecord,
   GroupImageRecord,
   GroupFileRecord,
+  GroupVoiceRecord,
   ChatRecordSend,
 };

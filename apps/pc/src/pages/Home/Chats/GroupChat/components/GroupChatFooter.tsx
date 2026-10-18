@@ -1,4 +1,5 @@
 import {
+  AudioOutlined,
   PaperClipOutlined,
   PictureOutlined,
   SmileOutlined,
@@ -21,6 +22,8 @@ import { Button, Input, message } from 'antd';
 import { TextAreaRef } from 'antd/es/input/TextArea';
 import { nanoid } from 'nanoid';
 import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
+import type { VoiceRecordingResult } from '@/utils/voiceRecorder';
+import VoiceRecordModal from '../../components/VoiceRecordModal';
 import styles from './GroupChatFooter.less';
 
 const { TextArea } = Input;
@@ -28,6 +31,7 @@ const { TextArea } = Input;
 const MSG_TYPE_GROUP_TEXT = 2001;
 const MSG_TYPE_GROUP_IMAGE = 2002;
 const MSG_TYPE_GROUP_FILE = 2003;
+const MSG_TYPE_GROUP_VOICE = 2006;
 
 interface GroupChatFooterProps {
   groupUuid: string;
@@ -114,6 +118,7 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<TextAreaRef>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [showVoiceRecord, setShowVoiceRecord] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -261,6 +266,38 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
     }
   };
 
+  const sendVoice = async (recording: VoiceRecordingResult) => {
+    const text_msg_raw: TextQuicMsgVo = {
+      nano_id: nanoid(),
+      text_type: MSG_TYPE_GROUP_VOICE,
+      raw: recording.path,
+      recv_user: groupUuid,
+      send_user: '',
+      timestamp: new Date().getTime(),
+    };
+
+    const temp: ChatMessage = {
+      from: MessageFrom.Mine,
+      text_msg_raw,
+      ack: false,
+    };
+
+    // 先上屏(展示气泡与上传进度)，再执行发送
+    onMessageSent(JSON.stringify(temp));
+    onUploadStart?.(text_msg_raw.nano_id);
+    try {
+      await invoke('send_group_voice_msg', {
+        textQuicMsg: text_msg_raw,
+        duration: recording.duration,
+      });
+    } catch (e) {
+      console.log('发送群语音失败', e);
+      message.error(intl.formatMessage({ id: 'chat.voice.failed' }));
+    } finally {
+      onUploadEnd?.(text_msg_raw.nano_id);
+    }
+  };
+
   return (
     <div className={styles.footer}>
       <div className={styles.footerBtnBar}>
@@ -301,6 +338,13 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
         >
           <PaperClipOutlined />
         </div>
+        <div
+          className={styles.footerBtn}
+          onClick={() => setShowVoiceRecord(true)}
+          title={intl.formatMessage({ id: 'chat.voice.sendVoice' })}
+        >
+          <AudioOutlined />
+        </div>
       </div>
       <div className={styles.footerMessage}>
         <TextArea
@@ -318,6 +362,11 @@ const GroupChatFooter: React.FC<GroupChatFooterProps> = ({
           </Button>
         </div>
       </div>
+      <VoiceRecordModal
+        open={showVoiceRecord}
+        onCancel={() => setShowVoiceRecord(false)}
+        onSend={sendVoice}
+      />
     </div>
   );
 };
