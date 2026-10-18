@@ -1,9 +1,14 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { resolve } from "path";
+import tauriConfig from "../../src-tauri/tauri.conf.json";
 
 export default defineConfig(async () => ({
   plugins: [vue()],
+  define: {
+    // 应用版本号兜底: 无 Tauri 运行时(浏览器直接开 dev server)时展示, 与 tauri.conf.json 同源
+    __APP_VERSION__: JSON.stringify(tauriConfig.version),
+  },
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),

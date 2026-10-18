@@ -5,13 +5,14 @@ import {
   QuestionCircleOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
-import { getVersion } from '@tauri-apps/api/app';
 import { useIntl } from '@umijs/max';
 import type { UpdateDownloadProgress } from '@workspace/services';
 import {
+  buildAppVersion,
   checkForUpdate,
   downloadUpdatePackage,
   formatFileSize,
+  getAppVersion,
   installUpdate,
   openExternalUrl,
 } from '@workspace/services';
@@ -37,7 +38,8 @@ const { Title, Text, Paragraph } = Typography;
 
 const AboutApp = () => {
   const intl = useIntl();
-  const [version, setVersion] = useState('1.0.0');
+  // 先展示构建期版本(与 tauri.conf.json 同源), 挂载后再用 Tauri 运行时版本校正
+  const [version, setVersion] = useState(buildAppVersion);
   const [checking, setChecking] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [installing, setInstalling] = useState(false);
@@ -51,11 +53,8 @@ const AboutApp = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    getVersion()
-      .then((v) => setVersion(v))
-      .catch(() => {
-        /* 浏览器环境无 Tauri 运行时, 保留静态版本号 */
-      });
+    // 运行时读取 Tauri 应用版本(无 Tauri 运行时自动回退到构建期注入的版本)
+    void getAppVersion().then(setVersion);
   }, []);
 
   const onCheckUpdate = async () => {

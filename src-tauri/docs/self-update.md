@@ -89,7 +89,16 @@ GitHub Actions (client-ci.yml)
 | `apps/mobile/.../Settings/About.vue` | 设置-关于页「检查更新」入口 + Vant Dialog + 下载 loading |
 | 三份 `locales/*.ts` | 新增更新相关文案(`newVersionAvailable/releaseNotes/downloadNow/...`) |
 
-版本号展示: PC 从硬编码 `v1.0.0` 改为 `getVersion()`(运行时真实版本); Mobile 本就用了 `getVersion()`。
+版本号展示: 版本号**单一数据源**为 `src-tauri/tauri.conf.json` 的 `version`。
+
+- Tauri 运行时(打包后的 PC / 移动端): `packages/services/src/appVersion` 的 `getAppVersion()` 调
+  `@tauri-apps/api/app` 的 `getVersion()`, 即 Tauri 编译期写入的应用版本(config.version 优先)——
+  与安装包 / 更新包版本始终一致。
+- 非 Tauri 运行时(浏览器直接开 dev server, 如 `pnpm dev` / `pnpm dev:mobile`): 回退到构建期注入的
+  `__APP_VERSION__`(apps/pc/.umirc.ts 与 apps/mobile/vite.config.ts 都直接 import
+  `src-tauri/tauri.conf.json`), 因此不会再出现写死 `1.0.0` 那种陈旧版本号。
+- PC 端「设置-关于」与 Mobile 端「设置-关于」都走这个 helper, 初值即为构建期版本, 挂载后再用运行时
+  版本校正(不会闪一下旧版本号)。
 
 ### 4.3 NSIS 安装器钩子(`installer.nsi`)
 
@@ -192,15 +201,18 @@ steps:
 ### 7.1 Windows(CI 全自动)
 
 ```bash
-# 1. 升版本号(仅这两处影响打包产物版本)
-#    src-tauri/tauri.conf.json  "version": "1.0.2"
-#    src-tauri/Cargo.toml       version = "1.0.2"
-#    (workspace 的 package.json 版本是内部包版本, 不影响产物, 不用动)
+# 1. 升版本号(单一数据源, 保持这几处一致; 前端"关于"页展示的版本号也来自它)
+#    src-tauri/tauri.conf.json  "version": "1.0.4"
+#    src-tauri/Cargo.toml       version = "1.0.4"
+#    src-tauri/Cargo.lock       name = "app" 下的 version = "1.0.4"(跑一次 cargo check 会自动刷新)
+#    (workspace 的 package.json 版本是内部包版本, 不影响产物, 也不用动)
+#    Android 额外: tauri.conf.json 的 bundle.android.versionCode 与 patch 对齐(1.0.4 -> 1000004),
+#    否则新 APK 的 versionCode 与上一版相同, 应用市场会拒绝上传
 
 # 2. 提交 + 打 tag + 推送(触发 CI 自动打包并发布)
-git add -A && git commit -m "release: v1.0.2"
-git tag v1.0.2
-git push origin develop && git push origin v1.0.2
+git add -A && git commit -m "release: v1.0.4"
+git tag v1.0.4
+git push origin develop && git push origin v1.0.4
 ```
 
 > 若想重新跑同一 tag: `git tag -f v1.0.2 && git push origin v1.0.2 --force`
@@ -223,6 +235,9 @@ git push origin develop && git push origin v1.0.2
 警告(不会再像旧实现那样因文件缺失而直接构建失败)。
 
 ```powershell
+# 0. 确认 src-tauri/tauri.conf.json 的 version 与 bundle.android.versionCode 已按新版本更新
+#    (构建时 CLI 会据此生成 gen/android/app/tauri.properties 的 versionName/versionCode)
+
 # 1. 本机打 universal APK(仓库根目录; 两个文件就位即自动签名)
 pnpm tauri android build
 # 产物: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk

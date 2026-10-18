@@ -2,11 +2,12 @@
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { showDialog, showToast } from "vant";
-import { getVersion } from "@tauri-apps/api/app";
 import {
+  buildAppVersion,
   checkForUpdate,
   downloadUpdatePackage,
   formatFileSize,
+  getAppVersion,
   installUpdate,
   openExternalUrl,
 } from "@workspace/services";
@@ -16,7 +17,8 @@ import { useI18n } from "@/i18n";
 
 const router = useRouter();
 const { t } = useI18n();
-const version = ref("1.0.0");
+// 先展示构建期版本(与 tauri.conf.json 同源), 挂载后再用 Tauri 运行时版本校正
+const version = ref(buildAppVersion);
 const checking = ref(false);
 const downloading = ref(false);
 const installing = ref(false);
@@ -26,11 +28,8 @@ const progressTotal = ref(0);
 const updateInfo = ref<UpdateInfo | null>(null);
 
 onMounted(async () => {
-  try {
-    version.value = await getVersion();
-  } catch {
-    // 浏览器环境中无 Tauri 运行时，展示静态版本号
-  }
+  // 运行时读取 Tauri 应用版本(无 Tauri 运行时自动回退到构建期注入的版本)
+  version.value = await getAppVersion();
 });
 
 const goBack = () => router.back();
