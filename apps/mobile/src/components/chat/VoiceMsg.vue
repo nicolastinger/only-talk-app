@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from "vue";
 import { showToast } from "vant";
-import { convertPathToTauriUrl } from "@workspace/services";
-import { loadChatFile } from "@/chat/media";
+import { resolvePlayableAudio } from "@/chat/media";
 import { useI18n } from "@/i18n";
 
 const props = defineProps<{
@@ -26,10 +25,11 @@ const WAVE_BARS = 5;
 const bubbleWidth = computed(() =>
   Math.min(200, Math.max(80, 80 + (props.duration || 0) * 4))
 );
-const durationText = computed(() => {
-  const s = Math.max(0, Math.round(props.duration || 0));
+/** 秒数格式化为语音时长：>=60s 用 m'ss" */
+const formatVoiceDuration = (seconds: number): string => {
+  const s = Math.max(0, Math.round(seconds || 0));
   return s >= 60 ? `${Math.floor(s / 60)}'${s % 60}"` : `${s}"`;
-});
+};
 
 const uploadPercent = computed(() =>
   Math.max(0, Math.min(100, Math.round(props.uploadProgress ?? 0)))
@@ -47,31 +47,67 @@ const audio = ref<HTMLAudioElement | null>(null);
 const srcUrl = ref<string | null>(null);
 const playing = ref(false);
 const loading = ref(false);
+/** 当前播放进度（秒） */
+const currentTime = ref(0);
+/** 音频真实时长（秒；metadata 加载后可用，0 表示未知） */
+const audioDuration = ref(0);
+/** 释放 Blob URL，避免内存泄漏 */
+let disposeSrc: (() => void) | null = null;
+
+/** 总时长：优先用音频真实时长，回退消息里的录音时长 */
+const totalSeconds = computed(() =>
+  audioDuration.value > 0
+    ? Math.round(audioDuration.value)
+    : Math.max(0, Math.round(props.duration || 0))
+);
+/** 播放倒计时（剩余秒数） */
+const remainingSeconds = computed(() =>
+  Math.max(0, Math.ceil(totalSeconds.value - currentTime.value))
+);
+/** 播放中/暂停在中途时展示剩余秒数，否则展示总时长 */
+const showRemaining = computed(() => playing.value || currentTime.value > 0);
+const durationText = computed(() =>
+  formatVoiceDuration(
+    showRemaining.value ? remainingSeconds.value : totalSeconds.value
+  )
+);
 
 const ensureSrc = async (): Promise<string | null> => {
   if (srcUrl.value) return srcUrl.value;
-  if (props.localPath) {
-    srcUrl.value = convertPathToTauriUrl(props.localPath);
-    return srcUrl.value;
-  }
-  if (!props.bizId) return null;
-  const file = await loadChatFile(props.bizId, props.nanoId);
-  const url = file?.tauri_file_path || null;
-  if (url) srcUrl.value = url;
-  return url;
+  const playable = await resolvePlayableAudio(
+    props.bizId,
+    props.nanoId,
+    props.localPath
+  );
+  if (!playable) return null;
+  srcUrl.value = playable.url;
+  disposeSrc = playable.revoke;
+  return playable.url;
 };
 
 const bindAudio = (url: string) => {
   const el = audio.value ?? new Audio();
   el.preload = "auto";
-  el.src = url;
+  // 新音源：重置进度与已知时长
+  currentTime.value = 0;
+  audioDuration.value = 0;
+  el.onloadedmetadata = () => {
+    audioDuration.value =
+      Number.isFinite(el.duration) && el.duration > 0 ? el.duration : 0;
+  };
+  el.ontimeupdate = () => {
+    currentTime.value = el.currentTime || 0;
+  };
   el.onended = () => {
     playing.value = false;
+    currentTime.value = 0;
   };
   el.onerror = () => {
     playing.value = false;
+    currentTime.value = 0;
     showToast({ message: t("chat.voice.playFailed"), icon: "fail" });
   };
+  el.src = url;
   audio.value = el;
 };
 
@@ -104,6 +140,8 @@ const toggle = async () => {
 onUnmounted(() => {
   audio.value?.pause();
   audio.value = null;
+  disposeSrc?.();
+  disposeSrc = null;
 });
 </script>
 

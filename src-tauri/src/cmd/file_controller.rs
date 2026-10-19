@@ -269,6 +269,20 @@ pub async fn delete_local_file(id: i64) -> Result<(), String> {
     delete_local_file_service(id).await.map_err(|e| e.to_string())
 }
 
+/// 读取本地文件原始字节并以「原始字节响应」返回(JS 侧 `invoke` 得到 ArrayBuffer)。
+///
+/// 移动端语音播放使用: Android WebView 对 `asset:` 协议的媒体加载不可靠
+/// (媒体资源加载不经过 shouldInterceptRequest), `<audio>` 直接播 asset URL 会失败。
+/// 前端改为取字节后构造 Blob URL 播放；读取走阻塞线程池, 避免大文件卡住异步命令。
+#[tauri::command]
+pub async fn read_local_file_bytes(file_path: String) -> Result<tauri::ipc::Response, String> {
+    let bytes = tokio::task::spawn_blocking(move || fs::read(&file_path))
+        .await
+        .map_err(|e| format!("读取文件线程异常: {}", e))?
+        .map_err(|e| format!("读取文件失败: {}", e))?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
 /// 将前端录音产生的音频字节写入应用临时目录, 返回 Rust 可读的绝对路径。
 ///
 /// 前端 WebView 的 MediaRecorder 只能得到 Blob(blob: URL), Rust 侧无法直接读取,

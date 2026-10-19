@@ -51,7 +51,7 @@ use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
     debug_resource_paths, delete_local_file, get_chat_file_by_biz_id, get_file_by_biz_id,
     get_local_file, get_local_file_list, get_local_file_size, has_local_chat_file,
-    open_external_url, open_local_file, save_voice_temp_file,
+    open_external_url, open_local_file, read_local_file_bytes, save_voice_temp_file,
 };
 use crate::cmd::friend_controller::{
     block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
@@ -261,6 +261,7 @@ pub fn run() {
             crop_image_to_webp_command,
             copy_file_to_temp,
             save_voice_temp_file,
+            read_local_file_bytes,
             get_device_info,
             get_network_type,
             get_local_file_size,

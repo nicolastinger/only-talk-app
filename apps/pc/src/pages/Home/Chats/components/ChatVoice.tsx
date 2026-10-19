@@ -24,7 +24,13 @@ interface ChatVoiceProps {
 
 const WAVE_BARS = 5;
 
-/** 语音消息气泡：播放/暂停 + 时长，按需下载后本地播放 */
+/** 秒数格式化为语音时长：>=60s 用 m'ss" */
+const formatVoiceDuration = (seconds: number): string => {
+  const s = Math.max(0, Math.round(seconds || 0));
+  return s >= 60 ? `${Math.floor(s / 60)}'${s % 60}"` : `${s}"`;
+};
+
+/** 语音消息气泡：播放/暂停 + 播放倒计时，按需下载后本地播放 */
 const ChatVoice: React.FC<ChatVoiceProps> = ({
   bizId,
   duration,
@@ -36,12 +42,27 @@ const ChatVoice: React.FC<ChatVoiceProps> = ({
 }) => {
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
+  /** 当前播放进度（秒） */
+  const [currentTime, setCurrentTime] = useState(0);
+  /** 音频真实时长（秒；metadata 加载后可用，0 表示未知） */
+  const [audioDuration, setAudioDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const srcRef = useRef<string | null>(null);
 
   const width = Math.min(200, Math.max(80, 80 + (duration || 0) * 4));
-  const durationText =
-    duration >= 60 ? `${Math.floor(duration / 60)}'${duration % 60}"` : `${duration || 0}"`;
+  /** 总时长：优先用音频真实时长，回退消息里的录音时长 */
+  const totalSeconds =
+    audioDuration > 0 ? Math.round(audioDuration) : duration || 0;
+  /** 播放倒计时（剩余秒数） */
+  const remainingSeconds = Math.max(
+    0,
+    Math.ceil(totalSeconds - currentTime),
+  );
+  /** 播放中/暂停在中途时展示剩余秒数，否则展示总时长 */
+  const showRemaining = playing || currentTime > 0;
+  const durationText = formatVoiceDuration(
+    showRemaining ? remainingSeconds : totalSeconds,
+  );
 
   const uploadPercent = Math.max(0, Math.min(100, Math.round(uploadProgress)));
   const uploadIndeterminate = sending && sendPhase !== 'uploading';
@@ -62,12 +83,25 @@ const ChatVoice: React.FC<ChatVoiceProps> = ({
   const bindAudio = (url: string) => {
     const el = audioRef.current ?? new Audio();
     el.preload = 'auto';
-    el.src = url;
-    el.onended = () => setPlaying(false);
+    // 新音源：重置进度与已知时长
+    setCurrentTime(0);
+    setAudioDuration(0);
+    el.onloadedmetadata = () => {
+      setAudioDuration(
+        Number.isFinite(el.duration) && el.duration > 0 ? el.duration : 0,
+      );
+    };
+    el.ontimeupdate = () => setCurrentTime(el.currentTime || 0);
+    el.onended = () => {
+      setPlaying(false);
+      setCurrentTime(0);
+    };
     el.onerror = () => {
       setPlaying(false);
+      setCurrentTime(0);
       message.error('语音播放失败');
     };
+    el.src = url;
     audioRef.current = el;
   };
 

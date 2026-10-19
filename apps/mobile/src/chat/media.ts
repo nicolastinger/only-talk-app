@@ -1,4 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
 import {
+  convertPathToTauriUrl,
   getChatFileByBizId,
   hasLocalChatFile,
   type ChatFileDownloadProgress,
@@ -64,8 +66,7 @@ export const checkLocalChatFile = async (bizId: string): Promise<boolean> => {
 };
 
 /** 从文件服务返回的 tauri 资源地址还原为可打开的本机路径（对齐 PC ChatFile.getLocalPath，兼容各端 asset 协议前缀） */
-export const toLocalPath = (tauriFilePath: string): string => {
-  let localPath = tauriFilePath;
+export const toLocalPath = (tauriFilePath: string): string => {  let localPath = tauriFilePath;
   const assetPrefixes = [
     "http://asset.localhost/",
     "https://asset.localhost/",
@@ -91,4 +92,95 @@ export const toLocalPath = (tauriFilePath: string): string => {
     localPath = localPath.replace(/\//g, "\\");
   }
   return localPath;
+};
+
+/* ==================== 语音播放 ==================== */
+
+/** 依据扩展名推断音频 MIME（Blob 播放需要正确的 Content-Type） */
+const guessAudioMime = (nameOrPath?: string): string => {
+  const ext =
+    (nameOrPath || "").split(/[.\\/]/).pop()?.toLowerCase() || "";
+  switch (ext) {
+    case "webm":
+      return "audio/webm";
+    case "ogg":
+    case "oga":
+      return "audio/ogg";
+    case "m4a":
+    case "mp4":
+      return "audio/mp4";
+    case "aac":
+      return "audio/aac";
+    case "mp3":
+      return "audio/mpeg";
+    case "wav":
+      return "audio/wav";
+    case "flac":
+      return "audio/flac";
+    default:
+      return "audio/webm";
+  }
+};
+
+/** 可播放音频地址 + 释放函数 */
+export interface PlayableAudio {
+  url: string;
+  revoke: () => void;
+}
+
+/**
+ * 解析语音消息的可播放地址。
+ *
+ * Android WebView 无法可靠加载 `asset:` 协议的媒体资源（`<audio>` 的媒体加载
+ * 不经过 shouldInterceptRequest），直接播放 asset URL 会失败。故优先通过
+ * `read_local_file_bytes` 读取文件字节并构造 Blob URL（`blob:` 已在 CSP
+ * media-src 放行）；读取失败时回退 asset URL（桌面等平台仍可播放）。
+ */
+export const resolvePlayableAudio = async (
+  bizId?: string,
+  nanoId?: string,
+  localPath?: string
+): Promise<PlayableAudio | null> => {
+  let absPath = localPath || "";
+  let mime = guessAudioMime(localPath);
+  let fallbackAsset = localPath ? convertPathToTauriUrl(localPath) : null;
+
+  if (!absPath) {
+    if (!bizId) return null;
+    const file = await loadChatFile(bizId, nanoId);
+    absPath = file?.absolute_file_path || "";
+    mime = file?.mime_type || guessAudioMime(
+      file?.file_extension || file?.original_file_name
+    );
+    fallbackAsset = fallbackAsset || file?.tauri_file_path || null;
+  }
+
+  if (absPath) {
+    try {
+      const raw = (await invoke("read_local_file_bytes", {
+        filePath: absPath,
+      })) as ArrayBuffer | number[];
+      const bytes =
+        raw instanceof ArrayBuffer ? new Uint8Array(raw) : new Uint8Array(raw);
+      if (bytes.byteLength > 0) {
+        const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+        let revoked = false;
+        return {
+          url,
+          revoke: () => {
+            if (revoked) return;
+            revoked = true;
+            URL.revokeObjectURL(url);
+          },
+        };
+      }
+    } catch (e) {
+      console.error("读取音频文件失败:", absPath, e);
+    }
+  }
+
+  if (fallbackAsset) {
+    return { url: fallbackAsset, revoke: () => {} };
+  }
+  return null;
 };
