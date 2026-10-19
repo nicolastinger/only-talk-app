@@ -20,7 +20,7 @@
     "lint:rust:clippy": "cd src-tauri && cargo +stable clippy --all-targets",
     "lint:rust": "pnpm lint:rust:fmt && pnpm lint:rust:clippy",
     "tauri": "tauri",
-    "android:build:split": "tauri android build --apk true --aab false --split-per-abi --target aarch64 --target armv7",
+    "android:build:split": "tauri android build --apk --split-per-abi --target aarch64 --target armv7",
     "lint": "prettier --cache --write .",
     "prepare": "husky"
   },

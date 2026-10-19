@@ -250,7 +250,7 @@ pnpm android:build:split
 # 产物(已含版本号与架构, 命名规则见 docs/安卓APK按ABI分包打包策略.md):
 #   src-tauri/gen/android/app/build/outputs/apk/arm64/release/Only.Talk_1.0.4_arm64-v8a.apk
 #   src-tauri/gen/android/app/build/outputs/apk/arm/release/Only.Talk_1.0.4_armeabi-v7a.apk
-# 需要全 ABI 兜底包时(约 110MB, 不分包即 universal): pnpm tauri android build --apk true --aab false
+# 需要全 ABI 兜底包时(约 110MB, 不分包即 universal): pnpm tauri android build --apk
 #   -> src-tauri/gen/android/app/build/outputs/apk/universal/release/Only.Talk_1.0.4_universal.apk
 
 # 2. 附到同名 tag 的 Release(Windows/Linux 的 CI 已建好 vX.Y.Z)
