@@ -251,13 +251,13 @@ const onChange = (path: string) => {
   left: 12px;
   right: 12px;
   bottom: calc(10px + env(safe-area-inset-bottom));
-  height: 62px;
+  height: 72px;
   display: flex;
   justify-content: space-around;
   align-items: center;
   padding: 0 6px;
   z-index: 1000;
-  border-radius: 26px;
+  border-radius: 30px;
   background: var(--nav-glass-bg, rgba(255, 255, 255, 0.55));
   border: 1px solid var(--nav-glass-border, rgba(255, 255, 255, 0.7));
   box-shadow: var(--nav-glass-shadow, 0 14px 34px rgba(31, 63, 120, 0.18)),
@@ -291,7 +291,7 @@ const onChange = (path: string) => {
   top: 50%;
   left: 6px;
   width: calc((100% - 12px) / 5);
-  height: 46px;
+  height: 52px;
   transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
   pointer-events: none;
 
@@ -300,9 +300,9 @@ const onChange = (path: string) => {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 48px;
-    height: 46px;
-    border-radius: 15px;
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
     background: var(--nav-glass-active-bg);
     border: 1px solid var(--nav-glass-active-border);
     box-shadow: inset 0 1px 0 var(--nav-glass-highlight),
