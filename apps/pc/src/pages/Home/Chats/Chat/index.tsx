@@ -1,4 +1,5 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
+import { useChatBackground } from '@/hooks/useChatBackground';
 import { useMessageApi } from '@/hooks/useMessageApi';
 import {
   isMessageSelectable,
@@ -422,6 +423,8 @@ const ChatPage: React.FC = () => {
   );
 
   const { textMessage } = useMessageApi(friendUuid, meUuid);
+  // 聊天背景(仅客户端): 有自定义背景时拉伸铺满, 否则保持主题渐变
+  const chatBackgroundUrl = useChatBackground();
 
   const handleHeightChange = (heightPercent: number) => {
     const containerHeight = window.innerHeight;
@@ -637,7 +640,19 @@ const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      style={
+        chatBackgroundUrl
+          ? {
+              backgroundImage: `url("${chatBackgroundUrl}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }
+          : undefined
+      }
+    >
       <div className={styles.header}>
         <ChatTopBar
           title={currentFriend?.friend_name || ''}

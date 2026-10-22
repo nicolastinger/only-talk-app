@@ -1,6 +1,7 @@
 export * from "./announcementService";
 export * from "./appConfig";
 export * from "./appVersion";
+export * from "./chatBackground";
 export * from "./doNotDisturb";
 export * from "./eventHub";
 export * from "./authFactorService";

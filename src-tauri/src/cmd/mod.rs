@@ -1,5 +1,6 @@
 pub mod api_controller;
 pub mod auth_controller;
+pub mod chat_background_controller;
 pub mod chat_record_controller;
 pub mod chat_session_controller;
 pub mod config_controller;

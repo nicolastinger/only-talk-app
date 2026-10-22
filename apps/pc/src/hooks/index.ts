@@ -1,4 +1,5 @@
 export { useChatSession } from './useChatSession';
+export { useChatBackground } from './useChatBackground';
 export { useGroupMemberInfo } from './useGroupMemberInfo';
 export { useMessageApi } from './useMessageApi';
 export { useMessageSound } from './useMessageSound';

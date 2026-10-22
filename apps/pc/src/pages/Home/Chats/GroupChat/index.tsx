@@ -1,4 +1,5 @@
 import { SYSTEM_ACCOUNT } from '@/constants';
+import { useChatBackground } from '@/hooks/useChatBackground';
 import { useGroupMemberInfo } from '@/hooks/useGroupMemberInfo';
 import { useGroupMessageAckApi } from '@/hooks/useGroupMessageAckApi';
 import { useMessageApi } from '@/hooks/useMessageApi';
@@ -75,6 +76,8 @@ const GroupChatPage: React.FC = () => {
 
   const meUuid = useBearStore((state) => state.userInfo.uuid) || '';
   const { textMessage } = useMessageApi(null, groupId);
+  // 聊天背景(仅客户端): 有自定义背景时拉伸铺满, 否则保持主题渐变
+  const chatBackgroundUrl = useChatBackground();
   const { groupAckMessage } = useGroupMessageAckApi(groupId);
 
   /* 供下方 effect / 回调引用, 提前声明以满足 no-use-before-define */
@@ -636,7 +639,19 @@ const GroupChatPage: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      style={
+        chatBackgroundUrl
+          ? {
+              backgroundImage: `url("${chatBackgroundUrl}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }
+          : undefined
+      }
+    >
       <div className={styles.header}>
         <GroupTopBar
           title={groupInfo?.group_name || ''}

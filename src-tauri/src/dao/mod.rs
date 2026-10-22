@@ -1,6 +1,7 @@
 pub use crate::utils::db::{get_common_db_client, get_db_client, get_private_db_client};
 
 pub mod app_log_db;
+pub mod chat_background_db;
 pub mod chat_record_ack;
 pub mod chat_record_db;
 pub mod chat_record_read;

@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { showConfirmDialog, showToast } from "vant";
 import {
+  deleteChatBackground,
   getAutoDownloadOnWifi,
   getAutoDownloadOnCellular,
+  importChatBackground,
+  pickChatBackgroundImage,
+  resolveChatBackgroundUrl,
+  setActiveChatBackground,
   setAutoDownloadOnWifi,
   setAutoDownloadOnCellular,
+  type ChatBackgroundVo,
 } from "@workspace/services";
 import { useTheme, type ChatsFontSize, type ThemeMode } from "@/stores/theme";
+import { useChatBackgroundStore } from "@/stores/chatBackground";
 import { useI18n, type Locale } from "@/i18n";
 
 const router = useRouter();
@@ -57,6 +65,85 @@ const fontOptions: { value: ChatsFontSize; key: string }[] = [
 ];
 
 const goBack = () => router.back();
+
+// 聊天背景(仅客户端): 历史列表 + 当前生效项
+const {
+  backgrounds,
+  activeUrl,
+  refresh: refreshChatBackground,
+} = useChatBackgroundStore();
+const backgroundUploading = ref(false);
+
+const backgroundThumb = (item: ChatBackgroundVo) =>
+  resolveChatBackgroundUrl(item.file_path);
+
+const handleBackgroundUpload = async () => {
+  const path = await pickChatBackgroundImage();
+  if (!path) return;
+  backgroundUploading.value = true;
+  try {
+    await importChatBackground(path);
+    await refreshChatBackground();
+    showToast({
+      message: t("settings.generalSettings.chatBackgroundApplied"),
+    });
+  } catch (e) {
+    console.error("设置聊天背景失败:", e);
+    showToast({
+      message: t("settings.generalSettings.chatBackgroundApplyFailed"),
+      icon: "fail",
+    });
+  } finally {
+    backgroundUploading.value = false;
+  }
+};
+
+const handleBackgroundSelect = async (id: number) => {
+  try {
+    await setActiveChatBackground(id);
+    await refreshChatBackground();
+  } catch (e) {
+    console.error("切换聊天背景失败:", e);
+    showToast({
+      message: t("settings.generalSettings.chatBackgroundApplyFailed"),
+      icon: "fail",
+    });
+  }
+};
+
+const handleBackgroundReset = async () => {
+  try {
+    await setActiveChatBackground(null);
+    await refreshChatBackground();
+  } catch (e) {
+    console.error("恢复默认聊天背景失败:", e);
+    showToast({
+      message: t("settings.generalSettings.chatBackgroundApplyFailed"),
+      icon: "fail",
+    });
+  }
+};
+
+const handleBackgroundDelete = async (id: number) => {
+  try {
+    await showConfirmDialog({
+      title: t("settings.generalSettings.chatBackgroundDeleteConfirm"),
+    });
+  } catch {
+    // 取消删除
+    return;
+  }
+  try {
+    await deleteChatBackground(id);
+    await refreshChatBackground();
+  } catch (e) {
+    console.error("删除聊天背景失败:", e);
+    showToast({
+      message: t("settings.generalSettings.chatBackgroundApplyFailed"),
+      icon: "fail",
+    });
+  }
+};
 </script>
 
 <template>
@@ -117,6 +204,56 @@ const goBack = () => router.back();
           {{ t(item.key) }}
         </button>
       </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">
+        {{ t("settings.generalSettings.chatBackground") }}
+      </div>
+      <p class="desc">
+        {{ t("settings.generalSettings.chatBackgroundDesc") }}
+      </p>
+      <div class="bg-actions">
+        <button
+          class="bg-btn primary"
+          :disabled="backgroundUploading"
+          @click="handleBackgroundUpload"
+        >
+          {{
+            backgroundUploading
+              ? t("settings.generalSettings.chatBackgroundUploading")
+              : t("settings.generalSettings.chatBackgroundUpload")
+          }}
+        </button>
+        <button
+          v-if="activeUrl"
+          class="bg-btn"
+          @click="handleBackgroundReset"
+        >
+          {{ t("settings.generalSettings.chatBackgroundReset") }}
+        </button>
+      </div>
+      <div v-if="backgrounds.length" class="bg-grid">
+        <div
+          v-for="item in backgrounds"
+          :key="item.id"
+          class="bg-item"
+          :class="{ active: item.is_active }"
+          @click="handleBackgroundSelect(item.id)"
+        >
+          <img :src="backgroundThumb(item)" alt="" />
+          <span
+            class="bg-del"
+            role="button"
+            :aria-label="t('common.delete')"
+            @click.stop="handleBackgroundDelete(item.id)"
+            >×</span
+          >
+        </div>
+      </div>
+      <p v-else class="bg-empty">
+        {{ t("settings.generalSettings.chatBackgroundEmpty") }}
+      </p>
     </div>
 
     <div class="section-card">
@@ -236,5 +373,83 @@ const goBack = () => router.back();
 
 .switch-text {
   min-width: 0;
+}
+
+.bg-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bg-btn {
+  flex: 1;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &.primary {
+    background: rgba(64, 150, 255, 0.12);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.bg-item {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  cursor: pointer;
+
+  &.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(64, 150, 255, 20%);
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.bg-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 45%);
+  color: #fff;
+  font-size: 14px;
+  line-height: 19px;
+  text-align: center;
+}
+
+.bg-empty {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--text-tertiary);
 }
 </style>

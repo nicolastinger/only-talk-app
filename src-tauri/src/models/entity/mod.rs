@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod app_log;
+pub mod chat_background;
 pub mod chat_record;
 pub mod chat_record_ack;
 pub mod chat_record_raw;

@@ -15,6 +15,7 @@ import { useMessageApi } from "@/hooks/useMessageApi";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useMyAvatar } from "@/hooks/useMyAvatar";
 import { useCallManager } from "@/webrtc/callManager";
+import { useChatBackgroundStore } from "@/stores/chatBackground";
 import { getMyUuid } from "@/utils/api";
 import { attachViewportHeight } from "@/utils/viewport";
 import { resolveContentToTempFile } from "@/utils/tempImage";
@@ -78,6 +79,19 @@ const friendInfo = reactive({
 });
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
+// 聊天背景(仅客户端): 有自定义背景时拉伸铺满, 否则保持主题背景
+const { activeUrl: chatBackgroundUrl, refresh: refreshChatBackground } =
+  useChatBackgroundStore();
+const chatBackgroundStyle = computed(() =>
+  chatBackgroundUrl.value
+    ? {
+        backgroundImage: `url("${chatBackgroundUrl.value}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }
+    : undefined
+);
 const meUuid = ref("");
 /** 是否停留在消息列表底部（决定软键盘弹起时是否自动贴底） */
 const isAtBottom = ref(true);
@@ -895,6 +909,7 @@ const markReadSession = () => {
 };
 
 onMounted(async () => {
+  refreshChatBackground().catch(() => {});
   meUuid.value = await getMyUuid();
   if (!meUuid.value) {
     router.replace("/login");
@@ -990,7 +1005,7 @@ const handleAvatarClick = ({
 </script>
 
 <template>
-  <div class="chat-page" ref="chatPageRef">
+  <div class="chat-page" ref="chatPageRef" :style="chatBackgroundStyle">
     <div class="header">
       <button class="back-btn" @click="goBack">
         <svg viewBox="0 0 24 24" fill="currentColor">

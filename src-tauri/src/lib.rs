@@ -32,6 +32,10 @@ use crate::cmd::auth_controller::{
     clear_user_info, delete_quick_login_user, get_quick_login_users, github_login, logout,
     quick_login, refresh_token_command, sign_in,
 };
+use crate::cmd::chat_background_controller::{
+    delete_chat_background, import_chat_background, list_chat_backgrounds,
+    set_active_chat_background,
+};
 use crate::cmd::chat_record_controller::{
     delete_chat_record, delete_group_chat_record, forward_chat_messages, get_chat_record_by_type,
     get_chat_record_from_store, get_group_chat_record_from_store, get_pending_send_records,
@@ -330,6 +334,10 @@ pub fn run() {
             set_client_config,
             get_all_client_config,
             reset_client_config,
+            import_chat_background,
+            list_chat_backgrounds,
+            set_active_chat_background,
+            delete_chat_background,
             update_friend_profile_command,
             batch_read_system_notification,
             clear_all_unread_notifications,

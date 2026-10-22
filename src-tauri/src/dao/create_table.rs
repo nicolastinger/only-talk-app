@@ -1,6 +1,7 @@
 use sqlx::SqlitePool;
 
 use crate::models::entity::app_log::AppLog;
+use crate::models::entity::chat_background::ChatBackground;
 use crate::models::entity::chat_record::ChatRecord;
 use crate::models::entity::chat_record_ack::ChatRecordAck;
 use crate::models::entity::chat_record_read::ChatRecordRead;
@@ -40,6 +41,8 @@ pub async fn init_common_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Err
 /// 初始化数据库
 pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error> {
     init_sqlite::<AppLog>(pool_sqlite).await?;
+    // 聊天背景(仅客户端): 用户库记录表, 支持历史背景切换
+    init_sqlite::<ChatBackground>(pool_sqlite).await?;
     init_sqlite::<ChatRecordRead>(pool_sqlite).await?;
     // 会话追平记录表(sync_task)先于 ChatSession 建; 旧版水位表 session_sync_state 由 ChatSession.update_table 清理
     init_sqlite::<SyncTask>(pool_sqlite).await?;

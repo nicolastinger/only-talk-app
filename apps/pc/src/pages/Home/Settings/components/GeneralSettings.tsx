@@ -3,20 +3,32 @@ import {
   DownloadOutlined,
   FontSizeOutlined,
   GlobalOutlined,
+  PictureOutlined,
   PoweroffOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { getLocale, setLocale, useIntl } from '@umijs/max';
 import {
+  deleteChatBackground,
   getAutoDownloadOnWifi,
+  importChatBackground,
+  listChatBackgrounds,
+  pickChatBackgroundImage,
+  resolveChatBackgroundUrl,
+  setActiveChatBackground,
   setAppLanguage,
   setAutoDownloadOnWifi,
+  type ChatBackgroundVo,
 } from '@workspace/services';
 import {
+  Button,
   Card,
   Checkbox,
   Divider,
+  Popconfirm,
   Select,
+  Space,
   Switch,
   Typography,
   message,
@@ -34,6 +46,9 @@ const GeneralSettings = () => {
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
   const [autoStartLoading, setAutoStartLoading] = useState(false);
   const [autoDownloadWifi, setAutoDownloadWifi] = useState(true);
+  // 聊天背景(仅客户端): 历史记录 + 当前生效项
+  const [backgrounds, setBackgrounds] = useState<ChatBackgroundVo[]>([]);
+  const [backgroundUploading, setBackgroundUploading] = useState(false);
 
   // 读取当前系统注册的开机自启状态，默认不启用
   useEffect(() => {
@@ -80,6 +95,84 @@ const GeneralSettings = () => {
     setLocale(value, false);
     setAppLanguage(value).catch(() => {});
   };
+
+  const refreshBackgrounds = () => {
+    listChatBackgrounds()
+      .then(setBackgrounds)
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshBackgrounds();
+  }, []);
+
+  const handleBackgroundUpload = async () => {
+    const path = await pickChatBackgroundImage();
+    if (!path) return;
+    setBackgroundUploading(true);
+    try {
+      await importChatBackground(path);
+      refreshBackgrounds();
+      message.success(
+        intl.formatMessage({
+          id: 'settings.generalSettings.chatBackgroundApplied',
+        }),
+      );
+    } catch (e) {
+      console.log('设置聊天背景失败', e);
+      message.error(
+        intl.formatMessage({
+          id: 'settings.generalSettings.chatBackgroundApplyFailed',
+        }),
+      );
+    } finally {
+      setBackgroundUploading(false);
+    }
+  };
+
+  const handleBackgroundSelect = async (id: number) => {
+    try {
+      await setActiveChatBackground(id);
+      refreshBackgrounds();
+    } catch (e) {
+      console.log('切换聊天背景失败', e);
+      message.error(
+        intl.formatMessage({
+          id: 'settings.generalSettings.chatBackgroundApplyFailed',
+        }),
+      );
+    }
+  };
+
+  const handleBackgroundReset = async () => {
+    try {
+      await setActiveChatBackground(null);
+      refreshBackgrounds();
+    } catch (e) {
+      console.log('恢复默认聊天背景失败', e);
+      message.error(
+        intl.formatMessage({
+          id: 'settings.generalSettings.chatBackgroundApplyFailed',
+        }),
+      );
+    }
+  };
+
+  const handleBackgroundDelete = async (id: number) => {
+    try {
+      await deleteChatBackground(id);
+      refreshBackgrounds();
+    } catch (e) {
+      console.log('删除聊天背景失败', e);
+      message.error(
+        intl.formatMessage({
+          id: 'settings.generalSettings.chatBackgroundApplyFailed',
+        }),
+      );
+    }
+  };
+
+  const hasActiveBackground = backgrounds.some((item) => item.is_active);
 
   return (
     <div className={styles.settingSection}>
@@ -197,6 +290,92 @@ const GeneralSettings = () => {
         </Select>
         <Text type="secondary" className={styles.description}>
           {intl.formatMessage({ id: 'settings.generalSettings.fontSizeDesc' })}
+        </Text>
+      </Card>
+
+      <Card className={styles.settingCard}>
+        <div className={styles.cardHeader}>
+          <PictureOutlined className={styles.cardIcon} />
+          <Text strong>
+            {intl.formatMessage({
+              id: 'settings.generalSettings.chatBackground',
+            })}
+          </Text>
+        </div>
+        <Divider className={styles.divider} />
+        <Space wrap className={styles.bgActions}>
+          <Button
+            type="primary"
+            icon={<UploadOutlined />}
+            loading={backgroundUploading}
+            onClick={handleBackgroundUpload}
+          >
+            {intl.formatMessage({
+              id: backgroundUploading
+                ? 'settings.generalSettings.chatBackgroundUploading'
+                : 'settings.generalSettings.chatBackgroundUpload',
+            })}
+          </Button>
+          {hasActiveBackground && (
+            <Button onClick={handleBackgroundReset}>
+              {intl.formatMessage({
+                id: 'settings.generalSettings.chatBackgroundReset',
+              })}
+            </Button>
+          )}
+        </Space>
+        {backgrounds.length > 0 ? (
+          <div className={styles.bgGrid}>
+            {backgrounds.map((item) => (
+              <div
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                className={`${styles.bgItem} ${
+                  item.is_active ? styles.bgItemActive : ''
+                }`}
+                onClick={() => handleBackgroundSelect(item.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleBackgroundSelect(item.id);
+                  }
+                }}
+              >
+                <img
+                  className={styles.bgThumb}
+                  src={resolveChatBackgroundUrl(item.file_path)}
+                  alt=""
+                />
+                <Popconfirm
+                  title={intl.formatMessage({
+                    id: 'settings.generalSettings.chatBackgroundDeleteConfirm',
+                  })}
+                  onConfirm={() => handleBackgroundDelete(item.id)}
+                >
+                  <button
+                    type="button"
+                    className={styles.bgDelete}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={intl.formatMessage({ id: 'common.delete' })}
+                  >
+                    ×
+                  </button>
+                </Popconfirm>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Text type="secondary" className={styles.description}>
+            {intl.formatMessage({
+              id: 'settings.generalSettings.chatBackgroundEmpty',
+            })}
+          </Text>
+        )}
+        <Text type="secondary" className={styles.description}>
+          {intl.formatMessage({
+            id: 'settings.generalSettings.chatBackgroundDesc',
+          })}
         </Text>
       </Card>
 
