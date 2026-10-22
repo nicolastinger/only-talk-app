@@ -88,9 +88,10 @@
   );
   --nav-glass-border: rgba(255, 255, 255, 0.72);
   --nav-glass-highlight: rgba(255, 255, 255, 0.92);
-  --nav-glass-active-bg: rgba(255, 255, 255, 0.58);
-  --nav-glass-active-border: rgba(255, 255, 255, 0.85);
-  --nav-glass-active-shadow: 0 4px 12px rgba(31, 63, 120, 0.1);
+  /* 选中胶囊: 用深色半透明压出对比度(浅色面板本身接近白色) */
+  --nav-glass-active-bg: rgba(15, 23, 42, 0.12);
+  --nav-glass-active-border: rgba(255, 255, 255, 0.55);
+  --nav-glass-active-shadow: 0 4px 12px rgba(31, 63, 120, 0.12);
   --nav-glass-shadow: 0 14px 34px rgba(31, 63, 120, 0.18);
   --nav-glass-sheen: radial-gradient(
       120% 90% at 15% 0%,
@@ -188,9 +189,10 @@
   );
   --nav-glass-border: rgba(255, 255, 255, 0.16);
   --nav-glass-highlight: rgba(255, 255, 255, 0.24);
-  --nav-glass-active-bg: rgba(255, 255, 255, 0.12);
-  --nav-glass-active-border: rgba(255, 255, 255, 0.16);
-  --nav-glass-active-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  /* 选中胶囊: 暗色下改用高光白提亮(深色面板上压暗会看不见) */
+  --nav-glass-active-bg: rgba(255, 255, 255, 0.2);
+  --nav-glass-active-border: rgba(255, 255, 255, 0.24);
+  --nav-glass-active-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   --nav-glass-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
   --nav-glass-sheen: radial-gradient(
       120% 90% at 15% 0%,
