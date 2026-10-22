@@ -1,4 +1,5 @@
-// 公告入口: 宽度按内容自适应, 窗口极窄时可被压缩至 1px, 不挤占标题栏拖拽区
+// 公告入口: 与最小化/最大化按钮同尺寸同 hover 样式; 宽度按内容自适应,
+// 窗口极窄时可被压缩至 1px, 不挤占标题栏拖拽区
 .banner {
   height: 100%;
   display: flex;
@@ -12,13 +13,12 @@
 .trigger {
   position: relative;
   flex: none;
-  width: 32px;
+  width: 40px;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  color: var(--text-secondary);
+  color: var(--color-gray-10);
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
   user-select: none;
@@ -30,14 +30,14 @@
 }
 
 .icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .badge {
   position: absolute;
   top: 3px;
-  right: 0;
+  right: 3px;
   min-width: 14px;
   height: 14px;
   padding: 0 3px;

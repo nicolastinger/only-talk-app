@@ -256,7 +256,6 @@ const HomeLayout = () => {
           <div className={styles.rightSideBarToolDraggable}>
             <DraggableHeader />
           </div>
-          <AnnouncementBanner />
           {!isConnected && (
             <div className={styles.quicReconnectTip}>
               <span className={styles.tipIcon}>⚠️</span>
@@ -280,6 +279,7 @@ const HomeLayout = () => {
           )}
           <div className={styles.rightSideBarToolButton}>
             <div className={styles.rightSideBarToolButtonList}>
+              <AnnouncementBanner />
               <div
                 onClick={minimizeWindow}
                 onMouseDown={(e) => e.stopPropagation()}
