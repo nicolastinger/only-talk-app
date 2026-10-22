@@ -19,7 +19,6 @@ const messages: LocaleMessages = {
       "groupInfo": "群聊信息",
       "groupSettings": "群聊設置",
     },
-    "fakeHome": "設置",
     "settings": "設置",
     "signIn": "登入",
     "signUp": "註冊",

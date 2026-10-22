@@ -5,7 +5,6 @@ import { LeftAside } from '@/components/LeftAside';
 import MessageAlertBanner from '@/components/MessageAlertBanner';
 import OnlineStatusSwitch from '@/components/OnlineStatusSwitch';
 import {
-  CamouflageButton,
   LanguageButton,
   MuteButton,
   QuicDisconnectButton,
@@ -247,7 +246,6 @@ const HomeLayout = () => {
             {isHovered && (
               <>
                 <MuteButton />
-                <CamouflageButton />
                 <LanguageButton />
                 <ThemeButton />
                 <QuicDisconnectButton />

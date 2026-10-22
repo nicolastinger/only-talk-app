@@ -18,7 +18,6 @@ const messages: LocaleMessages = {
       "groupInfo": "Group Info",
       "groupSettings": "Group Settings",
     },
-    "fakeHome": "Settings",
     "settings": "Settings",
     "signIn": "Sign In",
     "signUp": "Sign Up",
