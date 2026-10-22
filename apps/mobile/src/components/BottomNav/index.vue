@@ -251,13 +251,13 @@ const onChange = (path: string) => {
   left: 12px;
   right: 12px;
   bottom: calc(10px + env(safe-area-inset-bottom));
-  height: 72px;
+  height: 62px;
   display: flex;
   justify-content: space-around;
   align-items: center;
   padding: 0 6px;
   z-index: 1000;
-  border-radius: 30px;
+  border-radius: 26px;
   background: var(--nav-glass-bg, rgba(255, 255, 255, 0.55));
   border: 1px solid var(--nav-glass-border, rgba(255, 255, 255, 0.7));
   box-shadow: var(--nav-glass-shadow, 0 14px 34px rgba(31, 63, 120, 0.18)),
@@ -285,13 +285,13 @@ const onChange = (path: string) => {
   pointer-events: none;
 }
 
-/* 液态玻璃选中滑块: 蓝调玻璃胶囊, 随当前 tab 平滑移动 */
+/* 液态玻璃选中滑块: 中性玻璃胶囊, 随当前 tab 平滑移动 */
 .nav-indicator {
   position: absolute;
   top: 50%;
   left: 6px;
   width: calc((100% - 12px) / 5);
-  height: 52px;
+  height: 46px;
   transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
   pointer-events: none;
 
@@ -300,13 +300,13 @@ const onChange = (path: string) => {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 52px;
-    height: 52px;
-    border-radius: 18px;
+    width: 48px;
+    height: 46px;
+    border-radius: 15px;
     background: var(--nav-glass-active-bg);
     border: 1px solid var(--nav-glass-active-border);
     box-shadow: inset 0 1px 0 var(--nav-glass-highlight),
-      var(--nav-glass-active-shadow, 0 6px 18px rgba(64, 150, 255, 0.35));
+      var(--nav-glass-active-shadow, 0 4px 12px rgba(31, 63, 120, 0.1));
     transform: translate(-50%, -50%);
   }
 }
@@ -334,9 +334,9 @@ const onChange = (path: string) => {
     transition: color 0.2s ease, transform 0.2s ease;
   }
 
-  /* 选中项: 白色图标 + 轻微放大, 与滑动胶囊构成选中样式 */
+  /* 选中项: 品牌色图标 + 轻微放大, 与中性玻璃胶囊构成选中样式 */
   &.active .nav-icon {
-    color: #fff;
+    color: var(--nav-active-color);
     transform: scale(1.04);
   }
 

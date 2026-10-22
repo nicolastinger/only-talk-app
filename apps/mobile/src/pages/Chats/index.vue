@@ -497,7 +497,7 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
 .chats-page {
   min-height: 100vh;
   background: var(--page-bg);
-  padding-bottom: calc(108px + env(safe-area-inset-bottom));
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .header {
