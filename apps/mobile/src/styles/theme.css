@@ -89,7 +89,7 @@
   --nav-glass-border: rgba(255, 255, 255, 0.72);
   --nav-glass-highlight: rgba(255, 255, 255, 0.92);
   /* 选中胶囊: 用深色半透明压出对比度(浅色面板本身接近白色) */
-  --nav-glass-active-bg: rgba(15, 23, 42, 0.12);
+  --nav-glass-active-bg: rgba(181, 197, 240, 0.12);
   --nav-glass-active-border: rgba(255, 255, 255, 0.55);
   --nav-glass-active-shadow: 0 4px 12px rgba(31, 63, 120, 0.12);
   --nav-glass-shadow: 0 14px 34px rgba(31, 63, 120, 0.18);

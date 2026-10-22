@@ -768,7 +768,7 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
   background: var(--header-bg);
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-light);

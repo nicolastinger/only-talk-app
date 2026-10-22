@@ -250,7 +250,7 @@ const onChange = (path: string) => {
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(10px + env(safe-area-inset-bottom));
+  bottom: calc(16px + env(safe-area-inset-bottom));
   height: 62px;
   display: flex;
   justify-content: space-around;
