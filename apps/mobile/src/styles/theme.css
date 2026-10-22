@@ -80,6 +80,27 @@
   --nav-inactive-color: rgb(122, 135, 153);
   --nav-active-glow: 0 0 16px rgba(74, 144, 255, 0.5);
 
+  /* ===== 液态玻璃底部导航 ===== */
+  --nav-glass-bg: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.74) 0%,
+    rgba(255, 255, 255, 0.42) 100%
+  );
+  --nav-glass-border: rgba(255, 255, 255, 0.72);
+  --nav-glass-highlight: rgba(255, 255, 255, 0.92);
+  --nav-glass-active-bg: rgba(255, 255, 255, 0.58);
+  --nav-glass-shadow: 0 14px 34px rgba(31, 63, 120, 0.18);
+  --nav-glass-sheen: radial-gradient(
+      120% 90% at 15% 0%,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(255, 255, 255, 0) 45%
+    );
+
   /* ===== Input Fields ===== */
   --input-bg: rgba(255, 255, 255, 0.95);
   --input-border: rgba(0, 0, 0, 0.06);
@@ -157,6 +178,26 @@
   --nav-bg: rgba(30, 30, 30, 0.95);
   --nav-border: rgba(255, 255, 255, 0.08);
   --nav-inactive-color: #808080;
+  /* ===== 液态玻璃底部导航(暗色) ===== */
+  --nav-glass-bg: linear-gradient(
+    135deg,
+    rgba(66, 72, 84, 0.78) 0%,
+    rgba(32, 35, 42, 0.62) 100%
+  );
+  --nav-glass-border: rgba(255, 255, 255, 0.16);
+  --nav-glass-highlight: rgba(255, 255, 255, 0.24);
+  --nav-glass-active-bg: rgba(255, 255, 255, 0.12);
+  --nav-glass-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  --nav-glass-sheen: radial-gradient(
+      120% 90% at 15% 0%,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0) 45%
+    );
   --input-bg: rgba(40, 40, 40, 0.8);
   --input-border: rgba(255, 255, 255, 0.1);
   --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.2);

@@ -9,7 +9,11 @@ import {
   Badge,
   Empty,
 } from "vant";
-import { clearAllUnreadSessions, get_friend_list, get_group_list } from "@workspace/services";
+import {
+  clearAllUnreadSessions,
+  get_friend_list,
+  get_group_list,
+} from "@workspace/services";
 import { useChatSessions } from "@/hooks/useChatSession";
 import { useUnreadStore } from "@/stores/unread";
 import { useAnnouncementStore } from "@/stores/announcement";
@@ -17,15 +21,22 @@ import { useAvatar } from "@/hooks/useAvatar";
 import { getMyUuid } from "@/utils/api";
 import { formatMessageTime, getMessagePreview } from "@/utils/time";
 import { DEFAULT_AVATAR } from "@/stores/user";
-import type { ChatSessionVo, FriendVo, GroupListItemVo } from "@workspace/types";
+import type {
+  ChatSessionVo,
+  FriendVo,
+  GroupListItemVo,
+} from "@workspace/types";
 import { useI18n } from "@/i18n";
 
 const router = useRouter();
 const { t } = useI18n();
 const { sessions, refresh } = useChatSessions();
 const { hideSession } = useUnreadStore();
-const { unreadCount: annUnread, fetchList: fetchAnnouncements, openList: openAnnouncements } =
-  useAnnouncementStore();
+const {
+  unreadCount: annUnread,
+  fetchList: fetchAnnouncements,
+  openList: openAnnouncements,
+} = useAnnouncementStore();
 const { getAvatarUrl } = useAvatar();
 const refreshing = ref(false);
 const searchText = ref("");
@@ -486,7 +497,7 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
 .chats-page {
   min-height: 100vh;
   background: var(--page-bg);
-  padding-bottom: 80px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .header {

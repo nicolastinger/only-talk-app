@@ -231,11 +231,9 @@ const onChange = (path: string) => {
         />
       </svg>
 
-      <span
-        v-if="badgeOf(item.name) > 0"
-        class="nav-badge"
-        >{{ formatBadge(badgeOf(item.name)) }}</span
-      >
+      <span v-if="badgeOf(item.name) > 0" class="nav-badge">{{
+        formatBadge(badgeOf(item.name))
+      }}</span>
     </button>
   </div>
 </template>
@@ -243,21 +241,41 @@ const onChange = (path: string) => {
 <style scoped lang="less">
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
-  background: var(--nav-bg, rgba(255, 255, 255, 0.92));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--nav-border, rgba(74, 144, 255, 0.08));
+  left: 12px;
+  right: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  height: 62px;
   display: flex;
   justify-content: space-around;
   align-items: center;
+  padding: 0 6px;
   z-index: 1000;
-  padding: 0 8px;
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2px 20px rgba(74, 144, 255, 0.06);
+  border-radius: 26px;
+  background: var(--nav-glass-bg, rgba(255, 255, 255, 0.55));
+  border: 1px solid var(--nav-glass-border, rgba(255, 255, 255, 0.7));
+  box-shadow: var(--nav-glass-shadow, 0 14px 34px rgba(31, 63, 120, 0.18)),
+    inset 0 1px 0 var(--nav-glass-highlight, rgba(255, 255, 255, 0.9)),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  overflow: hidden;
+}
+
+/* 液态玻璃高光层: 左上角柔光 + 斜向光带 */
+.bottom-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(
+    --nav-glass-sheen,
+    radial-gradient(
+      120% 90% at 15% 0%,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0) 55%
+    )
+  );
+  pointer-events: none;
 }
 
 .nav-btn {
@@ -277,10 +295,33 @@ const onChange = (path: string) => {
   /* 活跃态由图标颜色 + 底部小圆点指示 */
   .nav-icon {
     position: relative;
+    z-index: 1;
     width: var(--nav-icon-size, 28px);
     height: var(--nav-icon-size, 28px);
     color: var(--nav-inactive-color, #b0c4de);
     transition: color 0.15s ease;
+  }
+
+  /* 活跃项玻璃底片 */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 42px;
+    height: 42px;
+    border-radius: 16px;
+    background: var(--nav-glass-active-bg, rgba(255, 255, 255, 0.55));
+    box-shadow: inset 0 1px 0
+      var(--nav-glass-highlight, rgba(255, 255, 255, 0.9));
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.86);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  &.active::before {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 
   &.active .nav-icon {
@@ -308,6 +349,7 @@ const onChange = (path: string) => {
     position: absolute;
     top: 7px;
     left: calc(50% + 9px);
+    z-index: 2;
     min-width: 18px;
     height: 18px;
     padding: 0 5px;

@@ -85,7 +85,7 @@ const goNotifications = () => router.push("/notifications?type=moments");
 .feed-page {
   min-height: 100vh;
   background: var(--page-bg);
-  padding-bottom: 80px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .header {

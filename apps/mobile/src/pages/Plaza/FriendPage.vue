@@ -103,7 +103,7 @@ const friendFeatures: Record<string, Component> = {
 .friend-page {
   min-height: 100vh;
   background: var(--page-bg);
-  padding-bottom: 80px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .header {

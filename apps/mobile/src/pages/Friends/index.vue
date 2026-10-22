@@ -404,9 +404,9 @@ onUnmounted(() => {
             </div>
             <div class="friend-info">
               <span class="friend-name">{{ group.group_name }}</span>
-              <span class="friend-account"
-                >{{ t("friends.memberCount", { count: group.member_count }) }}</span
-              >
+              <span class="friend-account">{{
+                t("friends.memberCount", { count: group.member_count })
+              }}</span>
             </div>
             <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -442,7 +442,7 @@ onUnmounted(() => {
 .friends-page {
   min-height: 100vh;
   background: var(--page-bg);
-  padding-bottom: 80px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .header {
