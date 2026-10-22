@@ -15,7 +15,7 @@ import { useMessageApi } from "@/hooks/useMessageApi";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useMyAvatar } from "@/hooks/useMyAvatar";
 import { useCallManager } from "@/webrtc/callManager";
-import { useChatBackgroundStore } from "@/stores/chatBackground";
+import { useChatBackgroundFor } from "@/stores/chatBackground";
 import { getMyUuid } from "@/utils/api";
 import { attachViewportHeight } from "@/utils/viewport";
 import { resolveContentToTempFile } from "@/utils/tempImage";
@@ -79,9 +79,8 @@ const friendInfo = reactive({
 });
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
-// 聊天背景(仅客户端): 有自定义背景时拉伸铺满, 否则保持主题背景
-const { activeUrl: chatBackgroundUrl, refresh: refreshChatBackground } =
-  useChatBackgroundStore();
+// 聊天背景(仅客户端): 好友专属背景优先, 未设置时回退全局背景
+const chatBackgroundUrl = useChatBackgroundFor(() => friendId);
 const chatBackgroundStyle = computed(() =>
   chatBackgroundUrl.value
     ? {
@@ -909,7 +908,6 @@ const markReadSession = () => {
 };
 
 onMounted(async () => {
-  refreshChatBackground().catch(() => {});
   meUuid.value = await getMyUuid();
   if (!meUuid.value) {
     router.replace("/login");

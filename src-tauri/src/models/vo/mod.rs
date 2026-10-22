@@ -1,6 +1,7 @@
 pub mod chat_background_vo;
 pub mod chat_session_vo;
 pub mod file_vo;
+pub mod friend_chat_background_vo;
 pub mod friend_vo;
 pub mod group_vo;
 pub mod http_response;

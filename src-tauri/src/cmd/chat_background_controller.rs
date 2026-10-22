@@ -2,14 +2,19 @@
 //!
 //! 目录固定为 `app_data_dir/chat_backgrounds/`, 独立于 `umi_gitee_temp` 等临时目录,
 //! 不会被任何清理逻辑删除(只有用户主动删除记录时才会移除对应文件)。
+//!
+//! 两类背景共用同一目录:
+//! - 全局背景(`chat_background` 表, 带历史与 is_active);
+//! - 好友专属背景(`friend_chat_background` 表, 每个好友最多一张), 聊天页优先使用。
 
 use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager};
 
-use crate::dao::chat_background_db;
+use crate::dao::{chat_background_db, friend_chat_background_db};
 use crate::models::entity::chat_background::ChatBackground;
 use crate::models::vo::chat_background_vo::ChatBackgroundVo;
+use crate::models::vo::friend_chat_background_vo::FriendChatBackgroundVo;
 use crate::utils::time::get_now_time_stamp_as_millis;
 
 /// 聊天背景存放目录(相对应用数据目录)
@@ -26,23 +31,12 @@ fn chat_bg_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-fn to_vo(dir: &Path, row: ChatBackground) -> ChatBackgroundVo {
-    ChatBackgroundVo {
-        id: row.id,
-        file_path: dir.join(&row.file_name).to_string_lossy().to_string(),
-        file_name: row.file_name,
-        is_active: row.is_active == 1,
-        created_at: row.created_at,
-    }
-}
-
-/// 导入一张图片作为聊天背景: 复制到永不过期的背景目录, 写入记录并立即生效。
-#[tauri::command]
-pub async fn import_chat_background(
-    app: AppHandle,
-    uri_or_path: String,
-) -> Result<ChatBackgroundVo, String> {
-    let src = PathBuf::from(&uri_or_path);
+/// 校验并复制图片到永久背景目录, 返回(目录, 文件名)。
+async fn copy_background_file(
+    app: &AppHandle,
+    uri_or_path: &str,
+) -> Result<(PathBuf, String), String> {
+    let src = PathBuf::from(uri_or_path);
     let ext = src.extension().and_then(|value| value.to_str()).unwrap_or_default().to_lowercase();
     if !ALLOWED_EXTS.contains(&ext.as_str()) {
         return Err("仅支持 jpg/png/webp/bmp/gif 图片".to_string());
@@ -56,17 +50,52 @@ pub async fn import_chat_background(
         return Err("图片不能超过 30MB".to_string());
     }
 
-    let dir = chat_bg_dir(&app)?;
+    let dir = chat_bg_dir(app)?;
     let timestamp = get_now_time_stamp_as_millis().map_err(|e| e.to_string())?;
     let file_name = format!("bg_{timestamp}_{}.{ext}", nanoid::nanoid!(8));
-    let dest = dir.join(&file_name);
-    tokio::fs::copy(&src, &dest).await.map_err(|e| format!("保存背景图片失败: {e}"))?;
+    tokio::fs::copy(&src, dir.join(&file_name))
+        .await
+        .map_err(|e| format!("保存背景图片失败: {e}"))?;
+    Ok((dir, file_name))
+}
+
+fn to_vo(dir: &Path, row: ChatBackground) -> ChatBackgroundVo {
+    ChatBackgroundVo {
+        id: row.id,
+        file_path: dir.join(&row.file_name).to_string_lossy().to_string(),
+        file_name: row.file_name,
+        is_active: row.is_active == 1,
+        created_at: row.created_at,
+    }
+}
+
+fn to_friend_vo(
+    dir: &Path,
+    friend_uuid: String,
+    row_file_name: String,
+    created_at: i64,
+) -> FriendChatBackgroundVo {
+    FriendChatBackgroundVo {
+        file_path: dir.join(&row_file_name).to_string_lossy().to_string(),
+        file_name: row_file_name,
+        friend_uuid,
+        created_at,
+    }
+}
+
+/// 导入一张图片作为全局聊天背景: 复制到永不过期的背景目录, 写入记录并立即生效。
+#[tauri::command]
+pub async fn import_chat_background(
+    app: AppHandle,
+    uri_or_path: String,
+) -> Result<ChatBackgroundVo, String> {
+    let (dir, file_name) = copy_background_file(&app, &uri_or_path).await?;
 
     let id = match chat_background_db::insert_and_activate(&file_name).await {
         Ok(id) => id,
         Err(e) => {
             // 入库失败时回滚已复制的文件, 避免产生孤儿文件
-            let _ = tokio::fs::remove_file(&dest).await;
+            let _ = tokio::fs::remove_file(dir.join(&file_name)).await;
             return Err(e.to_string());
         }
     };
@@ -78,7 +107,7 @@ pub async fn import_chat_background(
     Ok(to_vo(&dir, row))
 }
 
-/// 列出全部背景(含历史), 前端据此渲染历史切换列表。
+/// 列出全部全局背景(含历史), 前端据此渲染历史切换列表。
 #[tauri::command]
 pub async fn list_chat_backgrounds(app: AppHandle) -> Result<Vec<ChatBackgroundVo>, String> {
     let dir = chat_bg_dir(&app)?;
@@ -86,7 +115,7 @@ pub async fn list_chat_backgrounds(app: AppHandle) -> Result<Vec<ChatBackgroundV
     Ok(rows.into_iter().map(|row| to_vo(&dir, row)).collect())
 }
 
-/// 切换生效背景; `id = None` 表示恢复默认(保留历史记录)。
+/// 切换生效的全局背景; `id = None` 表示恢复默认(保留历史记录)。
 #[tauri::command]
 pub async fn set_active_chat_background(app: AppHandle, id: Option<i64>) -> Result<(), String> {
     // 确保目录存在, 便于前端拿到当前配置后直接解析路径
@@ -99,11 +128,69 @@ pub async fn set_active_chat_background(app: AppHandle, id: Option<i64>) -> Resu
     Ok(())
 }
 
-/// 删除一条背景(记录 + 磁盘文件); 若删除的是当前生效背景, 聊天页自动回落到默认渐变。
+/// 删除一条全局背景(记录 + 磁盘文件); 若删除的是当前生效背景, 聊天页自动回落到默认渐变。
 #[tauri::command]
 pub async fn delete_chat_background(app: AppHandle, id: i64) -> Result<(), String> {
     let dir = chat_bg_dir(&app)?;
     if let Some(file_name) = chat_background_db::delete(id).await.map_err(|e| e.to_string())? {
+        let _ = tokio::fs::remove_file(dir.join(file_name)).await;
+    }
+    Ok(())
+}
+
+/// 为某好友导入专属聊天背景(替换旧图并删除旧文件); 聊天页优先使用它, 否则回退全局背景。
+#[tauri::command]
+pub async fn import_friend_chat_background(
+    app: AppHandle,
+    friend_uuid: String,
+    uri_or_path: String,
+) -> Result<FriendChatBackgroundVo, String> {
+    if friend_uuid.trim().is_empty() {
+        return Err("好友不存在".to_string());
+    }
+    let (dir, file_name) = copy_background_file(&app, &uri_or_path).await?;
+
+    let previous = match friend_chat_background_db::upsert(&friend_uuid, &file_name).await {
+        Ok(previous) => previous,
+        Err(e) => {
+            let _ = tokio::fs::remove_file(dir.join(&file_name)).await;
+            return Err(e.to_string());
+        }
+    };
+
+    // 替换成功后再删除旧文件, 避免写入失败时丢失已有背景
+    if let Some(old_name) = previous.filter(|name| name != &file_name) {
+        let _ = tokio::fs::remove_file(dir.join(old_name)).await;
+    }
+
+    let row = friend_chat_background_db::get(&friend_uuid)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "好友背景记录写入失败".to_string())?;
+    Ok(to_friend_vo(&dir, friend_uuid, row.file_name, row.created_at))
+}
+
+/// 读取某好友的专属背景; 未设置时返回 None(前端回退全局背景)。
+#[tauri::command]
+pub async fn get_friend_chat_background(
+    app: AppHandle,
+    friend_uuid: String,
+) -> Result<Option<FriendChatBackgroundVo>, String> {
+    let dir = chat_bg_dir(&app)?;
+    let row = friend_chat_background_db::get(&friend_uuid).await.map_err(|e| e.to_string())?;
+    Ok(row.map(|row| to_friend_vo(&dir, friend_uuid, row.file_name, row.created_at)))
+}
+
+/// 清除某好友的专属背景, 聊天页回退全局背景。
+#[tauri::command]
+pub async fn clear_friend_chat_background(
+    app: AppHandle,
+    friend_uuid: String,
+) -> Result<(), String> {
+    let dir = chat_bg_dir(&app)?;
+    if let Some(file_name) =
+        friend_chat_background_db::delete(&friend_uuid).await.map_err(|e| e.to_string())?
+    {
         let _ = tokio::fs::remove_file(dir.join(file_name)).await;
     }
     Ok(())

@@ -9,6 +9,8 @@ import {
   MailOutlined,
   ManOutlined,
   PhoneOutlined,
+  PictureOutlined,
+  UploadOutlined,
   UserOutlined,
   WomanOutlined,
 } from '@ant-design/icons';
@@ -16,11 +18,17 @@ import { invoke } from '@tauri-apps/api/core';
 import { history, useIntl } from '@umijs/max';
 import {
   block_friend,
+  clearFriendChatBackground,
   get_friend_info,
-  get_user_info_with_cache,
   getFiles,
+  getFriendChatBackground,
+  get_user_info_with_cache,
+  importFriendChatBackground,
+  pickChatBackgroundImage,
   refresh_user_info,
+  resolveChatBackgroundUrl,
   unblock_friend,
+  type FriendChatBackgroundVo,
 } from '@workspace/services';
 import { openImagePreviewWindow } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
@@ -52,6 +60,9 @@ const FriendInfo = (props: { uuid: string }) => {
   const [isBlocked, setIsBlocked] = useState(false);
   /** 是否为自己的好友（非好友时只展示资料卡，不显示拉黑） */
   const [isFriend, setIsFriend] = useState(false);
+  // 好友专属聊天背景(仅客户端); null 表示使用全局背景
+  const [chatBg, setChatBg] = useState<FriendChatBackgroundVo | null>(null);
+  const [bgUploading, setBgUploading] = useState(false);
 
   const genderMap: { [key: number]: string } = {
     0: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }),
@@ -175,6 +186,53 @@ const FriendInfo = (props: { uuid: string }) => {
     console.log('uuid', uuid);
     initUserData(uuid);
   }, [uuid]);
+
+  // 读取该好友的专属聊天背景(未设置时回退全局背景)
+  useEffect(() => {
+    let mounted = true;
+    getFriendChatBackground(uuid)
+      .then((bg) => {
+        if (mounted) setChatBg(bg);
+      })
+      .catch(() => {
+        if (mounted) setChatBg(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [uuid]);
+
+  const handleBgUpload = async () => {
+    const path = await pickChatBackgroundImage();
+    if (!path) return;
+    setBgUploading(true);
+    try {
+      const bg = await importFriendChatBackground(uuid, path);
+      setChatBg(bg);
+      message.success(
+        intl.formatMessage({ id: 'friendInfo.chatBackgroundApplied' }),
+      );
+    } catch (e) {
+      console.log('设置好友聊天背景失败', e);
+      message.error(
+        intl.formatMessage({ id: 'friendInfo.chatBackgroundFailed' }),
+      );
+    } finally {
+      setBgUploading(false);
+    }
+  };
+
+  const handleBgClear = async () => {
+    try {
+      await clearFriendChatBackground(uuid);
+      setChatBg(null);
+    } catch (e) {
+      console.log('恢复全局聊天背景失败', e);
+      message.error(
+        intl.formatMessage({ id: 'friendInfo.chatBackgroundFailed' }),
+      );
+    }
+  };
 
   const routeToChat = async () => {
     try {
@@ -328,6 +386,54 @@ const FriendInfo = (props: { uuid: string }) => {
             ]}
           />
         </div>
+
+        {isFriend && (
+          <div className={styles.bgSection}>
+            <div className={styles.bgTitle}>
+              {intl.formatMessage({ id: 'friendInfo.chatBackground' })}
+            </div>
+            <div className={styles.bgBody}>
+              <div
+                className={styles.bgPreview}
+                style={
+                  chatBg
+                    ? {
+                        backgroundImage: `url("${resolveChatBackgroundUrl(
+                          chatBg.file_path,
+                        )}")`,
+                      }
+                    : undefined
+                }
+              >
+                {!chatBg && <PictureOutlined />}
+              </div>
+              <div className={styles.bgActions}>
+                <Button
+                  size="small"
+                  type="primary"
+                  ghost
+                  icon={<UploadOutlined />}
+                  loading={bgUploading}
+                  onClick={handleBgUpload}
+                >
+                  {intl.formatMessage({
+                    id: 'friendInfo.chatBackgroundUpload',
+                  })}
+                </Button>
+                {chatBg && (
+                  <Button size="small" onClick={handleBgClear}>
+                    {intl.formatMessage({
+                      id: 'friendInfo.chatBackgroundReset',
+                    })}
+                  </Button>
+                )}
+                <span className={styles.bgHint}>
+                  {intl.formatMessage({ id: 'friendInfo.chatBackgroundHint' })}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className={styles.footer}>
           <Button

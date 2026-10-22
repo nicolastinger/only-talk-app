@@ -10,6 +10,7 @@ use crate::models::entity::chat_session::ChatSession;
 use crate::models::entity::client_config::ClientConfig;
 use crate::models::entity::file_record::FileRecord;
 use crate::models::entity::friend::Friend;
+use crate::models::entity::friend_chat_background::FriendChatBackground;
 use crate::models::entity::group::Group;
 use crate::models::entity::group_chat_record::GroupChatRecord;
 use crate::models::entity::group_member::GroupMember;
@@ -48,6 +49,8 @@ pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error
     init_sqlite::<SyncTask>(pool_sqlite).await?;
     init_sqlite::<ChatSession>(pool_sqlite).await?;
     init_sqlite::<Friend>(pool_sqlite).await?;
+    // 好友专属聊天背景(仅客户端): 未设置时回退全局背景
+    init_sqlite::<FriendChatBackground>(pool_sqlite).await?;
     init_sqlite::<Group>(pool_sqlite).await?;
     init_sqlite::<GroupMember>(pool_sqlite).await?;
     init_sqlite::<SystemNotification>(pool_sqlite).await?;

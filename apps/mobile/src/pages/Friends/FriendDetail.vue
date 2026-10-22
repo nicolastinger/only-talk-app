@@ -4,10 +4,16 @@ import { useRoute, useRouter } from "vue-router";
 import { showToast, showConfirmDialog, Empty } from "vant";
 import { invoke } from "@tauri-apps/api/core";
 import {
+  clearFriendChatBackground,
   get_friend_info,
   get_cached_user_info,
   delete_friend,
+  getFriendChatBackground,
+  importFriendChatBackground,
+  pickChatBackgroundImage,
   refresh_user_info,
+  resolveChatBackgroundUrl,
+  type FriendChatBackgroundVo,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useI18n } from "@/i18n";
@@ -34,6 +40,57 @@ const loadError = ref(false);
 const avatarUrl = ref<string | null>(null);
 const showReport = ref(false);
 const showAvatarPreview = ref(false);
+// 好友专属聊天背景(仅客户端); null 表示使用全局背景
+const friendChatBg = ref<FriendChatBackgroundVo | null>(null);
+const bgUploading = ref(false);
+
+const friendBgUrl = computed(() =>
+  friendChatBg.value
+    ? resolveChatBackgroundUrl(friendChatBg.value.file_path)
+    : null
+);
+
+const loadFriendChatBg = async () => {
+  try {
+    friendChatBg.value = await getFriendChatBackground(friendId);
+  } catch {
+    friendChatBg.value = null;
+  }
+};
+
+const onPickChatBg = async () => {
+  const path = await pickChatBackgroundImage();
+  if (!path) return;
+  bgUploading.value = true;
+  try {
+    friendChatBg.value = await importFriendChatBackground(friendId, path);
+    showToast({
+      message: t("friendInfo.chatBackgroundApplied"),
+      icon: "success",
+    });
+  } catch (e) {
+    console.error("设置好友聊天背景失败:", e);
+    showToast({
+      message: t("friendInfo.chatBackgroundFailed"),
+      icon: "fail",
+    });
+  } finally {
+    bgUploading.value = false;
+  }
+};
+
+const onClearChatBg = async () => {
+  try {
+    await clearFriendChatBackground(friendId);
+    friendChatBg.value = null;
+  } catch (e) {
+    console.error("恢复全局聊天背景失败:", e);
+    showToast({
+      message: t("friendInfo.chatBackgroundFailed"),
+      icon: "fail",
+    });
+  }
+};
 
 /** 是否为自己的好友（非好友时只展示资料卡，不显示删除好友） */
 const isFriend = computed(() => !!detail.value.friendVo);
@@ -144,7 +201,10 @@ const onSendMessage = async () => {
   router.push(`/chats/chat/${friendId}`);
 };
 const goBack = () => router.back();
-onMounted(loadDetail);
+onMounted(() => {
+  loadDetail();
+  loadFriendChatBg();
+});
 </script>
 
 <template>
@@ -215,6 +275,47 @@ onMounted(loadDetail);
         <div class="info-item" v-if="detail.userInfo.address">
           <span class="info-label">{{ t("userInfo.address") }}</span
           ><span class="info-value">{{ detail.userInfo.address }}</span>
+        </div>
+      </div>
+
+      <div class="bg-section" v-if="isFriend">
+        <div class="bg-title">{{ t("friendInfo.chatBackground") }}</div>
+        <div class="bg-body">
+          <div
+            class="bg-preview"
+            :style="
+              friendBgUrl
+                ? { backgroundImage: `url('${friendBgUrl}')` }
+                : undefined
+            "
+          >
+            <svg v-if="!friendBgUrl" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+              />
+            </svg>
+          </div>
+          <div class="bg-actions">
+            <button
+              class="bg-btn primary"
+              :disabled="bgUploading"
+              @click="onPickChatBg"
+            >
+              {{
+                bgUploading
+                  ? t("friendInfo.chatBackgroundUploading")
+                  : t("friendInfo.chatBackgroundUpload")
+              }}
+            </button>
+            <button
+              v-if="friendBgUrl"
+              class="bg-btn"
+              @click="onClearChatBg"
+            >
+              {{ t("friendInfo.chatBackgroundReset") }}
+            </button>
+            <span class="bg-hint">{{ t("friendInfo.chatBackgroundHint") }}</span>
+          </div>
         </div>
       </div>
 
@@ -458,5 +559,85 @@ onMounted(loadDetail);
   color: var(--text-tertiary);
   font-size: 14px;
   cursor: pointer;
+}
+
+.bg-section {
+  margin: 0 16px 16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.bg-title {
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bg-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bg-preview {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 64px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-alt);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: var(--text-tertiary);
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.bg-actions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bg-btn {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+
+  &.primary {
+    background: rgba(64, 150, 255, 0.12);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.bg-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
 }
 </style>

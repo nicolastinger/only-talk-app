@@ -9,6 +9,7 @@ pub mod chat_record_send;
 pub mod client_config_db;
 pub mod create_table;
 pub mod file_record_db;
+pub mod friend_chat_background_db;
 pub mod friend_db;
 pub mod group_chat_record_db;
 pub mod group_db;

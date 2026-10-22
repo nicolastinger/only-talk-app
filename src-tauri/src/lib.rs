@@ -33,7 +33,8 @@ use crate::cmd::auth_controller::{
     quick_login, refresh_token_command, sign_in,
 };
 use crate::cmd::chat_background_controller::{
-    delete_chat_background, import_chat_background, list_chat_backgrounds,
+    clear_friend_chat_background, delete_chat_background, get_friend_chat_background,
+    import_chat_background, import_friend_chat_background, list_chat_backgrounds,
     set_active_chat_background,
 };
 use crate::cmd::chat_record_controller::{
@@ -338,6 +339,9 @@ pub fn run() {
             list_chat_backgrounds,
             set_active_chat_background,
             delete_chat_background,
+            import_friend_chat_background,
+            get_friend_chat_background,
+            clear_friend_chat_background,
             update_friend_profile_command,
             batch_read_system_notification,
             clear_all_unread_notifications,

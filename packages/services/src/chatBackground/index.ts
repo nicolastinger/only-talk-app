@@ -21,6 +21,14 @@ export interface ChatBackgroundVo {
   created_at: number;
 }
 
+/** 好友专属聊天背景(每个好友最多一张, 未设置时回退全局背景) */
+export interface FriendChatBackgroundVo {
+  friend_uuid: string;
+  file_name: string;
+  file_path: string;
+  created_at: number;
+}
+
 /** 聊天背景变更事件名(同一 webview 内通信) */
 export const CHAT_BACKGROUND_CHANGED_EVENT = "chat-background-changed";
 
@@ -51,18 +59,20 @@ export const pickChatBackgroundImage = async (): Promise<string | null> => {
 };
 
 /**
- * 导入并立即应用一张背景图。
  * Android 相册返回的 content:// URI 先交给 `copy_file_to_temp` 转成真实路径。
+ */
+const normalizeLocalPath = async (uriOrPath: string): Promise<string> => {
+  if (!uriOrPath.startsWith("content://")) return uriOrPath;
+  return invoke<string>("copy_file_to_temp", { uriOrPath });
+};
+
+/**
+ * 导入并立即应用一张全局背景图。
  */
 export const importChatBackground = async (
   uriOrPath: string
 ): Promise<ChatBackgroundVo> => {
-  let filePath = uriOrPath;
-  if (filePath.startsWith("content://")) {
-    filePath = await invoke<string>("copy_file_to_temp", {
-      uriOrPath: filePath,
-    });
-  }
+  const filePath = await normalizeLocalPath(uriOrPath);
   const background = await invoke<ChatBackgroundVo>("import_chat_background", {
     uriOrPath: filePath,
   });
@@ -85,5 +95,35 @@ export const setActiveChatBackground = async (
 /** 删除一条历史背景(记录 + 本地文件) */
 export const deleteChatBackground = async (id: number): Promise<void> => {
   await invoke("delete_chat_background", { id });
+  notifyChanged();
+};
+
+/** 为某好友导入专属背景(替换旧图并删除旧文件), 聊天页优先使用 */
+export const importFriendChatBackground = async (
+  friendUuid: string,
+  uriOrPath: string
+): Promise<FriendChatBackgroundVo> => {
+  const filePath = await normalizeLocalPath(uriOrPath);
+  const background = await invoke<FriendChatBackgroundVo>(
+    "import_friend_chat_background",
+    { friendUuid, uriOrPath: filePath }
+  );
+  notifyChanged();
+  return background;
+};
+
+/** 读取某好友的专属背景; 未设置返回 null(聊天页回退全局背景) */
+export const getFriendChatBackground = (
+  friendUuid: string
+): Promise<FriendChatBackgroundVo | null> =>
+  invoke<FriendChatBackgroundVo | null>("get_friend_chat_background", {
+    friendUuid,
+  });
+
+/** 清除某好友的专属背景, 回退全局背景 */
+export const clearFriendChatBackground = async (
+  friendUuid: string
+): Promise<void> => {
+  await invoke("clear_friend_chat_background", { friendUuid });
   notifyChanged();
 };

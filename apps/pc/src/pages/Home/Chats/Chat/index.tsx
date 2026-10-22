@@ -424,7 +424,7 @@ const ChatPage: React.FC = () => {
 
   const { textMessage } = useMessageApi(friendUuid, meUuid);
   // 聊天背景(仅客户端): 有自定义背景时拉伸铺满, 否则保持主题渐变
-  const chatBackgroundUrl = useChatBackground();
+  const chatBackgroundUrl = useChatBackground(friendUuid);
 
   const handleHeightChange = (heightPercent: number) => {
     const containerHeight = window.innerHeight;

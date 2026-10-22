@@ -11,6 +11,7 @@ pub mod chat_session;
 pub mod client_config;
 pub mod file_record;
 pub mod friend;
+pub mod friend_chat_background;
 pub mod group;
 pub mod group_chat_record;
 pub mod group_member;
