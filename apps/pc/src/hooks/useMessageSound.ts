@@ -1,5 +1,7 @@
 import {
   armMessageSound,
+  isDoNotDisturbEnabled,
+  isInDoNotDisturbWindow,
   isMessageSoundEnabled,
   playMessageSound,
 } from '@workspace/services';
@@ -20,6 +22,8 @@ const useMessageSound = () => {
 
   useBackendEvent('alert_incoming_message', () => {
     if (!isMessageSoundEnabled()) return;
+    // 夜间免打扰时段不响(Rust 端已拦截，这里兜底旧版本后端)
+    if (isDoNotDisturbEnabled() && isInDoNotDisturbWindow()) return;
     playMessageSound();
   });
 };

@@ -14,6 +14,8 @@ pub static CONFIG_SERVER_API_BASE: &str = "server.api_base";
 pub static CONFIG_SERVER_DOMAIN: &str = "server.domain";
 pub static CONFIG_APP_THEME: &str = "app.theme";
 pub static CONFIG_APP_LANGUAGE: &str = "app.language";
+pub static CONFIG_APP_MESSAGE_SOUND: &str = "app.message_sound";
+pub static CONFIG_APP_DO_NOT_DISTURB: &str = "app.do_not_disturb";
 pub static CONFIG_APP_AUTO_DOWNLOAD_WIFI: &str = "app.auto_download_wifi";
 pub static CONFIG_APP_AUTO_DOWNLOAD_CELLULAR: &str = "app.auto_download_cellular";
 

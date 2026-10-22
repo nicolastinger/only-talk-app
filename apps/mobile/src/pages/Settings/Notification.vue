@@ -2,10 +2,12 @@
 import { reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import {
+  isDoNotDisturbEnabled,
   isMessageSoundEnabled,
   kv_get,
   kv_set,
   playMessageSound,
+  setDoNotDisturbEnabled,
   setMessageSoundEnabled,
 } from "@workspace/services";
 import { useI18n } from "@/i18n";
@@ -52,12 +54,11 @@ const prefs = reactive<NotifyPrefs>(defaultPrefs());
 watch(
   prefs,
   (value) => {
-    // sound 由 client_config(app.message_sound) 持久化，不写进本地偏好快照
-    const { receive, vibration, preview, nightDnd } = value;
-    kv_set(
-      STORAGE_KEY,
-      JSON.stringify({ receive, vibration, preview, nightDnd })
-    ).catch(() => {});
+    // sound / nightDnd 由 client_config 持久化，不写进本地偏好快照
+    const { receive, vibration, preview } = value;
+    kv_set(STORAGE_KEY, JSON.stringify({ receive, vibration, preview })).catch(
+      () => {}
+    );
   },
   { deep: true }
 );
@@ -65,6 +66,7 @@ watch(
 onMounted(async () => {
   Object.assign(prefs, await loadPrefs());
   prefs.sound = isMessageSoundEnabled();
+  prefs.nightDnd = isDoNotDisturbEnabled();
 });
 
 const toggle = (key: keyof NotifyPrefs, checked: boolean) => {
@@ -73,6 +75,8 @@ const toggle = (key: keyof NotifyPrefs, checked: boolean) => {
     setMessageSoundEnabled(checked).catch(() => {});
     // 打开时试听一次，方便确认效果
     if (checked) playMessageSound();
+  } else if (key === "nightDnd") {
+    setDoNotDisturbEnabled(checked).catch(() => {});
   }
 };
 

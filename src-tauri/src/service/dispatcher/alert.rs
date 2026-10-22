@@ -14,22 +14,33 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use chrono::{Local, Timelike};
 use log::{error, info};
 use serde::Serialize;
 use tokio::sync::Mutex;
 
+use crate::config::get_config_bool_or_default;
 use crate::dao::friend_db::query_friend_info_by_id_db;
 use crate::dao::group_member_db::query_group_member;
 use crate::models::entity::group::Group;
 use crate::models::entity::user_info::UserInfo;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
-use crate::utils::global_static_str::SYSTEM;
+use crate::utils::global_static_str::{CONFIG_APP_DO_NOT_DISTURB, SYSTEM};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::utils::{events, notify};
 use crate::GLOBAL_QUIC_USER_INFO;
 
 /// 同一会话两次提醒的最小间隔(毫秒)
 const ALERT_DEBOUNCE_MS: i64 = 4000;
+
+/// 免打扰时段(本地时间): 23:00 - 次日 08:00, 结束小时不含
+const DND_START_HOUR: u32 = 23;
+const DND_END_HOUR: u32 = 8;
+
+/// 判断指定小时(本地时间)是否处于免打扰时段
+fn in_do_not_disturb_window(hour: u32) -> bool {
+    hour >= DND_START_HOUR || hour < DND_END_HOUR
+}
 
 /// 按会话记录上一次提醒时间(毫秒时间戳)，用于去抖
 static LAST_ALERT: LazyLock<Mutex<HashMap<String, i64>>> =
@@ -105,6 +116,14 @@ pub(crate) async fn on_incoming_message(
     // 会话目标：单聊 = 好友 uuid(send_user)；群聊 = 群 uuid(recv_user)
     let target = if is_group { msg.recv_user.clone() } else { msg.send_user.clone() };
     if target.is_empty() {
+        return;
+    }
+
+    // 夜间免打扰: 开关打开且处于免打扰时段时, 不弹横幅也不发系统通知(未读照常累计)
+    if get_config_bool_or_default(CONFIG_APP_DO_NOT_DISTURB, false)
+        && in_do_not_disturb_window(Local::now().hour())
+    {
+        info!("免打扰时段，跳过新消息提醒: target={}", target);
         return;
     }
 
@@ -250,5 +269,20 @@ fn trim_preview(raw: String) -> String {
         trimmed.chars().take(60).collect::<String>() + "…"
     } else {
         trimmed.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::in_do_not_disturb_window;
+
+    #[test]
+    fn do_not_disturb_window_covers_night_hours() {
+        assert!(in_do_not_disturb_window(23));
+        assert!(in_do_not_disturb_window(0));
+        assert!(in_do_not_disturb_window(7));
+        assert!(!in_do_not_disturb_window(8));
+        assert!(!in_do_not_disturb_window(12));
+        assert!(!in_do_not_disturb_window(22));
     }
 }

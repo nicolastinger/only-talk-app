@@ -12,6 +12,7 @@ export const CLIENT_CONFIG_KEYS = {
   appTheme: "app.theme",
   appLanguage: "app.language",
   messageSound: "app.message_sound",
+  doNotDisturb: "app.do_not_disturb",
   autoDownloadWifi: "app.auto_download_wifi",
   autoDownloadCellular: "app.auto_download_cellular",
 } as const;

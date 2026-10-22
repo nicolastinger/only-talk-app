@@ -1,8 +1,10 @@
 import { EyeOutlined, MessageOutlined, MoonOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import {
+  isDoNotDisturbEnabled,
   isMessageSoundEnabled,
   playMessageSound,
+  setDoNotDisturbEnabled,
   setMessageSoundEnabled,
 } from '@workspace/services';
 import { Card, Checkbox, Divider, Typography } from 'antd';
@@ -17,12 +19,19 @@ const NotificationSettings = () => {
   const [soundEnabled, setSoundEnabled] = useState(() =>
     isMessageSoundEnabled(),
   );
+  // 夜间免打扰(持久化在 client_config: app.do_not_disturb)
+  const [dndEnabled, setDndEnabled] = useState(() => isDoNotDisturbEnabled());
 
   const changeSoundEnabled = (enabled: boolean) => {
     setSoundEnabled(enabled);
     setMessageSoundEnabled(enabled).catch(() => {});
     // 打开时试听一次，方便确认效果
     if (enabled) playMessageSound();
+  };
+
+  const changeDndEnabled = (enabled: boolean) => {
+    setDndEnabled(enabled);
+    setDoNotDisturbEnabled(enabled).catch(() => {});
   };
 
   return (
@@ -99,14 +108,18 @@ const NotificationSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Checkbox className={styles.settingCheckbox}>
+        <Checkbox
+          className={styles.settingCheckbox}
+          checked={dndEnabled}
+          onChange={(e) => changeDndEnabled(e.target.checked)}
+        >
           {intl.formatMessage({
             id: 'settings.notificationSettings.nightDoNotDisturb',
           })}
         </Checkbox>
         <Text type="secondary" className={styles.description}>
           {intl.formatMessage({
-            id: 'settings.notificationSettings.doNotDisturbDesc',
+            id: 'settings.notificationSettings.nightDoNotDisturbDesc',
           })}
         </Text>
       </Card>
