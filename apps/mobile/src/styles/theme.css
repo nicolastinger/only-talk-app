@@ -88,7 +88,13 @@
   );
   --nav-glass-border: rgba(255, 255, 255, 0.72);
   --nav-glass-highlight: rgba(255, 255, 255, 0.92);
-  --nav-glass-active-bg: rgba(255, 255, 255, 0.58);
+  --nav-glass-active-bg: linear-gradient(
+    135deg,
+    rgba(94, 168, 255, 0.94) 0%,
+    rgba(58, 124, 255, 0.84) 100%
+  );
+  --nav-glass-active-border: rgba(255, 255, 255, 0.62);
+  --nav-glass-active-shadow: 0 6px 18px rgba(64, 150, 255, 0.38);
   --nav-glass-shadow: 0 14px 34px rgba(31, 63, 120, 0.18);
   --nav-glass-sheen: radial-gradient(
       120% 90% at 15% 0%,
@@ -186,7 +192,13 @@
   );
   --nav-glass-border: rgba(255, 255, 255, 0.16);
   --nav-glass-highlight: rgba(255, 255, 255, 0.24);
-  --nav-glass-active-bg: rgba(255, 255, 255, 0.12);
+  --nav-glass-active-bg: linear-gradient(
+    135deg,
+    rgba(80, 148, 255, 0.9) 0%,
+    rgba(46, 105, 230, 0.86) 100%
+  );
+  --nav-glass-active-border: rgba(255, 255, 255, 0.3);
+  --nav-glass-active-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
   --nav-glass-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
   --nav-glass-sheen: radial-gradient(
       120% 90% at 15% 0%,

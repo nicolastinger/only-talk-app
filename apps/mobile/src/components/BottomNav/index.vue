@@ -43,6 +43,12 @@ const active = computed(() => {
   return best || "/chats";
 });
 
+// 选中项下标，用于滑块式选中指示器
+const activeIndex = computed(() => {
+  const index = navItems.findIndex((item) => item.path === active.value);
+  return index < 0 ? 0 : index;
+});
+
 const onChange = (path: string) => {
   router.replace(path);
 };
@@ -50,6 +56,13 @@ const onChange = (path: string) => {
 
 <template>
   <div class="bottom-nav">
+    <!-- 液态玻璃选中滑块: 跟随当前 tab 平滑移动 -->
+    <div
+      class="nav-indicator"
+      :style="{
+        transform: `translate3d(calc(${activeIndex} * 100%), -50%, 0)`,
+      }"
+    />
     <button
       v-for="item in navItems"
       :key="item.path"
@@ -222,13 +235,7 @@ const onChange = (path: string) => {
           stroke-width="2"
           stroke-linecap="round"
         />
-        <circle
-          class="accent-dot"
-          cx="27"
-          cy="7"
-          r="2.5"
-          fill="var(--nav-active-color)"
-        />
+        <circle class="accent-dot" cx="27" cy="7" r="2.5" fill="currentColor" />
       </svg>
 
       <span v-if="badgeOf(item.name) > 0" class="nav-badge">{{
@@ -278,6 +285,32 @@ const onChange = (path: string) => {
   pointer-events: none;
 }
 
+/* 液态玻璃选中滑块: 蓝调玻璃胶囊, 随当前 tab 平滑移动 */
+.nav-indicator {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: calc((100% - 12px) / 5);
+  height: 46px;
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 48px;
+    height: 46px;
+    border-radius: 15px;
+    background: var(--nav-glass-active-bg);
+    border: 1px solid var(--nav-glass-active-border);
+    box-shadow: inset 0 1px 0 var(--nav-glass-highlight),
+      var(--nav-glass-active-shadow, 0 6px 18px rgba(64, 150, 255, 0.35));
+    transform: translate(-50%, -50%);
+  }
+}
+
 .nav-btn {
   flex: 1;
   display: flex;
@@ -292,57 +325,19 @@ const onChange = (path: string) => {
   -webkit-tap-highlight-color: transparent;
   padding: 0;
 
-  /* 活跃态由图标颜色 + 底部小圆点指示 */
   .nav-icon {
     position: relative;
     z-index: 1;
     width: var(--nav-icon-size, 28px);
     height: var(--nav-icon-size, 28px);
     color: var(--nav-inactive-color, #b0c4de);
-    transition: color 0.15s ease;
+    transition: color 0.2s ease, transform 0.2s ease;
   }
 
-  /* 活跃项玻璃底片 */
-  &::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 42px;
-    height: 42px;
-    border-radius: 16px;
-    background: var(--nav-glass-active-bg, rgba(255, 255, 255, 0.55));
-    box-shadow: inset 0 1px 0
-      var(--nav-glass-highlight, rgba(255, 255, 255, 0.9));
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.86);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-  }
-
-  &.active::before {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-
+  /* 选中项: 白色图标 + 轻微放大, 与滑动胶囊构成选中样式 */
   &.active .nav-icon {
-    color: var(--nav-active-color);
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: 7px;
-    left: 50%;
-    transform: translateX(-50%) scale(0);
-    width: 4px;
-    height: 4px;
-    background: var(--nav-active-color);
-    border-radius: 50%;
-    transition: transform 0.15s ease;
-  }
-
-  &.active::after {
-    transform: translateX(-50%) scale(1);
+    color: #fff;
+    transform: scale(1.04);
   }
 
   .nav-badge {
