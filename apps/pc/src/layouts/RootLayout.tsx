@@ -1,15 +1,22 @@
 import DevAssistant from '@/components/DevAssistant';
 import SyncLoadingOverlay from '@/components/SyncLoadingOverlay';
-import { useP2pMessageApi, useWebRTCIncomingCall, useWebRTCSignalApi } from '@/hooks';
+import {
+  useMessageSound,
+  useP2pMessageApi,
+  useWebRTCIncomingCall,
+  useWebRTCSignalApi,
+} from '@/hooks';
 import { useTheme } from '@/hooks/useTheme';
-import { ConfigProvider, theme } from 'antd';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Outlet } from '@umijs/max';
+import { ConfigProvider, theme } from 'antd';
 import { useEffect } from 'react';
 import styles from './styles/RootLayout.less';
 
 const RootLayout: React.FC = () => {
   useP2pMessageApi();
+  // 来消息提示音(可在设置-通知中关闭)
+  useMessageSound();
   useWebRTCSignalApi();
   // 全局监听视频通话来电（不依赖所在聊天会话），确保不漏接
   useWebRTCIncomingCall();

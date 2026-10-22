@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
+import { useMessageSound } from "@/hooks/useMessageSound";
 import { clearUuidCache } from "@/utils/api";
 import { useI18n } from "@/i18n";
 import AnnouncementCenter from "@/components/AnnouncementCenter.vue";
@@ -28,6 +29,8 @@ const { t } = useI18n();
 const { isLoggedIn, clearAuth } = useAuthStore();
 useTheme();
 useCallManager();
+// 来消息提示音(可在设置-通知中关闭)
+useMessageSound();
 
 let unlistenForceLogout: (() => void) | undefined;
 let logoutTask: Promise<void> | undefined;

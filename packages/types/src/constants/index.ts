@@ -11,6 +11,7 @@ export const CLIENT_CONFIG_KEYS = {
   serverDomain: "server.domain",
   appTheme: "app.theme",
   appLanguage: "app.language",
+  messageSound: "app.message_sound",
   autoDownloadWifi: "app.auto_download_wifi",
   autoDownloadCellular: "app.auto_download_cellular",
 } as const;

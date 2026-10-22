@@ -9,6 +9,7 @@ export * from "./groupService";
 export * from "./httpService";
 export * from "./imagePreviewService";
 export * from "./linkService";
+export * from "./messageSound";
 export * from "./momentService";
 export * from "./networkService";
 export * from "./notificationService";

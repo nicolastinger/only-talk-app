@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { kv_get, kv_set } from "@workspace/services";
+import {
+  isMessageSoundEnabled,
+  kv_get,
+  kv_set,
+  playMessageSound,
+  setMessageSoundEnabled,
+} from "@workspace/services";
 import { useI18n } from "@/i18n";
 
 interface NotifyItem {
@@ -46,17 +52,28 @@ const prefs = reactive<NotifyPrefs>(defaultPrefs());
 watch(
   prefs,
   (value) => {
-    kv_set(STORAGE_KEY, JSON.stringify(value)).catch(() => {});
+    // sound 由 client_config(app.message_sound) 持久化，不写进本地偏好快照
+    const { receive, vibration, preview, nightDnd } = value;
+    kv_set(
+      STORAGE_KEY,
+      JSON.stringify({ receive, vibration, preview, nightDnd })
+    ).catch(() => {});
   },
   { deep: true }
 );
 
 onMounted(async () => {
   Object.assign(prefs, await loadPrefs());
+  prefs.sound = isMessageSoundEnabled();
 });
 
 const toggle = (key: keyof NotifyPrefs, checked: boolean) => {
   prefs[key] = checked;
+  if (key === "sound") {
+    setMessageSoundEnabled(checked).catch(() => {});
+    // 打开时试听一次，方便确认效果
+    if (checked) playMessageSound();
+  }
 };
 
 const messageItems = ref<NotifyItem[]>([

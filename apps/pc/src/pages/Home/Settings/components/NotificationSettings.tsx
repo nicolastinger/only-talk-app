@@ -1,12 +1,29 @@
 import { EyeOutlined, MessageOutlined, MoonOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
+import {
+  isMessageSoundEnabled,
+  playMessageSound,
+  setMessageSoundEnabled,
+} from '@workspace/services';
 import { Card, Checkbox, Divider, Typography } from 'antd';
+import { useState } from 'react';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
 
 const NotificationSettings = () => {
   const intl = useIntl();
+  // 消息提示音开关(持久化在 client_config: app.message_sound)
+  const [soundEnabled, setSoundEnabled] = useState(() =>
+    isMessageSoundEnabled(),
+  );
+
+  const changeSoundEnabled = (enabled: boolean) => {
+    setSoundEnabled(enabled);
+    setMessageSoundEnabled(enabled).catch(() => {});
+    // 打开时试听一次，方便确认效果
+    if (enabled) playMessageSound();
+  };
 
   return (
     <div className={styles.settingSection}>
@@ -29,7 +46,11 @@ const NotificationSettings = () => {
             id: 'settings.notificationSettings.receiveNewMessage',
           })}
         </Checkbox>
-        <Checkbox defaultChecked className={styles.settingCheckbox}>
+        <Checkbox
+          className={styles.settingCheckbox}
+          checked={soundEnabled}
+          onChange={(e) => changeSoundEnabled(e.target.checked)}
+        >
           {intl.formatMessage({
             id: 'settings.notificationSettings.soundReminder',
           })}
