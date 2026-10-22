@@ -19,13 +19,16 @@ use log::{error, info};
 use serde::Serialize;
 use tokio::sync::Mutex;
 
-use crate::config::get_config_bool_or_default;
+use crate::config::{get_config, get_config_bool_or_default};
 use crate::dao::friend_db::query_friend_info_by_id_db;
 use crate::dao::group_member_db::query_group_member;
 use crate::models::entity::group::Group;
 use crate::models::entity::user_info::UserInfo;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
-use crate::utils::global_static_str::{CONFIG_APP_DO_NOT_DISTURB, SYSTEM};
+use crate::utils::global_static_str::{
+    CONFIG_APP_DO_NOT_DISTURB, CONFIG_APP_DO_NOT_DISTURB_END, CONFIG_APP_DO_NOT_DISTURB_START,
+    SYSTEM,
+};
 use crate::utils::time::get_now_time_stamp_as_millis;
 use crate::utils::{events, notify};
 use crate::GLOBAL_QUIC_USER_INFO;
@@ -33,13 +36,45 @@ use crate::GLOBAL_QUIC_USER_INFO;
 /// 同一会话两次提醒的最小间隔(毫秒)
 const ALERT_DEBOUNCE_MS: i64 = 4000;
 
-/// 免打扰时段(本地时间): 23:00 - 次日 08:00, 结束小时不含
-const DND_START_HOUR: u32 = 23;
-const DND_END_HOUR: u32 = 8;
+/// 缺省免打扰时段(本地时间, 当日分钟数): 23:00 - 次日 08:00
+const DEFAULT_DND_START_MINUTES: u32 = 23 * 60;
+const DEFAULT_DND_END_MINUTES: u32 = 8 * 60;
 
-/// 判断指定小时(本地时间)是否处于免打扰时段
-fn in_do_not_disturb_window(hour: u32) -> bool {
-    hour >= DND_START_HOUR || hour < DND_END_HOUR
+/// 解析 "HH:mm" 为当日分钟数(0..1440), 非法返回 None
+fn parse_hhmm(value: &str) -> Option<u32> {
+    let (hour, minute) = value.trim().split_once(':')?;
+    let hour: u32 = hour.parse().ok()?;
+    let minute: u32 = minute.parse().ok()?;
+    if hour >= 24 || minute >= 60 {
+        return None;
+    }
+    Some(hour * 60 + minute)
+}
+
+/// 判断指定时刻(当日分钟数)是否处于免打扰时段
+/// - `start < end`: 同日时段, 如 12:00 - 14:00
+/// - `start > end`: 跨天时段, 如 23:00 - 08:00
+/// - `start == end`: 全天免打扰
+fn in_do_not_disturb_window(now_minutes: u32, start: u32, end: u32) -> bool {
+    if start == end {
+        return true;
+    }
+    if start < end {
+        now_minutes >= start && now_minutes < end
+    } else {
+        now_minutes >= start || now_minutes < end
+    }
+}
+
+/// 读取用户自定义的免打扰时段(分钟数), 缺省/非法值回退 23:00 - 08:00
+fn do_not_disturb_range() -> (u32, u32) {
+    let start = get_config(CONFIG_APP_DO_NOT_DISTURB_START)
+        .and_then(|v| parse_hhmm(&v))
+        .unwrap_or(DEFAULT_DND_START_MINUTES);
+    let end = get_config(CONFIG_APP_DO_NOT_DISTURB_END)
+        .and_then(|v| parse_hhmm(&v))
+        .unwrap_or(DEFAULT_DND_END_MINUTES);
+    (start, end)
 }
 
 /// 按会话记录上一次提醒时间(毫秒时间戳)，用于去抖
@@ -119,12 +154,15 @@ pub(crate) async fn on_incoming_message(
         return;
     }
 
-    // 夜间免打扰: 开关打开且处于免打扰时段时, 不弹横幅也不发系统通知(未读照常累计)
-    if get_config_bool_or_default(CONFIG_APP_DO_NOT_DISTURB, false)
-        && in_do_not_disturb_window(Local::now().hour())
-    {
-        info!("免打扰时段，跳过新消息提醒: target={}", target);
-        return;
+    // 免打扰: 开关打开且当前时刻落在自定义时段内时, 不弹横幅也不发系统通知(未读照常累计)
+    if get_config_bool_or_default(CONFIG_APP_DO_NOT_DISTURB, false) {
+        let (start, end) = do_not_disturb_range();
+        let now = Local::now();
+        let now_minutes = now.hour() * 60 + now.minute();
+        if in_do_not_disturb_window(now_minutes, start, end) {
+            info!("免打扰时段，跳过新消息提醒: target={}", target);
+            return;
+        }
     }
 
     // 去抖：短时间同会话只提醒一次
@@ -274,15 +312,38 @@ fn trim_preview(raw: String) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::in_do_not_disturb_window;
+    use super::{in_do_not_disturb_window, parse_hhmm};
 
     #[test]
-    fn do_not_disturb_window_covers_night_hours() {
-        assert!(in_do_not_disturb_window(23));
-        assert!(in_do_not_disturb_window(0));
-        assert!(in_do_not_disturb_window(7));
-        assert!(!in_do_not_disturb_window(8));
-        assert!(!in_do_not_disturb_window(12));
-        assert!(!in_do_not_disturb_window(22));
+    fn parse_hhmm_accepts_valid_and_rejects_invalid() {
+        assert_eq!(parse_hhmm("23:00"), Some(23 * 60));
+        assert_eq!(parse_hhmm("08:05"), Some(8 * 60 + 5));
+        assert_eq!(parse_hhmm(" 00:00 "), Some(0));
+        assert_eq!(parse_hhmm("24:00"), None);
+        assert_eq!(parse_hhmm("12:60"), None);
+        assert_eq!(parse_hhmm("abc"), None);
+        assert_eq!(parse_hhmm("12"), None);
+    }
+
+    #[test]
+    fn do_not_disturb_window_handles_custom_ranges() {
+        // 跨天: 23:00 - 08:00
+        let (start, end) = (23 * 60, 8 * 60);
+        assert!(in_do_not_disturb_window(23 * 60, start, end));
+        assert!(in_do_not_disturb_window(0, start, end));
+        assert!(in_do_not_disturb_window(7 * 60 + 59, start, end));
+        assert!(!in_do_not_disturb_window(8 * 60, start, end));
+        assert!(!in_do_not_disturb_window(12 * 60, start, end));
+        assert!(!in_do_not_disturb_window(22 * 60 + 59, start, end));
+
+        // 同日: 12:30 - 14:00
+        let (start, end) = (12 * 60 + 30, 14 * 60);
+        assert!(in_do_not_disturb_window(12 * 60 + 30, start, end));
+        assert!(in_do_not_disturb_window(13 * 60, start, end));
+        assert!(!in_do_not_disturb_window(14 * 60, start, end));
+        assert!(!in_do_not_disturb_window(12 * 60 + 29, start, end));
+
+        // 起止相同 = 全天
+        assert!(in_do_not_disturb_window(9 * 60, 9 * 60, 9 * 60));
     }
 }

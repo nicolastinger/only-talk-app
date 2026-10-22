@@ -13,6 +13,8 @@ export const CLIENT_CONFIG_KEYS = {
   appLanguage: "app.language",
   messageSound: "app.message_sound",
   doNotDisturb: "app.do_not_disturb",
+  doNotDisturbStart: "app.do_not_disturb_start",
+  doNotDisturbEnd: "app.do_not_disturb_end",
   autoDownloadWifi: "app.auto_download_wifi",
   autoDownloadCellular: "app.auto_download_cellular",
 } as const;

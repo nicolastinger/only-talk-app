@@ -1,17 +1,26 @@
 import { EyeOutlined, MessageOutlined, MoonOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import {
+  getDoNotDisturbRange,
   isDoNotDisturbEnabled,
   isMessageSoundEnabled,
   playMessageSound,
   setDoNotDisturbEnabled,
+  setDoNotDisturbRange,
   setMessageSoundEnabled,
 } from '@workspace/services';
-import { Card, Checkbox, Divider, Typography } from 'antd';
+import { Card, Checkbox, Divider, TimePicker, Typography } from 'antd';
+import dayjs, { Dayjs } from 'dayjs';
 import { useState } from 'react';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
+
+/** "HH:mm" -> dayjs(今天, 指定时分)，供 TimePicker 使用 */
+const toDayjs = (hhmm: string): Dayjs => {
+  const [hour, minute] = hhmm.split(':').map(Number);
+  return dayjs().hour(hour).minute(minute).second(0);
+};
 
 const NotificationSettings = () => {
   const intl = useIntl();
@@ -19,8 +28,9 @@ const NotificationSettings = () => {
   const [soundEnabled, setSoundEnabled] = useState(() =>
     isMessageSoundEnabled(),
   );
-  // 夜间免打扰(持久化在 client_config: app.do_not_disturb)
+  // 免打扰开关与时段(持久化在 client_config: app.do_not_disturb*)
   const [dndEnabled, setDndEnabled] = useState(() => isDoNotDisturbEnabled());
+  const [dndRange, setDndRange] = useState(() => getDoNotDisturbRange());
 
   const changeSoundEnabled = (enabled: boolean) => {
     setSoundEnabled(enabled);
@@ -33,6 +43,28 @@ const NotificationSettings = () => {
     setDndEnabled(enabled);
     setDoNotDisturbEnabled(enabled).catch(() => {});
   };
+
+  const changeDndTime = (which: 'start' | 'end', value: string) => {
+    const next = { ...dndRange, [which]: value };
+    setDndRange(next);
+    setDoNotDisturbRange(next.start, next.end).catch(() => {});
+  };
+
+  const renderTimePicker = (which: 'start' | 'end') => (
+    <TimePicker
+      className={styles.dndTimePicker}
+      value={toDayjs(dndRange[which])}
+      format="HH:mm"
+      minuteStep={5}
+      allowClear={false}
+      size="small"
+      disabled={!dndEnabled}
+      onChange={(_, timeString) => {
+        const value = Array.isArray(timeString) ? timeString[0] : timeString;
+        if (value) changeDndTime(which, value);
+      }}
+    />
+  );
 
   return (
     <div className={styles.settingSection}>
@@ -117,6 +149,16 @@ const NotificationSettings = () => {
             id: 'settings.notificationSettings.nightDoNotDisturb',
           })}
         </Checkbox>
+        <div className={styles.dndRange}>
+          <Text type="secondary">
+            {intl.formatMessage({
+              id: 'settings.notificationSettings.doNotDisturbRange',
+            })}
+          </Text>
+          {renderTimePicker('start')}
+          <span className={styles.dndRangeSep}>–</span>
+          {renderTimePicker('end')}
+        </div>
         <Text type="secondary" className={styles.description}>
           {intl.formatMessage({
             id: 'settings.notificationSettings.nightDoNotDisturbDesc',
