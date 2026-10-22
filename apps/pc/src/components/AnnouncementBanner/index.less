@@ -1,54 +1,203 @@
+// 公告入口: 宽度按内容自适应, 窗口极窄时可被压缩至 1px, 不挤占标题栏拖拽区
 .banner {
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  flex: 0 1 360px;
-  min-width: 0;
-  max-width: 45%;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 1px;
   overflow: hidden;
 }
 
-.label {
+.trigger {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-primary);
-  white-space: nowrap;
-  flex-shrink: 0;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  user-select: none;
+
+  &:hover {
+    background-color: var(--acai-primary);
+    color: var(--color-white-11);
+  }
 }
 
 .icon {
-  font-size: 13px;
+  width: 16px;
+  height: 16px;
 }
 
-.title {
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
+.badge {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--acai-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+// ---------- 下拉面板 ----------
+// 双类选择器提高优先级，确保压过 antd 运行时注入的 .ant-popover-inner 样式
+.popover:global(.ant-popover) {
+  :global(.ant-popover-inner) {
+    padding: 0;
+    border-radius: 12px;
+    background: var(--dropdown-bg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+}
+
+.panel {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 8px;
+  flex-shrink: 0;
+}
+
+.panelTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
-  cursor: pointer;
-  overflow: hidden;
+}
+
+.headerIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--acai-primary);
+}
+
+.unreadTag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--acai-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
   white-space: nowrap;
-  text-overflow: ellipsis;
-  animation: fade-in 0.4s ease;
 }
 
-.title:hover {
-  color: var(--color-primary);
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 0;
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateX(6px);
+.list {
+  max-height: 320px;
+  padding: 0 14px;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:last-child {
+    border-bottom: none;
   }
 
-  to {
-    opacity: 1;
-    transform: translateX(0);
+  &:hover {
+    background: var(--item-hover-bg);
+  }
+}
+
+.item.read .itemTitle {
+  color: var(--text-secondary);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-gray-4);
+  flex-shrink: 0;
+}
+
+.dotUnread {
+  background: var(--acai-primary);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 20%);
+}
+
+.itemMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemTime {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.arrow {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.footer {
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+.confirmBtn {
+  width: 100%;
+  height: 32px;
+  border: none;
+  border-radius: 16px;
+  background: var(--btn-gradient-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.9;
   }
 }
