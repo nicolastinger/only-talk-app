@@ -76,8 +76,8 @@ const AnnouncementBanner = () => {
     if (next) fetchList(true).catch(() => {});
   };
 
-  if (visibleList.length === 0) return null;
-
+  // 入口常驻（与移动端公告中心一致）：没有生效公告时面板内展示空态，
+  // 不再整个组件返回 null —— 否则公告一过期/被忽略，入口就凭空消失，用户找不到。
   const title = intl.formatMessage({ id: 'announcement.banner' });
   const panelTitle = intl.formatMessage({ id: 'chats.announcements' });
   const badgeText = unreadCount > 99 ? '99+' : String(unreadCount);
@@ -99,6 +99,10 @@ const AnnouncementBanner = () => {
       {loading ? (
         <div className={styles.center}>
           <Spin size="small" />
+        </div>
+      ) : visibleList.length === 0 ? (
+        <div className={styles.empty}>
+          {intl.formatMessage({ id: 'announcement.empty' })}
         </div>
       ) : (
         <div className={styles.list}>

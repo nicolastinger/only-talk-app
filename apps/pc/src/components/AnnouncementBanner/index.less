@@ -1,12 +1,13 @@
-// 公告入口: 与最小化/最大化按钮同尺寸同 hover 样式; 宽度按内容自适应,
-// 窗口极窄时可被压缩至 1px, 不挤占标题栏拖拽区
+// 公告入口: 与最小化/最大化按钮同尺寸同 hover 样式。
+// 常驻显示（不再因没有公告而整块消失），最小宽度锁死一个按钮宽，
+// 避免窗口变窄时被 flex 压成 1px 看不见。
 .banner {
   height: 100%;
   display: flex;
   align-items: center;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   width: auto;
-  min-width: 1px;
+  min-width: 40px;
   overflow: hidden;
 }
 
@@ -109,6 +110,13 @@
   align-items: center;
   justify-content: center;
   padding: 28px 0;
+}
+
+.empty {
+  padding: 28px 14px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
 }
 
 .list {
