@@ -29,10 +29,20 @@ export function getEffectiveMode(mode: ThemeMode): EffectiveMode {
     : 'light';
 }
 
+/** 上一次主题写入的变量名, 切换时先移除, 避免"只在单侧主题定义"的变量残留 */
+let appliedThemeVars: string[] = [];
+
 export function applyCssVars(mode: ThemeMode) {
   const css = getEffectiveMode(mode) === 'dark' ? darkCss : lightCss;
   const root = document.documentElement;
-  css.forEach((item) => root.style.setProperty(item.name, item.value));
+  // dark.json 里有一批 light.json 没有的变量(如 --color-gray-9/--color-gray-10),
+  // 只覆盖不清理的话, 深色切回浅色后这些值仍留在 <html> 上,
+  // 导致顶栏图标/正文沿用了深色的近白色。先摘掉上一次的变量, 回退到 global.less 的基准值。
+  appliedThemeVars.forEach((name) => root.style.removeProperty(name));
+  appliedThemeVars = css.map((item) => {
+    root.style.setProperty(item.name, item.value);
+    return item.name;
+  });
 }
 
 export function applyFontVars(fontSize: ChatsFontSize) {
