@@ -18,6 +18,8 @@ import {
 import { useAvatar } from "@/hooks/useAvatar";
 import { useI18n } from "@/i18n";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import { usePresenceStore } from "@/stores/presence";
+import PresenceTag from "@/components/PresenceTag.vue";
 import { calcAgeFromBirthday } from "@/utils/time";
 import type { FriendVo, UserInfo } from "@workspace/types";
 import { ReportTargetType } from "@workspace/types";
@@ -29,6 +31,9 @@ const router = useRouter();
 const { t } = useI18n();
 const friendId = route.params.friendId as string;
 const { getAvatarUrl } = useAvatar();
+const { presenceOf, loadFriendPresence } = usePresenceStore();
+// 好友手动状态(仅好友且有状态时展示)
+const presence = computed(() => presenceOf(friendId));
 
 interface FriendDetail {
   friendVo: FriendVo | null;
@@ -204,6 +209,8 @@ const goBack = () => router.back();
 onMounted(() => {
   loadDetail();
   loadFriendChatBg();
+  // 资料卡单独补充该用户状态(merge, 不影响列表里其它好友的状态)
+  loadFriendPresence([friendId], "merge");
 });
 </script>
 
@@ -243,6 +250,9 @@ onMounted(() => {
             {{ getDisplayName() }}
             <UserTypeTag :type="detail.userInfo?.user_type" />
           </h2>
+          <div v-if="presence" class="profile-presence">
+            <PresenceTag :presence="presence" size="default" />
+          </div>
           <p class="profile-account">@{{ getAccount() }}</p>
           <p v-if="getBio()" class="profile-bio">{{ getBio() }}</p>
         </div>
@@ -458,6 +468,11 @@ onMounted(() => {
   color: var(--text-primary);
   margin: 0 0 4px;
 }
+.profile-presence {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
 .profile-account {
   font-size: 14px;
   color: var(--text-tertiary);
@@ -579,8 +594,8 @@ onMounted(() => {
 
 .bg-body {
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
 }
 
 .bg-preview {
@@ -588,15 +603,17 @@ onMounted(() => {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 96px;
-  height: 64px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  background-color: var(--surface-alt);
+  width: 108px;
+  height: 72px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  background-color: rgba(127, 127, 127, 8%);
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  color: var(--text-tertiary);
+  border: 1px solid rgba(127, 127, 127, 16%);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 8%);
 
   svg {
     width: 24px;
@@ -608,27 +625,33 @@ onMounted(() => {
   display: flex;
   flex: 1;
   flex-direction: column;
-  align-items: flex-start;
   gap: 8px;
+  align-items: flex-start;
   min-width: 0;
 }
 
 .bg-btn {
   width: 100%;
-  height: 36px;
+  height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  background: var(--surface-alt);
-  color: var(--text-secondary);
   font-size: 13px;
+  color: var(--text-secondary);
   cursor: pointer;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  transition: all var(--transition-fast);
 
   &.primary {
-    background: rgba(64, 150, 255, 0.12);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-    font-weight: 500;
+    font-weight: 600;
+    color: #fff;
+    background: var(--color-primary);
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(64, 150, 255, 28%);
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -638,6 +661,7 @@ onMounted(() => {
 
 .bg-hint {
   font-size: 11px;
+  line-height: 1.4;
   color: var(--text-tertiary);
 }
 </style>

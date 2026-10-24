@@ -1,14 +1,18 @@
 import FriendBox from '@/pages/Home/Contacts/components/FriendBox';
+import { usePresenceStore } from '@/store/presence';
 import { useBearStore } from '@/store/store';
 import { invoke } from '@tauri-apps/api/core';
-import { FriendVo } from '@workspace/types';
 import { useLocation } from '@umijs/max';
+import { FriendVo } from '@workspace/types';
 import { useEffect, useState } from 'react';
 import styles from './styles/FriendList.less';
 
 const FriendList = () => {
   const [friends, setFriends] = useState<FriendVo[]>([]);
   const refreshFlag = useBearStore((state) => state.refreshFlag);
+  const loadFriendPresence = usePresenceStore(
+    (state) => state.loadFriendPresence,
+  );
   const location = useLocation();
 
   // 获取朋友列表
@@ -17,6 +21,10 @@ const FriendList = () => {
       const friendQueue: FriendVo[] = await invoke('get_friend_list');
       console.log('朋友列表', friendQueue);
       setFriends(friendQueue);
+      // 列表到手后一次性拉取这批好友的手动状态(服务端只存 48h)
+      loadFriendPresence(
+        friendQueue.map((friend) => friend.friend_id).filter(Boolean),
+      );
     } catch (error) {
       console.error(error);
     }

@@ -1,5 +1,7 @@
+import PresenceTag from '@/components/PresenceTag';
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
+import { usePresenceStore } from '@/store/presence';
 import { history } from '@umijs/max';
 import { getFiles } from '@workspace/services';
 import { FriendVo } from '@workspace/types';
@@ -10,6 +12,10 @@ import styles from './styles/FriendBox.less';
 const FriendBox = (props: { friend: FriendVo; isSelected?: boolean }) => {
   const { friend_name, friend_id, friend_icon } = props.friend;
   const [userIcon, setUserIcon] = useState<string | null>(null);
+  // 手动状态(忙碌/学习中/自定义等), 与在线离线无关
+  const presence = usePresenceStore(
+    (state) => state.friendPresence[friend_id?.toLowerCase() ?? ''],
+  );
 
   const routeToFriendInfo = () => {
     history.push('/home/contacts/friend?friendId=' + friend_id);
@@ -32,7 +38,9 @@ const FriendBox = (props: { friend: FriendVo; isSelected?: boolean }) => {
 
   return (
     <div
-      className={`${styles.container} ${props.isSelected ? styles.selected : ''}`}
+      className={`${styles.container} ${
+        props.isSelected ? styles.selected : ''
+      }`}
       onClick={routeToFriendInfo}
     >
       <div className={styles.left}>
@@ -52,6 +60,11 @@ const FriendBox = (props: { friend: FriendVo; isSelected?: boolean }) => {
           {friend_name}
           <UserTypeTag type={props.friend.friend_user_type} />
         </div>
+        {presence && (
+          <div className={styles.centerSub}>
+            <PresenceTag presence={presence} />
+          </div>
+        )}
       </div>
     </div>
   );

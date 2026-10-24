@@ -1,20 +1,87 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
+import { showToast } from "vant";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useUserStore, DEFAULT_AVATAR } from "@/stores/user";
 import { useUnreadStore } from "@/stores/unread";
+import { usePresenceStore } from "@/stores/presence";
+import PresenceTag from "@/components/PresenceTag.vue";
 import { getMyAccount } from "@/utils/api";
 import { useI18n } from "@/i18n";
+import type { PresenceMode } from "@workspace/types";
 
 const router = useRouter();
 const { t } = useI18n();
 const { userInfo, loadUserInfo } = useUserStore();
 const { getAvatarUrl } = useAvatar();
 const { notifyUnread } = useUnreadStore();
+const { myPresence, loadMyPresence, updateMyPresence } = usePresenceStore();
 
 const account = ref("");
 const avatarUrl = ref<string | null>(null);
+
+// 手动状态(忙碌/离开/学习中/奋斗中/自定义): 与在线离线无关, 48 小时后自动清除
+const showStatusSheet = ref(false);
+const showCustomDialog = ref(false);
+const customText = ref("");
+
+const STATUS_OPTIONS: { nameKey: string; mode: PresenceMode }[] = [
+  { nameKey: "onlineStatus.online", mode: "online" },
+  { nameKey: "onlineStatus.busy", mode: "busy" },
+  { nameKey: "onlineStatus.away", mode: "away" },
+  { nameKey: "onlineStatus.studying", mode: "studying" },
+  { nameKey: "onlineStatus.working", mode: "working" },
+  { nameKey: "onlineStatus.custom", mode: "custom" },
+];
+
+const statusActions = computed(() =>
+  STATUS_OPTIONS.map((item) => ({ name: t(item.nameKey), value: item.mode }))
+);
+
+const activePresence = computed(() => {
+  const presence = myPresence.value;
+  return presence && presence.mode !== "online" ? presence : null;
+});
+
+const openStatusSheet = () => {
+  showStatusSheet.value = true;
+};
+
+const onSelectStatus = async (action: { value?: string }) => {
+  const mode = action.value as PresenceMode;
+  showStatusSheet.value = false;
+  if (!mode) return;
+  if (mode === "custom") {
+    customText.value =
+      myPresence.value?.mode === "custom" ? myPresence.value.text || "" : "";
+    showCustomDialog.value = true;
+    return;
+  }
+  try {
+    await updateMyPresence(mode);
+  } catch (e) {
+    console.error("设置状态失败:", e);
+    showToast(t("onlineStatus.setFailed"));
+  }
+};
+
+const onCustomBeforeClose = async (action: string) => {
+  if (action !== "confirm") return true;
+  const text = customText.value.trim();
+  if (!text) {
+    showToast(t("onlineStatus.customEmpty"));
+    return false;
+  }
+  try {
+    await updateMyPresence("custom", text);
+    return true;
+  } catch (e) {
+    console.error("设置自定义状态失败:", e);
+    showToast(t("onlineStatus.setFailed"));
+    return false;
+  }
+};
 
 const loadAvatar = async (icon: string) => {
   avatarUrl.value = await getAvatarUrl(icon);
@@ -28,6 +95,7 @@ onMounted(async () => {
     /* ignore */
   }
   await loadUserInfo();
+  loadMyPresence();
   if (userInfo.value?.icon) {
     loadAvatar(userInfo.value.icon);
   }
@@ -91,6 +159,17 @@ const goToFiles = () => {
       </div>
     </div>
 
+    <div class="status-row" @click="openStatusSheet">
+      <div class="status-left">
+        <span class="status-label">{{ t("profile.status") }}</span>
+        <PresenceTag v-if="activePresence" :presence="activePresence" />
+        <span v-else class="status-empty">{{ t("onlineStatus.online") }}</span>
+      </div>
+      <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+      </svg>
+    </div>
+
     <div class="menu-section">
       <div class="menu-item" @click="goToNotifications">
         <div class="menu-left">
@@ -141,6 +220,31 @@ const goToFiles = () => {
         </svg>
       </div>
     </div>
+
+    <ActionSheet
+      v-model:show="showStatusSheet"
+      :actions="statusActions"
+      :cancel-text="t('common.cancel')"
+      teleport="body"
+      @select="onSelectStatus"
+    />
+
+    <Dialog
+      v-model:show="showCustomDialog"
+      :title="t('onlineStatus.customTitle')"
+      :confirm-button-text="t('common.confirm')"
+      :cancel-button-text="t('common.cancel')"
+      show-cancel-button
+      :before-close="onCustomBeforeClose"
+    >
+      <Field
+        v-model="customText"
+        :placeholder="t('onlineStatus.customPlaceholder')"
+        maxlength="32"
+        autofocus
+      />
+      <p class="status-hint">{{ t("onlineStatus.expireHint") }}</p>
+    </Dialog>
   </div>
 </template>
 
@@ -257,6 +361,50 @@ const goToFiles = () => {
   height: 20px;
   color: var(--text-placeholder);
   flex-shrink: 0;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 16px 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: background 0.2s ease;
+}
+
+.status-row:active {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.status-left {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.status-label {
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.status-empty {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.status-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 .menu-section {

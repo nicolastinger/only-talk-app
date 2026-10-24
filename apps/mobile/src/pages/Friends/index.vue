@@ -19,6 +19,8 @@ import {
 import { useAvatar } from "@/hooks/useAvatar";
 import { parseResponse } from "@/utils/api";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import { usePresenceStore } from "@/stores/presence";
+import PresenceTag from "@/components/PresenceTag.vue";
 import type {
   FriendVo,
   GroupListItemVo,
@@ -30,6 +32,7 @@ import { useI18n } from "@/i18n";
 const router = useRouter();
 const { t } = useI18n();
 const { getAvatarUrl } = useAvatar();
+const { presenceOf, loadFriendPresence } = usePresenceStore();
 
 const friends = ref<FriendVo[]>([]);
 const groups = ref<GroupListItemVo[]>([]);
@@ -76,6 +79,8 @@ watch(
 const loadFriendList = async () => {
   try {
     friends.value = (await invoke("get_friend_list")) || [];
+    // 一次性拉取这批好友的手动状态(服务端只存 48 小时)
+    loadFriendPresence(friends.value.map((friend) => friend.friend_id));
   } catch (e) {
     console.error(e);
   }
@@ -334,7 +339,10 @@ onUnmounted(() => {
                 />
               </div>
               <div class="friend-info">
-                <span class="friend-name">{{ friend.friend_name }}</span>
+                <div class="friend-title-row">
+                  <span class="friend-name">{{ friend.friend_name }}</span>
+                  <PresenceTag :presence="presenceOf(friend.friend_id)" />
+                </div>
                 <UserTypeTag :type="friend.friend_user_type" />
                 <span class="friend-account">@{{ friend.friend_account }}</span>
               </div>
@@ -695,6 +703,12 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+.friend-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 .friend-name {
   font-size: 16px;

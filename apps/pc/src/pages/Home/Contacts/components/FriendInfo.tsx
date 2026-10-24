@@ -1,5 +1,7 @@
+import PresenceTag from '@/components/PresenceTag';
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
+import { usePresenceStore } from '@/store/presence';
 import { calcAgeFromBirthday } from '@/utils/format';
 import {
   CalendarOutlined,
@@ -20,17 +22,17 @@ import {
   block_friend,
   clearFriendChatBackground,
   get_friend_info,
+  get_user_info_with_cache,
   getFiles,
   getFriendChatBackground,
-  get_user_info_with_cache,
   importFriendChatBackground,
+  openImagePreviewWindow,
   pickChatBackgroundImage,
   refresh_user_info,
   resolveChatBackgroundUrl,
   unblock_friend,
   type FriendChatBackgroundVo,
 } from '@workspace/services';
-import { openImagePreviewWindow } from '@workspace/services';
 import { FriendVo, UserInfo } from '@workspace/types';
 import { Button, Collapse, message, Spin } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -63,6 +65,13 @@ const FriendInfo = (props: { uuid: string }) => {
   // 好友专属聊天背景(仅客户端); null 表示使用全局背景
   const [chatBg, setChatBg] = useState<FriendChatBackgroundVo | null>(null);
   const [bgUploading, setBgUploading] = useState(false);
+  // 好友手动状态(仅好友且有状态时展示)
+  const presence = usePresenceStore(
+    (state) => state.friendPresence[uuid?.toLowerCase() ?? ''],
+  );
+  const loadFriendPresence = usePresenceStore(
+    (state) => state.loadFriendPresence,
+  );
 
   const genderMap: { [key: number]: string } = {
     0: intl.formatMessage({ id: 'userInfo.genderTypes.unknown' }),
@@ -185,6 +194,8 @@ const FriendInfo = (props: { uuid: string }) => {
   useEffect(() => {
     console.log('uuid', uuid);
     initUserData(uuid);
+    // 资料卡单独补充该用户的状态(merge, 不影响列表已有的其它好友状态)
+    loadFriendPresence([uuid], 'merge');
   }, [uuid]);
 
   // 读取该好友的专属聊天背景(未设置时回退全局背景)
@@ -323,6 +334,11 @@ const FriendInfo = (props: { uuid: string }) => {
             {displayName}
             <UserTypeTag type={userInfo?.user_type} />
           </div>
+          {presence && (
+            <div className={styles.presenceRow}>
+              <PresenceTag presence={presence} size="default" />
+            </div>
+          )}
           {userInfo?.info && <div className={styles.bio}>{userInfo.info}</div>}
           <div className={styles.metaChips}>
             <span className={styles.chip}>

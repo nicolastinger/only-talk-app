@@ -1,5 +1,7 @@
+import PresenceTag from '@/components/PresenceTag';
 import ReportModal from '@/components/ReportModal';
 import UserTypeTag from '@/components/UserTypeTag';
+import { usePresenceStore } from '@/store/presence';
 import { useBearStore } from '@/store/store';
 import {
   BellOutlined,
@@ -17,7 +19,7 @@ import {
 } from '@workspace/services';
 import { FriendVo, ReportTargetType } from '@workspace/types';
 import { Dropdown, Modal, message } from 'antd';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './styles/TopBar.less';
 
 interface ChatTopBarProps {
@@ -32,6 +34,18 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   const [blockModalVisible, setBlockModalVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const triggerRefresh = useBearStore((state) => state.triggerRefresh);
+  // 好友手动状态(忙碌/学习中/自定义等)
+  const presence = usePresenceStore(
+    (state) => state.friendPresence[friendInfo?.friend_id?.toLowerCase() ?? ''],
+  );
+  const loadFriendPresence = usePresenceStore(
+    (state) => state.loadFriendPresence,
+  );
+
+  useEffect(() => {
+    if (!friendInfo?.friend_id) return;
+    loadFriendPresence([friendInfo.friend_id], 'merge');
+  }, [friendInfo?.friend_id, loadFriendPresence]);
 
   const handleViewProfile = () => {
     if (friendInfo?.friend_id) {
@@ -144,8 +158,9 @@ const ChatTopBar: React.FC<ChatTopBarProps> = (props: ChatTopBarProps) => {
   return (
     <div className={styles.container}>
       <div className={styles.leftContainer}>
-        {title}
+        <span className={styles.titleText}>{title}</span>
         <UserTypeTag type={friendInfo?.friend_user_type} />
+        <PresenceTag presence={presence} />
       </div>
       <div className={styles.rightContainer}>
         <Dropdown
