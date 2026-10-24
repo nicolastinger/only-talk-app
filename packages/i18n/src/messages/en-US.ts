@@ -41,6 +41,8 @@ const messages: LocaleMessages = {
     "empty": "No announcements",
     "ignore": "Ignore",
     "gotIt": "Got it",
+    "ignored": "Ignored",
+    "restoreAll": "Restore all",
   },
   "avatarCrop": {
     "title": "Crop Avatar",

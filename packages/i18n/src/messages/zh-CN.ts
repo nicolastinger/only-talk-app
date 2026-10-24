@@ -41,6 +41,8 @@ const messages: LocaleMessages = {
     "empty": "暂无公告",
     "ignore": "忽略此公告",
     "gotIt": "我知道了",
+    "ignored": "已忽略",
+    "restoreAll": "全部恢复",
   },
   "avatarCrop": {
     "title": "裁剪头像",

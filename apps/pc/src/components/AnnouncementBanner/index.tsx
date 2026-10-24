@@ -23,6 +23,7 @@ const BellIcon = ({ className }: { className?: string }) => (
 const AnnouncementBanner = () => {
   const intl = useIntl();
   const ignored = useAnnouncementStore((state) => state.ignored);
+  const restoreAll = useAnnouncementStore((state) => state.restoreAll);
   const [list, setList] = useState<AnnouncementVO[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -135,6 +136,21 @@ const AnnouncementBanner = () => {
               </svg>
             </div>
           ))}
+        </div>
+      )}
+      {ignored.length > 0 && (
+        <div className={styles.ignoredBar}>
+          <span>
+            {intl.formatMessage({ id: 'announcement.ignored' })}{' '}
+            {ignored.length}
+          </span>
+          <button
+            type="button"
+            className={styles.linkBtn}
+            onClick={() => restoreAll()}
+          >
+            {intl.formatMessage({ id: 'announcement.restoreAll' })}
+          </button>
         </div>
       )}
       <div className={styles.footer}>
