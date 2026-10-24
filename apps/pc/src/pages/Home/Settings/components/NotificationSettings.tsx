@@ -8,10 +8,11 @@ import {
   setDoNotDisturbEnabled,
   setDoNotDisturbRange,
   setMessageSoundEnabled,
+  subscribeMessageSoundChange,
 } from '@workspace/services';
 import { Card, Checkbox, Divider, TimePicker, Typography } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from '../Settings.less';
 
 const { Title, Text } = Typography;
@@ -31,6 +32,12 @@ const NotificationSettings = () => {
   // 免打扰开关与时段(持久化在 client_config: app.do_not_disturb*)
   const [dndEnabled, setDndEnabled] = useState(() => isDoNotDisturbEnabled());
   const [dndRange, setDndRange] = useState(() => getDoNotDisturbRange());
+
+  // 顶栏静音按钮改的也是同一个开关，双向同步
+  useEffect(
+    () => subscribeMessageSoundChange((enabled) => setSoundEnabled(enabled)),
+    [],
+  );
 
   const changeSoundEnabled = (enabled: boolean) => {
     setSoundEnabled(enabled);
@@ -94,11 +101,6 @@ const NotificationSettings = () => {
         >
           {intl.formatMessage({
             id: 'settings.notificationSettings.soundReminder',
-          })}
-        </Checkbox>
-        <Checkbox className={styles.settingCheckbox}>
-          {intl.formatMessage({
-            id: 'settings.notificationSettings.vibrationReminder',
           })}
         </Checkbox>
         <Text type="secondary" className={styles.description}>

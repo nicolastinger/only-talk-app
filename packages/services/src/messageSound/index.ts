@@ -17,6 +17,31 @@ let lastPlayedAt = 0;
 /** 同一时间窗内只播一次, 避免多条消息叠加成噪音 */
 const PLAY_THROTTLE_MS = 800;
 
+type MessageSoundListener = (enabled: boolean) => void;
+
+/** 提示音开关的变更监听(设置页与顶栏静音按钮共享同一份配置, 任一处改动互相同步) */
+const soundListeners = new Set<MessageSoundListener>();
+
+const notifyMessageSoundChange = (enabled: boolean): void => {
+  for (const listener of [...soundListeners]) {
+    try {
+      listener(enabled);
+    } catch (e) {
+      console.error("提示音开关监听执行失败:", e);
+    }
+  }
+};
+
+/** 订阅提示音开关变更, 返回取消订阅函数 */
+export const subscribeMessageSoundChange = (
+  listener: MessageSoundListener
+): (() => void) => {
+  soundListeners.add(listener);
+  return () => {
+    soundListeners.delete(listener);
+  };
+};
+
 /** 当前是否开启消息提示音(缺省开启) */
 export const isMessageSoundEnabled = (): boolean =>
   getConfig(CLIENT_CONFIG_KEYS.messageSound) !== "0";
@@ -27,6 +52,7 @@ export const setMessageSoundEnabled = async (
 ): Promise<void> => {
   try {
     await setConfig(CLIENT_CONFIG_KEYS.messageSound, enabled ? "1" : "0");
+    notifyMessageSoundChange(enabled);
   } catch (e) {
     console.error("保存消息提示音设置失败:", e);
   }

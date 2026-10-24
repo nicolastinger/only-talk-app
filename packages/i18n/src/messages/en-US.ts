@@ -1124,6 +1124,8 @@ const messages: LocaleMessages = {
     "connectionDisconnected": "Connection disconnected",
     "reconnecting": "Reconnecting...",
     "reconnect": "Reconnect",
+    "muteSound": "Mute notification sound",
+    "unmuteSound": "Unmute notification sound",
     "connOffline": "Offline",
     "connReconnecting": "Reconnecting",
     "connOnline": "Online",

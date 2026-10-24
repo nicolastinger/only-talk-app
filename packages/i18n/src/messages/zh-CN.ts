@@ -1124,6 +1124,8 @@ const messages: LocaleMessages = {
     "connectionDisconnected": "连接已断开",
     "reconnecting": "重连中...",
     "reconnect": "重连",
+    "muteSound": "关闭提示音",
+    "unmuteSound": "开启提示音",
     "connOffline": "已离线",
     "connReconnecting": "重连中",
     "connOnline": "已上线",
