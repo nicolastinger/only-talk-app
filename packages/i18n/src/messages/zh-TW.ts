@@ -43,6 +43,7 @@ const messages: LocaleMessages = {
     "gotIt": "我知道了",
     "ignored": "已忽略",
     "restoreAll": "全部恢復",
+    "loadFailed": "公告載入失敗，點擊重試",
   },
   "avatarCrop": {
     "title": "裁剪頭像",

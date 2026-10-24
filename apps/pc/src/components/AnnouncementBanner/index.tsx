@@ -26,6 +26,7 @@ const AnnouncementBanner = () => {
   const restoreAll = useAnnouncementStore((state) => state.restoreAll);
   const [list, setList] = useState<AnnouncementVO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<AnnouncementVO | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -35,8 +36,11 @@ const AnnouncementBanner = () => {
     try {
       const res = await get_announcement_list(1, 20);
       setList(res.list || []);
+      setFailed(false);
     } catch (e) {
       console.log('获取公告列表失败', e);
+      // 请求失败与「确实没有公告」要区分开, 否则接口挂了也只显示「暂无公告」, 无从排查
+      setFailed(true);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -100,6 +104,16 @@ const AnnouncementBanner = () => {
       {loading ? (
         <div className={styles.center}>
           <Spin size="small" />
+        </div>
+      ) : failed && visibleList.length === 0 ? (
+        <div className={styles.empty}>
+          <button
+            type="button"
+            className={styles.retry}
+            onClick={() => fetchList().catch(() => {})}
+          >
+            {intl.formatMessage({ id: 'announcement.loadFailed' })}
+          </button>
         </div>
       ) : visibleList.length === 0 ? (
         <div className={styles.empty}>

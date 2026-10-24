@@ -43,6 +43,7 @@ const messages: LocaleMessages = {
     "gotIt": "Got it",
     "ignored": "Ignored",
     "restoreAll": "Restore all",
+    "loadFailed": "Failed to load announcements, click to retry",
   },
   "avatarCrop": {
     "title": "Crop Avatar",
