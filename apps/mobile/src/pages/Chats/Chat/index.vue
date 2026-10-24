@@ -569,6 +569,21 @@ const sendText = async () => {
   scrollToBottom(true);
   startAckTimer(textMsg.nano_id);
   try {
+    if (friendId === meUuid.value) {
+      // 自己给自己发消息：纯本地落库，不经过服务端，避免 self-echo 回推导致重复渲染
+      const stored = await invoke<TextQuicMsgVo>("send_self_text_msg", {
+        textQuicMsg: textMsg,
+      });
+      clearAckTimer(textMsg.nano_id);
+      const idx = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
+      if (idx !== -1) {
+        messages.value[idx].textMsg = stored;
+        messages.value[idx].ack = true;
+      }
+      return;
+    }
     await invoke("send_text_msg", { textQuicMsg: textMsg });
   } catch (e) {
     console.error("发送失败:", e);

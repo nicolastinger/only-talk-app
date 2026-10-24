@@ -550,33 +550,7 @@ const ChatPage: React.FC = () => {
           const index = prevState.findIndex(
             (item) => item.text_msg_raw.nano_id === textMessage.raw,
           );
-          if (index !== -1) {
-            prevState[index].ack = true;
-            // 用服务端返回的 nano_id 归一本地乐观消息的 nano_id，
-            // 否则后续撤回/删除/已读会因本地 id 在 chat_record 中不存在而失败
-            if (textMessage.nano_id) {
-              prevState[index].text_msg_raw.nano_id = textMessage.nano_id;
-            }
-            // 检查被 ack 的消息是否是图片(text_type=2)/文件(text_type=3)/语音(text_type=21)
-            const ackedMessage = prevState[index];
-            const ackedMessageType = ackedMessage.text_msg_raw.text_type;
-            if (
-              ackedMessageType === 2 ||
-              ackedMessageType === 3 ||
-              ackedMessageType === 21
-            ) {
-              // 重新加载当前窗口的聊天记录
-              console.log(
-                `检测到图片/文件/语音消息 ${
-                  ackedMessageType === 2 ? '图片' : ackedMessageType === 3 ? '文件' : '语音'
-                } 的ack，重新加载聊天记录`,
-              );
-              setCurrentPage(1);
-              setHasMore(true);
-              setIsInitialLoad(true);
-              loadChatRecordFromStore(meUuid, friendUuid, 1, true);
-            }
-          } else {
+          if (index === -1) {
             // 列表中没有该消息：重发/补发成功的消息此前从未落库渲染过，
             // 重新加载最新聊天记录让新落库的气泡出现（否则需重进会话才可见）
             console.log(
@@ -586,14 +560,61 @@ const ChatPage: React.FC = () => {
             setHasMore(true);
             setIsInitialLoad(true);
             loadChatRecordFromStore(meUuid, friendUuid, 1, true);
+            return prevState;
           }
-          return [...prevState, temp];
+
+          const ackedMessage = prevState[index];
+          const ackedMessageType = ackedMessage.text_msg_raw.text_type;
+          // 用服务端返回的 nano_id 归一本地乐观消息的 nano_id，
+          // 否则后续撤回/删除/已读会因本地 id 在 chat_record 中不存在而失败
+          const nextList = [...prevState];
+          nextList[index] = {
+            ...ackedMessage,
+            text_msg_raw: {
+              ...ackedMessage.text_msg_raw,
+              nano_id:
+                textMessage.nano_id || ackedMessage.text_msg_raw.nano_id,
+            },
+            ack: true,
+          };
+
+          // 检查被 ack 的消息是否是图片(text_type=2)/文件(text_type=3)/语音(text_type=21)
+          if (
+            ackedMessageType === 2 ||
+            ackedMessageType === 3 ||
+            ackedMessageType === 21
+          ) {
+            // 重新加载当前窗口的聊天记录
+            console.log(
+              `检测到图片/文件/语音消息 ${
+                ackedMessageType === 2
+                  ? '图片'
+                  : ackedMessageType === 3
+                    ? '文件'
+                    : '语音'
+              } 的ack，重新加载聊天记录`,
+            );
+            setCurrentPage(1);
+            setHasMore(true);
+            setIsInitialLoad(true);
+            loadChatRecordFromStore(meUuid, friendUuid, 1, true);
+          }
+
+          // ACK 只是回执, 本身不是一条聊天气泡, 不追加进列表
+          return nextList;
         });
         // 201 ACK 到达，send 表对应记录状态置 3，刷新待发送记录条
         setPendingRefreshSignal((s) => s + 1);
       } else {
+        // 幂等上屏：同一条消息(重复投递 / self-echo / 补发)只渲染一次
+        setMessageList((prevState) =>
+          prevState.some(
+            (item) => item.text_msg_raw.nano_id === textMessage.nano_id,
+          )
+            ? prevState
+            : [...prevState, temp],
+        );
         setNewMessageIds(new Set([textMessage.nano_id]));
-        setMessageList((prevState) => [...prevState, temp]);
         setTimeout(() => {
           setNewMessageIds(new Set());
         }, 300);

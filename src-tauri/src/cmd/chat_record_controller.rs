@@ -13,8 +13,8 @@ use crate::service::chat_service::{
     recall_chat_message_service, recall_group_chat_message_service, retry_send_msg_service,
     send_call_control_msg_service, send_file_msg_service, send_group_file_msg_service,
     send_group_image_msg_service, send_group_text_msg_service, send_group_voice_msg_service,
-    send_image_msg_service, send_text_msg_service, send_voice_msg_service,
-    send_webrtc_signal_service, update_group_last_read_msg_service,
+    send_image_msg_service, send_self_text_msg_service, send_text_msg_service,
+    send_voice_msg_service, send_webrtc_signal_service, update_group_last_read_msg_service,
 };
 use crate::GLOBAL_MSG_SEND_LOCK;
 
@@ -39,6 +39,12 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
             Err("获取锁超时".to_string())
         }
     }
+}
+
+/// 自己给自己发文本消息（纯本地：不经过服务端，避免 self-echo 回推导致重复渲染）
+#[tauri::command]
+pub async fn send_self_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<TextQuicMsgVo, String> {
+    send_self_text_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
 /// 发送 WebRTC 信令消息（独立通道，不走 send/ack 表）

@@ -7,17 +7,21 @@ use quinn::Connection;
 use crate::dao::chat_record_ack::{
     insert_chat_record_ack, query_chat_record_by_send_id, update_chat_record_ack_prev_id,
 };
+use crate::dao::chat_record_db::insert_chat_record;
 use crate::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
     update_chat_record_send, update_chat_record_send_status,
 };
+use crate::dao::session_db::update_chat_session_db;
 use crate::models::entity::chat_record_ack::ChatRecordAck;
 use crate::models::entity::chat_record_raw::{
     ChatRecordRaw, FileRecord, ImageRecord, TextRecord, VoiceRecord,
 };
 use crate::models::entity::chat_record_send::ChatRecordSend;
+use crate::models::entity::chat_session::ChatSession;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
+use crate::service::chat_service::emit_chat_session_event;
 use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{PLATFORM, ZERO_UUID};
@@ -51,6 +55,14 @@ pub async fn send_msg(text_msg: Vec<u8>, conn: &Connection) -> Result<String, an
 pub async fn send_text_msg_service(text_quic_msg: TextQuicMsgVo) -> Result<String, anyhow::Error> {
     if CallControlLifecycle::matches(text_quic_msg.text_type) {
         return Err(anyhow!("通话控制消息(12-15)请使用 send_call_control_msg 命令"));
+    }
+    // 自己给自己发消息(笔记/文件传输助手)：没有对端，直接本地落库。
+    // 走服务端的话这条消息会被回推给自己(self-echo)，同一条内容会出现两次。
+    // 图片/文件/语音最终也汇聚到这里，因此统一在入口拦截。
+    let sender = get_user_info("uuid").await?;
+    if text_quic_msg.recv_user == sender {
+        send_self_text_msg_service(text_quic_msg).await?;
+        return Ok("success".to_string());
     }
     send_persistent_text_msg(text_quic_msg).await
 }
@@ -167,6 +179,49 @@ pub async fn send_persistent_text_msg(
             }
         }
     }
+}
+
+/// 自己给自己发文本消息（笔记 / 文件传输助手）：**纯本地**处理。
+///
+/// 这类消息没有"对端"：一旦走 QUIC，服务端会把它投递给接收者（也就是自己），
+/// 同一内容既走 ACK 落库、又走 self-echo 回推落库，客户端就会把一条消息渲染多次。
+/// 因此这里只做本地落库 + 会话置顶，并把落库后的消息原样返回给前端上屏。
+pub async fn send_self_text_msg_service(
+    mut text_quic_msg: TextQuicMsgVo,
+) -> Result<TextQuicMsgVo, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    if text_quic_msg.recv_user != me {
+        return Err(anyhow!("该接口仅用于给自己发消息"));
+    }
+
+    // 服务端不下发这条消息，id / 发送者 / 时间戳都由本地确定
+    text_quic_msg.nano_id = nanoid::nanoid!();
+    text_quic_msg.send_user = me.clone();
+    text_quic_msg.timestamp = get_now_time_stamp_as_millis()?;
+
+    insert_chat_record(&text_quic_msg).await?;
+
+    let session = ChatSession {
+        id: 0,
+        nano_id: text_quic_msg.nano_id.clone(),
+        timestamp: text_quic_msg.timestamp,
+        text_type: text_quic_msg.text_type,
+        unread_count: 0,
+        last_message: text_quic_msg.raw.clone(),
+        recv_user: me.clone(),
+        send_user: me.clone(),
+        session_type: 1,
+        is_show: 1,
+        is_top: 0,
+        group_id: None,
+        session_uuid: None,
+        last_message_id: 0,
+    };
+    update_chat_session_db(&session).await?;
+    // 广播会话事件：会话列表实时置顶预览
+    emit_chat_session_event(session.to_canonical(&me), 1).await?;
+
+    Ok(text_quic_msg)
 }
 
 /// 通话控制消息(12-15) -> 文本历史记录文案（媒体区分语音/视频，默认视频）

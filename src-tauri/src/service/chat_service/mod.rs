@@ -41,7 +41,7 @@ pub use record::{
 pub use send::{
     ignore_send_msg_service, prepare_pending_msg_for_send, process_no_send_success_msg,
     retry_send_msg_service, send_call_control_msg_service, send_msg, send_persistent_text_msg,
-    send_text_msg_service, send_webrtc_signal_service, set_prev_id,
+    send_self_text_msg_service, send_text_msg_service, send_webrtc_signal_service, set_prev_id,
 };
 pub use session::{
     clear_all_unread_sessions_service, clear_chat_session, create_chat_session_service,

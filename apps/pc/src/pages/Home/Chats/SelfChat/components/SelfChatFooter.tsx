@@ -139,13 +139,16 @@ const SelfChatFooter: React.FC<SelfChatFooterProps> = ({
       send_user: '',
       timestamp: new Date().getTime(),
     };
-    const temp: ChatMessage = {
-      from: MessageFrom.Mine,
-      text_msg_raw,
-      ack: false,
-    };
     try {
-      await invoke('send_text_msg', { textQuicMsg: text_msg_raw });
+      // 自己给自己发的消息走纯本地通道：不经过服务端，避免 self-echo 回推导致同一条消息渲染多次
+      const sent = await invoke<TextQuicMsgVo>('send_self_text_msg', {
+        textQuicMsg: text_msg_raw,
+      });
+      const temp: ChatMessage = {
+        from: MessageFrom.Mine,
+        text_msg_raw: sent,
+        ack: true,
+      };
       onMessageSent(JSON.stringify(temp));
       setMessageText('');
     } catch (e) {

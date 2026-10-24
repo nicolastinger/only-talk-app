@@ -455,9 +455,14 @@ const SelfChatPage: React.FC = () => {
 
   const handleMessageSent = (message: string) => {
     const temp: ChatMessage = JSON.parse(message);
-    // SelfChat: 消息只在这里添加一次，不需要额外去重
-    setNewMessageIds(new Set([temp.text_msg_raw.nano_id]));
-    setMessageList((prev) => [...prev, temp]);
+    const nanoId = temp.text_msg_raw.nano_id;
+    setNewMessageIds(new Set([nanoId]));
+    // 幂等上屏：同一 nano_id 只追加一次（补发/回推/重复回调都不会重复渲染）
+    setMessageList((prev) =>
+      prev.some((item) => item.text_msg_raw.nano_id === nanoId)
+        ? prev
+        : [...prev, temp],
+    );
     setTimeout(() => {
       scrollToBottom();
     }, 100);

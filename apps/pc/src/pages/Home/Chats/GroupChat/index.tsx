@@ -550,27 +550,35 @@ const GroupChatPage: React.FC = () => {
           const index = prevState.findIndex(
             (item) => item.text_msg_raw.nano_id === textMessage.raw,
           );
-          if (index !== -1) {
-            prevState[index].ack = true;
-            const ackedMessage = prevState[index];
-            const ackedMessageType = ackedMessage.text_msg_raw.text_type;
-            // 群聊图片消息类型是 2002，文件消息类型是 2003，语音消息类型是 2006
-            if (
-              ackedMessageType === 2002 ||
-              ackedMessageType === 2003 ||
-              ackedMessageType === 2006
-            ) {
-              setCurrentPage(1);
-              setHasMore(true);
-              setIsInitialLoad(true);
-              loadChatRecord(groupId, 1, true);
-            }
+          if (index === -1) return prevState;
+          const ackedMessage = prevState[index];
+          const ackedMessageType = ackedMessage.text_msg_raw.text_type;
+          // 群聊图片消息类型是 2002，文件消息类型是 2003，语音消息类型是 2006
+          if (
+            ackedMessageType === 2002 ||
+            ackedMessageType === 2003 ||
+            ackedMessageType === 2006
+          ) {
+            setCurrentPage(1);
+            setHasMore(true);
+            setIsInitialLoad(true);
+            loadChatRecord(groupId, 1, true);
           }
-          return [...prevState, temp];
+          // ACK 只是回执，不是一条气泡：原地更新，不追加
+          const nextList = [...prevState];
+          nextList[index] = { ...ackedMessage, ack: true };
+          return nextList;
         });
       } else {
+        // 幂等上屏：同一条消息(重复投递 / 补发)只渲染一次
+        setMessageList((prevState) =>
+          prevState.some(
+            (item) => item.text_msg_raw.nano_id === textMessage.nano_id,
+          )
+            ? prevState
+            : [...prevState, temp],
+        );
         setNewMessageIds(new Set([textMessage.nano_id]));
-        setMessageList((prevState) => [...prevState, temp]);
         setTimeout(() => {
           setNewMessageIds(new Set());
         }, 300);
@@ -589,15 +597,21 @@ const GroupChatPage: React.FC = () => {
         const index = prevState.findIndex(
           (item) => item.text_msg_raw.nano_id === groupAckMessage.raw,
         );
-        if (index !== -1) {
-          prevState[index].ack = true;
+        if (index === -1) return prevState;
+        const ackedMessage = prevState[index];
+        const nextList = [...prevState];
+        nextList[index] = {
+          ...ackedMessage,
+          ack: true,
           // 用服务端返回的 nano_id 归一本地乐观消息的 nano_id，
           // 否则后续撤回/删除会因本地 id 在 group_chat_record 中不存在而失败
-          if (groupAckMessage.nano_id) {
-            prevState[index].text_msg_raw.nano_id = groupAckMessage.nano_id;
-          }
-        }
-        return [...prevState];
+          text_msg_raw: {
+            ...ackedMessage.text_msg_raw,
+            nano_id:
+              groupAckMessage.nano_id || ackedMessage.text_msg_raw.nano_id,
+          },
+        };
+        return nextList;
       });
       setTimeout(() => {
         scrollToBottom();
@@ -607,8 +621,14 @@ const GroupChatPage: React.FC = () => {
 
   const handleMessageSent = (message: string) => {
     const temp: ChatMessage = JSON.parse(message);
-    setNewMessageIds(new Set([temp.text_msg_raw.nano_id]));
-    setMessageList((prev) => [...prev, temp]);
+    const nanoId = temp.text_msg_raw.nano_id;
+    setNewMessageIds(new Set([nanoId]));
+    // 幂等上屏：同一 nano_id 只追加一次
+    setMessageList((prev) =>
+      prev.some((item) => item.text_msg_raw.nano_id === nanoId)
+        ? prev
+        : [...prev, temp],
+    );
     setTimeout(() => {
       scrollToBottom();
     }, 100);
