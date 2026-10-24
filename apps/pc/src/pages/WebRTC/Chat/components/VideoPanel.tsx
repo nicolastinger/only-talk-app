@@ -1,117 +1,184 @@
 /**
- * 视频面板：本地/远端视频 + 媒体控制按钮
+ * 视频面板：远端画面 / 头像占位 / 本地小窗 / 通话信息条 / 媒体控制条
+ *
+ * 现代化要点：
+ * - 远端无画面（语音通话或对方关摄像头）时展示头像光晕占位，而非黑屏
+ * - 顶部信息条常驻：好友名 + 连接状态 + 通话计时
+ * - 底部悬浮胶囊控制条：麦克风 / 摄像头 / 挂断
  */
+import { DEFAULT_ICON } from '@/constants';
 import {
   AudioMutedOutlined,
   AudioOutlined,
+  PhoneOutlined,
   VideoCameraAddOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Button, Tooltip } from 'antd';
-import React from 'react';
+import { Tooltip } from 'antd';
+import React, { useEffect, useState } from 'react';
 import styles from '../index.less';
 
 interface VideoPanelProps {
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
+  isConnected: boolean;
+  friendName?: string;
+  friendAvatar?: string;
+  callDurationText: string;
+  statusText: string;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
   onToggleVideo: () => void;
   onToggleAudio: () => void;
+  onHangup: () => void;
 }
 
 const VideoPanel: React.FC<VideoPanelProps> = ({
   isVideoEnabled,
   isAudioEnabled,
+  isConnected,
+  friendName,
+  friendAvatar,
+  callDurationText,
+  statusText,
   localVideoRef,
   remoteVideoRef,
   onToggleVideo,
   onToggleAudio,
+  onHangup,
 }) => {
   const intl = useIntl();
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+
+  // 远端媒体流可能先于 ref 挂载，这里在挂载后同步一次播放状态
+  useEffect(() => {
+    const video = remoteVideoRef.current;
+    if (!video) return;
+    // 语音通话的流没有视频轨，videoWidth 恒为 0，此时应展示头像占位
+    const sync = () =>
+      setHasRemoteVideo(video.readyState >= 2 && video.videoWidth > 0);
+    sync();
+    video.addEventListener('playing', sync);
+    video.addEventListener('loadeddata', sync);
+    video.addEventListener('resize', sync);
+    video.addEventListener('emptied', sync);
+    return () => {
+      video.removeEventListener('playing', sync);
+      video.removeEventListener('loadeddata', sync);
+      video.removeEventListener('resize', sync);
+      video.removeEventListener('emptied', sync);
+    };
+  }, [remoteVideoRef]);
+
+  const avatar = friendAvatar || DEFAULT_ICON;
 
   return (
     <div className={styles.videoPanel}>
-      <div className={styles.videoWrapper}>
-        <div className={styles.videoContainer}>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className={styles.remoteVideo}
-          />
-          <div className={styles.videoLabel}>
-            {intl.formatMessage({ id: 'webrtc.remote' })}
-          </div>
-        </div>
-        <div className={styles.localVideoContainer}>
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className={styles.localVideo}
-          />
-          <div className={styles.videoLabel}>
-            {intl.formatMessage({ id: 'webrtc.local' })}
-          </div>
-        </div>
-      </div>
+      <div className={styles.stageArea}>
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className={styles.remoteVideo}
+        />
 
-      <div className={styles.mediaControls}>
-        <Tooltip title={intl.formatMessage({ id: 'webrtc.closeCamera' })}>
-          <Button
-            type={isVideoEnabled ? 'primary' : 'default'}
-            danger={!isVideoEnabled}
-            icon={
-              isVideoEnabled ? (
+        {!hasRemoteVideo && (
+          <div className={styles.stagePlaceholder}>
+            <div className={styles.stageAvatarHalo}>
+              <span className={styles.stageAvatarRing} />
+              <img className={styles.stageAvatar} src={avatar} alt="" />
+            </div>
+            <div className={styles.stageName}>
+              {friendName || intl.formatMessage({ id: 'webrtc.videoChat' })}
+            </div>
+            <div className={styles.stageHint}>{statusText}</div>
+          </div>
+        )}
+
+        <div className={styles.callInfoBar}>
+          <span
+            className={`${styles.infoDot} ${
+              isConnected ? styles.infoDotLive : ''
+            }`}
+          />
+          <span className={styles.infoName}>
+            {friendName || intl.formatMessage({ id: 'webrtc.peer' })}
+          </span>
+          <span className={styles.infoDivider} />
+          <span
+            className={`${styles.infoTimer} ${
+              isConnected ? styles.infoTimerLive : ''
+            }`}
+          >
+            {isConnected ? callDurationText : statusText}
+          </span>
+        </div>
+
+        {isVideoEnabled && (
+          <div className={styles.localVideoContainer}>
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className={styles.localVideo}
+            />
+            <span className={styles.localBadge}>
+              {intl.formatMessage({ id: 'webrtc.local' })}
+            </span>
+            {!isAudioEnabled && (
+              <span className={styles.localMutedBadge}>
+                <AudioMutedOutlined />
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className={styles.controlDock}>
+          <Tooltip
+            title={intl.formatMessage({
+              id: isAudioEnabled ? 'call.mute' : 'call.unmute',
+            })}
+          >
+            <button
+              type="button"
+              className={`${styles.dockBtn} ${
+                isAudioEnabled ? '' : styles.dockBtnOff
+              }`}
+              onClick={onToggleAudio}
+            >
+              {isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />}
+            </button>
+          </Tooltip>
+          <Tooltip
+            title={intl.formatMessage({
+              id: isVideoEnabled ? 'call.videoOff' : 'call.videoOn',
+            })}
+          >
+            <button
+              type="button"
+              className={`${styles.dockBtn} ${
+                isVideoEnabled ? '' : styles.dockBtnOff
+              }`}
+              onClick={onToggleVideo}
+            >
+              {isVideoEnabled ? (
                 <VideoCameraOutlined />
               ) : (
                 <VideoCameraAddOutlined />
-              )
-            }
-            onClick={onToggleVideo}
-            size="large"
-            shape="circle"
-          />
-        </Tooltip>
-        <Tooltip title={intl.formatMessage({ id: 'webrtc.openCamera' })}>
-          <Button
-            type={isVideoEnabled ? 'primary' : 'default'}
-            danger={!isVideoEnabled}
-            icon={
-              isVideoEnabled ? (
-                <VideoCameraOutlined />
-              ) : (
-                <VideoCameraAddOutlined />
-              )
-            }
-            onClick={onToggleVideo}
-            size="large"
-            shape="circle"
-          />
-        </Tooltip>
-        <Tooltip title={intl.formatMessage({ id: 'webrtc.closeMicrophone' })}>
-          <Button
-            type={isAudioEnabled ? 'primary' : 'default'}
-            danger={!isAudioEnabled}
-            icon={isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />}
-            onClick={onToggleAudio}
-            size="large"
-            shape="circle"
-          />
-        </Tooltip>
-        <Tooltip title={intl.formatMessage({ id: 'webrtc.openMicrophone' })}>
-          <Button
-            type={isAudioEnabled ? 'primary' : 'default'}
-            danger={!isAudioEnabled}
-            icon={isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />}
-            onClick={onToggleAudio}
-            size="large"
-            shape="circle"
-          />
-        </Tooltip>
+              )}
+            </button>
+          </Tooltip>
+          <button
+            type="button"
+            className={styles.hangupBtn}
+            onClick={onHangup}
+            title={intl.formatMessage({ id: 'call.hangup' })}
+          >
+            <PhoneOutlined rotate={135} />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -7,9 +7,10 @@
 
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
   background-color: var(--ant-color-bg-elevated);
   border-bottom: 1px solid var(--ant-color-border);
   -webkit-app-region: drag;
@@ -19,16 +20,46 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
-.webrtcIcon {
-  color: #52c41a;
-  font-size: 18px;
+.headerAvatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid var(--ant-color-border);
 }
 
 .title {
-  font-size: 16px;
-  font-weight: 500;
+  max-width: 220px;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerTimer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #52c41a;
+  background-color: rgba(82, 196, 26, 12%);
+  border-radius: 999px;
+}
+
+.headerTimerDot {
+  width: 6px;
+  height: 6px;
+  background-color: #52c41a;
+  border-radius: 50%;
+  animation: dot-blink 1.6s ease-in-out infinite;
 }
 
 .headerButtons {
@@ -53,45 +84,157 @@
 }
 
 .videoPanel {
+  position: relative;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  width: 80%;
-  background-color: #1a1a2e;
-  position: relative;
+  min-width: 0;
+  background-color: #0b0d12;
 }
 
-.videoWrapper {
-  flex: 1;
-  display: flex;
+.stageArea {
   position: relative;
-  overflow: hidden;
-}
-
-.videoContainer {
   flex: 1;
-  position: relative;
-  background-color: #000;
   overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 20%,
+    #232733 0%,
+    #0b0d12 60%,
+    #05060a 100%
+  );
 }
 
 .remoteVideo {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  background-color: #000;
+}
+
+.stagePlaceholder {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.stageAvatarHalo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 128px;
+  height: 128px;
+  margin-bottom: 8px;
+}
+
+.stageAvatarRing {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(82, 196, 26, 35%);
+  border-radius: 50%;
+  animation: ring-pulse 2.4s ease-out infinite;
+}
+
+.stageAvatar {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 20%);
+  border-radius: 50%;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 45%);
+}
+
+.stageName {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.stageHint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 65%);
+}
+
+.callInfoBar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 45%);
+  border: 1px solid rgba(255, 255, 255, 12%);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+}
+
+.infoDot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  background-color: rgba(255, 255, 255, 45%);
+  border-radius: 50%;
+}
+
+.infoDotLive {
+  background-color: #52c41a;
+  animation: dot-blink 1.6s ease-in-out infinite;
+}
+
+.infoName {
+  max-width: 180px;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.infoDivider {
+  width: 1px;
+  height: 12px;
+  background-color: rgba(255, 255, 255, 20%);
+}
+
+.infoTimer {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 65%);
+}
+
+.infoTimerLive {
+  font-weight: 600;
+  color: #fff;
 }
 
 .localVideoContainer {
   position: absolute;
-  bottom: 20px;
   right: 20px;
-  width: 200px;
-  height: 150px;
-  background-color: #000;
-  border-radius: 12px;
+  bottom: 104px;
+  z-index: 8;
+  width: 176px;
+  height: 132px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 50%);
-  border: 2px solid rgba(255, 255, 255, 20%);
-  z-index: 10;
+  background-color: #000;
+  border: 1px solid rgba(255, 255, 255, 22%);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 50%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 55%);
+    transform: translateY(-2px) scale(1.02);
+  }
 }
 
 .localVideo {
@@ -100,30 +243,100 @@
   object-fit: cover;
 }
 
-.videoLabel {
+.localBadge {
   position: absolute;
   bottom: 8px;
   left: 8px;
-  padding: 4px 8px;
-  background-color: rgba(0, 0, 0, 60%);
+  padding: 2px 8px;
+  font-size: 11px;
   color: #fff;
-  font-size: 12px;
-  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 50%);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
 }
 
-.mediaControls {
+.localMutedBadge {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 8px;
+  bottom: 8px;
   display: flex;
+  align-items: center;
   justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  color: #fff;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+}
+
+.controlDock {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
   gap: 16px;
-  padding: 12px 24px;
-  background-color: rgba(0, 0, 0, 60%);
-  backdrop-filter: blur(10px);
-  border-radius: 30px;
-  z-index: 20;
+  padding: 10px 18px;
+  background-color: rgba(16, 18, 24, 60%);
+  border: 1px solid rgba(255, 255, 255, 12%);
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 45%);
+  backdrop-filter: blur(18px);
+  transform: translateX(-50%);
+  animation: dock-in 0.3s ease;
+}
+
+.dockBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  color: #fff;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 14%);
+  border: 1px solid rgba(255, 255, 255, 18%);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 26%);
+    transform: translateY(-1px);
+  }
+}
+
+.dockBtnOff {
+  color: #1a1a1a;
+  background-color: #fff;
+  border-color: #fff;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 88%);
+  }
+}
+
+.hangupBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ff7875 0%, #ff4d4f 100%);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(255, 77, 79, 45%);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 10px 24px rgba(255, 77, 79, 55%);
+    transform: translateY(-1px);
+  }
 }
 
 .chatPanel {
@@ -375,35 +588,218 @@
 }
 
 .callScreen {
+  position: relative;
+  display: flex;
   flex: 1;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 15%,
+    #1e2432 0%,
+    #0b0d12 55%,
+    #05060a 100%
+  );
+}
+
+.callScreenBackdrop {
+  position: absolute;
+  inset: -60px;
+  background-position: center;
+  background-size: cover;
+  filter: blur(56px) saturate(1.3);
+  opacity: 0.32;
+}
+
+.callScreenContent {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
+  gap: 6px;
 }
 
-.callAvatar {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
+.callAvatarHalo {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 42px;
-  color: #fff;
-  background-color: #52c41a;
+  width: 140px;
+  height: 140px;
+  margin-bottom: 10px;
 }
 
-.callTitle {
-  font-size: 16px;
-  color: var(--ant-color-text);
+.callAvatarRing {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(82, 196, 26, 45%);
+  border-radius: 50%;
+  animation: ring-pulse 2.4s ease-out infinite;
+}
+
+.callAvatarRingSlow {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(82, 196, 26, 30%);
+  border-radius: 50%;
+  animation: ring-pulse 2.4s ease-out 1.2s infinite;
+}
+
+.callAvatar {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 25%);
+  border-radius: 50%;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 50%);
+}
+
+.callAvatarMedia {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border: 2px solid rgba(11, 13, 18, 85%);
+  border-radius: 50%;
+}
+
+.callName {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.callMediaLabel {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 50%);
+}
+
+.callStageText {
+  margin-top: 2px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 72%);
 }
 
 .callActions {
   display: flex;
+  align-items: flex-start;
+  gap: 64px;
+  margin-top: 36px;
+}
+
+.callActionItem {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 10px;
+}
+
+.callActionLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 65%);
+}
+
+.callAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+  color: #fff;
+  cursor: pointer;
+  border: none;
+  border-radius: 50%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.03);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.callActionAccept {
+  background: linear-gradient(135deg, #34d570 0%, #0fbf5b 100%);
+  box-shadow: 0 10px 26px rgba(15, 191, 91, 45%);
+}
+
+.callActionReject {
+  background: linear-gradient(135deg, #ff7875 0%, #e64646 100%);
+  box-shadow: 0 10px 26px rgba(230, 70, 70, 45%);
+}
+
+.callRingingDots {
+  display: flex;
+  gap: 6px;
+  margin-top: 24px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    background-color: rgba(255, 255, 255, 60%);
+    border-radius: 50%;
+    animation: dot-blink 1.2s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+@keyframes dot-blink {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ring-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.92);
+  }
+
+  70% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .viewTabs {

@@ -9,6 +9,7 @@
  *
  * 组件层仅负责渲染，调用此 Hook 获取状态与动作。
  */
+import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { updateWebRTCWindowState } from '@/hooks/useWebRTCSignalApi';
 import { initWebRTCConsoleCapture, useWebRTCLogs } from '@/services/webrtcLog';
 import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
@@ -16,10 +17,22 @@ import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
 import { subscribe } from '@workspace/services';
-import { WebRTCSignalMessage } from '@workspace/types';
+import { ChatSessionVo, WebRTCSignalMessage } from '@workspace/types';
 import { message } from 'antd';
 import { nanoid } from 'nanoid';
 import React, { useEffect, useRef, useState } from 'react';
+
+/** 通话计时格式：不足 1 小时 MM:SS，超过 1 小时 HH:MM:SS */
+export const formatCallDuration = (totalSeconds: number): string => {
+  const safe = Number.isFinite(totalSeconds) ? Math.max(0, totalSeconds) : 0;
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return hours > 0
+    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(minutes)}:${pad(seconds)}`;
+};
 
 export interface ChatMessageItem {
   id: string;
@@ -78,7 +91,61 @@ export const useWebRTCCall = () => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activeView, setActiveView] = useState<'video' | 'log'>('video');
+  const [friendName, setFriendName] = useState('');
+  const [friendIcon, setFriendIcon] = useState('');
+  const [callDuration, setCallDuration] = useState(0);
   const webRTCLogs = useWebRTCLogs();
+
+  const { avatarMap } = useAvatarMap([friendIcon]);
+  const friendAvatar = friendIcon ? avatarMap.get(friendIcon) : undefined;
+
+  // 通话计时：WebRTC 连接建立后开始，断开即停止（保留已计时长用于结束提示）
+  const connectedAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (connectionStatus !== 'connected') {
+      return;
+    }
+    connectedAtRef.current = Date.now();
+    setCallDuration(0);
+    const timer = setInterval(() => {
+      if (connectedAtRef.current !== null) {
+        setCallDuration(
+          Math.floor((Date.now() - connectedAtRef.current) / 1000),
+        );
+      }
+    }, 1000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [connectionStatus]);
+
+  const callDurationText = formatCallDuration(callDuration);
+
+  // 读取好友昵称与头像（与聊天列表同源：本地会话store）
+  useEffect(() => {
+    if (!friendId) return;
+    let cancelled = false;
+    const loadFriendInfo = async () => {
+      try {
+        const sessions = await invoke<ChatSessionVo[]>(
+          'get_chat_session_from_store',
+          {},
+        );
+        const session = sessions.find(
+          (item) => item.send_user === friendId || item.recv_user === friendId,
+        );
+        if (cancelled || !session) return;
+        setFriendName(session.friend_name || '');
+        setFriendIcon(session.friend_icon || '');
+      } catch (e) {
+        console.log('[WebRTCChat] 读取好友信息失败:', e);
+      }
+    };
+    loadFriendInfo();
+    return () => {
+      cancelled = true;
+    };
+  }, [friendId]);
 
   const isPreCall =
     callStage === 'incoming' ||
@@ -274,6 +341,9 @@ export const useWebRTCCall = () => {
           );
           if (state === 'connected') {
             setConnectionStatus('connected');
+            setCallStage('connected');
+            setIsVideoEnabled(service.getVideoEnabled());
+            setIsAudioEnabled(service.getAudioEnabled());
             console.log(`[WebRTCChat] ✅ P2P连接已建立，可以开始聊天`);
           } else if (state === 'disconnected' || state === 'closed') {
             setConnectionStatus('disconnected');
@@ -638,6 +708,9 @@ export const useWebRTCCall = () => {
     console.log(`[WebRTCChat.handleRetry] 用户点击重试按钮，开始重试...`);
     setIsRetrying(true);
     setConnectionStatus('connecting');
+    setCallStage('connecting');
+    setCallDuration(0);
+    connectedAtRef.current = null;
 
     try {
       const service = getWebRTCService();
@@ -715,6 +788,8 @@ export const useWebRTCCall = () => {
 
   return {
     friendId,
+    friendName,
+    friendAvatar,
     localUserId,
     isInitiator,
     isPreCall,
@@ -722,6 +797,8 @@ export const useWebRTCCall = () => {
     inputText,
     connectionStatus,
     callStage,
+    callDuration,
+    callDurationText,
     isVideoEnabled,
     isAudioEnabled,
     isRetrying,

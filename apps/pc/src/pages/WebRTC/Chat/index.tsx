@@ -2,7 +2,7 @@
  * WebRTC P2P 聊天组件
  *
  * 职责：仅负责 JSX 组装。
- * 业务逻辑（初始化、信令监听、连接生命周期、媒体开关、退出/重试）已抽离到
+ * 业务逻辑（初始化、信令监听、连接生命周期、媒体开关、通话计时、退出/重试）已抽离到
  * hooks/useWebRTCCall；各局部界面拆分为 components/ 下的子组件。
  *
  * URL参数：
@@ -12,8 +12,9 @@
  * - signalData: 初始信令数据(仅响应方需要，包含对端的offer)
  * - sessionId: 会话ID（由邀请流程注入）
  */
+import { DEFAULT_ICON } from '@/constants';
 import { clearWebRTCLogs } from '@/services/webrtcLog';
-import { ApiOutlined, LogoutOutlined } from '@ant-design/icons';
+import { LogoutOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
 import { Button } from 'antd';
 import React from 'react';
@@ -28,11 +29,14 @@ import styles from './index.less';
 const WebRTCChat: React.FC = () => {
   const intl = useIntl();
   const {
+    friendName,
+    friendAvatar,
     isPreCall,
     messages,
     inputText,
     connectionStatus,
     callStage,
+    callDurationText,
     isVideoEnabled,
     isAudioEnabled,
     isRetrying,
@@ -58,15 +62,36 @@ const WebRTCChat: React.FC = () => {
     handleExit,
   } = useWebRTCCall();
 
+  const isConnected = connectionStatus === 'connected';
+  const statusText =
+    connectionStatus === 'failed'
+      ? intl.formatMessage({ id: 'call.failed' })
+      : connectionStatus === 'disconnected'
+      ? intl.formatMessage({ id: 'webrtc.disconnected' })
+      : isRetrying
+      ? intl.formatMessage({ id: 'webrtc.retryConnection' })
+      : intl.formatMessage({ id: 'call.connecting' });
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
-          <ApiOutlined className={styles.webrtcIcon} />
+          <img
+            className={styles.headerAvatar}
+            src={friendAvatar || DEFAULT_ICON}
+            alt=""
+          />
           <span className={styles.title}>
-            {intl.formatMessage({ id: 'webrtc.videoChat' })}
+            {friendName || intl.formatMessage({ id: 'webrtc.videoChat' })}
           </span>
-          <ConnectionStatusTag status={connectionStatus} />
+          {isConnected ? (
+            <span className={styles.headerTimer}>
+              <span className={styles.headerTimerDot} />
+              {callDurationText}
+            </span>
+          ) : (
+            <ConnectionStatusTag status={connectionStatus} />
+          )}
         </div>
         <div className={styles.viewTabs}>
           <span
@@ -108,22 +133,32 @@ const WebRTCChat: React.FC = () => {
       ) : isPreCall ? (
         <CallScreen
           callStage={callStage}
+          friendName={friendName}
+          friendAvatar={friendAvatar}
+          isVideoCall={isVideoEnabled}
           onAccept={() => {
             handleAccept().catch(() => {});
           }}
           onReject={() => {
             handleReject().catch(() => {});
           }}
+          onCancel={handleExit}
         />
       ) : (
         <div className={styles.mainContent}>
           <VideoPanel
             isVideoEnabled={isVideoEnabled}
             isAudioEnabled={isAudioEnabled}
+            isConnected={isConnected}
+            friendName={friendName}
+            friendAvatar={friendAvatar}
+            callDurationText={callDurationText}
+            statusText={statusText}
             localVideoRef={localVideoRef}
             remoteVideoRef={remoteVideoRef}
             onToggleVideo={handleToggleVideo}
             onToggleAudio={handleToggleAudio}
+            onHangup={handleExit}
           />
           <ChatPanel
             messages={messages}
