@@ -21,7 +21,7 @@ use crate::models::entity::chat_record_send::ChatRecordSend;
 use crate::models::entity::chat_session::ChatSession;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg_without_nano;
-use crate::service::chat_service::emit_chat_session_event;
+use crate::service::chat_service::clear_chat_session;
 use crate::service::send_queue;
 use crate::service::user_service::get_user_info;
 use crate::utils::global_static_str::{PLATFORM, ZERO_UUID};
@@ -217,9 +217,11 @@ pub async fn send_self_text_msg_service(
         session_uuid: None,
         last_message_id: 0,
     };
+    // 自己发给自己 = 天然已读：先 upsert 会话行（首次发送时行还不存在），
+    // 再走"清空未读"通道（事件 type 0）。若按新消息(type 1)广播，
+    // 前端会给自己的会话凭空 +1 未读，出现"已读不正常"。
     update_chat_session_db(&session).await?;
-    // 广播会话事件：会话列表实时置顶预览
-    emit_chat_session_event(session.to_canonical(&me), 1).await?;
+    clear_chat_session(session).await?;
 
     Ok(text_quic_msg)
 }

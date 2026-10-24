@@ -69,6 +69,10 @@ pub async fn send_read_message(key: String) -> Result<(), anyhow::Error> {
 
         // 单聊: 按对端聚合 → 派生 session_uuid → 已读水位 nano_id
         for (peer, _ts) in query_read_peers(&uuid, 0).await? {
+            // 自己给自己的消息没有对端, 不需要上报已读(历史遗留的水位行直接跳过)
+            if peer == uuid {
+                continue;
+            }
             let su = match (Uuid::parse_str(&uuid), Uuid::parse_str(&peer)) {
                 (Ok(a), Ok(b)) => single_session_uuid(&a, &b).to_string(),
                 _ => continue,

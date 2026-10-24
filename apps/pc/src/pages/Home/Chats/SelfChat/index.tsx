@@ -67,16 +67,15 @@ const SelfChatPage: React.FC = () => {
     }
   };
 
-  const markRead = async (last_read_record: string) => {
+  // 会话级已读：进入 SelfChat 即清掉该会话未读（与单聊页 markReadFriend 对齐）。
+  // 自己给自己的消息天然已读，不需要按条上报已读水位。
+  const markReadSession = async () => {
+    if (!selfUuid) return;
     try {
-      let lastList = [] as string[];
-      if (last_read_record) {
-        lastList.push(last_read_record);
-      }
-      const data: ResponseData = await invoke('mark_read', {
-        textQuicMsgVec: lastList,
+      const data: ResponseData = await invoke('mark_read_chat_session', {
+        friendUuid: selfUuid,
       });
-      console.log('已读', data);
+      console.log('已读自己会话', data);
     } catch (err) {
       console.log(err);
     }
@@ -145,14 +144,8 @@ const SelfChatPage: React.FC = () => {
         setTimeout(() => {
           scrollToBottom();
         }, 100);
-        if (chatMessages.length > 0) {
-          const last_read_record = chatMessages.reduce((latest, current) =>
-            latest.text_msg_raw.timestamp > current.text_msg_raw.timestamp
-              ? latest
-              : current,
-          )?.text_msg_raw.nano_id;
-          markRead(last_read_record);
-        }
+        // 进入会话即视为已读（自己给自己的消息不需要按条上报水位）
+        markReadSession();
       } else {
         const container = messageContainerRef.current;
         const prevScrollHeight = container?.scrollHeight || 0;
@@ -347,18 +340,6 @@ const SelfChatPage: React.FC = () => {
   useEffect(() => {
     setRealFooterHeight(footerHeight + 6);
   }, [footerHeight]);
-
-  useEffect(() => {
-    if (messageList.length > 1) {
-      let last_nano_id: string = '';
-      const last_message = messageList[messageList.length - 1];
-      last_nano_id = last_message.text_msg_raw.nano_id;
-      if (last_nano_id !== '' && last_message.ack === undefined) {
-        console.log('已读', messageList);
-        markRead(last_nano_id);
-      }
-    }
-  }, [messageList]);
 
   useEffect(() => {
     setCurrentPage(1);

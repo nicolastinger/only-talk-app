@@ -241,7 +241,11 @@ pub async fn update_last_read_msg_from_db(
                 false => item.send_user.clone(),
             },
         };
-        update_last_read_msg(&chat_record_read).await?;
+        // 自己给自己的消息没有"对端"：只清会话未读，不写已读水位，
+        // 否则上报任务会把 peer=自己 的已读事件发给服务端(服务端没有这条消息)。
+        if item.send_user != uuid || item.recv_user != uuid {
+            update_last_read_msg(&chat_record_read).await?;
+        }
 
         //发送会话消息给前端
         let chat_session = ChatSession {
