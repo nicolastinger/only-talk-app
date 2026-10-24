@@ -213,6 +213,33 @@ const handleBackgroundDelete = async (id: number) => {
       <p class="desc">
         {{ t("settings.generalSettings.chatBackgroundDesc") }}
       </p>
+
+      <!-- 预览: 背景图 + 蒙层 + 假气泡, 直观看到实际聊天时的可读性 -->
+      <div class="bg-hero" :class="{ blank: !activeUrl }">
+        <template v-if="activeUrl">
+          <img class="bg-hero-img" :src="activeUrl" alt="" />
+          <span class="bg-hero-scrim"></span>
+          <span class="bg-hero-chip">
+            {{ t("settings.generalSettings.chatBackgroundInUse") }}
+          </span>
+          <span class="bg-bubbles">
+            <span class="bg-bubble in"></span>
+            <span class="bg-bubble out"></span>
+            <span class="bg-bubble in short"></span>
+          </span>
+        </template>
+        <div v-else class="bg-hero-empty">
+          <svg class="bg-hero-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+            />
+          </svg>
+          <span class="bg-hero-empty-text">
+            {{ t("settings.generalSettings.chatBackgroundEmpty") }}
+          </span>
+        </div>
+      </div>
+
       <div class="bg-actions">
         <button
           class="bg-btn primary"
@@ -227,33 +254,41 @@ const handleBackgroundDelete = async (id: number) => {
         </button>
         <button
           v-if="activeUrl"
-          class="bg-btn"
+          class="bg-btn ghost"
           @click="handleBackgroundReset"
         >
           {{ t("settings.generalSettings.chatBackgroundReset") }}
         </button>
       </div>
-      <div v-if="backgrounds.length" class="bg-grid">
-        <div
-          v-for="item in backgrounds"
-          :key="item.id"
-          class="bg-item"
-          :class="{ active: item.is_active }"
-          @click="handleBackgroundSelect(item.id)"
-        >
-          <img :src="backgroundThumb(item)" alt="" />
-          <span
-            class="bg-del"
-            role="button"
-            :aria-label="t('common.delete')"
-            @click.stop="handleBackgroundDelete(item.id)"
-            >×</span
-          >
+
+      <template v-if="backgrounds.length">
+        <div class="bg-strip-label">
+          {{ t("settings.generalSettings.chatBackgroundHistory") }}
         </div>
-      </div>
-      <p v-else class="bg-empty">
-        {{ t("settings.generalSettings.chatBackgroundEmpty") }}
-      </p>
+        <div class="bg-grid">
+          <div
+            v-for="item in backgrounds"
+            :key="item.id"
+            class="bg-item"
+            :class="{ active: item.is_active }"
+            @click="handleBackgroundSelect(item.id)"
+          >
+            <img :src="backgroundThumb(item)" alt="" />
+            <span v-if="item.is_active" class="bg-check">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+              </svg>
+            </span>
+            <span
+              class="bg-del"
+              role="button"
+              :aria-label="t('common.delete')"
+              @click.stop="handleBackgroundDelete(item.id)"
+              >×</span
+            >
+          </div>
+        </div>
+      </template>
     </div>
 
     <div class="section-card">
@@ -375,6 +410,112 @@ const handleBackgroundDelete = async (id: number) => {
   min-width: 0;
 }
 
+// ============ 聊天背景 ============
+// 预览: 背景图 + 蒙层 + 假气泡, 直观看到实际聊天时的可读性
+.bg-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 12px;
+  overflow: hidden;
+  background: rgba(127, 127, 127, 8%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+
+  &.blank {
+    background: rgba(127, 127, 127, 5%);
+    border-color: var(--border-medium);
+    border-style: dashed;
+  }
+}
+
+.bg-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bg-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 12%) 0%,
+    rgba(0, 0, 0, 0%) 35%,
+    rgba(0, 0, 0, 45%) 100%
+  );
+}
+
+.bg-hero-chip {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 38%);
+  border: 1px solid rgba(255, 255, 255, 22%);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+
+.bg-bubbles {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  justify-content: center;
+  padding: 0 16%;
+  pointer-events: none;
+}
+
+.bg-bubble {
+  height: 20px;
+  background: rgba(255, 255, 255, 62%);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 10%);
+
+  &.in {
+    width: 60%;
+  }
+
+  &.out {
+    width: 44%;
+    margin-left: auto;
+    background: rgba(64, 150, 255, 72%);
+  }
+
+  &.short {
+    width: 34%;
+  }
+}
+
+.bg-hero-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 16px;
+}
+
+.bg-hero-icon {
+  width: 30px;
+  height: 30px;
+  color: var(--text-tertiary);
+}
+
+.bg-hero-empty-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
 .bg-actions {
   display: flex;
   gap: 8px;
@@ -382,21 +523,33 @@ const handleBackgroundDelete = async (id: number) => {
 
 .bg-btn {
   flex: 1;
-  height: 40px;
+  height: 44px;
   padding: 0 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
   background: var(--surface-alt);
   border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 14px;
-  cursor: pointer;
+  border-radius: 12px;
   transition: all var(--transition-fast);
 
   &.primary {
-    background: rgba(64, 150, 255, 0.12);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-    font-weight: 500;
+    font-weight: 600;
+    color: #fff;
+    background: var(--color-primary);
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(64, 150, 255, 28%);
+  }
+
+  &.ghost {
+    flex: 0 0 auto;
+    padding: 0 16px;
+    color: var(--text-secondary);
+    background: transparent;
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -404,25 +557,34 @@ const handleBackgroundDelete = async (id: number) => {
   }
 }
 
+.bg-strip-label {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
 .bg-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-top: 12px;
 }
 
 .bg-item {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
-  border: 2px solid transparent;
-  border-radius: var(--radius-sm);
-  background: var(--surface-alt);
   cursor: pointer;
+  background: rgba(127, 127, 127, 8%);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &.active {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(64, 150, 255, 20%);
+    box-shadow: 0 0 0 3px rgba(64, 150, 255, 18%);
   }
 
   img {
@@ -433,23 +595,40 @@ const handleBackgroundDelete = async (id: number) => {
   }
 }
 
-.bg-del {
+.bg-check {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 45%);
+  right: 5px;
+  bottom: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   color: #fff;
-  font-size: 14px;
-  line-height: 19px;
-  text-align: center;
+  background: var(--color-primary);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 25%);
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
 }
 
-.bg-empty {
-  margin: 12px 0 0;
-  font-size: 13px;
-  color: var(--text-tertiary);
+.bg-del {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 45%);
+  border-radius: 50%;
+  backdrop-filter: blur(4px);
 }
 </style>

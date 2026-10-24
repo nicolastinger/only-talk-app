@@ -1,5 +1,6 @@
 import { useTheme } from '@/hooks/useTheme';
 import {
+  CheckCircleFilled,
   DownloadOutlined,
   FontSizeOutlined,
   GlobalOutlined,
@@ -28,7 +29,6 @@ import {
   Divider,
   Popconfirm,
   Select,
-  Space,
   Switch,
   Typography,
   message,
@@ -172,7 +172,7 @@ const GeneralSettings = () => {
     }
   };
 
-  const hasActiveBackground = backgrounds.some((item) => item.is_active);
+  const activeBackground = backgrounds.find((item) => item.is_active);
 
   return (
     <div className={styles.settingSection}>
@@ -303,75 +303,135 @@ const GeneralSettings = () => {
           </Text>
         </div>
         <Divider className={styles.divider} />
-        <Space wrap className={styles.bgActions}>
-          <Button
-            type="primary"
-            icon={<UploadOutlined />}
-            loading={backgroundUploading}
-            onClick={handleBackgroundUpload}
-          >
-            {intl.formatMessage({
-              id: backgroundUploading
-                ? 'settings.generalSettings.chatBackgroundUploading'
-                : 'settings.generalSettings.chatBackgroundUpload',
-            })}
-          </Button>
-          {hasActiveBackground && (
-            <Button onClick={handleBackgroundReset}>
-              {intl.formatMessage({
-                id: 'settings.generalSettings.chatBackgroundReset',
-              })}
-            </Button>
-          )}
-        </Space>
-        {backgrounds.length > 0 ? (
-          <div className={styles.bgGrid}>
-            {backgrounds.map((item) => (
-              <div
-                key={item.id}
-                role="button"
-                tabIndex={0}
-                className={`${styles.bgItem} ${
-                  item.is_active ? styles.bgItemActive : ''
-                }`}
-                onClick={() => handleBackgroundSelect(item.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleBackgroundSelect(item.id);
-                  }
-                }}
-              >
-                <img
-                  className={styles.bgThumb}
-                  src={resolveChatBackgroundUrl(item.file_path)}
-                  alt=""
+
+        {/* 预览: 背景铺进一个"假聊天窗口", 直接看消息气泡在背景上的可读性 */}
+        <div
+          className={`${styles.bgStage} ${
+            activeBackground ? '' : styles.bgStageBlank
+          }`}
+        >
+          {activeBackground ? (
+            <>
+              <img
+                className={styles.bgStageImg}
+                src={resolveChatBackgroundUrl(activeBackground.file_path)}
+                alt=""
+              />
+              <span className={styles.bgStageScrim} />
+              <span className={styles.bgStageChip}>
+                {intl.formatMessage({
+                  id: 'settings.generalSettings.chatBackgroundInUse',
+                })}
+              </span>
+              <span className={styles.bgBubbles}>
+                <span className={`${styles.bgBubble} ${styles.bgBubbleIn}`} />
+                <span className={`${styles.bgBubble} ${styles.bgBubbleOut}`} />
+                <span
+                  className={`${styles.bgBubble} ${styles.bgBubbleIn} ${styles.bgBubbleShort}`}
                 />
-                <Popconfirm
-                  title={intl.formatMessage({
-                    id: 'settings.generalSettings.chatBackgroundDeleteConfirm',
-                  })}
-                  onConfirm={() => handleBackgroundDelete(item.id)}
+              </span>
+              <div className={styles.bgStageActions}>
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  loading={backgroundUploading}
+                  onClick={handleBackgroundUpload}
                 >
-                  <button
-                    type="button"
-                    className={styles.bgDelete}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={intl.formatMessage({ id: 'common.delete' })}
-                  >
-                    ×
-                  </button>
-                </Popconfirm>
+                  {intl.formatMessage({
+                    id: backgroundUploading
+                      ? 'settings.generalSettings.chatBackgroundUploading'
+                      : 'settings.generalSettings.chatBackgroundUpload',
+                  })}
+                </Button>
+                <Button
+                  size="small"
+                  className={styles.bgGhostBtn}
+                  onClick={handleBackgroundReset}
+                >
+                  {intl.formatMessage({
+                    id: 'settings.generalSettings.chatBackgroundReset',
+                  })}
+                </Button>
               </div>
-            ))}
-          </div>
-        ) : (
-          <Text type="secondary" className={styles.description}>
-            {intl.formatMessage({
-              id: 'settings.generalSettings.chatBackgroundEmpty',
-            })}
-          </Text>
+            </>
+          ) : (
+            <div className={styles.bgStageEmpty}>
+              <PictureOutlined className={styles.bgStageEmptyIcon} />
+              <span className={styles.bgStageEmptyText}>
+                {intl.formatMessage({
+                  id: 'settings.generalSettings.chatBackgroundEmpty',
+                })}
+              </span>
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                loading={backgroundUploading}
+                onClick={handleBackgroundUpload}
+              >
+                {intl.formatMessage({
+                  id: backgroundUploading
+                    ? 'settings.generalSettings.chatBackgroundUploading'
+                    : 'settings.generalSettings.chatBackgroundUpload',
+                })}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {backgrounds.length > 0 && (
+          <>
+            <div className={styles.bgStripLabel}>
+              {intl.formatMessage({
+                id: 'settings.generalSettings.chatBackgroundHistory',
+              })}
+            </div>
+            <div className={styles.bgStrip}>
+              {backgrounds.map((item) => (
+                <div
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  className={`${styles.bgThumbItem} ${
+                    item.is_active ? styles.bgThumbActive : ''
+                  }`}
+                  onClick={() => handleBackgroundSelect(item.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleBackgroundSelect(item.id);
+                    }
+                  }}
+                >
+                  <img
+                    className={styles.bgThumbImg}
+                    src={resolveChatBackgroundUrl(item.file_path)}
+                    alt=""
+                  />
+                  {item.is_active && (
+                    <CheckCircleFilled className={styles.bgThumbCheck} />
+                  )}
+                  <Popconfirm
+                    title={intl.formatMessage({
+                      id: 'settings.generalSettings.chatBackgroundDeleteConfirm',
+                    })}
+                    onConfirm={() => handleBackgroundDelete(item.id)}
+                  >
+                    <button
+                      type="button"
+                      className={styles.bgThumbDelete}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={intl.formatMessage({ id: 'common.delete' })}
+                    >
+                      ×
+                    </button>
+                  </Popconfirm>
+                </div>
+              ))}
+            </div>
+          </>
         )}
+
         <Text type="secondary" className={styles.description}>
           {intl.formatMessage({
             id: 'settings.generalSettings.chatBackgroundDesc',
