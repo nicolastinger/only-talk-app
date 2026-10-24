@@ -24,7 +24,13 @@
   display: flex;
   flex-direction: row;
   background-color: var(--sidebar-bg);
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-light);
   position: relative;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
 
   .tools {
     padding: 4px;
@@ -126,6 +132,10 @@
   align-items: center;
   justify-content: center;
   height: 40px;
+  cursor: default;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .rightButton:hover {
