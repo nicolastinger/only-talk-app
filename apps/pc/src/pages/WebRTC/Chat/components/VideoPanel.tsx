@@ -27,6 +27,8 @@ interface VideoPanelProps {
   friendAvatar?: string;
   callDurationText: string;
   statusText: string;
+  /** 远端媒体流：用于监听视频轨 mute/unmute（对方开关摄像头） */
+  remoteStream?: MediaStream | null;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
   onToggleVideo: () => void;
@@ -42,6 +44,7 @@ const VideoPanel: React.FC<VideoPanelProps> = ({
   friendAvatar,
   callDurationText,
   statusText,
+  remoteStream,
   localVideoRef,
   remoteVideoRef,
   onToggleVideo,
@@ -51,25 +54,46 @@ const VideoPanel: React.FC<VideoPanelProps> = ({
   const intl = useIntl();
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
-  // 远端媒体流可能先于 ref 挂载，这里在挂载后同步一次播放状态
+  // 远端是否有画面：
+  // - 语音通话没有视频轨，videoWidth 恒为 0
+  // - 对方关摄像头时轨道会进入 muted，画面停在最后一帧，需要靠 mute/unmute 事件感知
+  // 元素事件与轨道事件共同驱动，避免流先于 ref 挂载时状态不同步
   useEffect(() => {
     const video = remoteVideoRef.current;
     if (!video) return;
-    // 语音通话的流没有视频轨，videoWidth 恒为 0，此时应展示头像占位
-    const sync = () =>
+
+    const sync = () => {
+      const track = (video.srcObject as MediaStream | null)?.getVideoTracks()[0];
+      if (track?.muted) {
+        setHasRemoteVideo(false);
+        return;
+      }
       setHasRemoteVideo(video.readyState >= 2 && video.videoWidth > 0);
+    };
+
+    const track = remoteStream?.getVideoTracks()[0] ?? null;
+    const onUnmute = () => {
+      video.play().catch(() => {});
+      sync();
+    };
+    const onMute = () => setHasRemoteVideo(false);
+
     sync();
     video.addEventListener('playing', sync);
     video.addEventListener('loadeddata', sync);
     video.addEventListener('resize', sync);
     video.addEventListener('emptied', sync);
+    track?.addEventListener('mute', onMute);
+    track?.addEventListener('unmute', onUnmute);
     return () => {
       video.removeEventListener('playing', sync);
       video.removeEventListener('loadeddata', sync);
       video.removeEventListener('resize', sync);
       video.removeEventListener('emptied', sync);
+      track?.removeEventListener('mute', onMute);
+      track?.removeEventListener('unmute', onUnmute);
     };
-  }, [remoteVideoRef]);
+  }, [remoteStream, remoteVideoRef]);
 
   const avatar = friendAvatar || DEFAULT_ICON;
 

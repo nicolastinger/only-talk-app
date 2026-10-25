@@ -43,6 +43,7 @@ const WebRTCChat: React.FC = () => {
     showEmojiPicker,
     activeView,
     webRTCLogs,
+    remoteStream,
     messageContainerRef,
     localVideoRef,
     remoteVideoRef,
@@ -154,6 +155,7 @@ const WebRTCChat: React.FC = () => {
             friendAvatar={friendAvatar}
             callDurationText={callDurationText}
             statusText={statusText}
+            remoteStream={remoteStream}
             localVideoRef={localVideoRef}
             remoteVideoRef={remoteVideoRef}
             onToggleVideo={handleToggleVideo}

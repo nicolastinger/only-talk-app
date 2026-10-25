@@ -27,12 +27,43 @@ const isVideo = computed(() => call.media === "video");
 const isRinging = computed(
   () => call.stage === "outgoing" || call.stage === "incoming"
 );
-// 对方是否有可播的视频轨（语音通话 / 对方关摄像头时退回头像舞台）
-const remoteHasVideoTrack = computed(
-  () => !!remoteStream.value?.getVideoTracks().some((track) => !track.muted)
-);
+// 对方是否有画面：不能直接读 track.muted —— 远端轨道初始恒为 muted，且该属性不是响应式的，
+// 只靠 computed 永远得到 false，远端 <video> 会一直被隐藏，表现为「看不到对方的视频」。
+// 这里改为 track 的 mute/unmute 事件 + video 元素的 loadeddata/resize 事件共同驱动。
+const remoteHasVideo = ref(false);
+let detachRemoteTrack: (() => void) | null = null;
+
+const attachRemoteTrack = (stream: MediaStream | null) => {
+  detachRemoteTrack?.();
+  detachRemoteTrack = null;
+  const track = stream?.getVideoTracks()[0];
+  if (!track) {
+    remoteHasVideo.value = false;
+    return;
+  }
+  const sync = () => {
+    remoteHasVideo.value = !track.muted;
+    if (!track.muted) remoteVideoRef.value?.play().catch(() => {});
+  };
+  track.addEventListener("mute", sync);
+  track.addEventListener("unmute", sync);
+  detachRemoteTrack = () => {
+    track.removeEventListener("mute", sync);
+    track.removeEventListener("unmute", sync);
+  };
+  sync();
+};
+
+// 有些机型 track.muted 不会及时翻转，用元素尺寸兜底
+const syncRemoteFrame = () => {
+  const video = remoteVideoRef.value;
+  if (video && video.readyState >= 2 && video.videoWidth > 0) {
+    remoteHasVideo.value = true;
+  }
+};
+
 const showRemoteVideo = computed(
-  () => call.stage === "connected" && isVideo.value && remoteHasVideoTrack.value
+  () => call.stage === "connected" && isVideo.value && remoteHasVideo.value
 );
 const showLocalPreview = computed(
   () => isVideo.value && call.videoOn && !!localStream.value && call.stage !== "idle"
@@ -118,6 +149,7 @@ watch(localStream, async (s) => {
 watch(remoteStream, async (s) => {
   await nextTick();
   bindStream(remoteVideoRef.value, s);
+  attachRemoteTrack(s);
 });
 
 watch(
@@ -127,12 +159,19 @@ watch(
       await nextTick();
       bindStream(localVideoRef.value, localStream.value);
       bindStream(remoteVideoRef.value, remoteStream.value);
+      attachRemoteTrack(remoteStream.value);
+      syncRemoteFrame();
     }
   }
 );
 
 // 未登录/无活跃通话时不应停留在此页
 onMounted(async () => {
+  const video = remoteVideoRef.value;
+  video?.addEventListener("loadeddata", syncRemoteFrame);
+  video?.addEventListener("playing", syncRemoteFrame);
+  video?.addEventListener("resize", syncRemoteFrame);
+
   if (!call.active || !call.friendId) {
     router.replace("/chats");
     return;
@@ -141,6 +180,13 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  const video = remoteVideoRef.value;
+  video?.removeEventListener("loadeddata", syncRemoteFrame);
+  video?.removeEventListener("playing", syncRemoteFrame);
+  video?.removeEventListener("resize", syncRemoteFrame);
+  detachRemoteTrack?.();
+  detachRemoteTrack = null;
+
   // 非终结态下离开页面（如安卓返回键）视为挂断
   if (
     call.active &&

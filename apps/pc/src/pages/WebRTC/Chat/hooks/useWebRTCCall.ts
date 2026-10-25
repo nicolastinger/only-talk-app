@@ -94,6 +94,7 @@ export const useWebRTCCall = () => {
   const [friendName, setFriendName] = useState('');
   const [friendIcon, setFriendIcon] = useState('');
   const [callDuration, setCallDuration] = useState(0);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const webRTCLogs = useWebRTCLogs();
 
   const { avatarMap } = useAvatarMap([friendIcon]);
@@ -316,6 +317,8 @@ export const useWebRTCCall = () => {
               `[WebRTCChat.onRemoteStreamCallback] ✅ 远程视频流已绑定`,
             );
           }
+          // 同步到 state：VideoPanel 依赖它监听视频轨的 mute/unmute（对方开关摄像头）
+          setRemoteStream(stream);
         },
       );
 
@@ -433,6 +436,7 @@ export const useWebRTCCall = () => {
     if (remote && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remote;
     }
+    setRemoteStream(remote ?? null);
     const state = service.getConnectionState(friendId);
     if (state) {
       if (state === 'connected') {
@@ -447,6 +451,19 @@ export const useWebRTCCall = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreCall, friendId, activeView]);
+
+  // 关闭摄像头时本地小窗整个卸载（VideoPanel 里 isVideoEnabled && ...），
+  // 重新打开会挂载一个全新的 <video>，srcObject 为空 → 预览一直黑屏。
+  // 这里在重新开启后把本地流补绑回去。
+  useEffect(() => {
+    if (isPreCall || !isVideoEnabled) return;
+    const local = getWebRTCService()?.getLocalStream();
+    const video = localVideoRef.current;
+    if (!local || !video || video.srcObject === local) return;
+    video.srcObject = local;
+    video.play().catch(() => {});
+    console.log('[WebRTCChat] 重新开启摄像头，本地视频流已重新绑定');
+  }, [isVideoEnabled, isPreCall]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -805,6 +822,7 @@ export const useWebRTCCall = () => {
     showEmojiPicker,
     activeView,
     webRTCLogs,
+    remoteStream,
     messageContainerRef,
     localVideoRef,
     remoteVideoRef,
