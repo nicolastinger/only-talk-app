@@ -28,43 +28,91 @@ const isRinging = computed(
   () => call.stage === "outgoing" || call.stage === "incoming"
 );
 // 对方是否有画面：不能直接读 track.muted —— 远端轨道初始恒为 muted，且该属性不是响应式的，
-// 只靠 computed 永远得到 false，远端 <video> 会一直被隐藏，表现为「看不到对方的视频」。
-// 这里改为 track 的 mute/unmute 事件 + video 元素的 loadeddata/resize 事件共同驱动。
+// 出帧检测改用 requestVideoFrameCallback（每来一帧回调一次，最可靠），
+// 没有该 API 的老 WebView 退回 videoWidth 轮询；track 的 mute/unmute 只负责「对方关/开摄像头」。
 const remoteHasVideo = ref(false);
 let detachRemoteTrack: (() => void) | null = null;
+let attachedTrack: MediaStreamTrack | null = null;
+let frameWatchStarted = false;
+let frameCallbackAlive = true;
+let framePollTimer: ReturnType<typeof setInterval> | null = null;
 
 const attachRemoteTrack = (stream: MediaStream | null) => {
+  const track = stream?.getVideoTracks()[0] ?? null;
+  // 已挂过同一轨道就跳过（出帧回调里会反复调用，避免监听器越挂越多）
+  if (track === attachedTrack) return;
   detachRemoteTrack?.();
   detachRemoteTrack = null;
-  const track = stream?.getVideoTracks()[0];
-  if (!track) {
+  attachedTrack = track;
+  if (!track) return;
+  const onMute = () => {
     remoteHasVideo.value = false;
-    return;
-  }
-  const sync = () => {
-    remoteHasVideo.value = !track.muted;
-    if (!track.muted) remoteVideoRef.value?.play().catch(() => {});
   };
-  track.addEventListener("mute", sync);
-  track.addEventListener("unmute", sync);
+  const onUnmute = () => {
+    remoteVideoRef.value?.play().catch(() => {});
+  };
+  track.addEventListener("mute", onMute);
+  track.addEventListener("unmute", onUnmute);
   detachRemoteTrack = () => {
-    track.removeEventListener("mute", sync);
-    track.removeEventListener("unmute", sync);
+    track.removeEventListener("mute", onMute);
+    track.removeEventListener("unmute", onUnmute);
   };
-  sync();
 };
 
-// 有些机型 track.muted 不会及时翻转，用元素尺寸兜底
+/** 老 WebView 兜底：videoWidth > 0 说明已经解出画面 */
 const syncRemoteFrame = () => {
+  attachRemoteTrack(remoteStream.value);
   const video = remoteVideoRef.value;
-  if (video && video.readyState >= 2 && video.videoWidth > 0) {
-    remoteHasVideo.value = true;
+  if (!video) return;
+  // 对方关摄像头时轨道会 muted，画面停在最后一帧，此时不能靠 videoWidth 判断
+  const track = remoteStream.value?.getVideoTracks()[0] ?? null;
+  if (track?.muted) return;
+  if (video.readyState >= 2 && video.videoWidth > 0) {
+    if (!remoteHasVideo.value) remoteHasVideo.value = true;
+    if (video.paused) video.play().catch(() => {});
   }
 };
 
-const showRemoteVideo = computed(
-  () => call.stage === "connected" && isVideo.value && remoteHasVideo.value
+// 远端 <video> 只要视频通话已接通就渲染出来（无画面时 opacity:0，仍参与解码）。
+// 之前用 remoteHasVideo 直接 v-show，元素 display:none 时安卓 WebView 不解码，
+// videoWidth 恒为 0 → 永远检测不到画面（死锁），对端视频就永远出不来。
+const videoCallActive = computed(
+  () => call.stage === "connected" && isVideo.value
 );
+const showStagePlaceholder = computed(
+  () => !videoCallActive.value || !remoteHasVideo.value
+);
+
+const startFrameWatch = () => {
+  // 元素在未接通时是 display:none，此时注册帧回调不会触发，等接通后由 stage watcher 再启动
+  if (frameWatchStarted || !videoCallActive.value) return;
+  const video = remoteVideoRef.value;
+  if (!video) return;
+  frameWatchStarted = true;
+  const v = video as HTMLVideoElement & {
+    requestVideoFrameCallback?: (cb: () => void) => number;
+  };
+  if (typeof v.requestVideoFrameCallback === "function") {
+    const onFrame = () => {
+      if (!frameCallbackAlive) return;
+      attachRemoteTrack(remoteStream.value);
+      if (!remoteHasVideo.value) remoteHasVideo.value = true;
+      if (video.paused) video.play().catch(() => {});
+      v.requestVideoFrameCallback?.(onFrame);
+    };
+    v.requestVideoFrameCallback(onFrame);
+  }
+  // 与帧回调并行跑一份低频兜底：个别 WebView 透明元素不触发 rVFC
+  framePollTimer = setInterval(syncRemoteFrame, 400);
+};
+
+const stopFrameWatch = () => {
+  frameWatchStarted = false;
+  if (framePollTimer) {
+    clearInterval(framePollTimer);
+    framePollTimer = null;
+  }
+};
 const showLocalPreview = computed(
   () => isVideo.value && call.videoOn && !!localStream.value && call.stage !== "idle"
 );
@@ -150,6 +198,7 @@ watch(remoteStream, async (s) => {
   await nextTick();
   bindStream(remoteVideoRef.value, s);
   attachRemoteTrack(s);
+  startFrameWatch();
 });
 
 watch(
@@ -161,6 +210,9 @@ watch(
       bindStream(remoteVideoRef.value, remoteStream.value);
       attachRemoteTrack(remoteStream.value);
       syncRemoteFrame();
+      startFrameWatch();
+    } else {
+      stopFrameWatch();
     }
   }
 );
@@ -176,16 +228,22 @@ onMounted(async () => {
     router.replace("/chats");
     return;
   }
+  if (call.stage === "connected") {
+    startFrameWatch();
+  }
   await loadFriend();
 });
 
 onUnmounted(() => {
+  frameCallbackAlive = false;
+  stopFrameWatch();
   const video = remoteVideoRef.value;
   video?.removeEventListener("loadeddata", syncRemoteFrame);
   video?.removeEventListener("playing", syncRemoteFrame);
   video?.removeEventListener("resize", syncRemoteFrame);
   detachRemoteTrack?.();
   detachRemoteTrack = null;
+  attachedTrack = null;
 
   // 非终结态下离开页面（如安卓返回键）视为挂断
   if (
@@ -210,17 +268,18 @@ const coverAvatar = computed(
     <div class="call-backdrop" :style="backdropStyle"></div>
     <div class="call-scrim"></div>
 
-    <!-- 远端画面 -->
+    <!-- 远端画面：接通即渲染，未出帧时透明（保持解码，等 videoWidth 有值再显示） -->
     <video
-      v-show="showRemoteVideo"
+      v-show="videoCallActive"
       ref="remoteVideoRef"
       class="remote-video"
+      :class="{ blank: !remoteHasVideo }"
       autoplay
       playsinline
     ></video>
 
-    <!-- 无远端画面时的头像舞台（语音通话 / 对方关闭画面） -->
-    <div v-if="!showRemoteVideo" class="call-stage">
+    <!-- 无远端画面时的头像舞台（语音通话 / 对方关闭画面 / 尚未出帧） -->
+    <div v-if="showStagePlaceholder" class="call-stage">
       <div class="stage-avatar" :class="{ ringing: isRinging }">
         <span class="stage-ring"></span>
         <span class="stage-ring delay"></span>
@@ -436,6 +495,12 @@ const coverAvatar = computed(
   height: 100%;
   object-fit: contain;
   background: #000;
+  transition: opacity 0.2s ease;
+
+  // 还没收到画面时保持透明，让头像舞台和模糊背景露出来
+  &.blank {
+    opacity: 0;
+  }
 }
 
 .call-stage {
