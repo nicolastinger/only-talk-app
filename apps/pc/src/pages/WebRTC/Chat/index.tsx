@@ -44,6 +44,7 @@ const WebRTCChat: React.FC = () => {
     activeView,
     webRTCLogs,
     remoteStream,
+    localStream,
     messageContainerRef,
     localVideoRef,
     remoteVideoRef,
@@ -156,6 +157,7 @@ const WebRTCChat: React.FC = () => {
             callDurationText={callDurationText}
             statusText={statusText}
             remoteStream={remoteStream}
+            localStream={localStream}
             localVideoRef={localVideoRef}
             remoteVideoRef={remoteVideoRef}
             onToggleVideo={handleToggleVideo}

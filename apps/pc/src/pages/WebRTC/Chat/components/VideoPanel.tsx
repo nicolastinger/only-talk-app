@@ -29,6 +29,8 @@ interface VideoPanelProps {
   statusText: string;
   /** 远端媒体流：用于监听视频轨 mute/unmute（对方开关摄像头） */
   remoteStream?: MediaStream | null;
+  /** 本地媒体流：小窗常驻挂载，切开关时重新绑定 */
+  localStream?: MediaStream | null;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
   onToggleVideo: () => void;
@@ -45,6 +47,7 @@ const VideoPanel: React.FC<VideoPanelProps> = ({
   callDurationText,
   statusText,
   remoteStream,
+  localStream,
   localVideoRef,
   remoteVideoRef,
   onToggleVideo,
@@ -96,6 +99,26 @@ const VideoPanel: React.FC<VideoPanelProps> = ({
   }, [remoteStream, remoteVideoRef]);
 
   const avatar = friendAvatar || DEFAULT_ICON;
+  const hasLocalVideoTrack = !!localStream?.getVideoTracks().length;
+
+  // 本地小窗 <video> 常驻挂载，这里在流可用时绑定并播放。
+  // 之前小窗随 isVideoEnabled 卸载/重挂载，新元素 srcObject 为空 → 重新开摄像头后预览黑屏。
+  useEffect(() => {
+    const video = localVideoRef.current;
+    if (!video) return;
+    if (video.srcObject !== (localStream ?? null)) {
+      video.srcObject = localStream ?? null;
+    }
+    if (localStream) {
+      video.play().catch(() => {});
+    }
+  }, [localStream, localVideoRef]);
+
+  // 小窗只是 display:none 隐藏，重新打开时补一次 play，避免被浏览器挂起
+  useEffect(() => {
+    if (!isVideoEnabled) return;
+    localVideoRef.current?.play().catch(() => {});
+  }, [isVideoEnabled, localVideoRef]);
 
   return (
     <div className={styles.videoPanel}>
@@ -139,25 +162,32 @@ const VideoPanel: React.FC<VideoPanelProps> = ({
           </span>
         </div>
 
-        {isVideoEnabled && (
-          <div className={styles.localVideoContainer}>
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className={styles.localVideo}
-            />
-            <span className={styles.localBadge}>
-              {intl.formatMessage({ id: 'webrtc.local' })}
+        <div
+          className={`${styles.localVideoContainer} ${
+            isVideoEnabled ? '' : styles.localVideoHidden
+          }`}
+        >
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className={styles.localVideo}
+          />
+          {!hasLocalVideoTrack && (
+            <span className={styles.localEmpty}>
+              {intl.formatMessage({ id: 'call.cameraUnavailable' })}
             </span>
-            {!isAudioEnabled && (
-              <span className={styles.localMutedBadge}>
-                <AudioMutedOutlined />
-              </span>
-            )}
-          </div>
-        )}
+          )}
+          <span className={styles.localBadge}>
+            {intl.formatMessage({ id: 'webrtc.local' })}
+          </span>
+          {!isAudioEnabled && (
+            <span className={styles.localMutedBadge}>
+              <AudioMutedOutlined />
+            </span>
+          )}
+        </div>
 
         <div className={styles.controlDock}>
           <Tooltip

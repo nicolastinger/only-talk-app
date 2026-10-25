@@ -95,6 +95,7 @@ export const useWebRTCCall = () => {
   const [friendIcon, setFriendIcon] = useState('');
   const [callDuration, setCallDuration] = useState(0);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const webRTCLogs = useWebRTCLogs();
 
   const { avatarMap } = useAvatarMap([friendIcon]);
@@ -158,6 +159,9 @@ export const useWebRTCCall = () => {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
+  // 本地媒体采集可能还在进行中就收到"对方已接受"，createOffer 前先等它完成，
+  // 否则连接创建时 localStream 为 null，轨道根本不会加进 SDP（对端既无音频也无视频）
+  const localStreamPromiseRef = useRef<Promise<MediaStream> | null>(null);
 
   // 采集当前窗口与 WebRTC 相关的日志，用于日志 Tab 展示
   useEffect(() => {
@@ -206,6 +210,11 @@ export const useWebRTCCall = () => {
     if (!service) {
       console.error('[WebRTCChat] ❌ WebRTCService不存在，无法创建offer');
       return;
+    }
+    // 采集尚未完成时先等一等，保证 offer 里带上本地音视频轨
+    if (!service.getLocalStream() && localStreamPromiseRef.current) {
+      console.log('[WebRTCChat] 等待本地媒体采集完成后再创建offer...');
+      await localStreamPromiseRef.current.catch(() => {});
     }
     console.log(`[WebRTCChat] 对方已接受，创建offer... (friendId=${friendId})`);
     const offer = await service.createOffer(friendId);
@@ -295,7 +304,10 @@ export const useWebRTCCall = () => {
 
       try {
         console.log(`[WebRTCChat] 初始化本地媒体流...`);
-        const stream = await service.initLocalStream(true, true);
+        const mediaPromise = service.initLocalStream(true, true);
+        localStreamPromiseRef.current = mediaPromise;
+        const stream = await mediaPromise;
+        setLocalStream(stream);
 
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
@@ -303,6 +315,7 @@ export const useWebRTCCall = () => {
         }
       } catch (error) {
         console.error(`[WebRTCChat] ❌ 初始化本地媒体流失败:`, error);
+        setLocalStream(null);
         message.warning(intl.formatMessage({ id: 'webrtc.mediaAccessError' }));
       }
 
@@ -432,6 +445,7 @@ export const useWebRTCCall = () => {
     if (local && localVideoRef.current) {
       localVideoRef.current.srcObject = local;
     }
+    setLocalStream(local ?? null);
     const remote = service.getRemoteStream(friendId);
     if (remote && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remote;
@@ -452,18 +466,8 @@ export const useWebRTCCall = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreCall, friendId, activeView]);
 
-  // 关闭摄像头时本地小窗整个卸载（VideoPanel 里 isVideoEnabled && ...），
-  // 重新打开会挂载一个全新的 <video>，srcObject 为空 → 预览一直黑屏。
-  // 这里在重新开启后把本地流补绑回去。
-  useEffect(() => {
-    if (isPreCall || !isVideoEnabled) return;
-    const local = getWebRTCService()?.getLocalStream();
-    const video = localVideoRef.current;
-    if (!local || !video || video.srcObject === local) return;
-    video.srcObject = local;
-    video.play().catch(() => {});
-    console.log('[WebRTCChat] 重新开启摄像头，本地视频流已重新绑定');
-  }, [isVideoEnabled, isPreCall]);
+  // 本地小窗的 <video> 常驻挂载（关闭摄像头只是隐藏），绑流统一交给 VideoPanel 的
+  // localStream effect 处理，避免元素重挂载后 srcObject 为空导致预览黑屏。
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -705,11 +709,16 @@ export const useWebRTCCall = () => {
 
   const handleToggleVideo = () => {
     const service = getWebRTCService();
-    if (service) {
-      const enabled = service.toggleVideo();
-      setIsVideoEnabled(enabled);
-      console.log(`[WebRTCChat] 视频状态切换为: ${enabled ? '开启' : '关闭'}`);
+    if (!service) return;
+    // 没有视频轨（采集失败/被释放）时直接提示，避免"点一下小窗就消失且再也回不来"
+    if (!service.getLocalStream()?.getVideoTracks().length) {
+      message.warning(intl.formatMessage({ id: 'webrtc.mediaAccessError' }));
+      return;
     }
+    const enabled = service.toggleVideo();
+    setIsVideoEnabled(enabled);
+    setLocalStream(service.getLocalStream());
+    console.log(`[WebRTCChat] 视频状态切换为: ${enabled ? '开启' : '关闭'}`);
   };
 
   const handleToggleAudio = () => {
@@ -823,6 +832,7 @@ export const useWebRTCCall = () => {
     activeView,
     webRTCLogs,
     remoteStream,
+    localStream,
     messageContainerRef,
     localVideoRef,
     remoteVideoRef,

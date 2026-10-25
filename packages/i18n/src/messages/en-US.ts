@@ -1589,6 +1589,7 @@ const messages: LocaleMessages = {
     "switchCameraFailed": "Failed to switch camera",
     "micAccessError": "Cannot access microphone",
     "callFailed": "Call failed, please retry later",
+    "cameraUnavailable": "Camera not ready",
   },
   "friends": {
     "title": "Friends",

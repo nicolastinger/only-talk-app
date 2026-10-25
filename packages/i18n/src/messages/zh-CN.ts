@@ -1589,6 +1589,7 @@ const messages: LocaleMessages = {
     "switchCameraFailed": "切换摄像头失败",
     "micAccessError": "无法访问麦克风",
     "callFailed": "呼叫失败，请稍后重试",
+    "cameraUnavailable": "摄像头未就绪",
   },
   "friends": {
     "title": "好友",

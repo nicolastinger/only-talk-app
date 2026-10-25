@@ -243,6 +243,24 @@
   object-fit: cover;
 }
 
+// 关闭摄像头只隐藏，不卸载 <video>，否则重新开启时 srcObject 丢失会黑屏
+.localVideoHidden {
+  display: none;
+}
+
+// 采集失败（无视频轨）时的占位提示，避免小窗只显示一块黑
+.localEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 70%);
+  text-align: center;
+}
+
 .localBadge {
   position: absolute;
   bottom: 8px;
