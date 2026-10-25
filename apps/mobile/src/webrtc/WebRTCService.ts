@@ -1,8 +1,8 @@
 /**
  * 移动端 WebRTC 服务类（从 PC 端 webrtcService/WebRTCService.ts 裁剪移植）
  *
- * 裁剪内容：DataChannel(通话内文字 v1 未做)、NAT检测/IceConnector/诊断日志面板。
- * 保留：完整 SDP 模式(候选内嵌，收集最多 8 秒) + 音视频轨管理与前后摄切换。
+ * 裁剪内容：NAT检测/IceConnector/诊断日志面板。
+ * 保留：完整 SDP 模式(候选内嵌，收集最多 8 秒) + 音视频轨管理与前后摄切换 + DataChannel 文字聊天。
  */
 import { createWebRTCConfig, hasTurnServer } from "./config";
 import { genId } from "./signal";
@@ -43,6 +43,8 @@ const waitForIceGathering = (
 export class WebRTCService {
   private connections: Map<string, RTCPeerConnection> = new Map();
   private remoteStreams: Map<string, MediaStream> = new Map();
+  /** P2P 文字聊天通道（通话内，不经过服务器） */
+  private dataChannels: Map<string, RTCDataChannel> = new Map();
   private localStream: MediaStream | null = null;
   public sessionId: string;
   private onRemoteStreamCallback:
@@ -50,6 +52,12 @@ export class WebRTCService {
     | null = null;
   private onConnectionStateChange:
     | ((friendId: string, state: RTCPeerConnectionState) => void)
+    | null = null;
+  private onMessageCallback:
+    | ((friendId: string, data: string) => void)
+    | null = null;
+  private onDataChannelStateChange:
+    | ((friendId: string, open: boolean) => void)
     | null = null;
   private isVideoEnabled = true;
   private isAudioEnabled = true;
@@ -70,6 +78,59 @@ export class WebRTCService {
     cb: (friendId: string, state: RTCPeerConnectionState) => void
   ) {
     this.onConnectionStateChange = cb;
+  }
+
+  setOnMessageCallback(cb: (friendId: string, data: string) => void) {
+    this.onMessageCallback = cb;
+  }
+
+  setOnDataChannelStateChange(
+    cb: (friendId: string, open: boolean) => void
+  ) {
+    this.onDataChannelStateChange = cb;
+  }
+
+  /** DataChannel 是否已就绪（可以发文字） */
+  isDataChannelOpen(friendId: string): boolean {
+    return this.dataChannels.get(friendId)?.readyState === "open";
+  }
+
+  /** 通过 DataChannel 发送一帧文本；通道未就绪返回 false */
+  sendMessage(friendId: string, message: string): boolean {
+    const channel = this.dataChannels.get(friendId);
+    if (!channel || channel.readyState !== "open") return false;
+    try {
+      channel.send(message);
+      return true;
+    } catch (e) {
+      console.error("[WebRTCService] DataChannel 发送失败:", e);
+      return false;
+    }
+  }
+
+  private setupDataChannel(friendId: string, channel: RTCDataChannel) {
+    this.dataChannels.set(friendId, channel);
+    channel.onopen = () => {
+      console.log(`[WebRTCService] ${friendId} DataChannel 已打开`);
+      this.onDataChannelStateChange?.(friendId, true);
+    };
+    channel.onclose = () => {
+      console.log(`[WebRTCService] ${friendId} DataChannel 已关闭`);
+      if (this.dataChannels.get(friendId) === channel) {
+        this.dataChannels.delete(friendId);
+      }
+      this.onDataChannelStateChange?.(friendId, false);
+    };
+    channel.onmessage = (event) => {
+      const data = typeof event.data === "string" ? event.data : "";
+      if (data) this.onMessageCallback?.(friendId, data);
+    };
+    channel.onerror = (event) => {
+      console.error(`[WebRTCService] ${friendId} DataChannel 错误:`, event);
+    };
+    if (channel.readyState === "open") {
+      this.onDataChannelStateChange?.(friendId, true);
+    }
   }
 
   getLocalStream(): MediaStream | null {
@@ -202,8 +263,16 @@ export class WebRTCService {
       }
     };
 
-    // 完整 SDP 模式：候选内嵌于 SDP，无需逐条发送；ondatachannel 预留（v1 未用）
+    // 完整 SDP 模式：候选内嵌于 SDP，无需逐条发送
     connection.onicecandidate = () => {};
+
+    // 响应方：由发起方创建 DataChannel，这里接收
+    connection.ondatachannel = (event) => {
+      console.log(
+        `[WebRTCService] 收到 ${friendId} 的 DataChannel: ${event.channel.label}`
+      );
+      this.setupDataChannel(friendId, event.channel);
+    };
 
     connection.ontrack = (event) => {
       if (event.streams && event.streams.length > 0) {
@@ -227,6 +296,13 @@ export class WebRTCService {
   /** 发起方：创建 offer（等候选收集完，返回含全部候选的完整 SDP） */
   async createOffer(friendId: string): Promise<RTCSessionDescriptionInit> {
     const connection = await this.ensureConnection(friendId);
+    // 发起方负责创建 P2P 文字通道（响应方通过 ondatachannel 接收）
+    if (!this.dataChannels.has(friendId)) {
+      const channel = connection.createDataChannel("webrtc-chat", {
+        ordered: true,
+      });
+      this.setupDataChannel(friendId, channel);
+    }
     const offer = await connection.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
@@ -297,6 +373,16 @@ export class WebRTCService {
   }
 
   closeConnection(friendId: string): void {
+    const channel = this.dataChannels.get(friendId);
+    if (channel) {
+      try {
+        channel.close();
+      } catch {
+        /* 已关闭 */
+      }
+      this.dataChannels.delete(friendId);
+      this.onDataChannelStateChange?.(friendId, false);
+    }
     const connection = this.connections.get(friendId);
     if (connection) {
       connection.close();

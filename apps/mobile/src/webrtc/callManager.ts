@@ -9,7 +9,15 @@
  * 页面（/call）只负责渲染：通过 useCallManager() 取状态与动作。
  */
 import { reactive, ref } from "vue";
-import { subscribe } from "@workspace/services";
+import {
+  decodeP2PChatFrame,
+  encodeP2PChatHello,
+  encodeP2PChatMessage,
+  encodeP2PChatRead,
+  genP2PChatMessageId,
+  P2P_CHAT_CAP_READ,
+  subscribe,
+} from "@workspace/services";
 import { showToast } from "vant";
 import { t } from "@/i18n";
 import { WebRTCService } from "./WebRTCService";
@@ -50,6 +58,8 @@ interface CallState {
   connStatus: "connecting" | "connected" | "disconnected" | "failed";
   elapsedSec: number;
   errorMsg: string;
+  /** P2P 文字通道是否就绪 */
+  chatReady: boolean;
 }
 
 const call = reactive<CallState>({
@@ -64,7 +74,26 @@ const call = reactive<CallState>({
   connStatus: "connecting",
   elapsedSec: 0,
   errorMsg: "",
+  chatReady: false,
 });
+
+/** P2P 直连聊天消息（仅内存，挂断/关窗即消失，不落库不走服务器） */
+export interface P2PChatMessage {
+  id: string;
+  text: string;
+  ts: number;
+  mine: boolean;
+  /** 已通过 DataChannel 发出 */
+  delivered: boolean;
+  /** 对方已读回执 */
+  read: boolean;
+}
+
+const chatMessages = ref<P2PChatMessage[]>([]);
+const chatOpen = ref(false);
+const chatUnread = ref(0);
+/** 对方是否声明支持已读回执（来自 hello 帧） */
+let peerReadCapable = false;
 
 // MediaStream 不能放入 reactive/ref 深代理，单独用 ref 存储原始对象
 const localStream = ref<MediaStream | null>(null);
@@ -109,11 +138,22 @@ const isMidCall = () =>
   call.active &&
   ["outgoing", "incoming", "connecting", "connected"].includes(call.stage);
 
-/** 绑定服务回调（远程流 / 连接状态） */
+/** 绑定服务回调（远程流 / 连接状态 / P2P 文字通道） */
 const attachServiceCallbacks = (svc: WebRTCService, friendId: string) => {
   svc.setOnRemoteStreamCallback((fromId, stream) => {
     if (fromId === friendId) remoteStream.value = stream;
   });
+  svc.setOnMessageCallback((fromId, data) => {
+    if (fromId === friendId) handleChatData(data);
+  });
+  svc.setOnDataChannelStateChange((fromId, open) => {
+    if (fromId !== friendId) return;
+    call.chatReady = open;
+    if (open) sendChatHello();
+  });
+  // 通道可能在校调注册之前就已经 open
+  call.chatReady = svc.isDataChannelOpen(friendId);
+  if (call.chatReady) sendChatHello();
   svc.setOnConnectionStateChange((fromId, state) => {
     if (fromId !== friendId) return;
     if (state === "connected") {
@@ -122,6 +162,8 @@ const attachServiceCallbacks = (svc: WebRTCService, friendId: string) => {
         call.stage = "connected";
         startElapsedTimer();
       }
+      // DataChannel 可能比连接状态回调早/晚，这里补一次探测
+      call.chatReady = svc.isDataChannelOpen(friendId);
     } else if (state === "disconnected") {
       call.connStatus = "disconnected";
     } else if (state === "closed") {
@@ -134,6 +176,95 @@ const attachServiceCallbacks = (svc: WebRTCService, friendId: string) => {
       }
     }
   });
+};
+
+/* ========================= P2P 直连聊天 ========================= */
+
+/** 通道打开后互报能力，对方据此决定是否回已读回执 */
+const sendChatHello = () => {
+  if (!service) return;
+  service.sendMessage(call.friendId, encodeP2PChatHello([P2P_CHAT_CAP_READ]));
+};
+
+/** 把还没有回过执的对方消息补发一次已读（收到 hello 或打开面板时用） */
+const ackIncomingReads = (ids?: string[]) => {
+  if (!service || !peerReadCapable) return;
+  const targets =
+    ids ??
+    chatMessages.value.filter((m) => !m.mine).map((m) => m.id);
+  const unique = [...new Set(targets.filter(Boolean))];
+  if (unique.length === 0) return;
+  service.sendMessage(call.friendId, encodeP2PChatRead(unique));
+};
+
+const handleChatData = (raw: string) => {
+  if (!call.active) return;
+  const frame = decodeP2PChatFrame(raw);
+  if (frame.kind === "hello") {
+    peerReadCapable = frame.caps.includes(P2P_CHAT_CAP_READ);
+    if (peerReadCapable) ackIncomingReads();
+    return;
+  }
+  if (frame.kind === "read") {
+    const ids = new Set(frame.ids);
+    chatMessages.value = chatMessages.value.map((m) =>
+      m.mine && ids.has(m.id) ? { ...m, read: true } : m
+    );
+    return;
+  }
+  // 文本消息
+  const id = frame.id || genP2PChatMessageId();
+  chatMessages.value.push({
+    id,
+    text: frame.text,
+    ts: frame.ts || Date.now(),
+    mine: false,
+    delivered: true,
+    read: true,
+  });
+  if (!chatOpen.value) chatUnread.value += 1;
+  if (peerReadCapable) {
+    service?.sendMessage(call.friendId, encodeP2PChatRead([id]));
+  }
+};
+
+const sendChatMessage = (text: string): boolean => {
+  const value = text.trim();
+  if (!value || !service) return false;
+  if (!service.isDataChannelOpen(call.friendId)) return false;
+  const id = genP2PChatMessageId();
+  if (!service.sendMessage(call.friendId, encodeP2PChatMessage(id, value))) {
+    return false;
+  }
+  chatMessages.value.push({
+    id,
+    text: value,
+    ts: Date.now(),
+    mine: true,
+    delivered: true,
+    read: false,
+  });
+  return true;
+};
+
+const openChat = () => {
+  chatOpen.value = true;
+  chatUnread.value = 0;
+  // 面板打开时补一次回执，覆盖「消息先到但当时还没互报能力」的情况
+  ackIncomingReads();
+};
+
+const closeChat = () => {
+  chatOpen.value = false;
+};
+
+/** 每次通话开始时清空：P2P 消息只存在内存，关窗即消失 */
+const resetChat = () => {
+  chatMessages.value = [];
+  chatUnread.value = 0;
+  chatOpen.value = false;
+  peerReadCapable = false;
+  call.chatReady = false;
 };
 
 const getOrCreateService = (): WebRTCService => {
@@ -159,6 +290,7 @@ const reset = () => {
   }
   localStream.value = null;
   remoteStream.value = null;
+  resetChat();
   call.active = false;
   call.stage = "idle";
   call.role = "initiator";
@@ -374,6 +506,7 @@ const beginIncoming = (
   call.connStatus = "connecting";
   call.elapsedSec = 0;
   call.errorMsg = "";
+  resetChat();
   attachServiceCallbacks(svc, friendId);
 
   // 无人接听 45s 自动拒绝
@@ -597,6 +730,9 @@ export const useCallManager = () => {
     call,
     localStream,
     remoteStream,
+    chatMessages,
+    chatOpen,
+    chatUnread,
     startCall,
     accept,
     decline,
@@ -605,6 +741,9 @@ export const useCallManager = () => {
     toggleAudio,
     toggleVideo,
     switchCamera,
+    sendChatMessage,
+    openChat,
+    closeChat,
     reset,
   };
 };

@@ -40,6 +40,7 @@ const WebRTCChat: React.FC = () => {
     isVideoEnabled,
     isAudioEnabled,
     isRetrying,
+    chatReady,
     showEmojiPicker,
     activeView,
     webRTCLogs,
@@ -167,6 +168,7 @@ const WebRTCChat: React.FC = () => {
           <ChatPanel
             messages={messages}
             connectionStatus={connectionStatus}
+            chatReady={chatReady}
             isRetrying={isRetrying}
             inputText={inputText}
             showEmojiPicker={showEmojiPicker}

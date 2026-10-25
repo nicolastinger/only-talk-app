@@ -55,6 +55,10 @@ class WebRTCService {
   private onMessageCallback:
     | ((friendId: string, message: string) => void)
     | null = null;
+  /** DataChannel 打开/关闭回调 */
+  private onDataChannelStateChange:
+    | ((friendId: string, open: boolean) => void)
+    | null = null;
   /** 连接状态变化时的回调函数: (来源friendId, 连接状态) => void */
   private onConnectionStateChange:
     | ((friendId: string, state: RTCPeerConnectionState) => void)
@@ -118,6 +122,16 @@ class WebRTCService {
   setOnMessageCallback(callback: (friendId: string, message: string) => void) {
     this.onMessageCallback = callback;
     console.log(`[WebRTCService] 消息回调已设置`);
+  }
+
+  /**
+   * 设置 DataChannel 开关状态回调
+   * @param callback 通道打开/关闭时触发（用于启用输入框、发 hello 帧）
+   */
+  setOnDataChannelStateChange(
+    callback: (friendId: string, open: boolean) => void,
+  ) {
+    this.onDataChannelStateChange = callback;
   }
 
   /**
@@ -552,12 +566,14 @@ class WebRTCService {
      * ordered: true 保证消息顺序传递
      * 响应方会通过ondatachannel事件接收此通道
      */
-    console.log(`[WebRTCService.createOffer] 📡 创建DataChannel...`);
-    const dataChannel = connection.createDataChannel('webrtc-chat', {
-      ordered: true,
-    });
-    this.setupDataChannel(friendId, dataChannel);
-    console.log(`[WebRTCService.createOffer] ✅ DataChannel 已创建`);
+    if (!this.dataChannels.has(friendId)) {
+      console.log(`[WebRTCService.createOffer] 📡 创建DataChannel...`);
+      const dataChannel = connection.createDataChannel('webrtc-chat', {
+        ordered: true,
+      });
+      this.setupDataChannel(friendId, dataChannel);
+      console.log(`[WebRTCService.createOffer] ✅ DataChannel 已创建`);
+    }
 
     /**
      * 创建offer
@@ -928,6 +944,7 @@ class WebRTCService {
       console.log(
         `[WebRTCService.ondatachannelopen] 通道详情 - readyState: ${channel.readyState}, bufferedAmount: ${channel.bufferedAmount}`,
       );
+      this.onDataChannelStateChange?.(friendId, true);
     };
 
     /** DataChannel关闭事件 */
@@ -936,6 +953,7 @@ class WebRTCService {
         `[WebRTCService.ondatachannelclose] DataChannel已关闭 (friendId: ${friendId})`,
       );
       this.dataChannels.delete(friendId);
+      this.onDataChannelStateChange?.(friendId, false);
     };
 
     /** DataChannel接收消息事件 */
@@ -966,6 +984,11 @@ class WebRTCService {
     console.log(
       `[WebRTCService.setupDataChannel] DataChannel设置完成，当前总数: ${this.dataChannels.size}`,
     );
+
+    // 通道可能已经 open（重试/重连场景）
+    if (channel.readyState === 'open') {
+      this.onDataChannelStateChange?.(friendId, true);
+    }
   }
 
   /**

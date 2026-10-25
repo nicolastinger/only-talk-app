@@ -15,6 +15,7 @@ export * from "./messageSound";
 export * from "./momentService";
 export * from "./networkService";
 export * from "./notificationService";
+export * from "./p2pChatProtocol";
 export * from "./passwordService";
 export * from "./plazaService";
 export * from "./reportService";

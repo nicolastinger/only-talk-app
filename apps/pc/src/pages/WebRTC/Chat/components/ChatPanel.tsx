@@ -81,6 +81,8 @@ const EMOJI_LIST = [
 interface ChatPanelProps {
   messages: ChatMessageItem[];
   connectionStatus: ConnectionState;
+  /** DataChannel 是否就绪（可发文字） */
+  chatReady: boolean;
   isRetrying: boolean;
   inputText: string;
   showEmojiPicker: boolean;
@@ -104,6 +106,7 @@ const formatTime = (timestamp: number): string => {
 const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   connectionStatus,
+  chatReady,
   isRetrying,
   inputText,
   showEmojiPicker,
@@ -141,6 +144,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           >
             {msg.text}
           </div>
+          {msg.isMine && (
+            <span className={styles.messageState}>
+              {msg.read
+                ? intl.formatMessage({ id: 'webrtc.read' })
+                : msg.delivered
+                ? intl.formatMessage({ id: 'webrtc.delivered' })
+                : null}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -211,15 +223,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             value={inputText}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyPress={onKeyPress}
-            placeholder={intl.formatMessage({ id: 'webrtc.inputMessage' })}
+            placeholder={intl.formatMessage({
+              id: chatReady ? 'webrtc.inputMessage' : 'webrtc.chatConnecting',
+            })}
             autoSize={{ minRows: 1, maxRows: 3 }}
-            disabled={connectionStatus !== 'connected'}
+            disabled={connectionStatus !== 'connected' || !chatReady}
           />
           <Button
             type="primary"
             icon={<SendOutlined />}
             onClick={onSend}
-            disabled={connectionStatus !== 'connected'}
+            disabled={connectionStatus !== 'connected' || !chatReady}
             className={styles.sendBtn}
           />
         </div>

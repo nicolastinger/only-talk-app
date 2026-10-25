@@ -16,7 +16,15 @@ import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
-import { subscribe } from '@workspace/services';
+import {
+  decodeP2PChatFrame,
+  encodeP2PChatHello,
+  encodeP2PChatMessage,
+  encodeP2PChatRead,
+  genP2PChatMessageId,
+  P2P_CHAT_CAP_READ,
+  subscribe,
+} from '@workspace/services';
 import { ChatSessionVo, WebRTCSignalMessage } from '@workspace/types';
 import { message } from 'antd';
 import { nanoid } from 'nanoid';
@@ -40,6 +48,10 @@ export interface ChatMessageItem {
   isMine: boolean;
   timestamp: number;
   senderName?: string;
+  /** 已通过 DataChannel 发出 */
+  delivered?: boolean;
+  /** 对方已读回执 */
+  read?: boolean;
 }
 
 interface WebRTCSignalMsgRaw {
@@ -96,6 +108,7 @@ export const useWebRTCCall = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [chatReady, setChatReady] = useState(false);
   const webRTCLogs = useWebRTCLogs();
 
   const { avatarMap } = useAvatarMap([friendIcon]);
@@ -162,6 +175,8 @@ export const useWebRTCCall = () => {
   // 本地媒体采集可能还在进行中就收到"对方已接受"，createOffer 前先等它完成，
   // 否则连接创建时 localStream 为 null，轨道根本不会加进 SDP（对端既无音频也无视频）
   const localStreamPromiseRef = useRef<Promise<MediaStream> | null>(null);
+  // 对方是否声明支持已读回执（来自 hello 帧）
+  const peerReadCapableRef = useRef(false);
 
   // 采集当前窗口与 WebRTC 相关的日志，用于日志 Tab 展示
   useEffect(() => {
@@ -335,19 +350,66 @@ export const useWebRTCCall = () => {
         },
       );
 
-      service.setOnMessageCallback((fromFriendId: string, msg: string) => {
+      service.setOnMessageCallback((fromFriendId: string, raw: string) => {
         console.log(
-          `[WebRTCChat.onMessageCallback] 收到来自${fromFriendId}的消息: ${msg}`,
+          `[WebRTCChat.onMessageCallback] 收到来自${fromFriendId}的数据: ${raw}`,
         );
+        if (fromFriendId !== friendId) return;
+        const frame = decodeP2PChatFrame(raw);
+
+        // 能力协商：对方声明支持已读回执
+        if (frame.kind === 'hello') {
+          peerReadCapableRef.current = frame.caps.includes(P2P_CHAT_CAP_READ);
+          console.log(
+            `[WebRTCChat] 对方能力: ${frame.caps.join(',') || '(none)'}`,
+          );
+          return;
+        }
+
+        // 已读回执：把我发出去的消息标记为已读
+        if (frame.kind === 'read') {
+          const ids = new Set(frame.ids);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.isMine && ids.has(m.id) ? { ...m, read: true } : m,
+            ),
+          );
+          return;
+        }
+
+        // 文本消息（含旧版本纯文本）
+        const id = frame.id || genP2PChatMessageId();
         const newMessage: ChatMessageItem = {
-          id: `${Date.now()}_${Math.random()}`,
-          text: msg,
+          id,
+          text: frame.text,
           isMine: false,
-          timestamp: Date.now(),
+          timestamp: frame.ts || Date.now(),
           senderName: intl.formatMessage({ id: 'webrtc.peer' }),
+          delivered: true,
+          read: true,
         };
         setMessages((prev) => [...prev, newMessage]);
+
+        // 收到即回执（对方支持才发，避免旧版本把 JSON 当成消息显示）
+        if (peerReadCapableRef.current) {
+          service.sendMessage(friendId, encodeP2PChatRead([id]));
+        }
       });
+
+      // 文字通道就绪/断开：用于启用输入框 + 互报能力
+      service.setOnDataChannelStateChange(
+        (fromFriendId: string, open: boolean) => {
+          if (fromFriendId !== friendId) return;
+          setChatReady(open);
+          if (open) {
+            service.sendMessage(
+              friendId,
+              encodeP2PChatHello([P2P_CHAT_CAP_READ]),
+            );
+          }
+        },
+      );
+      setChatReady(service.isDataChannelOpen(friendId));
       console.log(`[WebRTCChat] 消息回调已设置`);
 
       service.setOnConnectionStateChange(
@@ -670,29 +732,27 @@ export const useWebRTCCall = () => {
       return;
     }
 
-    console.log(
-      `[WebRTCChat.sendMessage] ✅ 连接就绪，调用 service.sendMessage()...`,
+    const text = inputText.trim();
+    const id = genP2PChatMessageId();
+    const success = service.sendMessage(
+      friendId,
+      encodeP2PChatMessage(id, text),
     );
-
-    const success = service.sendMessage(friendId, inputText.trim());
     if (success) {
       console.log(
         `[WebRTCChat.sendMessage] ✅ 消息发送成功，添加到本地消息列表`,
       );
 
       const newMessage: ChatMessageItem = {
-        id: `${Date.now()}_${Math.random()}`,
-        text: inputText.trim(),
+        id,
+        text,
         isMine: true,
         timestamp: Date.now(),
         senderName: intl.formatMessage({ id: 'webrtc.me' }),
+        delivered: true,
+        read: false,
       };
       setMessages((prev) => [...prev, newMessage]);
-      console.log(
-        `[WebRTCChat.sendMessage] 消息已添加到UI，当前消息总数: ${
-          messages.length + 1
-        }`,
-      );
       setInputText('');
     } else {
       console.error(`[WebRTCChat.sendMessage] ❌ 消息发送失败`);
@@ -828,6 +888,7 @@ export const useWebRTCCall = () => {
     isVideoEnabled,
     isAudioEnabled,
     isRetrying,
+    chatReady,
     showEmojiPicker,
     activeView,
     webRTCLogs,

@@ -11,7 +11,24 @@ import type { ChatSessionVo } from "@workspace/types";
 
 const router = useRouter();
 const { t } = useI18n();
-const { call, localStream, remoteStream, accept, decline, hangup, retry, toggleAudio, toggleVideo, switchCamera } = useCallManager();
+const {
+  call,
+  localStream,
+  remoteStream,
+  chatMessages,
+  chatOpen,
+  chatUnread,
+  accept,
+  decline,
+  hangup,
+  retry,
+  toggleAudio,
+  toggleVideo,
+  switchCamera,
+  sendChatMessage,
+  openChat,
+  closeChat,
+} = useCallManager();
 
 const { getAvatarUrl } = useAvatar();
 
@@ -20,6 +37,48 @@ const loadingInfo = ref(false);
 
 const localVideoRef = ref<HTMLVideoElement | null>(null);
 const remoteVideoRef = ref<HTMLVideoElement | null>(null);
+
+/* ---------- P2P 直连聊天（仅内存，挂断即消失） ---------- */
+const chatInput = ref("");
+const chatListRef = ref<HTMLElement | null>(null);
+
+const scrollChatToBottom = () => {
+  const el = chatListRef.value;
+  if (el) el.scrollTop = el.scrollHeight;
+};
+
+const toggleChat = () => {
+  if (chatOpen.value) closeChat();
+  else openChat();
+};
+
+const onSendChat = () => {
+  if (!sendChatMessage(chatInput.value)) return;
+  chatInput.value = "";
+  nextTick(scrollChatToBottom);
+};
+
+const formatChatTime = (ts: number) => {
+  const d = new Date(ts);
+  return `${d.getHours().toString().padStart(2, "0")}:${d
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+};
+
+watch(
+  chatMessages,
+  () => {
+    if (chatOpen.value) nextTick(scrollChatToBottom);
+  },
+  { deep: true }
+);
+
+watch(chatOpen, async (isOpen) => {
+  if (!isOpen) return;
+  await nextTick();
+  scrollChatToBottom();
+});
 
 const friendId = computed(() => call.friendId);
 
@@ -425,6 +484,20 @@ const coverAvatar = computed(
           />
         </svg>
       </button>
+      <button
+        type="button"
+        class="dock-btn chat"
+        @click="toggleChat"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
+          />
+        </svg>
+        <span v-if="chatUnread > 0" class="chat-badge">{{
+          chatUnread > 99 ? "99+" : chatUnread
+        }}</span>
+      </button>
       <button type="button" class="dock-btn hang" @click="hangup">
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path
@@ -432,6 +505,63 @@ const coverAvatar = computed(
           />
         </svg>
       </button>
+    </div>
+
+    <!-- P2P 直连聊天面板（仅内存，挂断/关窗即消失） -->
+    <div v-if="chatOpen" class="chat-panel">
+      <div class="chat-header">
+        <div class="chat-heading">
+          <span class="chat-title">{{ t("webrtc.chat") }}</span>
+          <span class="chat-sub">{{ t("webrtc.p2pChatHint") }}</span>
+        </div>
+        <button type="button" class="chat-close" @click="closeChat">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div ref="chatListRef" class="chat-list">
+        <div v-if="chatMessages.length === 0" class="chat-empty">
+          {{ t("webrtc.chatEmpty") }}
+        </div>
+        <div
+          v-for="m in chatMessages"
+          :key="m.id"
+          class="chat-row"
+          :class="{ mine: m.mine }"
+        >
+          <div class="chat-bubble">{{ m.text }}</div>
+          <div class="chat-meta">
+            <span>{{ formatChatTime(m.ts) }}</span>
+            <span v-if="m.mine" class="chat-state">
+              {{ m.read ? t("webrtc.read") : t("webrtc.delivered") }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-bar">
+        <input
+          v-model="chatInput"
+          class="chat-input"
+          :placeholder="
+            call.chatReady ? t('webrtc.inputMessage') : t('webrtc.chatConnecting')
+          "
+          :disabled="!call.chatReady"
+          @keyup.enter="onSendChat"
+        />
+        <button
+          type="button"
+          class="chat-send"
+          :disabled="!call.chatReady || !chatInput.trim()"
+          @click="onSendChat"
+        >
+          {{ t("webrtc.send") }}
+        </button>
+      </div>
     </div>
 
     <!-- 拨打等待中挂断 -->
@@ -845,6 +975,188 @@ const coverAvatar = computed(
   .terminal-text {
     font-size: 16px;
     color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+/* ---------- P2P 直连聊天 ---------- */
+.dock-btn.chat {
+  position: relative;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 18px;
+  color: #fff;
+  text-align: center;
+  background: #e64646;
+  border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(230, 70, 70, 0.5);
+}
+
+.chat-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px
+    calc(env(safe-area-inset-bottom) + 14px);
+  background: rgba(8, 10, 16, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.chat-header {
+  display: flex;
+  flex: none;
+  gap: 12px;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chat-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.chat-sub {
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.chat-close {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: #fff;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 50%;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.chat-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 0;
+  overflow-y: auto;
+}
+
+.chat-empty {
+  margin: auto;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.chat-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 78%;
+
+  &.mine {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+}
+
+.chat-bubble {
+  padding: 9px 13px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #fff;
+  word-break: break-word;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px 14px 14px 4px;
+}
+
+.chat-row.mine .chat-bubble {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: transparent;
+  border-radius: 14px 14px 4px 14px;
+}
+
+.chat-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.chat-state {
+  color: #4ade80;
+}
+
+.chat-input-bar {
+  display: flex;
+  flex: none;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  outline: none;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.chat-send {
+  flex: none;
+  padding: 0 18px;
+  font-size: 13px;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: none;
+  border-radius: 999px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
   }
 }
 
