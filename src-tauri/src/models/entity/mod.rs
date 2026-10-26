@@ -17,6 +17,7 @@ pub mod group_chat_record;
 pub mod group_member;
 pub mod group_message_ack;
 pub mod group_message_read;
+pub mod moment_cache;
 pub mod store;
 pub mod sync_task;
 pub mod system_notification;

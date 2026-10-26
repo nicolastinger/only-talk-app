@@ -9,6 +9,7 @@ pub mod file_controller;
 pub mod friend_controller;
 pub mod group_controller;
 pub mod log_controller;
+pub mod moment_cache_controller;
 pub mod network_controller;
 pub mod notification_controller;
 pub mod p2p_controller;

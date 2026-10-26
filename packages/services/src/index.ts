@@ -12,6 +12,7 @@ export * from "./httpService";
 export * from "./imagePreviewService";
 export * from "./linkService";
 export * from "./messageSound";
+export * from "./momentCache";
 export * from "./momentService";
 export * from "./networkService";
 export * from "./notificationService";

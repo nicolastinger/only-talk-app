@@ -16,6 +16,7 @@ use crate::models::entity::group_chat_record::GroupChatRecord;
 use crate::models::entity::group_member::GroupMember;
 use crate::models::entity::group_message_ack::GroupMessageAck;
 use crate::models::entity::group_message_read::GroupMessageRead;
+use crate::models::entity::moment_cache::MomentCache;
 use crate::models::entity::store::init_sqlite;
 use crate::models::entity::sync_task::SyncTask;
 use crate::models::entity::system_notification::SystemNotification;
@@ -53,6 +54,8 @@ pub async fn init_user_ddl(pool_sqlite: &SqlitePool) -> Result<(), anyhow::Error
     init_sqlite::<FriendChatBackground>(pool_sqlite).await?;
     init_sqlite::<Group>(pool_sqlite).await?;
     init_sqlite::<GroupMember>(pool_sqlite).await?;
+    // 动态(朋友圈)本地缓存: 按 feed 缓存最近 100 条, 首屏/离线优先读本地
+    init_sqlite::<MomentCache>(pool_sqlite).await?;
     init_sqlite::<SystemNotification>(pool_sqlite).await?;
     {
         // 本地存储初始化成功

@@ -72,6 +72,9 @@ use crate::cmd::group_controller::{
 use crate::cmd::log_controller::{
     clear_app_logs, get_app_logs, get_client_log_files, read_client_log_file,
 };
+use crate::cmd::moment_cache_controller::{
+    clear_moment_cache, delete_moment_cache, get_moment_cache, save_moment_cache,
+};
 use crate::cmd::network_controller::get_network_type;
 use crate::cmd::notification_controller::{
     batch_read_system_notification, clear_all_unread_notifications, clear_unread_by_level,
@@ -331,6 +334,10 @@ pub fn run() {
             get_black_list,
             create_chat_session,
             get_system_notification,
+            save_moment_cache,
+            get_moment_cache,
+            delete_moment_cache,
+            clear_moment_cache,
             update_local_friend_list,
             get_client_config,
             set_client_config,

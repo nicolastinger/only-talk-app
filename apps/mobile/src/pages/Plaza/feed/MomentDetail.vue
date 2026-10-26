@@ -6,6 +6,7 @@ import {
   getFiles,
   get_moment_detail,
   delete_moment,
+  delete_moment_cache,
   switch_moment_like,
   switch_user_follow,
   post_moment_comment,
@@ -213,6 +214,7 @@ const onDelete = async () => {
       cancelButtonText: t("common.cancel"),
     });
     await delete_moment({ moment_uuid: moment.value.uuid });
+    void delete_moment_cache(moment.value.uuid);
     showToast({ message: t("plaza.moment.deleted"), icon: "success" });
     router.back();
   } catch (e) {
