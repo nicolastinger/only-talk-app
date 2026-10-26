@@ -2,6 +2,7 @@
 import { useRouter } from "vue-router";
 import { showDialog, showToast } from "vant";
 import { useAuthStore } from "@/stores/auth";
+import { markAutoLoginTried } from "@/utils/autoLogin";
 import { useI18n } from "@/i18n";
 
 interface SettingsEntry {
@@ -121,6 +122,8 @@ const onLogout = () => {
     cancelButtonText: t("common.cancel"),
   })
     .then(() => {
+      // 主动登出后不再自动登录回原账号(仅本次启动生效)
+      markAutoLoginTried();
       clearAuth();
       showToast({ message: t("settings.logoutDone"), icon: "success" });
       router.replace("/login");

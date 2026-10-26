@@ -17,6 +17,7 @@ export const CLIENT_CONFIG_KEYS = {
   doNotDisturbEnd: "app.do_not_disturb_end",
   autoDownloadWifi: "app.auto_download_wifi",
   autoDownloadCellular: "app.auto_download_cellular",
+  appAutoLogin: "app.auto_login",
 } as const;
 
 /** 客户端配置项 */

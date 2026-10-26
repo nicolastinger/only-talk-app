@@ -17,6 +17,7 @@ import {
 } from "@workspace/types";
 import {
   getApiBase,
+  getConfig,
   setConfig,
   getFiles,
   get_cached_user_info_by_account,
@@ -30,6 +31,7 @@ import {
 } from "@workspace/services";
 import { useAuthStore } from "@/stores/auth";
 import { parseResponse } from "@/utils/api";
+import { hasTriedAutoLogin, markAutoLoginTried } from "@/utils/autoLogin";
 import { useI18n } from "@/i18n";
 
 const router = useRouter();
@@ -176,31 +178,56 @@ const handleDeleteUser = async () => {
   }
 };
 
-const handleQuickLogin = async () => {
-  const user = currentQuickUser.value;
-  if (!user?.refresh_token) return;
+/** 用指定免登录账号换 token 登录, 返回是否成功(成功后已进入应用) */
+const quickLogin = async (user: QuickLoginUser | null): Promise<boolean> => {
+  if (!user?.refresh_token) return false;
   quickLoginLoading.value = true;
-  const failQuickLogin = () => {
-    showQuickLogin.value = false;
-    showToast({ message: t("login.quickLoginFailed"), icon: "fail" });
-  };
   try {
     const response: HttpResponse = await invoke("quick_login", {
       refreshToken: user.refresh_token,
       url: getApiBase(),
     });
     const data: ResponseData = JSON.parse(response.body);
-    if (isBackendSuccess(data.code)) {
-      await enterApp();
-    } else {
-      failQuickLogin();
-    }
+    if (!isBackendSuccess(data.code)) return false;
+    await enterApp();
+    return true;
   } catch (error) {
     console.log(error);
-    failQuickLogin();
+    return false;
   } finally {
     quickLoginLoading.value = false;
   }
+};
+
+const handleQuickLogin = async () => {
+  const user = currentQuickUser.value;
+  if (!user?.refresh_token) return;
+  if (await quickLogin(user)) return;
+  showQuickLogin.value = false;
+  showToast({ message: t("login.quickLoginFailed"), icon: "fail" });
+};
+
+/**
+ * 打开应用自动登录第一个账号(免登录列表中最近使用的那一个)。
+ * 每次启动只尝试一次; 设置-通用中可关闭(app.auto_login = "0")。
+ */
+const tryAutoLogin = async () => {
+  if (hasTriedAutoLogin()) return;
+  const first = quickUsers.value[0];
+  if (!first?.refresh_token) return;
+  if (getConfig(CLIENT_CONFIG_KEYS.appAutoLogin) === "0") return;
+  markAutoLoginTried();
+  currentUserIndex.value = 0;
+  showLoadingToast({
+    message: t("login.autoLoggingIn"),
+    forbidClick: true,
+    duration: 0,
+  });
+  const ok = await quickLogin(first);
+  if (ok) return; // enterApp 已关闭 loading 并跳转
+  closeToast();
+  // 自动登录失败时保留免登录界面, 用户可换账号或改用密码登录
+  showToast({ message: t("login.quickLoginFailed"), icon: "fail" });
 };
 
 const toPasswordLogin = () => {
@@ -399,10 +426,12 @@ const onLogin = async () => {
 
 /** 打开官网隐私协议页面 */
 const onOpenPrivacy = () => void openExternalUrl(PRIVACY_POLICY_URL);
-onMounted(() => {
+onMounted(async () => {
   clearAuth();
   accountAvatar.value = null;
-  loadQuickUsers();
+  await loadQuickUsers();
+  // 打开应用默认登录第一个账号(最近使用); 失败则留在登录页
+  await tryAutoLogin();
 });
 </script>
 

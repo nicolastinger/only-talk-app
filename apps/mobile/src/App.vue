@@ -16,6 +16,7 @@ import {
   useUnreadStore,
 } from "@/stores/unread";
 import { useAuthStore } from "@/stores/auth";
+import { markAutoLoginTried } from "@/utils/autoLogin";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
 import { useMessageSound } from "@/hooks/useMessageSound";
@@ -167,6 +168,8 @@ onMounted(() => {
       closeOnClickOverlay: false,
     })
       .then(() => {
+        // 被顶下线后不要自动登录回同一账号(仅本次启动生效)
+        markAutoLoginTried();
         clearAuth();
         router.replace("/login");
       })

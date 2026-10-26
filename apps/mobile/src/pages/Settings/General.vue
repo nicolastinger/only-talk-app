@@ -6,14 +6,17 @@ import {
   deleteChatBackground,
   getAutoDownloadOnWifi,
   getAutoDownloadOnCellular,
+  getConfig,
   importChatBackground,
   pickChatBackgroundImage,
   resolveChatBackgroundUrl,
   setActiveChatBackground,
   setAutoDownloadOnWifi,
   setAutoDownloadOnCellular,
+  setConfig,
   type ChatBackgroundVo,
 } from "@workspace/services";
+import { CLIENT_CONFIG_KEYS } from "@workspace/types";
 import { useTheme, type ChatsFontSize, type ThemeMode } from "@/stores/theme";
 import { useChatBackgroundStore } from "@/stores/chatBackground";
 import { useI18n, type Locale } from "@/i18n";
@@ -44,6 +47,15 @@ getAutoDownloadOnCellular()
 const setAutoDownloadCellular = (value: boolean) => {
   autoDownloadCellular.value = value;
   setAutoDownloadOnCellular(value).catch(() => {});
+};
+
+// 打开应用自动登录(公共库 client_config: app.auto_login, 未设置时默认开启)
+const autoLogin = ref(getConfig(CLIENT_CONFIG_KEYS.appAutoLogin) !== "0");
+const setAutoLogin = (value: boolean) => {
+  autoLogin.value = value;
+  setConfig(CLIENT_CONFIG_KEYS.appAutoLogin, value ? "1" : "0").catch(
+    () => {}
+  );
 };
 
 const themeOptions: { value: ThemeMode; key: string }[] = [
@@ -323,6 +335,24 @@ const handleBackgroundDelete = async (id: number) => {
           :model-value="autoDownloadCellular"
           size="22px"
           @update:model-value="setAutoDownloadCellular"
+        />
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="switch-row">
+        <div class="switch-text">
+          <span class="section-title inline">
+            {{ t("settings.generalSettings.autoLogin") }}
+          </span>
+          <p class="desc inline">
+            {{ t("settings.generalSettings.autoLoginDesc") }}
+          </p>
+        </div>
+        <van-switch
+          :model-value="autoLogin"
+          size="22px"
+          @update:model-value="setAutoLogin"
         />
       </div>
     </div>
