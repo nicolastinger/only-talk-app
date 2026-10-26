@@ -48,6 +48,7 @@ import {
 } from "@/chat/messageParse";
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
+import { collectCopyableText, copyTextToClipboard } from "@/chat/clipboard";
 import { useMessageSelection } from "@/chat/useMessageSelection";
 import type { VoiceRecordingResult } from "@/chat/useVoiceRecorder";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -277,6 +278,23 @@ const showForward = ref(false);
 const openForward = () => {
   if (selectedMessages.value.length === 0) return;
   showForward.value = true;
+};
+
+/** 多选复制: 仅复制文本消息(图片/文件/语音跳过), 没有文字时提示 */
+const copySelected = async () => {
+  const text = collectCopyableText(selectedMessages.value);
+  if (!text) {
+    showToast(t("chat.noCopyableText"));
+    return;
+  }
+  try {
+    await copyTextToClipboard(text);
+    showToast({ message: t("chat.copySuccess"), icon: "success" });
+    exitSelect();
+  } catch (e) {
+    console.error("复制消息失败:", e);
+    showToast({ message: t("chat.copyFailed"), icon: "fail" });
+  }
 };
 
 const onActionSelect = (action: { key?: string; name: string }) => {
@@ -1106,6 +1124,7 @@ const handleAvatarClick = ({
         :all-selected="allSelected"
         @cancel="exitSelect"
         @toggle-all="toggleAll"
+        @copy="copySelected"
         @forward="openForward"
         @delete="deleteSelected"
       />

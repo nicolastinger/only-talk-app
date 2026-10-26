@@ -5,6 +5,7 @@ const props = defineProps<{ count: number; allSelected: boolean }>();
 const emit = defineEmits<{
   (e: "cancel"): void;
   (e: "toggle-all"): void;
+  (e: "copy"): void;
   (e: "forward"): void;
   (e: "delete"): void;
 }>();
@@ -21,21 +22,29 @@ const { t } = useI18n();
     <button class="sel-text" @click="emit('cancel')">
       {{ t("common.cancel") }}
     </button>
-    <div class="sel-spacer" />
-    <button
-      class="sel-action"
-      :disabled="count === 0"
-      @click="emit('forward')"
-    >
-      {{ t("chat.actions.forward") }}<i v-if="count">({{ count }})</i>
-    </button>
-    <button
-      class="sel-action danger"
-      :disabled="count === 0"
-      @click="emit('delete')"
-    >
-      {{ t("chat.actions.delete") }}<i v-if="count">({{ count }})</i>
-    </button>
+    <div class="sel-actions">
+      <button
+        class="sel-action"
+        :disabled="count === 0"
+        @click="emit('copy')"
+      >
+        {{ t("chat.actions.copy") }}<i v-if="count">({{ count }})</i>
+      </button>
+      <button
+        class="sel-action"
+        :disabled="count === 0"
+        @click="emit('forward')"
+      >
+        {{ t("chat.actions.forward") }}<i v-if="count">({{ count }})</i>
+      </button>
+      <button
+        class="sel-action danger"
+        :disabled="count === 0"
+        @click="emit('delete')"
+      >
+        {{ t("chat.actions.delete") }}<i v-if="count">({{ count }})</i>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -43,8 +52,8 @@ const { t } = useI18n();
 .selection-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 16px;
+  gap: 12px;
+  padding: 10px 12px;
   padding-bottom: max(10px, env(safe-area-inset-bottom));
   background: var(--header-bg);
   backdrop-filter: blur(20px);
@@ -55,6 +64,7 @@ const { t } = useI18n();
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
   background: transparent;
   border: none;
   color: var(--text-secondary);
@@ -73,16 +83,26 @@ const { t } = useI18n();
     box-shadow: inset 0 0 0 3px var(--surface);
   }
 }
-.sel-spacer {
-  flex: 1;
+.sel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 .sel-action {
-  padding: 8px 16px;
+  flex-shrink: 0;
+  padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid var(--border-medium);
   background: var(--surface);
   color: var(--brand-blue);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   i {

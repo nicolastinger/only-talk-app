@@ -762,6 +762,7 @@ const messages: LocaleMessages = {
     "recalled": "recalled a message",
     "actions": {
       "multiSelect": "Multi-select",
+      "copy": "Copy",
       "forward": "Forward",
       "recall": "Recall",
       "delete": "Delete",
@@ -773,6 +774,9 @@ const messages: LocaleMessages = {
     "deleteFailed": "Failed to delete",
     "forwardSuccess": "Forwarded to {name}",
     "forwardFailed": "Forward failed",
+    "copySuccess": "Copied",
+    "copyFailed": "Copy failed",
+    "noCopyableText": "No text to copy in the selected messages",
     "sendFailed": "Failed to send, tap the message to retry",
     "readFileFailed": "Failed to read file",
     "sendImageFailed": "Failed to send image",

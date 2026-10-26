@@ -8,6 +8,7 @@ interface MessageSelectionBarProps {
   allSelected: boolean;
   onToggleAll: () => void;
   onCancel: () => void;
+  onCopy: () => void;
   onForward: () => void;
   onDelete: () => void;
 }
@@ -17,6 +18,7 @@ const MessageSelectionBar: React.FC<MessageSelectionBarProps> = ({
   allSelected,
   onToggleAll,
   onCancel,
+  onCopy,
   onForward,
   onDelete,
 }) => {
@@ -35,6 +37,10 @@ const MessageSelectionBar: React.FC<MessageSelectionBarProps> = ({
         {intl.formatMessage({ id: 'chat.messageActions.cancel' })}
       </Button>
       <div className={styles.spacer} />
+      <Button disabled={count === 0} onClick={onCopy}>
+        {intl.formatMessage({ id: 'chat.messageActions.copy' })}
+        {count > 0 ? `(${count})` : ''}
+      </Button>
       <Button type="primary" disabled={count === 0} onClick={onForward}>
         {intl.formatMessage({ id: 'chat.messageActions.forward' })}
         {count > 0 ? `(${count})` : ''}

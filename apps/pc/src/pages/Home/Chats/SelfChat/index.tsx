@@ -3,6 +3,7 @@ import {
   useMessageSelection,
 } from '@/hooks/useMessageSelection';
 import { useBearStore } from '@/store/store';
+import { collectCopyableText } from '@/utils/messageText';
 import { invoke } from '@tauri-apps/api/core';
 import { useIntl, useLocation } from '@umijs/max';
 import { listenChatFileUploadProgress } from '@workspace/services';
@@ -230,6 +231,24 @@ const SelfChatPage: React.FC = () => {
     },
     [intl],
   );
+
+  const copySelected = useCallback(async () => {
+    const text = collectCopyableText(
+      selectedMessages.map((m) => m.text_msg_raw),
+    );
+    if (!text) {
+      message.info(intl.formatMessage({ id: 'chat.noCopyableText' }));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success(intl.formatMessage({ id: 'chat.messageActions.copied' }));
+      exitSelect();
+    } catch (err) {
+      console.error(err);
+      message.error(intl.formatMessage({ id: 'chat.copyFailed' }));
+    }
+  }, [selectedMessages, intl, exitSelect]);
 
   const deleteMessages = useCallback(
     async (ids: string[]) => {
@@ -505,6 +524,7 @@ const SelfChatPage: React.FC = () => {
             allSelected={allSelected}
             onToggleAll={toggleAll}
             onCancel={exitSelect}
+            onCopy={copySelected}
             onForward={() => openForward(selectedMessages)}
             onDelete={() => confirmDelete([...selectedIds])}
           />

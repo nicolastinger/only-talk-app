@@ -238,6 +238,29 @@ export const needTimeDivider = (
   return Math.abs(currentTimestamp - prevTimestamp) >= 10 * 60 * 1000;
 };
 
+/**
+ * 消息的纯文本内容（仅文本类消息；非文本类型返回空串）。
+ *
+ * 与 `parsePrivateText` / `parseGroupText` 不同：这里不带「空消息」等占位文案，
+ * 供多选复制等需要原始文本的场景使用。
+ */
+export const getCopyableText = (textType: number, raw: string): string => {
+  if (textType === MSG_TYPE_TEXT) {
+    if (isLocalFilePath(raw)) return "";
+    const parsed = tryParseJson<{ text?: string; content?: string }>(raw);
+    return parsed?.text || parsed?.content || raw;
+  }
+  if (textType === MSG_TYPE_GROUP_TEXT) {
+    if (isLocalFilePath(raw)) return "";
+    const outer = unwrapGroupOuter(raw);
+    const inner = outer ? outer.text : raw;
+    if (!inner) return "";
+    const nested = tryParseJson<{ text?: string }>(inner);
+    return typeof nested?.text === "string" ? nested.text : inner;
+  }
+  return "";
+};
+
 /** 判断某条消息是否需要按“自己发送/回执状态”渲染（mine 判定复用） */
 export const isMineMessage = (
   msg: TextQuicMsgVo,

@@ -762,6 +762,7 @@ const messages: LocaleMessages = {
     "recalled": "撤回了一条消息",
     "actions": {
       "multiSelect": "多选",
+      "copy": "复制",
       "forward": "转发",
       "recall": "撤回",
       "delete": "删除",
@@ -773,6 +774,9 @@ const messages: LocaleMessages = {
     "deleteFailed": "删除失败",
     "forwardSuccess": "已转发到 {name}",
     "forwardFailed": "转发失败",
+    "copySuccess": "已复制",
+    "copyFailed": "复制失败",
+    "noCopyableText": "选中的消息没有可复制的文字",
     "sendFailed": "发送失败，点击消息重试",
     "readFileFailed": "读取文件失败",
     "sendImageFailed": "图片发送失败",
