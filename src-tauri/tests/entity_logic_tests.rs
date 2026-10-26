@@ -7,8 +7,8 @@ use app_lib::models::entity::chat_session::ChatSession;
 use app_lib::models::bo::quic_connection::{ConnectionType, FirstQuicMsg};
 use app_lib::models::bo::text_msg::{HeadMsg, TextMsg, TextQuicMsg};
 use app_lib::service::chat_service::{
-    group_raw_to_private, normalize_for_target, private_raw_to_group, GroupFileRecord,
-    GroupImageRecord, GroupTextRecord,
+    extract_biz_id, group_raw_to_private, normalize_for_target, private_raw_to_group,
+    replace_biz_id, GroupFileRecord, GroupImageRecord, GroupTextRecord,
 };
 use app_lib::utils::message_types::{
     MSG_TYPE_FILE, MSG_TYPE_GROUP_FILE, MSG_TYPE_GROUP_IMAGE, MSG_TYPE_GROUP_TEXT, MSG_TYPE_IMAGE,
@@ -414,6 +414,74 @@ fn convert_rejects_unsupported_type_and_bad_json() {
     // 非法 JSON
     assert!(normalize_for_target(MSG_TYPE_TEXT, "not-json", true, "me").is_err());
     assert!(group_raw_to_private(MSG_TYPE_GROUP_TEXT, "not-json").is_err());
+}
+
+// ---------- 转发文件 biz 重新签发(extract_biz_id / replace_biz_id) ----------
+
+#[test]
+fn extract_biz_id_reads_file_messages_only() {
+    assert_eq!(
+        extract_biz_id(MSG_TYPE_IMAGE, &private_image_json("biz-a")).as_deref(),
+        Some("biz-a")
+    );
+    assert_eq!(
+        extract_biz_id(MSG_TYPE_FILE, &private_file_json("biz-b")).as_deref(),
+        Some("biz-b")
+    );
+    assert_eq!(
+        extract_biz_id(MSG_TYPE_GROUP_IMAGE, &group_image_inner("biz-c")).as_deref(),
+        Some("biz-c")
+    );
+    assert_eq!(
+        extract_biz_id(MSG_TYPE_GROUP_FILE, &group_file_inner("biz-d")).as_deref(),
+        Some("biz-d")
+    );
+    // 文本消息没有文件
+    assert_eq!(extract_biz_id(MSG_TYPE_TEXT, &private_text_json("hi")), None);
+    // 非法 JSON 不 panic, 视为无文件
+    assert_eq!(extract_biz_id(MSG_TYPE_IMAGE, "not-json"), None);
+}
+
+#[test]
+fn replace_biz_id_rewrites_private_image_and_keeps_others() {
+    let raw = private_image_json("old-biz");
+    let out = replace_biz_id(MSG_TYPE_IMAGE, &raw, "new-biz").expect("替换失败");
+    let record = ImageRecord::deserialize(&out).expect("反序列化失败");
+    assert_eq!(record.biz_id, "new-biz");
+    // 其余字段原样保留
+    assert_eq!(record.file_name, "a.png");
+    assert_eq!(record.img_width, 640);
+    assert_eq!(record.prev_id, "prev");
+}
+
+#[test]
+fn replace_biz_id_rewrites_group_file_inner() {
+    let raw = group_file_inner("old-biz");
+    let out = replace_biz_id(MSG_TYPE_GROUP_FILE, &raw, "new-biz").expect("替换失败");
+    let record = GroupFileRecord::deserialize(&out).expect("反序列化失败");
+    assert_eq!(record.biz_id, "new-biz");
+    assert_eq!(record.file_name, "doc.pdf");
+    assert_eq!(record.send_user, "sender");
+}
+
+#[test]
+fn replace_biz_id_keeps_text_untouched() {
+    let raw = private_text_json("hi");
+    let out = replace_biz_id(MSG_TYPE_TEXT, &raw, "new-biz").expect("替换失败");
+    assert_eq!(out, raw);
+}
+
+#[test]
+fn replace_biz_id_after_normalize_targets_group_format() {
+    // 单聊图片转群聊后是群内层格式, 换 biz 后仍应保持可解析
+    let (text_type, inner) =
+        normalize_for_target(MSG_TYPE_IMAGE, &private_image_json("old-biz"), true, "me")
+            .expect("互转失败");
+    assert_eq!(text_type, MSG_TYPE_GROUP_IMAGE);
+    let out = replace_biz_id(text_type, &inner, "new-biz").expect("替换失败");
+    let record = GroupImageRecord::deserialize(&out).expect("反序列化失败");
+    assert_eq!(record.biz_id, "new-biz");
+    assert_eq!(record.send_user, "me");
 }
 
 #[test]

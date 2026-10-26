@@ -231,7 +231,8 @@ pub async fn delete_group_chat_record(
     delete_group_chat_record_service(nano_id_list, group_id).await.map_err(|e| e.to_string())
 }
 
-/// 逐条转发消息到目标（好友或群），复用原始 biz_id，不重新上传
+/// 逐条转发消息到目标（好友或群）。
+/// 图片/文件/语音复用原文件，但会先请求服务端为目标重新签发 biz_id（不重新上传）。
 #[tauri::command]
 pub async fn forward_chat_messages(
     messages: Vec<TextQuicMsgVo>,

@@ -6,7 +6,8 @@
 //! - 群聊(raw)：外层 `GroupTextRecord` JSON `{"text":"<内层>","send_user":"..."}`，
 //!   其中内层 `text`：文本为纯文本，图片/文件为 `GroupImageRecord` / `GroupFileRecord` JSON。
 //!
-//! 转发时**复用 `biz_id` 不重新上传**；仅重建记录结构与消息类型。
+//! 转发时**不重新上传文件**：先由服务端为转发目标重新签发 `biz_id`（新建 chat_biz_record，
+//! 复用同一批文件关联），再用新 biz 改写 raw，见 [`extract_biz_id`] / [`replace_biz_id`]。
 
 use anyhow::anyhow;
 
@@ -164,4 +165,65 @@ pub fn normalize_for_target(
             Ok((origin_text_type, outer.text))
         }
     }
+}
+
+/// 取出消息引用的文件业务 id（图片/文件/语音），无文件消息（文本等）返回 `None`。
+///
+/// 入参 `raw` 必须是**目标会话格式**，即 [`normalize_for_target`] 的输出：
+/// 单聊为目标单聊记录，群聊为群聊内层记录（不含外层 `GroupTextRecord`）。
+pub fn extract_biz_id(text_type: u16, raw: &str) -> Option<String> {
+    let biz_id = match text_type {
+        MSG_TYPE_IMAGE => ImageRecord::deserialize(raw).ok()?.biz_id,
+        MSG_TYPE_FILE => FileRecord::deserialize(raw).ok()?.biz_id,
+        MSG_TYPE_VOICE => VoiceRecord::deserialize(raw).ok()?.biz_id,
+        MSG_TYPE_GROUP_IMAGE => GroupImageRecord::deserialize(raw).ok()?.biz_id,
+        MSG_TYPE_GROUP_FILE => GroupFileRecord::deserialize(raw).ok()?.biz_id,
+        MSG_TYPE_GROUP_VOICE => GroupVoiceRecord::deserialize(raw).ok()?.biz_id,
+        _ => return None,
+    };
+    (!biz_id.is_empty()).then_some(biz_id)
+}
+
+/// 把消息 raw 中引用的 `biz_id` 替换为服务端为本次转发目标新签发的 biz。
+///
+/// 仅图片/文件/语音需要处理；文本等其他类型原样返回。入参 `raw` 与
+/// [`extract_biz_id`] 一致，必须是目标会话格式（`normalize_for_target` 的输出）。
+pub fn replace_biz_id(
+    text_type: u16,
+    raw: &str,
+    new_biz_id: &str,
+) -> Result<String, anyhow::Error> {
+    Ok(match text_type {
+        MSG_TYPE_IMAGE => {
+            let mut record = ImageRecord::deserialize(raw)?;
+            record.biz_id = new_biz_id.to_string();
+            record.json_serialize()?
+        }
+        MSG_TYPE_FILE => {
+            let mut record = FileRecord::deserialize(raw)?;
+            record.biz_id = new_biz_id.to_string();
+            record.json_serialize()?
+        }
+        MSG_TYPE_VOICE => {
+            let mut record = VoiceRecord::deserialize(raw)?;
+            record.biz_id = new_biz_id.to_string();
+            record.json_serialize()?
+        }
+        MSG_TYPE_GROUP_IMAGE => {
+            let mut record = GroupImageRecord::deserialize(raw)?;
+            record.biz_id = new_biz_id.to_string();
+            record.json_serialize()?
+        }
+        MSG_TYPE_GROUP_FILE => {
+            let mut record = GroupFileRecord::deserialize(raw)?;
+            record.biz_id = new_biz_id.to_string();
+            record.json_serialize()?
+        }
+        MSG_TYPE_GROUP_VOICE => {
+            let mut record = GroupVoiceRecord::deserialize(raw)?;
+            record.biz_id = new_biz_id.to_string();
+            record.json_serialize()?
+        }
+        _ => raw.to_string(),
+    })
 }

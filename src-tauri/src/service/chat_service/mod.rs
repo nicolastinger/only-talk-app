@@ -8,7 +8,7 @@
 //! - [`send`]：单聊发送管道（持久化 / 重发 / 补发 / 通话控制 / WebRTC 信令）
 //! - [`group`]：群聊发送
 //! - [`media`]：图片/文件上传与压缩
-//! - [`forward`]：消息转发
+//! - [`forward`]：消息转发（图片/文件/语音先向服务端为转发目标重新签发 biz）
 //! - [`recall`]：撤回与本地撤回核对
 //! - [`message_convert`]：单聊/群聊 raw 互转
 
@@ -28,7 +28,10 @@ pub use group::{
     GroupVoiceRecord,
 };
 pub use media::{send_file_msg_service, send_image_msg_service, send_voice_msg_service};
-pub use message_convert::{group_raw_to_private, normalize_for_target, private_raw_to_group};
+pub use message_convert::{
+    extract_biz_id, group_raw_to_private, normalize_for_target, private_raw_to_group,
+    replace_biz_id,
+};
 pub use recall::{
     recall_chat_message_service, recall_group_chat_message_service, reconcile_group_recalls,
     reconcile_single_recalls, resolve_group_recall_target, resolve_single_recall_target,
