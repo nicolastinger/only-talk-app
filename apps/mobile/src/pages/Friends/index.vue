@@ -510,11 +510,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--glass-border);
   border-radius: 50%;
-  background: var(--surface);
+  background: var(--glass-bg);
   color: var(--brand-blue);
   box-shadow: var(--shadow-xs);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: all var(--transition-fast);
@@ -538,13 +540,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  padding: 11px 16px;
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-xs);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   &:active {
     background: var(--surface-hover);
   }
@@ -566,17 +570,19 @@ onUnmounted(() => {
   display: flex;
   gap: 4px;
   padding: 4px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-xs);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 .seg-tab {
   flex: 1;
   height: 34px;
   border: none;
-  border-radius: calc(var(--radius-lg) - 5px);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-secondary);
   font-size: 14px;
@@ -589,7 +595,7 @@ onUnmounted(() => {
     background: var(--gradient-primary);
     color: #fff;
     font-weight: 600;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 6px 16px rgba(74, 144, 255, 0.32);
   }
 }
 
@@ -602,9 +608,9 @@ onUnmounted(() => {
   flex-direction: column;
   margin: 0 12px 12px;
   background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -684,9 +690,9 @@ onUnmounted(() => {
   flex-direction: column;
   margin: 0 12px 12px;
   background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 

@@ -19,8 +19,8 @@ const FONT_SCALE: Record<ChatsFontSize, string> = {
 
 /** 与 theme.css 的 --page-bg 保持一致，用于无 View Transitions 时的遮罩兜底 */
 const PAGE_BG: Record<EffectiveTheme, string> = {
-  light: "#f5f8fd",
-  dark: "#1a1a1a",
+  light: "#edf3fd",
+  dark: "#0b0f17",
 };
 
 const getSystemTheme = (): EffectiveTheme =>

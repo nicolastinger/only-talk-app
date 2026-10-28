@@ -601,12 +601,14 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  padding: 8px 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  padding: 9px 16px;
   transition: all var(--transition-normal);
   box-shadow: var(--shadow-xs);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 
   &:focus-within {
     border-color: var(--brand-blue);
@@ -655,9 +657,9 @@ const hasResolvedAvatar = (item: ChatSessionVo) => {
   flex-direction: column;
   margin: 12px 12px 12px;
   background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 

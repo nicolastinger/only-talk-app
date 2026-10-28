@@ -292,8 +292,11 @@ const goToFiles = () => {
   border-radius: var(--radius-xl);
   overflow: hidden;
   position: relative;
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-md);
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 .user-bg {
@@ -372,7 +375,7 @@ const goToFiles = () => {
   padding: 12px 16px;
   cursor: pointer;
   background: var(--surface);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
   transition: background 0.2s ease;
@@ -411,9 +414,9 @@ const goToFiles = () => {
   margin: 0 16px 12px;
   background: var(--surface);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--glass-border);
   overflow: hidden;
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
 }
 
 .menu-item {

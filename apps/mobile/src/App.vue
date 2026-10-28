@@ -246,7 +246,7 @@ body {
   min-height: 100vh;
   background: var(
     --page-bg,
-    linear-gradient(180deg, #e8f4fd 0%, #f0f6ff 30%, #ffffff 100%)
+    linear-gradient(180deg, #f8fbff 0%, #edf3fd 100%)
   );
 }
 
