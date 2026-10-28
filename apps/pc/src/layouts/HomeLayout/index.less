@@ -1,31 +1,43 @@
 .userHomeContainer {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-flow: row nowrap;
+  gap: 0;
+  padding: 0;
+  box-sizing: border-box;
   justify-content: center;
   align-items: center;
+  background: transparent;
 }
 
 .leftSideBar {
-  width: 68px;
+  flex: 0 0 72px;
+  width: 72px;
   height: 100%;
-  background: var(--sidebar-bg-gradient);
+  background: transparent;
 }
 
 .rightSideBar {
-  width: calc(100% - 68px);
+  flex: 1;
+  min-width: 0;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--glass-border);
+  background: var(--shell-bg);
 }
 
 .rightSideBarTool {
   width: 100%;
-  height: 40px;
+  height: 44px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: row;
-  background-color: var(--sidebar-bg);
+  background-color: transparent;
   color: var(--text-color);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--glass-border-soft);
   position: relative;
   transition:
     background-color 0.3s ease,
@@ -33,12 +45,12 @@
     color 0.3s ease;
 
   .tools {
-    padding: 4px;
+    padding: 4px 8px;
     height: 100%;
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     transition: all 0.3s ease;
     min-width: fit-content;
   }
@@ -126,21 +138,24 @@
 .rightButton,
 .rightButtonDanger {
   color: var(--color-gray-10);
-  width: 40px;
+  width: 38px;
   font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
+  height: 32px;
+  border-radius: 10px;
   cursor: default;
   transition:
     background-color 0.2s ease,
-    color 0.2s ease;
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .rightButton:hover {
-  background-color: var(--acai-primary);
-  color: var(--color-white-11);
+  background-color: var(--glass-bg-dark);
+  color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 .rightButtonDanger:hover {
@@ -153,7 +168,8 @@
 }
 
 .rightSideBarContent {
-  height: calc(100% - 40px);
+  height: calc(100% - 44px);
+  overflow: hidden;
 }
 
 @keyframes tip-pulse {

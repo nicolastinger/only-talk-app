@@ -2,12 +2,13 @@
   position: absolute;
   z-index: 2147483000;
   min-width: 120px;
-  padding: 4px;
+  padding: 6px;
   margin: 0;
-  background: var(--surface, #fff);
-  border: 1px solid var(--border-light, rgba(0, 0, 0, 8%));
-  border-radius: 8px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 16%);
+  background: var(--glass-bg-dark);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--glass-shadow-lg);
+  backdrop-filter: var(--glass-blur);
   animation: menu-fade 0.12s ease-out;
   will-change: left, top;
 }
@@ -28,7 +29,7 @@
   padding: 8px 14px;
   font-size: 13px;
   color: var(--text-primary, #333);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s ease;

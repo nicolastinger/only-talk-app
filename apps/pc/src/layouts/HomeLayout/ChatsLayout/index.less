@@ -4,8 +4,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
-  background: var(--glass-bg-light);
-  backdrop-filter: var(--glass-blur);
+  background: transparent;
   flex-direction: row;
 }
 
@@ -25,9 +24,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid var(--border-light);
+  background: transparent;
+  border-bottom: 1px solid var(--glass-border-soft);
 }
 
 .headerTool {
@@ -41,15 +39,13 @@
 .left {
   width: auto !important;
   overflow: hidden;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  border-right: 1px solid var(--border-light);
+  background: var(--glass-bg-light);
+  border-right: 1px solid var(--glass-border-soft);
 }
 
 .right {
   width: calc(100% - 280px);
-  background: var(--glass-bg-light);
-  backdrop-filter: var(--glass-blur);
+  background: transparent;
 }
 
 .item {
@@ -96,12 +92,12 @@
   position: fixed;
   z-index: 1000;
   min-width: 150px;
-  padding: 4px;
-  background: var(--glass-bg);
+  padding: 6px;
+  background: var(--glass-bg-dark);
   backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 12%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--glass-shadow-lg);
 }
 
 .contextMenuItem {

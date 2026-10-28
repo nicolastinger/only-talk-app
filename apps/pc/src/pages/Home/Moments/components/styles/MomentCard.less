@@ -1,9 +1,11 @@
 .card {
   position: relative;
   width: 100%;
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   background: var(--card-bg, #fff);
-  box-shadow: 0 2px 12px rgba(74, 144, 255, 6%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-sm);
+  backdrop-filter: var(--glass-blur);
   overflow: hidden;
   cursor: pointer;
   animation: card-in 0.35s ease-out backwards;
@@ -12,7 +14,7 @@
 
   &:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(74, 144, 255, 14%);
+    box-shadow: var(--glass-shadow);
   }
 }
 

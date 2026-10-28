@@ -107,7 +107,7 @@
   max-width: 100%;
   min-width: 40px;
   min-height: 40px;
-  color: #333;
+  color: var(--text-primary);
   border-radius: 18px 18px 18px 4px;
   display: flex;
   align-items: center;
@@ -118,8 +118,8 @@
   line-height: 1.6;
   overflow: hidden;
   padding: 5px 7px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 6%);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 8%), 0 4px 20px rgba(0, 0, 0, 5%);
   transition: all 0.3s ease;
   position: relative;
@@ -132,7 +132,7 @@
     bottom: 8px;
     width: 0;
     height: 0;
-    border-right: 8px solid #fff;
+    border-right: 8px solid var(--glass-bg);
     border-top: 6px solid transparent;
     border-bottom: 6px solid transparent;
   }
@@ -144,7 +144,7 @@
     bottom: 8px;
     width: 0;
     height: 0;
-    border-right: 9px solid rgba(0, 0, 0, 6%);
+    border-right: 9px solid var(--glass-border);
     border-top: 7px solid transparent;
     border-bottom: 7px solid transparent;
     z-index: -1;

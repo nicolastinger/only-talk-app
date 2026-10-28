@@ -1,10 +1,11 @@
 .modal {
   :global(.ant-modal-content) {
     padding: 0;
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     background: var(--glass-bg-dark);
+    border: 1px solid var(--glass-border);
     backdrop-filter: var(--glass-blur);
-    box-shadow: var(--shadow-xl);
+    box-shadow: var(--glass-shadow-lg);
     overflow: hidden;
   }
 
@@ -118,9 +119,9 @@
 }
 
 .contentCard {
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  background: var(--color-white-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
   padding: 20px;
 }
 

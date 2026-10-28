@@ -1,7 +1,11 @@
 [
   {
     "name": "--bg-color",
-    "value": "white"
+    "value": "#e4edfb"
+  },
+  {
+    "name": "--app-bg",
+    "value": "radial-gradient(120% 80% at 0% 0%, #d5e5ff 0%, rgba(213, 229, 255, 0%) 58%), radial-gradient(110% 70% at 100% 0%, #cfefff 0%, rgba(207, 239, 255, 0%) 55%), radial-gradient(130% 80% at 50% 100%, #e2d8ff 0%, rgba(226, 216, 255, 0%) 60%), linear-gradient(180deg, #f3f8ff 0%, #e4edfb 100%)"
   },
   {
     "name": "--text-color",
@@ -9,67 +13,107 @@
   },
   {
     "name": "--sidebar-bg-gradient",
-    "value": "linear-gradient(180deg, #4A90E2 0%, #FFFFFF 100%)"
+    "value": "linear-gradient(180deg, rgba(47, 111, 228, 0.94) 0%, rgba(26, 79, 208, 0.9) 100%)"
   },
   {
     "name": "--sidebar-bg",
-    "value": "rgb(220, 225, 230)"
+    "value": "transparent"
+  },
+  {
+    "name": "--shell-bg",
+    "value": "radial-gradient(120% 80% at 100% 0%, rgba(64, 150, 255, 0.1) 0%, rgba(64, 150, 255, 0) 55%), linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.38) 100%)"
   },
   {
     "name": "--glass-bg",
-    "value": "rgba(255, 255, 255, 0.8)"
+    "value": "rgba(255, 255, 255, 0.7)"
   },
   {
     "name": "--glass-bg-light",
-    "value": "rgba(255, 255, 255, 0.6)"
+    "value": "rgba(255, 255, 255, 0.5)"
   },
   {
     "name": "--glass-bg-dark",
-    "value": "rgba(255, 255, 255, 0.95)"
+    "value": "rgba(255, 255, 255, 0.9)"
   },
   {
-    "name": "--input-bg",
+    "name": "--glass-border",
     "value": "rgba(255, 255, 255, 0.8)"
   },
   {
+    "name": "--glass-border-soft",
+    "value": "rgba(31, 63, 120, 0.1)"
+  },
+  {
+    "name": "--glass-blur",
+    "value": "blur(22px) saturate(180%)"
+  },
+  {
+    "name": "--glass-sheen",
+    "value": "linear-gradient(150deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 45%)"
+  },
+  {
+    "name": "--glass-shadow",
+    "value": "0 20px 50px rgba(24, 52, 110, 0.18), 0 6px 16px rgba(24, 52, 110, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.85)"
+  },
+  {
+    "name": "--glass-shadow-sm",
+    "value": "0 10px 24px rgba(24, 52, 110, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.78)"
+  },
+  {
+    "name": "--glass-shadow-lg",
+    "value": "0 28px 68px rgba(24, 52, 110, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.78)"
+  },
+  {
+    "name": "--header-shadow",
+    "value": "0 6px 20px rgba(31, 63, 120, 0.08)"
+  },
+  {
+    "name": "--border-medium",
+    "value": "rgba(31, 63, 120, 0.14)"
+  },
+  {
+    "name": "--input-bg",
+    "value": "rgba(255, 255, 255, 0.72)"
+  },
+  {
     "name": "--input-bg-focus",
-    "value": "rgba(255, 255, 255, 0.95)"
+    "value": "rgba(255, 255, 255, 0.9)"
   },
   {
     "name": "--input-border",
-    "value": "rgba(0, 0, 0, 0.06)"
+    "value": "rgba(31, 63, 120, 0.1)"
   },
   {
     "name": "--search-bg",
-    "value": "var(--color-gray-light)"
+    "value": "rgba(255, 255, 255, 0.5)"
   },
   {
     "name": "--search-bg-focus",
-    "value": "var(--color-gray-lighter)"
+    "value": "rgba(255, 255, 255, 0.78)"
   },
   {
     "name": "--dropdown-bg",
-    "value": "#fff"
+    "value": "rgba(255, 255, 255, 0.9)"
   },
   {
     "name": "--border-light",
-    "value": "rgba(0, 0, 0, 0.05)"
+    "value": "rgba(31, 63, 120, 0.08)"
   },
   {
     "name": "--scrollbar-bg",
-    "value": "rgba(0, 0, 0, 0.1)"
+    "value": "rgba(31, 63, 120, 0.12)"
   },
   {
     "name": "--scrollbar-bg-hover",
-    "value": "rgba(0, 0, 0, 0.2)"
+    "value": "rgba(31, 63, 120, 0.22)"
   },
   {
     "name": "--item-hover-bg",
-    "value": "rgba(64, 150, 255, 0.05)"
+    "value": "rgba(64, 150, 255, 0.08)"
   },
   {
     "name": "--segmented-bg",
-    "value": "rgba(0, 0, 0, 0.04)"
+    "value": "rgba(255, 255, 255, 0.38)"
   },
   {
     "name": "--text-primary",
@@ -85,11 +129,11 @@
   },
   {
     "name": "--timestamp-text",
-    "value": "#999999"
+    "value": "#7a8799"
   },
   {
     "name": "--timestamp-bg",
-    "value": "rgba(255, 255, 255, 0.8)"
+    "value": "rgba(255, 255, 255, 0.72)"
   },
   {
     "name": "--color-white-bg",
@@ -101,19 +145,19 @@
   },
   {
     "name": "--color-gray-border-light",
-    "value": "rgba(0, 0, 0, 0.06)"
+    "value": "rgba(31, 63, 120, 0.08)"
   },
   {
     "name": "--scrollbar-thumb",
-    "value": "rgba(0, 0, 0, 0.2)"
+    "value": "rgba(31, 63, 120, 0.2)"
   },
   {
     "name": "--scrollbar-thumb-light",
-    "value": "rgba(0, 0, 0, 0.1)"
+    "value": "rgba(31, 63, 120, 0.1)"
   },
   {
     "name": "--scrollbar-thumb-hover",
-    "value": "rgba(0, 0, 0, 0.3)"
+    "value": "rgba(31, 63, 120, 0.3)"
   },
   {
     "name": "--color-info-bg",
@@ -125,27 +169,27 @@
   },
   {
     "name": "--shadow-sm",
-    "value": "0 2px 8px rgba(0, 0, 0, 0.08)"
+    "value": "0 6px 18px rgba(31, 63, 120, 0.09), 0 2px 6px rgba(31, 63, 120, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6)"
   },
   {
     "name": "--card-bg",
-    "value": "#fff"
+    "value": "rgba(255, 255, 255, 0.72)"
   },
   {
     "name": "--card-border",
-    "value": "rgba(0, 0, 0, 0.08)"
+    "value": "rgba(255, 255, 255, 0.8)"
   },
   {
     "name": "--divider-bg",
-    "value": "rgba(0, 0, 0, 0.06)"
+    "value": "rgba(31, 63, 120, 0.08)"
   },
   {
     "name": "--menu-hover-bg",
-    "value": "rgba(0, 0, 0, 0.04)"
+    "value": "rgba(64, 150, 255, 0.08)"
   },
   {
     "name": "--chat-bg-gradient",
-    "value": "linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%)"
+    "value": "linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 100%)"
   },
   {
     "name": "--chat-bg-overlay",

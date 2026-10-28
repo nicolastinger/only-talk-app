@@ -1,11 +1,11 @@
 .container {
   position: relative;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 8%);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-sm);
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   display: flex;
@@ -13,8 +13,8 @@
 
   &:hover {
     transform: translateY(-6px);
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 16%), 0 0 0 1px var(--bg-white-80);
-    border-color: rgba(255, 255, 255, 20%);
+    box-shadow: var(--glass-shadow);
+    border-color: rgba(255, 255, 255, 90%);
 
     .avatar {
       transform: scale(1.08);

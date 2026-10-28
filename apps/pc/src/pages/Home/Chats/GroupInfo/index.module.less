@@ -5,8 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--glass-bg-light);
-  backdrop-filter: var(--glass-blur);
+  background: transparent;
   position: relative;
   overflow: hidden;
 
@@ -37,9 +36,10 @@
   align-items: stretch;
   padding: 0 0 20px;
   background: var(--glass-bg);
-  border-radius: 24px;
-  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--bg-white-80);
-  border: 1px solid var(--border-white-lightest);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
   position: relative;
   overflow: hidden auto;
   scrollbar-width: none;

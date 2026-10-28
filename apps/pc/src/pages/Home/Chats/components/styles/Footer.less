@@ -4,11 +4,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 95%),
-    rgba(255, 255, 255, 90%)
-  );
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
   position: relative;
 }
 
@@ -30,7 +27,7 @@
 .header {
   width: 100%;
   height: 40px;
-  border-bottom: 1px solid rgba(0, 0, 0, 5%);
+  border-bottom: 1px solid var(--glass-border-soft);
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
 }
@@ -38,12 +35,11 @@
 .mainContainer {
   width: 100%;
   height: calc(100% - 40px);
-  border-left: 1px solid rgba(0, 0, 0, 5%);
+  border-left: 1px solid var(--glass-border-soft);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 20px;
-  background: var(--glass-bg-light);
-  backdrop-filter: var(--glass-blur);
+  background: transparent;
   scrollbar-width: thin;
   scrollbar-color: rgba(64, 150, 255, 30%) transparent;
 
@@ -120,7 +116,7 @@
 }
 
 .footer {
-  border-top: 1px solid rgba(0, 0, 0, 5%);
+  border-top: 1px solid var(--glass-border-soft);
   width: 100%;
   height: 100%;
   border-radius: 8px;

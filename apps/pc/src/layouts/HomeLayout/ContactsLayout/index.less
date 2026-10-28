@@ -4,8 +4,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
-  background: var(--glass-bg-light);
-  backdrop-filter: var(--glass-blur);
+  background: transparent;
   flex-direction: row;
 }
 
@@ -24,9 +23,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid rgba(0, 0, 0, 4%);
+  background: transparent;
+  border-bottom: 1px solid var(--glass-border-soft);
 }
 
 .headerTool {
@@ -41,17 +39,19 @@
   width: 100%;
   padding: 8px 12px;
   box-sizing: border-box;
-  background: var(--glass-bg);
+  background: transparent;
 
   :global {
     .ant-segmented {
-      background: rgba(0, 0, 0, 4%);
+      background: var(--glass-bg-light);
+      border: 1px solid var(--glass-border);
       padding: 3px;
-      border-radius: 10px;
+      border-radius: var(--radius-full);
+      box-shadow: var(--glass-shadow-sm);
     }
 
     .ant-segmented-item {
-      border-radius: 8px;
+      border-radius: var(--radius-full);
       transition: all 0.3s ease;
       color: var(--text-color-secondary);
       font-size: 13px;
@@ -65,7 +65,7 @@
       );
       color: #fff;
       font-weight: 500;
-      box-shadow: 0 2px 8px rgba(64, 150, 255, 30%);
+      box-shadow: 0 6px 16px rgba(64, 150, 255, 32%);
     }
 
     .ant-segmented-thumb {
@@ -74,16 +74,15 @@
         var(--color-primary) 0%,
         #4096ff 100%
       );
-      border-radius: 8px;
+      border-radius: var(--radius-full);
     }
   }
 }
 
 .left {
   width: 280px;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  border-right: 1px solid rgba(0, 0, 0, 4%);
+  background: var(--glass-bg-light);
+  border-right: 1px solid var(--glass-border-soft);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -120,8 +119,7 @@
 
 .right {
   width: calc(100% - 280px);
-  background: var(--glass-bg-light);
-  backdrop-filter: var(--glass-blur);
+  background: transparent;
 }
 
 .item {

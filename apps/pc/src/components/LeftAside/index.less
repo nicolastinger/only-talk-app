@@ -1,31 +1,36 @@
 .leftSideBar {
   width: 100%;
   height: 100%;
-  background: var(--bg-gradient-sidebar);
+  padding: 6px 0;
+  background: var(--sidebar-bg-gradient);
+  border-right: 1px solid rgba(255, 255, 255, 18%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 20%),
+    4px 0 24px rgba(9, 28, 80, 14%);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   justify-content: space-between;
+  overflow: hidden;
 
   .header {
     width: 100%;
     display: flex;
-    height: 40px;
+    height: 24px;
     align-items: center;
     justify-content: center;
     color: var(--acai-light);
   }
 
   .icon {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     transition: transform 0.3s ease;
     cursor: pointer;
   }
 
   .icon:hover {
-    transform: scale(1.1) rotate(5deg);
+    transform: scale(1.06);
   }
 
   .imgItem {
@@ -33,45 +38,46 @@
     height: 100%;
     border-radius: 50%;
     overflow: hidden;
-    border: 2px solid transparent;
+    border: 2px solid rgba(255, 255, 255, 70%);
+    box-shadow: var(--glass-shadow-sm);
     transition: all 0.3s ease;
   }
 
   .icon:hover .imgItem {
-    border-color: var(--color-info);
-    box-shadow: 0 0 10px rgba(24, 144, 255, 30%);
+    border-color: rgba(255, 255, 255, 92%);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 22%);
   }
 
   .iconBtn {
-    width: 40px;
-    height: 40px;
-    color: var(--color-white);
-    background: var(--bg-white-20);
-    border: 1px solid var(--border-white-lighter);
-    border-radius: 8px;
-    backdrop-filter: blur(5px);
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: rgba(255, 255, 255, 82%);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 4px var(--bg-black-20);
   }
 
   .iconBtn:hover {
     color: var(--color-white);
-    background: var(--bg-white-30);
-    border: 1px solid var(--border-white-lightest);
+    background: rgba(255, 255, 255, 16%);
+    border-color: rgba(255, 255, 255, 26%);
     cursor: pointer;
-    transform: scale(1.1);
-    box-shadow: 0 4px 8px var(--bg-black-30);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(7, 23, 66, 26%),
+      inset 0 1px 0 rgba(255, 255, 255, 24%);
   }
 
   .top,
   .bottom {
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin-top: 4px;
+    margin-bottom: 4px;
     width: 100%;
-    gap: 10px;
+    gap: 6px;
     display: flex;
     flex-direction: column;
     justify-content: center;
