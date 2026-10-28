@@ -1613,6 +1613,8 @@ const messages: LocaleMessages = {
     "groupRequestsDesc": "查看群组邀请",
     "tabFriends": "好友",
     "tabGroups": "群组",
+    "addFriend": "添加好友",
+    "createGroup": "创建群组",
     "sendMessage": "发消息",
     "emptyFriends": "暂无好友",
     "emptyGroups": "暂无群聊",

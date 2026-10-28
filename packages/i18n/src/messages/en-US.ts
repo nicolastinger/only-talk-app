@@ -1613,6 +1613,8 @@ const messages: LocaleMessages = {
     "groupRequestsDesc": "View group invitations",
     "tabFriends": "Friends",
     "tabGroups": "Groups",
+    "addFriend": "Add Friend",
+    "createGroup": "Create Group",
     "sendMessage": "Message",
     "emptyFriends": "No friends yet",
     "emptyGroups": "No groups yet",

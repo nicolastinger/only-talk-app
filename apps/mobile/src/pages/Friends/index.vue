@@ -243,6 +243,34 @@ onUnmounted(() => {
         />
       </svg>
       <span class="page-title">{{ t("friends.title") }}</span>
+      <div class="header-actions">
+        <button
+          class="header-action"
+          type="button"
+          :aria-label="t('friends.addFriend')"
+          :title="t('friends.addFriend')"
+          @click="goSearch"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+            />
+          </svg>
+        </button>
+        <button
+          class="header-action"
+          type="button"
+          :aria-label="t('friends.createGroup')"
+          :title="t('friends.createGroup')"
+          @click="goCreateGroup"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M8 10H5V7H3v3H0v2h3v3h2v-3h3v-2zm10 1c1.66 0 2.99-1.34 2.99-3S19.66 5 18 5c-.32 0-.63.05-.91.14.57.81.9 1.79.9 2.86s-.34 2.04-.9 2.86c.28.09.59.14.91.14zm-5 0c1.66 0 2.99-1.34 2.99-3S14.66 5 13 5s-3 1.34-3 3 1.34 3 3 3zm6.62 2.16c.83.73 1.38 1.66 1.38 2.84v2h3v-2c0-1.54-2.37-2.49-4.38-2.84zM13 13c-2 0-6 1-6 3v2h12v-2c0-2-4-3-6-3z"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div class="search-section" @click="goSearch">
@@ -426,23 +454,6 @@ onUnmounted(() => {
         <Empty v-else :description="t('friends.emptyGroups')" />
       </PullRefresh>
     </div>
-
-    <div class="fab" @click="sectionTab === 0 ? goSearch() : goCreateGroup()">
-      <template v-if="sectionTab === 0">
-        <svg viewBox="0 0 24 24" fill="white">
-          <path
-            d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-          />
-        </svg>
-      </template>
-      <template v-else>
-        <svg viewBox="0 0 24 24" fill="white">
-          <path
-            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
-          />
-        </svg>
-      </template>
-    </div>
   </div>
 </template>
 
@@ -483,6 +494,40 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-action {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand-blue);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--transition-fast);
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:active {
+    background: var(--surface-hover);
+    transform: scale(0.94);
+  }
 }
 
 .search-section {
@@ -766,30 +811,6 @@ onUnmounted(() => {
   svg {
     width: 20px;
     height: 20px;
-  }
-}
-
-.fab {
-  position: fixed;
-  bottom: 84px;
-  right: 20px;
-  width: 52px;
-  height: 52px;
-  background: var(--fab-bg);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--fab-shadow);
-  cursor: pointer;
-  z-index: 100;
-  transition: all var(--transition-normal);
-  svg {
-    width: 26px;
-    height: 26px;
-  }
-  &:active {
-    transform: scale(0.95);
   }
 }
 
