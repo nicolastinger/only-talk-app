@@ -4,11 +4,14 @@ import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { showToast } from "vant";
 import { get_user_info_with_cache } from "@workspace/services";
-import type { UserInfo } from "@workspace/types";
+import type { UserInfo, VideoCallInvite } from "@workspace/types";
 import MessageInputBar from "@/components/chat/MessageInputBar.vue";
+import PrivacyVideoCall from "@/components/privacy/PrivacyVideoCall.vue";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useBackendEvent } from "@/hooks/useBackendEvent";
 import { useI18n } from "@/i18n";
+import { detectPrivacyMediaCapabilities } from "@/privacy/media/capabilities";
+import * as transport from "@/privacy/media/p2pTransport";
 import { getMyUuid } from "@/utils/api";
 import { attachViewportHeight } from "@/utils/viewport";
 import { DEFAULT_AVATAR } from "@/stores/user";
@@ -33,6 +36,14 @@ const messages = ref<PrivacyMessage[]>([]);
 const pageRef = ref<HTMLElement | null>(null);
 const listRef = ref<HTMLElement | null>(null);
 
+// ==================== 隐私音视频 ====================
+const mediaSupportPromise = detectPrivacyMediaCapabilities();
+const mediaSupported = ref<boolean | null>(null);
+const callActive = ref(false);
+const callInitiator = ref(true);
+const callInvite = ref<VideoCallInvite | null>(null);
+const incomingCall = ref<VideoCallInvite | null>(null);
+
 let meUuid = "";
 let viewportCleanup: (() => void) | undefined;
 let closed = false;
@@ -40,6 +51,18 @@ let closed = false;
 const friendName = computed(
   () => peer.value?.username || friendId || t("privacyChat.other")
 );
+const headerHint = computed(() =>
+  mediaSupported.value === false
+    ? `${t("privacyChat.hint")} · ${t("privacyChat.textOnly")}`
+    : t("privacyChat.hint")
+);
+
+void mediaSupportPromise.then((caps) => {
+  mediaSupported.value = caps.supported;
+  if (!caps.supported) {
+    console.info("[PrivacyChat] 音视频不可用, 仅文字聊天:", caps.reason);
+  }
+});
 
 const scrollToBottom = async () => {
   await nextTick();
@@ -76,6 +99,94 @@ useBackendEvent("p2p_text_message", (payload) => {
     void scrollToBottom();
   } catch (e) {
     console.error("[PrivacyChat] 解析 P2P 文本失败:", e);
+  }
+});
+
+/* ==================== 隐私音视频 ==================== */
+
+const startVideoCall = () => {
+  if (!mediaSupported.value) {
+    showToast(t("privacyChat.videoUnsupported"));
+    return;
+  }
+  if (callActive.value) return;
+  callInitiator.value = true;
+  callInvite.value = null;
+  callActive.value = true;
+};
+
+const acceptIncomingCall = () => {
+  if (!incomingCall.value) return;
+  callInvite.value = incomingCall.value;
+  incomingCall.value = null;
+  callInitiator.value = false;
+  callActive.value = true;
+};
+
+const rejectIncomingCall = () => {
+  if (!incomingCall.value) return;
+  incomingCall.value = null;
+  void transport
+    .sendP2pVideoCallResponse(friendId, {
+      accept: false,
+      mediaConfig: null,
+      rejectReason: t("privacyChat.userRejected"),
+    })
+    .catch(() => {});
+};
+
+const onCallClosed = () => {
+  callActive.value = false;
+  callInvite.value = null;
+  callInitiator.value = true;
+};
+
+// 隐私会话内的视频通话邀请（普通 WebRTC 通话由 callManager 处理，不走这里）
+useBackendEvent("video_call_invite", async (payload) => {
+  let invite: VideoCallInvite;
+  try {
+    invite = JSON.parse(payload) as VideoCallInvite;
+  } catch {
+    return;
+  }
+  if (invite.from_uuid && invite.from_uuid !== friendId) return;
+
+  const caps = await mediaSupportPromise;
+  mediaSupported.value = caps.supported;
+
+  if (!caps.supported) {
+    // 编解码不支持：自动拒绝音视频，只保留文字聊天
+    void transport
+      .sendP2pVideoCallResponse(friendId, {
+        accept: false,
+        mediaConfig: null,
+        rejectReason: t("privacyChat.videoUnsupported"),
+      })
+      .catch(() => {});
+    showToast(t("privacyChat.videoUnsupported"));
+    return;
+  }
+
+  if (callActive.value) {
+    void transport
+      .sendP2pVideoCallResponse(friendId, {
+        accept: false,
+        mediaConfig: null,
+        rejectReason: t("privacyChat.busy"),
+      })
+      .catch(() => {});
+    return;
+  }
+
+  incomingCall.value = invite;
+});
+
+// 主叫在接听前挂断时，关闭来电弹窗
+useBackendEvent("video_call_end", (payload) => {
+  if (payload && payload !== friendId) return;
+  if (incomingCall.value) {
+    incomingCall.value = null;
+    showToast(t("privacyChat.callEnded"));
   }
 });
 
@@ -142,8 +253,21 @@ onUnmounted(() => {
           </svg>
           <span class="header-name">{{ friendName }}</span>
         </div>
-        <div class="header-hint">{{ t("privacyChat.hint") }}</div>
+        <div class="header-hint">{{ headerHint }}</div>
       </div>
+      <button
+        v-if="mediaSupported"
+        class="header-video"
+        type="button"
+        :aria-label="t('privacyChat.videoCall')"
+        @click="startVideoCall"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
+          />
+        </svg>
+      </button>
       <img
         :src="peerAvatar"
         class="header-avatar"
@@ -177,6 +301,41 @@ onUnmounted(() => {
       :tools="['emoji']"
       :placeholder="t('privacyChat.inputPlaceholder')"
       @send="sendText"
+    />
+
+    <div v-if="incomingCall" class="incoming-call-overlay">
+      <div class="incoming-call-card">
+        <img
+          class="incoming-avatar"
+          :src="peerAvatar"
+          :alt="friendName"
+          @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
+        />
+        <div class="incoming-name">
+          {{ incomingCall.from_name || friendName }}
+        </div>
+        <div class="incoming-desc">
+          {{ t("privacyChat.incomingVideoCall") }}
+        </div>
+        <div class="incoming-actions">
+          <button class="incoming-btn reject" type="button" @click="rejectIncomingCall">
+            {{ t("privacyChat.reject") }}
+          </button>
+          <button class="incoming-btn accept" type="button" @click="acceptIncomingCall">
+            {{ t("privacyChat.accept") }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <PrivacyVideoCall
+      v-if="callActive"
+      :friend-id="friendId"
+      :is-initiator="callInitiator"
+      :friend-name="friendName"
+      :friend-avatar="peerAvatar"
+      :invite="callInvite"
+      @close="onCallClosed"
     />
   </div>
 </template>
@@ -271,6 +430,113 @@ onUnmounted(() => {
   object-fit: cover;
   box-shadow: var(--shadow-xs);
   flex-shrink: 0;
+}
+
+.header-video {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-medium);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand-blue);
+  box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:active {
+    background: var(--surface-hover);
+  }
+}
+
+.incoming-call-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(10, 18, 32, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.incoming-call-card {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 26px 22px 20px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(15, 35, 75, 0.18));
+}
+
+.incoming-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: var(--shadow-sm);
+}
+
+.incoming-name {
+  margin-top: 12px;
+  max-width: 100%;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.incoming-desc {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.incoming-actions {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.incoming-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &.reject {
+    background: var(--surface-alt);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-medium);
+  }
+
+  &.accept {
+    background: var(--gradient-primary);
+    color: #fff;
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 .message-list {
