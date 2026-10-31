@@ -166,6 +166,10 @@ interface P2pInitMsg {
   request_cert?: string;
   /** 接收方 P2P 会话证书(PEM)，用于发起端证书指纹固定 */
   accept_cert?: string;
+  /** 发起方是否支持 IPv6(双方都支持时优先走 IPv6 P2P) */
+  request_ipv6?: boolean;
+  /** 接收方是否支持 IPv6 */
+  accept_ipv6?: boolean;
 }
 
 interface RequestMediaMsg {

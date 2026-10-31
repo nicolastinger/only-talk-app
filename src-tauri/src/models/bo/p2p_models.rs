@@ -112,6 +112,12 @@ pub struct P2pInitMsg {
     /// 接收方 P2P 会话证书(PEM) - 用于发起方做证书指纹固定，不含私钥
     #[serde(default)]
     pub accept_cert: String,
+    /// 发起方是否支持 IPv6(双方都支持时优先走 IPv6 P2P)
+    #[serde(default)]
+    pub request_ipv6: bool,
+    /// 接收方是否支持 IPv6
+    #[serde(default)]
+    pub accept_ipv6: bool,
 }
 
 /// 用户地址信息

@@ -144,6 +144,8 @@ fn p2p_init_msg_serde_roundtrip() {
         is_server: true,
         request_cert: "-----BEGIN CERTIFICATE-----\na\n-----END CERTIFICATE-----\n".to_string(),
         accept_cert: "-----BEGIN CERTIFICATE-----\nb\n-----END CERTIFICATE-----\n".to_string(),
+        request_ipv6: true,
+        accept_ipv6: false,
     };
     let json = serde_json::to_string(&msg).expect("序列化失败");
     let back: P2pInitMsg = serde_json::from_str(&json).expect("反序列化失败");
@@ -155,6 +157,8 @@ fn p2p_init_msg_serde_roundtrip() {
     assert!(back.is_server);
     assert_eq!(back.request_cert, msg.request_cert);
     assert_eq!(back.accept_cert, msg.accept_cert);
+    assert!(back.request_ipv6);
+    assert!(!back.accept_ipv6);
 }
 
 #[test]
@@ -174,6 +178,16 @@ fn p2p_init_msg_old_payload_defaults_certs() {
     let msg: P2pInitMsg = serde_json::from_str(json).expect("反序列化失败");
     assert!(msg.request_cert.is_empty());
     assert!(msg.accept_cert.is_empty());
+    assert!(!msg.request_ipv6);
+    assert!(!msg.accept_ipv6);
+}
+
+#[test]
+fn p2p_ipv6_peer_address_parses() {
+    // NAT 服务端下发的 IPv6 地址形如 [2001:db8::1]:19563
+    let addr: std::net::SocketAddrV6 =
+        "[2001:db8::1]:19563".parse().expect("解析 IPv6 地址失败");
+    assert_eq!(addr.port(), 19563);
 }
 
 #[test]

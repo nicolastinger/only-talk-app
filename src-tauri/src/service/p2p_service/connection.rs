@@ -1,21 +1,45 @@
 //! 自建 P2P 连接的建立/接受/拒绝、服务端/客户端运行与资源清理。
 
+use std::net::{Ipv6Addr, SocketAddrV6, UdpSocket};
 use std::time::Duration;
 
 use anyhow::anyhow;
-use log::{error, info};
+use log::{error, info, warn};
 use nanoid::nanoid;
 
-use super::nat::check_user_ip_type;
+use super::nat::{check_user_ip_type, get_nat_udp_ports};
 use crate::models::bo::p2p_models::{P2pInitMsg, P2pMsg, UserAddressInfo};
 use crate::models::bo::text_msg::TextQuicMsg;
 use crate::quic_core::center_service::text_msg_service::generate_text_msg;
 use crate::quic_core::p2p::client::run_client;
-use crate::quic_core::p2p::server::{run_server, udp_port_forward};
+use crate::quic_core::p2p::server::{run_server, udp_port_forward, udp_port_forward_ipv6};
 use crate::quic_core::p2p_tls::generate_p2p_identity;
+use crate::utils::dns::resolve_ipv6;
 use crate::utils::events;
+use crate::utils::global_static_str::talk_api_domain;
 use crate::utils::message_types::{MSG_TYPE_P2P, P2P_ACCEPT_REQUEST};
 use crate::{GLOBAL_QUIC_SERVER_LIST, GLOBAL_QUIC_USER_INFO};
+
+/// 本机/网络是否具备可用的 IPv6 P2P 能力(域名有 AAAA、能绑定 IPv6 socket 且能发出 UDP)
+async fn detect_ipv6() -> bool {
+    let ports = match get_nat_udp_ports().await {
+        Ok(ports) => ports,
+        Err(e) => {
+            info!("[p2p] 获取 NAT UDP 端口失败, 视为不支持 IPv6: {}", e);
+            return false;
+        }
+    };
+    let server = match resolve_ipv6(&talk_api_domain(), ports.v6_port_1).await {
+        Ok(addr) => addr,
+        Err(_) => return false,
+    };
+    let socket = match UdpSocket::bind((Ipv6Addr::UNSPECIFIED, 0)) {
+        Ok(socket) => socket,
+        Err(_) => return false,
+    };
+    // UDP 无连接，send_to 成功即说明本机具备 IPv6 出口路由
+    socket.send_to(&[], server).is_ok()
+}
 
 /// 发送p2p初始化信息
 pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error> {
@@ -29,6 +53,8 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
 
     // 本次 P2P 会话的临时证书(私钥只留在本机，证书随 init 消息经中心服务器交换)
     let (cert_pem, key_pem) = generate_p2p_identity()?;
+    // 本机是否具备 IPv6 能力，随 init 消息告知对端(双方都支持时优先 IPv6)
+    let local_ipv6 = detect_ipv6().await;
 
     // 本机作为服务端
 
@@ -39,6 +65,8 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
         guard.insert("target_uuid".to_string(), accept_user.clone());
         guard.insert("p2p_local_cert_pem".to_string(), cert_pem.clone());
         guard.insert("p2p_local_key_pem".to_string(), key_pem);
+        guard
+            .insert("p2p_local_ipv6".to_string(), (if local_ipv6 { "1" } else { "0" }).to_string());
         guard.remove("p2p_peer_cert_pem");
     }
 
@@ -54,6 +82,8 @@ pub async fn send_p2p_init_msg(accept_user: String) -> Result<(), anyhow::Error>
         is_server: false,
         request_cert: cert_pem,
         accept_cert: String::new(),
+        request_ipv6: local_ipv6,
+        accept_ipv6: false,
     };
     let p2p_msg =
         generate_text_msg(MSG_TYPE_P2P, serde_json::to_vec(&p2p_init_msg)?, accept_user, sender)?;
@@ -108,6 +138,9 @@ pub async fn access_p2p_request(mut p2p_init_msg: P2pInitMsg) -> Result<(), anyh
 
     // 生成本次会话的临时证书，回传给发起方做指纹固定
     let (cert_pem, key_pem) = generate_p2p_identity()?;
+    // 双方都支持 IPv6 时才走 IPv6(IPv6 穿透率高，优先使用)
+    let local_ipv6 = detect_ipv6().await;
+    let use_ipv6 = p2p_init_msg.request_ipv6 && local_ipv6;
 
     {
         let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
@@ -115,11 +148,14 @@ pub async fn access_p2p_request(mut p2p_init_msg: P2pInitMsg) -> Result<(), anyh
         guard.insert("p2p_request_token".to_string(), p2p_init_msg.request_token.clone());
         guard.insert("p2p_local_cert_pem".to_string(), cert_pem.clone());
         guard.insert("p2p_local_key_pem".to_string(), key_pem);
+        guard
+            .insert("p2p_local_ipv6".to_string(), (if local_ipv6 { "1" } else { "0" }).to_string());
         guard.insert("p2p_peer_cert_pem".to_string(), peer_cert_pem);
     }
     p2p_init_msg.accept_cert = cert_pem;
+    p2p_init_msg.accept_ipv6 = local_ipv6;
 
-    check_user_ip_type().await?;
+    check_user_ip_type(use_ipv6).await?;
 
     let p2p_msg = generate_text_msg(
         MSG_TYPE_P2P,
@@ -147,11 +183,18 @@ pub async fn run_p2p_server(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
     events::emit("listen_p2p_request", serde_json::to_string(&p2p_msg)?)?;
     tokio::spawn(async move {
         info!("收到 {:?}", target_address_info);
-        // 开启ipv4服务端
-        if target_address_info.ip_type == 1 {
-            if let Err(e) = run_p2p_serer_v4(target_address_info).await {
-                error!("运行ipv4版本p2p服务端失败: {}", e);
+        match target_address_info.ip_type {
+            1 => {
+                if let Err(e) = run_p2p_serer_v4(target_address_info).await {
+                    error!("运行ipv4版本p2p服务端失败: {}", e);
+                }
             }
+            2 => {
+                if let Err(e) = run_p2p_serer_v6(target_address_info).await {
+                    error!("运行ipv6版本p2p服务端失败: {}", e);
+                }
+            }
+            other => warn!("未知的 P2P ip_type: {}", other),
         }
     });
     Ok(())
@@ -169,14 +212,34 @@ pub async fn run_p2p_client(text_quic_msg: TextQuicMsg) -> Result<(), anyhow::Er
                 }
             };
         info!("收到 {:?}", target_address_info);
-        // 开启ipv4客户端
-        if target_address_info.ip_type == 1 {
-            if let Err(e) = run_p2p_client_v4(target_address_info).await {
-                error!("创建ipv4版p2p客户失败: {}", e);
+        match target_address_info.ip_type {
+            1 => {
+                if let Err(e) = run_p2p_client_v4(target_address_info).await {
+                    error!("创建ipv4版p2p客户失败: {}", e);
+                }
             }
+            2 => {
+                if let Err(e) = run_p2p_client_v6(target_address_info).await {
+                    error!("创建ipv6版p2p客户失败: {}", e);
+                }
+            }
+            other => warn!("未知的 P2P ip_type: {}", other),
         }
     });
     Ok(())
+}
+
+/// 解析 NAT 服务端下发的 IPv6 地址，兼容旧版无方括号格式(`2001:db8::1:19563`)
+fn parse_peer_addr_v6(raw: &str) -> Result<SocketAddrV6, anyhow::Error> {
+    if let Ok(addr) = raw.parse::<SocketAddrV6>() {
+        return Ok(addr);
+    }
+    if let Some((host, port)) = raw.rsplit_once(':') {
+        if let (Ok(ip), Ok(port)) = (host.parse::<Ipv6Addr>(), port.parse::<u16>()) {
+            return Ok(SocketAddrV6::new(ip, port, 0, 0));
+        }
+    }
+    Err(anyhow!("无法解析 IPv6 对端地址: {}", raw))
 }
 
 /// 创建ipv4服务端
@@ -203,6 +266,28 @@ async fn run_p2p_serer_v4(target_address_info: UserAddressInfo) -> Result<(), an
     udp_port_forward(addr.parse()?, target_address_info.address.to_string().parse()?, &vec_to)
         .await?;
     run_server(addr.parse()?, cert_pem, key_pem, expected_token).await?;
+    Ok(())
+}
+
+/// 创建ipv6服务端
+async fn run_p2p_serer_v6(target_address_info: UserAddressInfo) -> Result<(), anyhow::Error> {
+    let (port, cert_pem, key_pem, expected_token) = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        let port = guard.get("p2p_port_v6").ok_or(anyhow!("no p2p v6 port"))?.clone();
+        let cert_pem = guard.get("p2p_local_cert_pem").ok_or(anyhow!("no p2p cert"))?.clone();
+        let key_pem = guard.get("p2p_local_key_pem").ok_or(anyhow!("no p2p key"))?.clone();
+        let expected_token = guard.get("p2p_request_token").ok_or(anyhow!("no p2p token"))?.clone();
+        (port, cert_pem, key_pem, expected_token)
+    };
+    let local: SocketAddrV6 = format!("[::]:{}", port).parse()?;
+    let remote = parse_peer_addr_v6(&target_address_info.address)?;
+    let vec_to = Vec::new();
+    // IPv6 通常可直连，发几次空包主要用于放行双方防火墙
+    for _ in 0..3 {
+        udp_port_forward_ipv6(local, remote, &vec_to).await?;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    run_server(local.into(), cert_pem, key_pem, expected_token).await?;
     Ok(())
 }
 
@@ -241,6 +326,25 @@ async fn run_p2p_client_v4(target_address_info: UserAddressInfo) -> Result<(), a
     tokio::time::sleep(Duration::from_millis(100)).await;
     run_client(addr.parse()?, target_address_info.address.to_string().parse()?, peer_cert_pem)
         .await?;
+    Ok(())
+}
+
+/// 运行ipv6客户端
+async fn run_p2p_client_v6(target_address_info: UserAddressInfo) -> Result<(), anyhow::Error> {
+    let port = {
+        let guard = GLOBAL_QUIC_USER_INFO.read().await;
+        guard.get("p2p_port_v6").ok_or(anyhow!("no p2p v6 port"))?.clone()
+    };
+    // accept 消息与 NAT 匹配消息可能乱序到达，这里短暂等待对端证书就位
+    let peer_cert_pem =
+        wait_for_peer_cert(Duration::from_secs(2)).await.ok_or(anyhow!("no peer p2p cert"))?;
+    let local: SocketAddrV6 = format!("[::]:{}", port).parse()?;
+    let remote = parse_peer_addr_v6(&target_address_info.address)?;
+    let vec_to = Vec::new();
+    // 发送一次空包放行对端防火墙
+    udp_port_forward_ipv6(local, remote, &vec_to).await?;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    run_client(local.into(), remote.into(), peer_cert_pem).await?;
     Ok(())
 }
 
@@ -291,6 +395,7 @@ pub async fn close_p2p_connection_service(target_uuid: String) -> Result<(), any
         guard.remove("p2p_local_cert_pem");
         guard.remove("p2p_local_key_pem");
         guard.remove("p2p_peer_cert_pem");
+        guard.remove("p2p_local_ipv6");
     }
 
     // 停止MediaData通道的接收循环
@@ -336,8 +441,14 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
                             let mut guard = GLOBAL_QUIC_USER_INFO.write().await;
                             guard.insert("p2p_peer_cert_pem".to_string(), peer_cert_pem);
                         }
+                        // 复用发起时检测到的本机 IPv6 能力，避免重复探测导致两端判断不一致
+                        let local_ipv6 = {
+                            let guard = GLOBAL_QUIC_USER_INFO.read().await;
+                            guard.get("p2p_local_ipv6").map(|v| v == "1").unwrap_or(false)
+                        };
+                        let use_ipv6 = local_ipv6 && p2p_init_msg.accept_ipv6;
                         // 探索本机的ip类型
-                        check_user_ip_type().await?;
+                        check_user_ip_type(use_ipv6).await?;
                     }
                 }
                 // 用户拒绝建立连接
@@ -359,4 +470,21 @@ pub async fn process_p2p_msg(p2p_init_msg: P2pInitMsg) -> Result<(), anyhow::Err
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_peer_addr_v6;
+
+    #[test]
+    fn parse_peer_addr_v6_accepts_bracket_and_legacy_formats() {
+        let bracketed = parse_peer_addr_v6("[2001:db8::1]:19563").expect("带方括号解析失败");
+        assert_eq!(bracketed.port(), 19563);
+        assert_eq!(bracketed.ip().to_string(), "2001:db8::1");
+
+        // 旧版服务端下发的无方括号格式
+        let legacy = parse_peer_addr_v6("2001:db8::1:19563").expect("旧格式解析失败");
+        assert_eq!(legacy.port(), 19563);
+        assert_eq!(legacy.ip().to_string(), "2001:db8::1");
+    }
 }
