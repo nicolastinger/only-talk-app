@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUnreadStore } from "@/stores/unread";
 
@@ -52,10 +52,85 @@ const activeIndex = computed(() => {
 const onChange = (path: string) => {
   router.replace(path);
 };
+
+/**
+ * 软键盘避让。
+ *
+ * 导航栏是 position: fixed，而 Android 端 MainActivity 用 decorView 的 IME padding
+ * 模拟 adjustResize，键盘弹起时 webview 会整体缩小，fixed 元素就跟着"上跳"到键盘上方。
+ * 这里在键盘弹出期间把导航栏下移淡出（真机上本来也会被键盘挡住），收起后复原。
+ *
+ * - 输入框聚焦时立刻隐藏，避免跟随窗口缩放的动画抖动；
+ * - 之后按可见高度回落情况校正（硬件键盘等不弹键盘的场景会恢复显示）。
+ */
+const keyboardVisible = ref(false);
+// 无键盘时的可见高度基准（取历史最大值，忽略收起过程中的中间值）
+let baselineHeight = 0;
+let measureRaf = 0;
+let verifyTimer: ReturnType<typeof setTimeout> | null = null;
+
+const visibleHeight = () => {
+  const vv = window.visualViewport;
+  return Math.min(window.innerHeight, vv ? vv.height : window.innerHeight);
+};
+
+const isEditable = (el: Element | null) =>
+  !!el &&
+  (el instanceof HTMLInputElement ||
+    el instanceof HTMLTextAreaElement ||
+    (el instanceof HTMLElement && el.isContentEditable));
+
+const measure = () => {
+  const height = visibleHeight();
+  if (height > baselineHeight) baselineHeight = height;
+  keyboardVisible.value = baselineHeight - height > 60;
+};
+
+const scheduleMeasure = () => {
+  if (measureRaf) return;
+  measureRaf = requestAnimationFrame(() => {
+    measureRaf = 0;
+    measure();
+  });
+};
+
+const onFocusIn = (event: FocusEvent) => {
+  if (!isEditable(event.target as Element | null)) return;
+  keyboardVisible.value = true;
+  // 600ms 后复核：只有窗口确实被压缩才保持隐藏
+  if (verifyTimer) clearTimeout(verifyTimer);
+  verifyTimer = setTimeout(measure, 600);
+};
+
+const onOrientationChange = () => {
+  // 横竖屏基准高度不同，重置后重新采样
+  baselineHeight = 0;
+  keyboardVisible.value = false;
+  setTimeout(measure, 300);
+};
+
+onMounted(() => {
+  measure();
+  window.addEventListener("resize", scheduleMeasure);
+  window.addEventListener("focusin", onFocusIn);
+  window.addEventListener("orientationchange", onOrientationChange);
+  window.visualViewport?.addEventListener("resize", scheduleMeasure);
+  window.visualViewport?.addEventListener("scroll", scheduleMeasure);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", scheduleMeasure);
+  window.removeEventListener("focusin", onFocusIn);
+  window.removeEventListener("orientationchange", onOrientationChange);
+  window.visualViewport?.removeEventListener("resize", scheduleMeasure);
+  window.visualViewport?.removeEventListener("scroll", scheduleMeasure);
+  if (measureRaf) cancelAnimationFrame(measureRaf);
+  if (verifyTimer) clearTimeout(verifyTimer);
+});
 </script>
 
 <template>
-  <div class="bottom-nav">
+  <div class="bottom-nav" :class="{ 'keyboard-hidden': keyboardVisible }">
     <!-- 液态玻璃选中滑块: 跟随当前 tab 平滑移动 -->
     <div
       class="nav-indicator"
@@ -266,6 +341,15 @@ const onChange = (path: string) => {
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   overflow: hidden;
+  transition: transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.2s ease;
+}
+
+/* 软键盘弹出: 下移出屏幕并淡出, 避免 fixed 跟随缩小后的视窗上跳 */
+.bottom-nav.keyboard-hidden {
+  transform: translateY(calc(100% + 24px));
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* 液态玻璃高光层: 左上角柔光 + 斜向光带 */
