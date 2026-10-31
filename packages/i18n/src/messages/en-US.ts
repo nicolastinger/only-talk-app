@@ -1334,6 +1334,10 @@ const messages: LocaleMessages = {
     "videoCallInvite": "Video Call Invitation",
     "accept": "Accept",
     "reject": "Reject",
+    "incomingRequest": "invites you to a private chat",
+    "requesting": "Waiting for the other party to accept...",
+    "noResponse": "No response from the other party",
+    "startFailed": "Failed to start private mode",
     "inviteToVideoCall": "invites you to a video call",
     "userRejected": "User rejected",
     "errors": {

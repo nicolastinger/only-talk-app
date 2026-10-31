@@ -1,6 +1,7 @@
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
 import { useBearStore } from '@/store/store';
 import { WebviewOptions } from '@tauri-apps/api/webview';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { WindowOptions } from '@tauri-apps/api/window';
 import { P2pInitMsg, P2pMsg } from '@workspace/types';
 import { useEffect, useMemo, useState } from 'react';
@@ -38,6 +39,11 @@ const openMessageHandler = async (p2pInitMsg: P2pInitMsg) => {
 
 // 打开隐私聊天窗口
 const openPrivacyChatHandler = async (uuid: string) => {
+  // 关闭已存在的隐私窗口，避免同 label 创建失败或复用上一会话
+  const existing = await WebviewWindow.getByLabel('隐私聊天').catch(() => null);
+  if (existing) {
+    await existing.close().catch(() => {});
+  }
   const webviewOptions: WebviewOptions = {
     x: 0,
     y: 0,
@@ -70,10 +76,6 @@ const useP2pMessageApi = () => {
       setRequestMediaMsg({ mediaType: 1, p2pInitMsg });
       // 直接传递数据打开窗口
       await openMessageHandler(p2pInitMsg);
-    } else if (p2pMsg.type === 103) {
-      // 接收到p2p同意信息
-      const uuid = p2pMsg.raw;
-      await openPrivacyChatHandler(uuid);
     } else if (p2pMsg.type === 104) {
       // 接收到p2p拒绝信息
     } else {
@@ -88,6 +90,13 @@ const useP2pMessageApi = () => {
     console.log('接受到p2p信息', p2pMsg);
 
     processP2pMsg(p2pMsg);
+  });
+
+  // P2P 传输就绪(监听端已开始监听/连接端已连上)后再打开隐私聊天窗口。
+  // 服务端/客户端角色由 NAT 决定，不能只依赖服务端的 103 事件。
+  useBackendEvent('p2p_ready', (friendId) => {
+    if (!friendId) return;
+    openPrivacyChatHandler(friendId);
   });
 
   return useMemo(() => ({ state }), [state]);

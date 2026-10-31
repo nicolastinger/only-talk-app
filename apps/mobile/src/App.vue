@@ -19,6 +19,8 @@ import { useAuthStore } from "@/stores/auth";
 import { markAutoLoginTried } from "@/utils/autoLogin";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
+import { usePrivacyManager } from "@/privacy/manager";
+import PrivacyRequestOverlay from "@/components/privacy/PrivacyRequestOverlay.vue";
 import { useMessageSound } from "@/hooks/useMessageSound";
 import { clearUuidCache } from "@/utils/api";
 import { useI18n } from "@/i18n";
@@ -30,6 +32,7 @@ const { t } = useI18n();
 const { isLoggedIn, clearAuth } = useAuthStore();
 useTheme();
 useCallManager();
+usePrivacyManager();
 // 来消息提示音(可在设置-通知中关闭)
 useMessageSound();
 
@@ -39,6 +42,7 @@ let logoutTask: Promise<void> | undefined;
 const showNav = computed(() => {
   const path = route.path;
   if (path === "/call") return false;
+  if (path.startsWith("/privacy/chat/")) return false;
   if (path.startsWith("/chats/chat/")) return false;
   if (path === "/friends/search" || path.startsWith("/friends/detail/"))
     return false;
@@ -196,6 +200,7 @@ onUnmounted(() => {
     <QuicStatusBar />
     <SyncOverlay />
     <AnnouncementCenter />
+    <PrivacyRequestOverlay />
   </div>
 </template>
 

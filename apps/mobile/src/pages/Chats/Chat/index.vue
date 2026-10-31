@@ -15,6 +15,7 @@ import { useMessageApi } from "@/hooks/useMessageApi";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useMyAvatar } from "@/hooks/useMyAvatar";
 import { useCallManager } from "@/webrtc/callManager";
+import { usePrivacyManager } from "@/privacy/manager";
 import { useChatBackgroundFor } from "@/stores/chatBackground";
 import { getMyUuid } from "@/utils/api";
 import { attachViewportHeight } from "@/utils/viewport";
@@ -1002,8 +1003,9 @@ const handlePreview = async (msg: UiChatMessage) => {
   }
 };
 
-/* ============ 通话 ============ */
+/* ============ 通话 / 隐私模式 ============ */
 const { startCall } = useCallManager();
+const { startPrivacyChat } = usePrivacyManager();
 const handleStartCall = async (media: "audio" | "video") => {
   await startCall(friendId, media);
 };
@@ -1015,6 +1017,7 @@ const friendTools: InputTool[] = [
   "voice",
   "audio",
   "video",
+  "privacy",
 ];
 const selfTools: InputTool[] = ["emoji", "image"];
 
@@ -1146,6 +1149,7 @@ const handleAvatarClick = ({
         @pick-file="sendFile"
         @record-voice="openVoiceRecord"
         @call="handleStartCall"
+        @privacy="startPrivacyChat(friendId)"
       />
 
       <VoiceRecordOverlay v-model:show="showVoiceRecord" @send="sendVoice" />

@@ -18,6 +18,7 @@ use crate::quic_core::p2p::io::{
 };
 use crate::quic_core::p2p_tls;
 use crate::utils::app_log::log_quic_event;
+use crate::utils::events;
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
 /// 首帧认证超时(秒)：对端连上后必须尽快完成 token 校验
@@ -245,6 +246,9 @@ async fn handle_connection(
         remote_addr.clone(),
         Some(buffer_msg),
     );
+
+    // 首帧认证通过且 Default 通道已注册：通知前端打开隐私会话页面
+    let _ = events::emit("p2p_ready", target_uuid.clone());
 
     // ==================== 后续通道 ====================
     // 按流序号分配通道: 1=MediaInfo, 2=MediaData, 3=File

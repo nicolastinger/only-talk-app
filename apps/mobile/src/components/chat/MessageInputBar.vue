@@ -9,7 +9,8 @@ export type InputTool =
   | "file"
   | "voice"
   | "audio"
-  | "video";
+  | "video"
+  | "privacy";
 
 const props = defineProps<{
   modelValue: string;
@@ -25,6 +26,7 @@ const emit = defineEmits<{
   (e: "pick-file"): void;
   (e: "record-voice"): void;
   (e: "call", media: "audio" | "video"): void;
+  (e: "privacy"): void;
 }>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -60,6 +62,10 @@ const toolDefs: Record<InputTool, { labelKey: string; svg: string }> = {
     labelKey: "chat.tools.video",
     svg: "M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z",
   },
+  privacy: {
+    labelKey: "chat.footer.privateChat",
+    svg: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
+  },
 };
 
 const togglePanel = () => {
@@ -93,6 +99,10 @@ const clickTool = (tool: InputTool) => {
   }
   if (tool === "video") {
     emit("call", "video");
+    return;
+  }
+  if (tool === "privacy") {
+    emit("privacy");
     return;
   }
 };

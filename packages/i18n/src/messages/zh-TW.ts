@@ -1334,6 +1334,10 @@ const messages: LocaleMessages = {
     "videoCallInvite": "視頻通話邀請",
     "accept": "接受",
     "reject": "拒絕",
+    "incomingRequest": "邀請你進行隱私聊天",
+    "requesting": "等待對方接受隱私模式...",
+    "noResponse": "對方未回應",
+    "startFailed": "發起隱私模式失敗",
     "inviteToVideoCall": "邀請您進行視頻通話",
     "userRejected": "用戶拒絕",
     "errors": {

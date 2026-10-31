@@ -40,6 +40,8 @@ export interface BackendEventPayloads {
   quic_sync_complete: string;
   /** P2P 入站请求(JSON 字符串) */
   listen_p2p_request: string;
+  /** P2P 传输就绪(监听端已开始监听 / 连接端已建立连接)，payload 为对端 uuid */
+  p2p_ready: string;
   /** 通话控制信令(JSON 字符串) */
   call_control: string;
   /** WebRTC 信令(JSON 字符串) */

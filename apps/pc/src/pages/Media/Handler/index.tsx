@@ -1,4 +1,3 @@
-import { openNewWindow } from '@/components/Window/OpenWindow';
 import UserTypeTag from '@/components/UserTypeTag';
 import { DEFAULT_ICON } from '@/constants';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
@@ -10,10 +9,9 @@ import {
 } from '@ant-design/icons';
 import { window } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
-import { WebviewOptions } from '@tauri-apps/api/webview';
 import { useIntl } from '@umijs/max';
 import { get_user_info_with_cache } from '@workspace/services';
-import { HttpResponse, P2pInitMsg, UserInfo } from '@workspace/types';
+import { P2pInitMsg, UserInfo } from '@workspace/types';
 import { Button } from 'antd';
 import React, { useEffect, useState } from 'react';
 import styles from './index.less';
@@ -90,18 +88,11 @@ const MediaPage: React.FC = () => {
 
     p2pInitMsg.accept = true;
     try {
-      const response: HttpResponse = await invoke('process_init_p2p_request', {
+      await invoke('process_init_p2p_request', {
         p2pInitMsg: JSON.stringify(p2pInitMsg),
       });
-      console.log('response', response);
-      const webviewOptions: WebviewOptions = {
-        url: '/privacy/chat?friendId=' + p2pInitMsg.request_uuid,
-        height: 600,
-        width: 800,
-        x: 0,
-        y: 0,
-      };
-      await openNewWindow('隐私模式', webviewOptions, currentWindow);
+      // 隐私聊天窗口由主窗口监听 p2p_ready 后统一打开
+      await currentWindow.close();
     } catch (e) {
       console.log('处理请求失败', e);
     }

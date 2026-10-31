@@ -200,6 +200,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/privacy/chat/:friendId",
+    name: "PrivacyChat",
+    component: () => import("@/pages/Privacy/Chat/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/",
     redirect: "/chats",
   },

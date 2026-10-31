@@ -326,6 +326,8 @@ async fn run_p2p_client_v4(target_address_info: UserAddressInfo) -> Result<(), a
     tokio::time::sleep(Duration::from_millis(100)).await;
     run_client(addr.parse()?, target_address_info.address.to_string().parse()?, peer_cert_pem)
         .await?;
+    // 客户端已连接并就绪：通知前端打开隐私会话页面
+    let _ = events::emit("p2p_ready", target_address_info.uuid.clone());
     Ok(())
 }
 
@@ -345,6 +347,8 @@ async fn run_p2p_client_v6(target_address_info: UserAddressInfo) -> Result<(), a
     udp_port_forward_ipv6(local, remote, &vec_to).await?;
     tokio::time::sleep(Duration::from_millis(100)).await;
     run_client(local.into(), remote.into(), peer_cert_pem).await?;
+    // 客户端已连接并就绪：通知前端打开隐私会话页面
+    let _ = events::emit("p2p_ready", target_address_info.uuid.clone());
     Ok(())
 }
 
