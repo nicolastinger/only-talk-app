@@ -8,7 +8,7 @@ mod dispatch;
 mod media;
 mod sender;
 
-pub use dispatch::{process_rec_msg, send_ping_msg};
+pub use dispatch::{process_msg, process_rec_msg, send_ping_msg};
 pub use media::{process_media_data_channel, send_media_frame};
 pub use sender::get_sender;
 

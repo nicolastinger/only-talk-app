@@ -110,6 +110,11 @@ pub const MSG_TYPE_PING: u16 = 99;
 /// WebRTC信令消息
 pub const MSG_TYPE_WEBRTC_SIGNAL: u16 = 100;
 
+/// P2P 连接首帧身份认证
+/// 建连后第一条双向流首帧，携带 request_token 与双方 uuid；
+/// 监听端校验通过后才注册流(隐私模式 P2P)
+pub const MSG_TYPE_P2P_AUTH: u16 = 101;
+
 /// 消息接收成功回执
 pub const MSG_TYPE_RECALL_SUCCESS: u16 = 201;
 

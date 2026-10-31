@@ -157,8 +157,15 @@ interface P2pInitMsg {
   request_addr: string;
   request_uuid: string;
   request_token: string;
+  accept_uuid: string;
   accept: boolean;
   ip_type: number;
+  step: number;
+  is_server: boolean;
+  /** 发起方 P2P 会话证书(PEM)，用于连接端证书指纹固定 */
+  request_cert?: string;
+  /** 接收方 P2P 会话证书(PEM)，用于发起端证书指纹固定 */
+  accept_cert?: string;
 }
 
 interface RequestMediaMsg {

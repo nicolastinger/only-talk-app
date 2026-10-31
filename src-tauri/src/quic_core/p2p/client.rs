@@ -4,8 +4,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use log::{error, info};
-use quinn::{ClientConfig, Endpoint};
-use rustls::ClientConfig as RustlsClientConfig;
+use quinn::Endpoint;
 use tokio::sync::Mutex;
 
 use crate::models::bo::p2p_models::P2pChannelType;
@@ -14,27 +13,21 @@ use crate::models::entity::app_log::{LOG_LEVEL_ERROR, LOG_LEVEL_INFO};
 use crate::quic_core::center_service::text_msg_service::generate_text_msg;
 use crate::quic_core::models::TargetSendStream;
 use crate::quic_core::p2p::io::{process_media_data_channel, process_rec_msg, send_ping_msg};
+use crate::quic_core::p2p_tls;
 use crate::utils::app_log::log_quic_event;
-use crate::utils::message_types::MSG_TYPE_TEXT;
+use crate::utils::message_types::MSG_TYPE_P2P_AUTH;
 use crate::{GLOBAL_QUIC_USER_INFO, P2P_STREAM_SENDER};
 
 pub async fn run_client(
     local_addr: SocketAddr,
     server_addr: SocketAddr,
+    peer_cert_pem: String,
 ) -> Result<(), anyhow::Error> {
     // 创建客户端端点
     let mut endpoint = Endpoint::client(local_addr)?;
 
-    // 配置客户端
-    let mut crypto = RustlsClientConfig::builder()
-        .with_safe_defaults()
-        .with_root_certificates(rustls::RootCertStore::empty())
-        .with_no_client_auth();
-
-    // 禁用证书验证
-    crypto.dangerous().set_certificate_verifier(Arc::new(danger::NoCertificateVerification {}));
-
-    let config = ClientConfig::new(Arc::new(crypto));
+    // 配置客户端：只信任对端证书的 SHA-256 指纹(证书经中心服务器认证通道交换)
+    let config = p2p_tls::client_config(&peer_cert_pem)?;
     endpoint.set_default_client_config(config);
 
     info!("Connecting to server at {} from local {}", server_addr, local_addr);
@@ -57,11 +50,16 @@ pub async fn run_client(
     )
     .await;
 
-    let (p2p_request_token, target_uuid) = {
+    let (my_uuid, p2p_request_token, target_uuid) = {
         let guard = GLOBAL_QUIC_USER_INFO.read().await;
-        let p2p_request_token = guard.get("p2p_request_token").expect("p2p_request_token");
-        let target_uuid = guard.get("target_uuid").expect("target_uuid");
-        (p2p_request_token.clone(), target_uuid.clone())
+        let my_uuid = guard.get("uuid").cloned().ok_or_else(|| anyhow::anyhow!("no uuid"))?;
+        let p2p_request_token = guard
+            .get("p2p_request_token")
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("no p2p_request_token"))?;
+        let target_uuid =
+            guard.get("target_uuid").cloned().ok_or_else(|| anyhow::anyhow!("no target_uuid"))?;
+        (my_uuid, p2p_request_token, target_uuid)
     };
     let ping_uuid = target_uuid.clone();
 
@@ -71,12 +69,12 @@ pub async fn run_client(
     // ==================== 打开Default通道（双向流0） ====================
     let (mut send_default, mut recv_default) = connection.open_bi().await?;
 
-    // 发送验证消息
+    // 首帧认证：监听端校验 token + 双方 uuid 通过后才注册流
     let verify_msg = generate_text_msg(
-        MSG_TYPE_TEXT,
+        MSG_TYPE_P2P_AUTH,
         serde_json::to_vec(&p2p_request_token)?,
-        "".to_string(),
-        "".to_string(),
+        target_uuid.clone(),
+        my_uuid,
     )?;
     send_default.write_all(&verify_msg).await?;
 
@@ -365,27 +363,4 @@ pub async fn run_client(
     });
 
     Ok(())
-}
-
-// 实现不安全的证书验证器
-mod danger {
-    use std::time::SystemTime;
-
-    use rustls::client::ServerCertVerifier;
-
-    pub struct NoCertificateVerification {}
-
-    impl ServerCertVerifier for NoCertificateVerification {
-        fn verify_server_cert(
-            &self,
-            _end_entity: &rustls::Certificate,
-            _intermediates: &[rustls::Certificate],
-            _server_name: &rustls::ServerName,
-            _scts: &mut dyn Iterator<Item = &[u8]>,
-            _ocsp_response: &[u8],
-            _now: SystemTime,
-        ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
-            Ok(rustls::client::ServerCertVerified::assertion())
-        }
-    }
 }

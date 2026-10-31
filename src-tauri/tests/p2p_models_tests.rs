@@ -142,6 +142,8 @@ fn p2p_init_msg_serde_roundtrip() {
         ip_type: 1,
         step: 2,
         is_server: true,
+        request_cert: "-----BEGIN CERTIFICATE-----\na\n-----END CERTIFICATE-----\n".to_string(),
+        accept_cert: "-----BEGIN CERTIFICATE-----\nb\n-----END CERTIFICATE-----\n".to_string(),
     };
     let json = serde_json::to_string(&msg).expect("序列化失败");
     let back: P2pInitMsg = serde_json::from_str(&json).expect("反序列化失败");
@@ -151,6 +153,27 @@ fn p2p_init_msg_serde_roundtrip() {
     assert_eq!(back.ip_type, 1);
     assert_eq!(back.step, 2);
     assert!(back.is_server);
+    assert_eq!(back.request_cert, msg.request_cert);
+    assert_eq!(back.accept_cert, msg.accept_cert);
+}
+
+#[test]
+fn p2p_init_msg_old_payload_defaults_certs() {
+    // 老版本客户端不会带 request_cert / accept_cert
+    let json = r#"{
+        "accept_addr": "",
+        "request_addr": "",
+        "request_uuid": "u1",
+        "request_token": "t",
+        "accept_uuid": "u2",
+        "accept": false,
+        "ip_type": 0,
+        "step": 0,
+        "is_server": false
+    }"#;
+    let msg: P2pInitMsg = serde_json::from_str(json).expect("反序列化失败");
+    assert!(msg.request_cert.is_empty());
+    assert!(msg.accept_cert.is_empty());
 }
 
 #[test]

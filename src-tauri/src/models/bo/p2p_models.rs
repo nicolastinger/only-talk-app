@@ -106,6 +106,12 @@ pub struct P2pInitMsg {
     pub step: u8,
     /// 是否作为服务端
     pub is_server: bool,
+    /// 发起方 P2P 会话证书(PEM) - 用于对端做证书指纹固定，不含私钥
+    #[serde(default)]
+    pub request_cert: String,
+    /// 接收方 P2P 会话证书(PEM) - 用于发起方做证书指纹固定，不含私钥
+    #[serde(default)]
+    pub accept_cert: String,
 }
 
 /// 用户地址信息
