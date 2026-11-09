@@ -207,12 +207,22 @@ useSystemNotify(() => store.userInfo.uuid);
 </script>
 
 <template>
-  <div :class="styles.userHomeContainer">
-    <div :class="styles.leftSideBar">
+  <a-layout :class="styles.userHomeContainer">
+    <a-layout-sider
+      :width="72"
+      :class="styles.leftSideBar"
+      :style="{ background: 'transparent' }"
+    >
       <LeftAside />
-    </div>
-    <div :class="styles.rightSideBar">
-      <div :class="styles.rightSideBarTool">
+    </a-layout-sider>
+    <a-layout
+      :class="styles.rightSideBar"
+      :style="{ background: 'transparent' }"
+    >
+      <a-layout-header
+        :class="styles.rightSideBarTool"
+        :style="{ padding: 0, background: 'transparent', lineHeight: 'normal' }"
+      >
         <div
           :class="styles.tools"
           @mouseenter="isHovered = true"
@@ -273,11 +283,11 @@ useSystemNotify(() => store.userInfo.uuid);
             </div>
           </div>
         </div>
-      </div>
-      <div :class="styles.rightSideBarContent">
+      </a-layout-header>
+      <a-layout-content :class="styles.rightSideBarContent">
         <router-view />
-      </div>
-    </div>
+      </a-layout-content>
+    </a-layout>
     <ConnectionStatusTag :status-tag="statusTag" />
     <MessageAlertBanner />
     <a-modal
@@ -335,5 +345,5 @@ useSystemNotify(() => store.userInfo.uuid);
         {{ forceLogoutReason || t('homeLayout.forceLogoutContent') }}
       </p>
     </a-modal>
-  </div>
+  </a-layout>
 </template>
