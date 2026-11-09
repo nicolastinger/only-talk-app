@@ -394,6 +394,8 @@ const messages: LocaleMessages = {
       "autoStart": "开机自动启动",
       "autoStartDesc": "登录系统后自动启动应用",
       "autoStartFailed": "修改开机自启设置失败",
+      "devAssistant": "开发助手",
+      "devAssistantDesc": "在应用内显示开发助手悬浮入口（默认隐藏）",
       "chatBackground": "聊天背景",
       "chatBackgroundDesc": "选择图片作为聊天背景，默认拉伸铺满；图片仅保存在本机，不会上传到服务器。",
       "chatBackgroundUpload": "选择图片",

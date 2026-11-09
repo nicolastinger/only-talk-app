@@ -6,6 +6,7 @@ import AvatarCropHost from '@/components/AvatarCropModal/Host.vue';
 import DevAssistant from '@/components/DevAssistant/index.vue';
 import FeedbackBridge from '@/components/FeedbackBridge.vue';
 import SyncLoadingOverlay from '@/components/SyncLoadingOverlay/index.vue';
+import { useDevAssistantStore } from '@/stores/devAssistant';
 import {
   useMessageSound,
   useP2pMessageApi,
@@ -24,6 +25,9 @@ useWebRTCIncomingCall();
 
 // 启动时恢复持久化主题，并让 antd 组件跟随深浅色
 const { effectiveMode } = useTheme();
+
+// 开发助手默认隐藏，可在设置中开启
+const devAssistant = useDevAssistantStore();
 
 // 窗口在 tauri.conf.json 中配置为 visible:false，首帧渲染完成后再显示，避免白屏
 onMounted(() => {
@@ -49,7 +53,7 @@ onMounted(() => {
       <div :class="styles.container">
         <router-view />
         <AvatarCropHost />
-        <DevAssistant />
+        <DevAssistant v-if="devAssistant.visible" />
         <SyncLoadingOverlay />
       </div>
     </a-app>

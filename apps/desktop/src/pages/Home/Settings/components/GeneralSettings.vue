@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import {
   CheckCircleFilled,
+  CodeOutlined,
   DownloadOutlined,
   FontSizeOutlined,
   GlobalOutlined,
@@ -22,6 +23,7 @@ import {
   type ChatBackgroundVo,
 } from '@workspace/services';
 import { useTheme } from '@/hooks/useTheme';
+import { useDevAssistantStore } from '@/stores/devAssistant';
 import type { ChatsFontSize, ThemeMode } from '@/stores/theme';
 import { useI18n } from '@/i18n';
 import { feedback } from '@/utils/feedback';
@@ -29,6 +31,7 @@ import styles from '../Settings.module.less';
 
 const { t, locale, setLocale } = useI18n();
 const { mode, fontSize, setMode, setFontSize } = useTheme();
+const devAssistant = useDevAssistantStore();
 
 const autoStartEnabled = ref(false);
 const autoStartLoading = ref(false);
@@ -61,6 +64,10 @@ onMounted(() => {
 const handleAutoDownloadChange = (checked: boolean) => {
   autoDownloadWifi.value = checked;
   setAutoDownloadOnWifi(checked).catch(() => {});
+};
+
+const handleDevAssistantChange = (checked: boolean) => {
+  devAssistant.setVisible(checked);
 };
 
 const onAutoDownloadChange = (e: { target: { checked: boolean } }) => {
@@ -421,6 +428,24 @@ const onThumbKeydown = (e: KeyboardEvent, id: number) => {
       </a-checkbox>
       <a-typography-text type="secondary" :class="styles.description">
         {{ t('settings.generalSettings.autoDownloadDesc') }}
+      </a-typography-text>
+    </a-card>
+
+    <a-card :class="styles.settingCard">
+      <div :class="styles.cardHeader">
+        <CodeOutlined :class="styles.cardIcon" />
+        <a-typography-text strong>
+          {{ t('settings.generalSettings.devAssistant') }}
+        </a-typography-text>
+      </div>
+      <a-divider :class="styles.divider" />
+      <a-switch
+        :checked="devAssistant.visible"
+        :class="styles.settingSwitch"
+        @change="handleDevAssistantChange"
+      />
+      <a-typography-text type="secondary" :class="styles.description">
+        {{ t('settings.generalSettings.devAssistantDesc') }}
       </a-typography-text>
     </a-card>
   </div>

@@ -394,6 +394,8 @@ const messages: LocaleMessages = {
       "autoStart": "Launch on Startup",
       "autoStartDesc": "Automatically launch the app after system login",
       "autoStartFailed": "Failed to change launch on startup setting",
+      "devAssistant": "Developer Assistant",
+      "devAssistantDesc": "Show the floating developer assistant entry in the app (hidden by default)",
       "chatBackground": "Chat Background",
       "chatBackgroundDesc": "Choose an image as the chat background (stretched to fill). Images stay on this device and are never uploaded.",
       "chatBackgroundUpload": "Choose Image",
