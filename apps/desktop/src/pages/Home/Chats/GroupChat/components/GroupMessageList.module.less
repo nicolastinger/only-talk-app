@@ -1,0 +1,48 @@
+.groupMessageList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.groupMessageSystem {
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #7ab8d4;
+  background: rgba(64, 150, 255, 5%);
+  border-radius: 8px;
+  margin: 8px auto;
+  max-width: 80%;
+}
+
+.newMessageAnimation {
+  animation: slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.messageItem {
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

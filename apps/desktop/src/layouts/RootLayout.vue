@@ -2,6 +2,7 @@
 import { onMounted } from 'vue';
 import { theme } from 'ant-design-vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import AvatarCropHost from '@/components/AvatarCropModal/Host.vue';
 import DevAssistant from '@/components/DevAssistant/index.vue';
 import FeedbackBridge from '@/components/FeedbackBridge.vue';
 import SyncLoadingOverlay from '@/components/SyncLoadingOverlay/index.vue';
@@ -47,6 +48,7 @@ onMounted(() => {
       <FeedbackBridge />
       <div :class="styles.container">
         <router-view />
+        <AvatarCropHost />
         <DevAssistant />
         <SyncLoadingOverlay />
       </div>

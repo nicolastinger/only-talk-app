@@ -1,0 +1,101 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.playBtn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+
+  .waveBar {
+    display: block;
+    width: 3px;
+    border-radius: 2px;
+    background: currentcolor;
+    opacity: 0.55;
+  }
+
+  .waveBar:nth-child(1) {
+    height: 10px;
+  }
+
+  .waveBar:nth-child(2) {
+    height: 16px;
+  }
+
+  .waveBar:nth-child(3) {
+    height: 8px;
+  }
+
+  .waveBar:nth-child(4) {
+    height: 14px;
+  }
+
+  .waveBar:nth-child(5) {
+    height: 11px;
+  }
+}
+
+.duration {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+
+.uploadBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 25%);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.uploadProgress {
+  display: block;
+  height: 100%;
+  background: currentcolor;
+}
+
+.uploadIndeterminate {
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: currentcolor;
+  animation: voice-upload-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes voice-upload-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(260%);
+  }
+}

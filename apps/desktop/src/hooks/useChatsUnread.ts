@@ -4,7 +4,9 @@ import type { ChatSessionEvent, ChatSessionVo } from '@workspace/types';
 import { useBackendEvent } from './useBackendEvent';
 
 // 监听会话信息
-export const useChatsUnread = (recvUuid: string) => {
+export const useChatsUnread = (recvUuid: string | (() => string)) => {
+  const getRecvUuid = () =>
+    typeof recvUuid === 'function' ? recvUuid() : recvUuid;
   const chatSessions = ref<ChatSessionVo[]>([]);
 
   const totalUnreadCount = computed(() =>
@@ -17,7 +19,7 @@ export const useChatsUnread = (recvUuid: string) => {
   let intervalId: ReturnType<typeof setInterval> | undefined;
 
   const getChatSession = async () => {
-    if (recvUuid === '') return;
+    if (getRecvUuid() === '') return;
     try {
       const res = (await invoke(
         'get_chat_session_from_store',
@@ -31,14 +33,14 @@ export const useChatsUnread = (recvUuid: string) => {
   };
 
   const start = () => {
-    if (recvUuid === '') return;
+    if (getRecvUuid() === '') return;
     getChatSession();
     // 每 30s 检查一次会话信息
     intervalId = setInterval(getChatSession, 30000);
   };
 
   onMounted(start);
-  watch(() => recvUuid, start);
+  watch(getRecvUuid, start);
   onUnmounted(() => {
     if (intervalId) clearInterval(intervalId);
   });
@@ -48,7 +50,7 @@ export const useChatsUnread = (recvUuid: string) => {
       const event = JSON.parse(payload) as ChatSessionEvent;
       console.log('chatSessionEvent', event);
       // 只监听当前用户的会话
-      if (event.data.recv_user !== recvUuid) return;
+      if (event.data.recv_user !== getRecvUuid()) return;
 
       const index = chatSessions.value.findIndex(
         (item) =>

@@ -1,0 +1,32 @@
+.languageSwitch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-white-10);
+  border: 1px solid var(--border-white-light);
+}
+
+.languageSwitch:hover {
+  background: var(--bg-white-20);
+  border-color: var(--border-white-lighter);
+}
+
+.langText {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--bg-white-90);
+  user-select: none;
+}
+
+.switchIcon {
+  color: var(--bg-white-80);
+  transition: transform 0.3s ease;
+}
+
+.languageSwitch:hover .switchIcon {
+  transform: rotate(15deg);
+}
