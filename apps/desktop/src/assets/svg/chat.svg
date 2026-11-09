@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="chatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4facfe"/>
+      <stop offset="100%" stop-color="#00f2fe"/>
+    </linearGradient>
+    <linearGradient id="chatGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="50" fill="url(#chatGrad)" opacity="0.1"/>
+  <circle cx="60" cy="60" r="40" fill="url(#chatGrad)" opacity="0.15"/>
+  <circle cx="60" cy="60" r="30" fill="url(#chatGrad)" opacity="0.2"/>
+  <rect x="25" y="30" width="70" height="50" rx="12" fill="url(#chatGrad)" opacity="0.9"/>
+  <rect x="30" y="35" width="60" height="35" rx="8" fill="white" opacity="0.3"/>
+  <path d="M40 48 L80 48" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <path d="M40 58 L65 58" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <path d="M35 80 L25 95 L45 80" fill="url(#chatGrad)" opacity="0.9"/>
+  <circle cx="85" cy="25" r="12" fill="url(#chatGrad2)" opacity="0.9"/>
+  <path d="M82 22 L88 28 M88 22 L82 28" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -2,29 +2,36 @@ import { ref } from 'vue';
 import type { TextQuicMsgVo } from '@workspace/types';
 import { useBackendEvent } from './useBackendEvent';
 
+type Getter<T> = T | (() => T);
+
+const resolve = <T>(value: Getter<T>): T =>
+  typeof value === 'function' ? (value as () => T)() : value;
+
 // 监听目标账号的消息传递,为空则监听全局
 export const useMessageApi = (
-  sendUuid: string | null,
-  recvUuid: string,
+  sendUuid: Getter<string | null>,
+  recvUuid: Getter<string>,
 ) => {
   // 窗口内聊天列表
   const textMessage = ref<TextQuicMsgVo>();
 
   useBackendEvent('text_message', (payload) => {
+    const send = resolve(sendUuid);
+    const recv = resolve(recvUuid);
     const text = JSON.parse(payload) as TextQuicMsgVo;
     // 自己其他端发送的消息(self-echo)会被回推: send_user=我, recv_user=好友。
     // 需在 recv_user 与 sendUuid 过滤之前放行。
-    if (sendUuid && text.send_user === recvUuid && text.recv_user === sendUuid) {
+    if (send && text.send_user === recv && text.recv_user === send) {
       textMessage.value = text;
       return;
     }
-    if (text.recv_user !== recvUuid) {
+    if (text.recv_user !== recv) {
       return;
     }
     // 监听某个账号
-    if (sendUuid !== null) {
+    if (send !== null) {
       // 过滤接收人
-      if (text.send_user === sendUuid || text.send_user === 'system') {
+      if (text.send_user === send || text.send_user === 'system') {
         textMessage.value = text;
       }
     } else {

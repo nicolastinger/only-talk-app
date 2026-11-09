@@ -1,0 +1,1024 @@
+/**
+ * WebRTC 通话编排 Hook
+ *
+ * 集中处理 WebRTC 通话窗口的：
+ * - 初始化（本地媒体流、创建 offer/answer）
+ * - 信令监听（webrtc_signal=100）与通话回应监听（13接受/14拒绝）
+ * - 连接生命周期与媒体开关
+ * - 退出/重试/拒绝等交互动作
+ *
+ * 组件层仅负责渲染，调用此 Composable 获取状态与动作。
+ */
+import { useAvatarMap } from '@/hooks/useAvatarMap';
+import { updateWebRTCWindowState } from '@/hooks/useWebRTCSignalApi';
+import { getWebRTCService, initWebRTCService } from '@/services/webrtcService';
+import { useI18n } from '@/i18n';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
+import { useRoute } from 'vue-router';
+import {
+  decodeP2PChatFrame,
+  encodeP2PChatHello,
+  encodeP2PChatMessage,
+  encodeP2PChatRead,
+  genP2PChatMessageId,
+  P2P_CHAT_CAP_READ,
+  subscribe,
+} from '@workspace/services';
+import type { ChatSessionVo, WebRTCSignalMessage } from '@workspace/types';
+import { feedback } from '@/utils/feedback';
+import { nanoid } from 'nanoid';
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
+
+/** 通话计时格式：不足 1 小时 MM:SS，超过 1 小时 HH:MM:SS */
+export const formatCallDuration = (totalSeconds: number): string => {
+  const safe = Number.isFinite(totalSeconds) ? Math.max(0, totalSeconds) : 0;
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return hours > 0
+    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(minutes)}:${pad(seconds)}`;
+};
+
+export interface ChatMessageItem {
+  id: string;
+  text: string;
+  isMine: boolean;
+  timestamp: number;
+  senderName?: string;
+  /** 已通过 DataChannel 发出 */
+  delivered?: boolean;
+  /** 对方已读回执 */
+  read?: boolean;
+}
+
+export type ConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'failed';
+
+export type CallStage =
+  | 'incoming'
+  | 'outgoing'
+  | 'connecting'
+  | 'connected'
+  | 'rejected'
+  | 'ended';
+
+interface WebRTCSignalMsgRaw {
+  type: 'offer' | 'answer' | 'candidate' | 'end';
+  sender: string;
+  receiver: string;
+  sessionId: string;
+  data: unknown;
+  timestamp: number;
+}
+
+interface TextQuicMsgVo {
+  nano_id: string;
+  text_type: number;
+  raw: string;
+  recv_user: string;
+  send_user: string;
+  timestamp: number;
+}
+
+export type WebRTCLogLevel = 'log' | 'info' | 'warn' | 'error';
+
+export interface WebRTCLogEntry {
+  id: number;
+  timestamp: number;
+  level: WebRTCLogLevel;
+  message: string;
+}
+
+// ==================== WebRTC 窗口日志缓冲 ====================
+
+const MAX_LOGS = 1000;
+
+const webRTCLogs = ref<WebRTCLogEntry[]>([]);
+let nextLogId = 0;
+let logCaptureInstalled = false;
+
+const stringifyArg = (arg: unknown): string => {
+  if (typeof arg === 'string') return arg;
+  if (arg instanceof Error) return arg.stack || arg.message;
+  try {
+    return JSON.stringify(arg);
+  } catch {
+    return String(arg);
+  }
+};
+
+const pushLog = (level: WebRTCLogLevel, args: unknown[]) => {
+  const message = args.map(stringifyArg).join(' ');
+  // 仅采集与 WebRTC 相关的日志（[WebRTCService...] / [WebRTCChat...] 等）
+  if (!message.includes('[WebRT')) return;
+  const next = webRTCLogs.value.concat({
+    id: nextLogId++,
+    timestamp: Date.now(),
+    level,
+    message,
+  });
+  webRTCLogs.value = next.length > MAX_LOGS ? next.slice(next.length - MAX_LOGS) : next;
+};
+
+/** 拦截当前 webview 的 console，仅采集包含 [WebRT 的日志到内存缓冲区 */
+export const initWebRTCConsoleCapture = (): (() => void) => {
+  if (logCaptureInstalled) return () => {};
+  logCaptureInstalled = true;
+
+  const originals = {
+    log: console.log.bind(console),
+    info: console.info.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+  };
+
+  console.log = (...args: unknown[]) => {
+    pushLog('log', args);
+    originals.log(...args);
+  };
+  console.info = (...args: unknown[]) => {
+    pushLog('info', args);
+    originals.info(...args);
+  };
+  console.warn = (...args: unknown[]) => {
+    pushLog('warn', args);
+    originals.warn(...args);
+  };
+  console.error = (...args: unknown[]) => {
+    pushLog('error', args);
+    originals.error(...args);
+  };
+
+  return () => {
+    console.log = originals.log;
+    console.info = originals.info;
+    console.warn = originals.warn;
+    console.error = originals.error;
+    logCaptureInstalled = false;
+  };
+};
+
+/** 订阅 WebRTC 日志，日志更新时触发重渲染 */
+export const useWebRTCLogs = () => webRTCLogs;
+
+/** 清空 WebRTC 日志 */
+export const clearWebRTCLogs = () => {
+  webRTCLogs.value = [];
+};
+
+// ==================== 主 Composable ====================
+
+export const useWebRTCCall = () => {
+  const { t } = useI18n();
+  const route = useRoute();
+
+  const getQueryString = (key: string): string => {
+    const value = route.query[key];
+    return typeof value === 'string' ? value : '';
+  };
+
+  const friendId = getQueryString('friendId');
+  const isInitiator = getQueryString('initiator') === 'true';
+  const localUserId = getQueryString('localUserId');
+  const initialSignalData = route.query.signalData;
+  const initialSignalDataStr =
+    typeof initialSignalData === 'string' ? initialSignalData : undefined;
+  const urlSessionId = getQueryString('sessionId');
+
+  const messages = ref<ChatMessageItem[]>([]);
+  const inputText = ref('');
+  const connectionStatus = ref<ConnectionState>('connecting');
+  const callStage = ref<CallStage>(isInitiator ? 'outgoing' : 'incoming');
+  const isVideoEnabled = ref(true);
+  const isAudioEnabled = ref(true);
+  const isRetrying = ref(false);
+  const showEmojiPicker = ref(false);
+  const activeView = ref<'video' | 'log'>('video');
+  const friendName = ref('');
+  const friendIcon = ref('');
+  const callDuration = ref(0);
+  const remoteStream = ref<MediaStream | null>(null);
+  const localStream = ref<MediaStream | null>(null);
+  const chatReady = ref(false);
+  const webRTCLogs = useWebRTCLogs();
+
+  // useAvatarMap 依赖响应式数组追踪 icon 变化
+  const friendIconIds = reactive<Array<string | undefined>>([]);
+  const { avatarMap } = useAvatarMap(friendIconIds);
+  const friendAvatar = computed(() =>
+    friendIcon.value ? avatarMap.value.get(friendIcon.value) : undefined,
+  );
+  watch(
+    friendIcon,
+    (icon) => {
+      friendIconIds.splice(0, friendIconIds.length, icon);
+    },
+    { immediate: true },
+  );
+
+  // 通话计时：WebRTC 连接建立后开始，断开即停止（保留已计时长用于结束提示）
+  const connectedAtRef = ref<number | null>(null);
+  watch(connectionStatus, (status, _old, onCleanup) => {
+    if (status !== 'connected') {
+      return;
+    }
+    connectedAtRef.value = Date.now();
+    callDuration.value = 0;
+    const timer = setInterval(() => {
+      if (connectedAtRef.value !== null) {
+        callDuration.value = Math.floor(
+          (Date.now() - connectedAtRef.value) / 1000,
+        );
+      }
+    }, 1000);
+    onCleanup(() => {
+      clearInterval(timer);
+    });
+  });
+
+  const callDurationText = computed(() => formatCallDuration(callDuration.value));
+
+  // 读取好友昵称与头像（与聊天列表同源：本地会话store）
+  watch(
+    () => friendId,
+    (id, _oldId, onCleanup) => {
+      if (!id) return;
+      let cancelled = false;
+      const loadFriendInfo = async () => {
+        try {
+          const sessions = await invoke<ChatSessionVo[]>(
+            'get_chat_session_from_store',
+            {},
+          );
+          const session = sessions.find(
+            (item) => item.send_user === id || item.recv_user === id,
+          );
+          if (cancelled || !session) return;
+          friendName.value = session.friend_name || '';
+          friendIcon.value = session.friend_icon || '';
+        } catch (e) {
+          console.log('[WebRTCChat] 读取好友信息失败:', e);
+        }
+      };
+      loadFriendInfo();
+      onCleanup(() => {
+        cancelled = true;
+      });
+    },
+    { immediate: true },
+  );
+
+  const isPreCall = computed(
+    () =>
+      callStage.value === 'incoming' ||
+      callStage.value === 'outgoing' ||
+      callStage.value === 'rejected',
+  );
+
+  const messageContainerRef = ref<HTMLDivElement | null>(null);
+  const localVideoRef = ref<HTMLVideoElement | null>(null);
+  const remoteVideoRef = ref<HTMLVideoElement | null>(null);
+  const emojiPickerRef = ref<HTMLDivElement | null>(null);
+  const logContainerRef = ref<HTMLDivElement | null>(null);
+  // 本地媒体采集可能还在进行中就收到"对方已接受"，createOffer 前先等它完成，
+  // 否则连接创建时 localStream 为 null，轨道根本不会加进 SDP（对端既无音频也无视频）
+  const localStreamPromiseRef = ref<Promise<MediaStream> | null>(null);
+  // 对方是否声明支持已读回执（来自 hello 帧）
+  const peerReadCapableRef = ref(false);
+
+  // 采集当前窗口与 WebRTC 相关的日志，用于日志 Tab 展示
+  onMounted(() => {
+    initWebRTCConsoleCapture();
+  });
+
+  // 日志更新时自动滚到底部
+  watch(webRTCLogs, async () => {
+    await nextTick();
+    const el = logContainerRef.value;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  });
+
+  // 发送视频通话控制消息（12邀请/13接受/14拒绝/15结束）
+  const sendControlMsg = async (
+    text_type: number,
+    type: string,
+    sessionId: string,
+  ) => {
+    const msg: TextQuicMsgVo = {
+      nano_id: nanoid(),
+      text_type,
+      raw: JSON.stringify({
+        type,
+        sender: localUserId,
+        receiver: friendId,
+        sessionId,
+        timestamp: Date.now(),
+      }),
+      recv_user: friendId,
+      send_user: localUserId,
+      timestamp: Date.now(),
+    };
+    await invoke('send_call_control_msg', { textQuicMsg: msg });
+  };
+
+  // 发起方：发送邀请
+  const sendInvite = async (sessionId: string) => {
+    await sendControlMsg(12, 'invite', sessionId);
+  };
+
+  // 收到对方接受(13)后：创建 offer 并发送 100 信令
+  const sendOffer = async () => {
+    const service = getWebRTCService();
+    if (!service) {
+      console.error('[WebRTCChat] ❌ WebRTCService不存在，无法创建offer');
+      return;
+    }
+    // 采集尚未完成时先等一等，保证 offer 里带上本地音视频轨
+    if (!service.getLocalStream() && localStreamPromiseRef.value) {
+      console.log('[WebRTCChat] 等待本地媒体采集完成后再创建offer...');
+      await localStreamPromiseRef.value.catch(() => {});
+    }
+    console.log(`[WebRTCChat] 对方已接受，创建offer... (friendId=${friendId})`);
+    const offer = await service.createOffer(friendId);
+    const signalMessage: WebRTCSignalMessage = {
+      type: 'offer',
+      sender: localUserId,
+      receiver: friendId,
+      sessionId: service.sessionId,
+      data: offer,
+      timestamp: Date.now(),
+    };
+    await service.sendSignal(signalMessage);
+    callStage.value = 'connecting';
+    console.log(`[WebRTCChat] ✅ offer已发送，等待对端的answer和ICE候选...`);
+  };
+
+  // 被叫方：接受
+  const handleAccept = async () => {
+    const service = getWebRTCService();
+    const sessionId = service?.sessionId || urlSessionId;
+    await sendControlMsg(13, 'accept', sessionId);
+    callStage.value = 'connecting';
+  };
+
+  // 关闭当前WebRTC窗口（不发送结束信令，用于未接通时的退出）
+  const closeWebRTCWindow = async () => {
+    try {
+      await updateWebRTCWindowState(friendId, 'close');
+      const currentWindow = getCurrentWindow();
+      await currentWindow.close();
+    } catch (e) {
+      console.error('[WebRTCChat] 关闭窗口失败:', e);
+    }
+  };
+
+  // 被叫方/发起方：拒绝
+  const handleReject = async () => {
+    const service = getWebRTCService();
+    const sessionId = service?.sessionId || urlSessionId;
+    await sendControlMsg(14, 'reject', sessionId);
+    callStage.value = 'rejected';
+    // 短暂提示后自动关闭窗口
+    setTimeout(() => closeWebRTCWindow(), 2000);
+  };
+
+  const scrollToBottom = () => {
+    const container = messageContainerRef.value;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  };
+
+  watch(messages, scrollToBottom, { deep: true, flush: 'post' });
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      emojiPickerRef.value &&
+      !emojiPickerRef.value.contains(event.target as Node)
+    ) {
+      showEmojiPicker.value = false;
+    }
+  };
+  onMounted(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+  });
+  onUnmounted(() => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  });
+
+  // 信令监听（webrtc_signal=100）
+  let unlistenSignal: (() => void) | undefined;
+  // 通话回应监听（call_control）
+  let unlistenCallControl: (() => void) | undefined;
+
+  const setupSignalListener = () => {
+    try {
+      console.log(
+        `[WebRTCChat] useEffect(setupListener) - 开始设置信令事件监听...`,
+      );
+
+      unlistenSignal = subscribe('webrtc_signal', async (payload) => {
+        console.log(`[WebRTCChat.onWebRTCSignal] 📡 收到WebRTC信令事件`);
+        try {
+          const msgVo: TextQuicMsgVo = JSON.parse(payload);
+          console.log(
+            `[WebRTCChat.onWebRTCSignal] QUIC消息已解析 - nano_id: ${msgVo.nano_id}, text_type: ${msgVo.text_type}`,
+          );
+
+          const signalMsg: WebRTCSignalMsgRaw = JSON.parse(msgVo.raw);
+          console.log(
+            `[WebRTCChat.onWebRTCSignal] 信令消息已解析 - 类型: ${signalMsg.type}, 发送方: ${signalMsg.sender}, sessionId: ${signalMsg.sessionId}`,
+          );
+
+          if (signalMsg.sender !== friendId) {
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] ⚠️  忽略来自非目标用户(${signalMsg.sender})的消息`,
+            );
+            return;
+          }
+
+          const service = getWebRTCService();
+          if (!service) {
+            console.error(`[WebRTCChat.onWebRTCSignal] ❌ WebRTCService不存在`);
+            return;
+          }
+
+          if (signalMsg.type === 'answer') {
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的answer，正在处理...`,
+            );
+            await service.handleAnswer(
+              friendId,
+              signalMsg.data as RTCSessionDescriptionInit,
+            );
+            console.log(`[WebRTCChat.onWebRTCSignal] ✅ answer已处理`);
+          } else if (signalMsg.type === 'offer') {
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的offer（可能是ICE重启），正在处理...`,
+            );
+            try {
+              const restartAnswer = await service.handleOffer(
+                friendId,
+                signalMsg.data as RTCSessionDescriptionInit,
+              );
+              console.log(`[WebRTCChat.onWebRTCSignal] ICE重启answer已创建`);
+
+              const responseSignal: WebRTCSignalMessage = {
+                type: 'answer',
+                sender: localUserId,
+                receiver: friendId,
+                sessionId: signalMsg.sessionId,
+                data: restartAnswer,
+                timestamp: Date.now(),
+              };
+              await service.sendSignal(responseSignal);
+              console.log(
+                `[WebRTCChat.onWebRTCSignal] ✅ ICE重启answer已发送`,
+              );
+            } catch (e) {
+              console.error(
+                `[WebRTCChat.onWebRTCSignal] ❌ 处理ICE重启offer失败:`,
+                e,
+              );
+            }
+          } else if (signalMsg.type === 'candidate') {
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的ICE candidate`,
+            );
+            await service.handleCandidate(
+              friendId,
+              signalMsg.data as RTCIceCandidateInit,
+            );
+            console.log(`[WebRTCChat.onWebRTCSignal] ✅ candidate已处理`);
+          } else if (signalMsg.type === 'end') {
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] 收到来自${friendId}的结束信令，关闭连接`,
+            );
+            connectionStatus.value = 'disconnected';
+            await service.closeConnection(friendId);
+          } else {
+            console.log(
+              `[WebRTCChat.onWebRTCSignal] ⚠️  未知的信令类型: ${signalMsg.type}`,
+            );
+          }
+        } catch (e) {
+          console.error(`[WebRTCChat.onWebRTCSignal] ❌ 处理信令失败:`, e);
+        }
+      });
+
+      console.log(`[WebRTCChat] ✅ 信令事件监听已设置`);
+    } catch (e) {
+      console.error(`[WebRTCChat] ❌ 设置信令监听失败:`, e);
+    }
+  };
+
+  const setupCallControlListener = () => {
+    try {
+      unlistenCallControl = subscribe('call_control', async (payload) => {
+        const text: TextQuicMsgVo = JSON.parse(payload);
+        if (text.recv_user !== localUserId || text.send_user !== friendId) {
+          return;
+        }
+        if (text.text_type === 13) {
+          console.log(`[WebRTCChat] 收到对方接受通知，开始创建offer...`);
+          try {
+            await sendOffer();
+          } catch (e) {
+            console.error('[WebRTCChat] 创建offer失败:', e);
+            feedback.message.error(t('webrtc.connectionCreateFailed'));
+          }
+        } else if (text.text_type === 14) {
+          console.log(`[WebRTCChat] 对方拒绝了通话请求`);
+          callStage.value = 'rejected';
+          setTimeout(() => closeWebRTCWindow(), 2000);
+        } else if (text.text_type === 15) {
+          console.log(`[WebRTCChat] 对方结束了通话，关闭连接`);
+          const service = getWebRTCService();
+          if (service) {
+            await service.closeConnection(friendId);
+          }
+          callStage.value = 'ended';
+          setTimeout(() => closeWebRTCWindow(), 2000);
+        }
+      });
+      console.log(`[WebRTCChat] ✅ 通话回应监听已设置`);
+    } catch (e) {
+      console.error(`[WebRTCChat] ❌ 设置通话回应监听失败:`, e);
+    }
+  };
+
+  const initWebRTC = async () => {
+    console.log(`[WebRTCChat] 开始初始化WebRTC连接...`);
+    console.log(
+      `[WebRTCChat] 参数 - friendId: ${friendId}, isInitiator: ${isInitiator}, localUserId: ${localUserId}`,
+    );
+
+    const service = initWebRTCService(localUserId);
+    console.log(
+      `[WebRTCChat] WebRTCService已初始化，会话ID: ${service.sessionId}`,
+    );
+
+    // 若通过邀请流程携带了 sessionId，则注入以保证双方使用同一会话
+    if (urlSessionId) {
+      service.sessionId = urlSessionId;
+      console.log(`[WebRTCChat] 已注入会话ID: ${service.sessionId}`);
+    }
+
+    try {
+      console.log(`[WebRTCChat] 初始化本地媒体流...`);
+      const mediaPromise = service.initLocalStream(true, true);
+      localStreamPromiseRef.value = mediaPromise;
+      const stream = await mediaPromise;
+      localStream.value = stream;
+
+      if (localVideoRef.value) {
+        localVideoRef.value.srcObject = stream;
+        console.log(`[WebRTCChat] ✅ 本地视频流已绑定`);
+      }
+    } catch (error) {
+      console.error(`[WebRTCChat] ❌ 初始化本地媒体流失败:`, error);
+      localStream.value = null;
+      feedback.message.warning(t('webrtc.mediaAccessError'));
+    }
+
+    service.setOnRemoteStreamCallback(
+      (fromFriendId: string, stream: MediaStream) => {
+        console.log(
+          `[WebRTCChat.onRemoteStreamCallback] 收到来自${fromFriendId}的远程媒体流`,
+        );
+        if (remoteVideoRef.value) {
+          remoteVideoRef.value.srcObject = stream;
+          console.log(
+            `[WebRTCChat.onRemoteStreamCallback] ✅ 远程视频流已绑定`,
+          );
+        }
+        // 同步到 state：VideoPanel 依赖它监听视频轨的 mute/unmute（对方开关摄像头）
+        remoteStream.value = stream;
+      },
+    );
+
+    service.setOnMessageCallback((fromFriendId: string, raw: string) => {
+      console.log(
+        `[WebRTCChat.onMessageCallback] 收到来自${fromFriendId}的数据: ${raw}`,
+      );
+      if (fromFriendId !== friendId) return;
+      const frame = decodeP2PChatFrame(raw);
+
+      // 能力协商：对方声明支持已读回执
+      if (frame.kind === 'hello') {
+        peerReadCapableRef.value = frame.caps.includes(P2P_CHAT_CAP_READ);
+        console.log(
+          `[WebRTCChat] 对方能力: ${frame.caps.join(',') || '(none)'}`,
+        );
+        return;
+      }
+
+      // 已读回执：把我发出去的消息标记为已读
+      if (frame.kind === 'read') {
+        const ids = new Set(frame.ids);
+        messages.value = messages.value.map((m) =>
+          m.isMine && ids.has(m.id) ? { ...m, read: true } : m,
+        );
+        return;
+      }
+
+      // 文本消息（含旧版本纯文本）
+      const id = frame.id || genP2PChatMessageId();
+      const newMessage: ChatMessageItem = {
+        id,
+        text: frame.text,
+        isMine: false,
+        timestamp: frame.ts || Date.now(),
+        senderName: t('webrtc.peer'),
+        delivered: true,
+        read: true,
+      };
+      messages.value = [...messages.value, newMessage];
+
+      // 收到即回执（对方支持才发，避免旧版本把 JSON 当成消息显示）
+      if (peerReadCapableRef.value) {
+        service.sendMessage(friendId, encodeP2PChatRead([id]));
+      }
+    });
+
+    // 文字通道就绪/断开：用于启用输入框 + 互报能力
+    service.setOnDataChannelStateChange(
+      (fromFriendId: string, open: boolean) => {
+        if (fromFriendId !== friendId) return;
+        chatReady.value = open;
+        if (open) {
+          service.sendMessage(
+            friendId,
+            encodeP2PChatHello([P2P_CHAT_CAP_READ]),
+          );
+        }
+      },
+    );
+    chatReady.value = service.isDataChannelOpen(friendId);
+    console.log(`[WebRTCChat] 消息回调已设置`);
+
+    service.setOnConnectionStateChange(
+      (fromFriendId: string, state: RTCPeerConnectionState) => {
+        console.log(
+          `[WebRTCChat.onConnectionStateChange] 连接状态变化: ${state}`,
+        );
+        if (state === 'connected') {
+          connectionStatus.value = 'connected';
+          callStage.value = 'connected';
+          isVideoEnabled.value = service.getVideoEnabled();
+          isAudioEnabled.value = service.getAudioEnabled();
+          console.log(`[WebRTCChat] ✅ P2P连接已建立，可以开始聊天`);
+        } else if (state === 'disconnected' || state === 'closed') {
+          connectionStatus.value = 'disconnected';
+          console.log(`[WebRTCChat] ⚠️  连接已断开`);
+        } else if (state === 'failed') {
+          connectionStatus.value = 'failed';
+          console.log(`[WebRTCChat] ❌ 连接失败`);
+        }
+      },
+    );
+    console.log(`[WebRTCChat] 连接状态回调已设置`);
+
+    if (isInitiator) {
+      console.log(`[WebRTCChat] 本端为发起方，发送视频通话邀请...`);
+      try {
+        await sendInvite(service.sessionId);
+        console.log(`[WebRTCChat] ✅ 邀请已发送，等待对方接受...`);
+      } catch (e) {
+        console.error(`[WebRTCChat] ❌ 发送邀请失败:`, e);
+        feedback.message.error(t('chat.footer.webRTCFailed'));
+      }
+    } else if (initialSignalDataStr) {
+      console.log(`[WebRTCChat] 本端为响应方，处理对端的offer...`);
+      try {
+        console.log(`[WebRTCChat] 解析URL参数中的signalData...`);
+        const signalMsg: WebRTCSignalMsgRaw = JSON.parse(
+          decodeURIComponent(initialSignalDataStr),
+        );
+        console.log(
+          `[WebRTCChat] signalData解析成功，类型: ${signalMsg.type}`,
+        );
+
+        if (signalMsg.type === 'offer') {
+          console.log(`[WebRTCChat] 调用 service.handleOffer()...`);
+          const answer = await service.handleOffer(
+            friendId,
+            signalMsg.data as RTCSessionDescriptionInit,
+          );
+          console.log(`[WebRTCChat] answer创建成功`);
+
+          const responseSignal: WebRTCSignalMessage = {
+            type: 'answer',
+            sender: localUserId,
+            receiver: friendId,
+            sessionId: signalMsg.sessionId,
+            data: answer,
+            timestamp: Date.now(),
+          };
+          console.log(`[WebRTCChat] answer信令消息已构建，准备发送...`);
+
+          console.log(`[WebRTCChat] 调用 service.sendSignal()...`);
+          await service.sendSignal(responseSignal);
+          console.log(`[WebRTCChat] ✅ answer已发送，等待ICE候选和连接建立...`);
+        }
+      } catch (e) {
+        console.error(`[WebRTCChat] ❌ 处理初始信令失败:`, e);
+        feedback.message.error(t('webrtc.signalProcessFailed'));
+      }
+    } else {
+      // 响应方：已接受后等待对端 offer 的常规路径，正常逻辑，无需告警
+      callStage.value = 'incoming';
+      console.log(
+        `[WebRTCChat] 本端为响应方，等待对端同意后发送 offer（正常流程）`,
+      );
+    }
+  };
+
+  // 接通前呼叫提示阶段视频元素未挂载，此处于视频面板挂载时绑定本地/远程媒体流
+  watch(
+    [isPreCall, () => friendId, activeView],
+    ([preCall]) => {
+      if (preCall) return;
+      const service = getWebRTCService();
+      if (!service) return;
+      const local = service.getLocalStream();
+      if (local && localVideoRef.value) {
+        localVideoRef.value.srcObject = local;
+      }
+      localStream.value = local ?? null;
+      const remote = service.getRemoteStream(friendId);
+      if (remote && remoteVideoRef.value) {
+        remoteVideoRef.value.srcObject = remote;
+      }
+      remoteStream.value = remote ?? null;
+      const state = service.getConnectionState(friendId);
+      if (state) {
+        if (state === 'connected') {
+          connectionStatus.value = 'connected';
+        } else if (state === 'disconnected' || state === 'closed') {
+          connectionStatus.value = 'disconnected';
+        } else if (state === 'failed') {
+          connectionStatus.value = 'failed';
+        } else {
+          connectionStatus.value = 'connecting';
+        }
+      }
+    },
+    { flush: 'post' },
+  );
+
+  const handleEmojiClick = (emoji: string) => {
+    inputText.value += emoji;
+    showEmojiPicker.value = false;
+  };
+
+  const sendMessage = async () => {
+    console.log(
+      `[WebRTCChat.sendMessage] 准备发送消息，输入内容: "${inputText.value}"`,
+    );
+
+    if (!inputText.value.trim()) {
+      console.log(`[WebRTCChat.sendMessage] ⚠️  输入为空，取消发送`);
+      return;
+    }
+
+    const service = getWebRTCService();
+
+    if (!service) {
+      console.error(`[WebRTCChat.sendMessage] ❌ WebRTCService不存在`);
+      feedback.message.error(t('webrtc.connectionNotEstablished'));
+      return;
+    }
+
+    if (!service.isDataChannelOpen(friendId)) {
+      console.error(`[WebRTCChat.sendMessage] ❌ DataChannel未打开`);
+      feedback.message.error(t('webrtc.connectionNotEstablished'));
+      return;
+    }
+
+    const text = inputText.value.trim();
+    const id = genP2PChatMessageId();
+    const success = service.sendMessage(
+      friendId,
+      encodeP2PChatMessage(id, text),
+    );
+    if (success) {
+      console.log(
+        `[WebRTCChat.sendMessage] ✅ 消息发送成功，添加到本地消息列表`,
+      );
+
+      const newMessage: ChatMessageItem = {
+        id,
+        text,
+        isMine: true,
+        timestamp: Date.now(),
+        senderName: t('webrtc.me'),
+        delivered: true,
+        read: false,
+      };
+      messages.value = [...messages.value, newMessage];
+      inputText.value = '';
+    } else {
+      console.error(`[WebRTCChat.sendMessage] ❌ 消息发送失败`);
+      feedback.message.error(t('webrtc.sendFailed'));
+    }
+  };
+
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const handleToggleVideo = () => {
+    const service = getWebRTCService();
+    if (!service) return;
+    // 没有视频轨（采集失败/被释放）时直接提示，避免"点一下小窗就消失且再也回不来"
+    if (!service.getLocalStream()?.getVideoTracks().length) {
+      feedback.message.warning(t('webrtc.mediaAccessError'));
+      return;
+    }
+    const enabled = service.toggleVideo();
+    isVideoEnabled.value = enabled;
+    localStream.value = service.getLocalStream();
+    console.log(`[WebRTCChat] 视频状态切换为: ${enabled ? '开启' : '关闭'}`);
+  };
+
+  const handleToggleAudio = () => {
+    const service = getWebRTCService();
+    if (service) {
+      const enabled = service.toggleAudio();
+      isAudioEnabled.value = enabled;
+      console.log(`[WebRTCChat] 音频状态切换为: ${enabled ? '开启' : '关闭'}`);
+    }
+  };
+
+  const handleRetry = async () => {
+    console.log(`[WebRTCChat.handleRetry] 用户点击重试按钮，开始重试...`);
+    isRetrying.value = true;
+    connectionStatus.value = 'connecting';
+    callStage.value = 'connecting';
+    callDuration.value = 0;
+    connectedAtRef.value = null;
+
+    try {
+      const service = getWebRTCService();
+      if (!service) {
+        console.error(`[WebRTCChat.handleRetry] WebRTCService不存在`);
+        return;
+      }
+
+      console.log(`[WebRTCChat.handleRetry] 关闭旧连接...`);
+      await service.closeConnection(friendId);
+
+      if (isInitiator) {
+        console.log(`[WebRTCChat.handleRetry] 发起方重试，重新创建offer...`);
+        const offer = await service.createOffer(friendId);
+        const signalMessage: WebRTCSignalMessage = {
+          type: 'offer',
+          sender: localUserId,
+          receiver: friendId,
+          sessionId: service.sessionId,
+          data: offer,
+          timestamp: Date.now(),
+        };
+        await service.sendSignal(signalMessage);
+        console.log(`[WebRTCChat.handleRetry] ✅ 重试offer已发送`);
+      } else {
+        console.log(`[WebRTCChat.handleRetry] 响应方等待对端的新offer...`);
+      }
+    } catch (e) {
+      console.error(`[WebRTCChat.handleRetry] ❌ 重试失败:`, e);
+      connectionStatus.value = 'failed';
+    } finally {
+      isRetrying.value = false;
+    }
+  };
+
+  const handleExit = async () => {
+    console.log(`[WebRTCChat.handleExit] 用户点击退出按钮，开始清理资源...`);
+
+    try {
+      const service = getWebRTCService();
+      if (service) {
+        console.log(
+          `[WebRTCChat.handleExit] 先发送结束控制消息(15)，再关闭连接...`,
+        );
+        // 发送 15-end 控制命令通知对端（自动生成"通话已结束"文本记录；对端据此清理连接）
+        try {
+          await sendControlMsg(15, 'end', service.sessionId);
+          console.log(`[WebRTCChat.handleExit] ✅ 结束控制消息已发送`);
+        } catch (sendEndErr) {
+          console.error(
+            `[WebRTCChat.handleExit] 发送结束控制消息失败:`,
+            sendEndErr,
+          );
+        }
+
+        console.log(
+          `[WebRTCChat.handleExit] 调用 service.closeConnection(${friendId})...`,
+        );
+        await service.closeConnection(friendId);
+        console.log(`[WebRTCChat.handleExit] ✅ WebRTC连接已关闭`);
+      } else {
+        console.log(`[WebRTCChat.handleExit] ⚠️  WebRTCService不存在`);
+      }
+
+      console.log(`[WebRTCChat.handleExit] 清理后端窗口状态...`);
+      await updateWebRTCWindowState(friendId, 'close');
+
+      console.log(`[WebRTCChat.handleExit] 关闭当前窗口...`);
+      const currentWindow = getCurrentWindow();
+      await currentWindow.close();
+      console.log(`[WebRTCChat.handleExit] ✅ 窗口已关闭`);
+    } catch (e) {
+      console.error(`[WebRTCChat.handleExit] ❌ 退出失败:`, e);
+      feedback.message.error(t('webrtc.exitFailed'));
+    }
+  };
+
+  onMounted(() => {
+    console.log(
+      `[WebRTCChat] useEffect(initWebRTC) - 组件挂载，开始初始化`,
+    );
+    setupSignalListener();
+    setupCallControlListener();
+    initWebRTC();
+  });
+
+  onUnmounted(() => {
+    if (unlistenSignal) {
+      console.log(`[WebRTCChat] useEffect cleanup - 取消信令事件监听`);
+      unlistenSignal();
+      unlistenSignal = undefined;
+    }
+    if (unlistenCallControl) {
+      unlistenCallControl();
+      unlistenCallControl = undefined;
+    }
+  });
+
+  return {
+    friendId,
+    friendName,
+    friendAvatar,
+    localUserId,
+    isInitiator,
+    isPreCall,
+    messages,
+    inputText,
+    connectionStatus,
+    callStage,
+    callDuration,
+    callDurationText,
+    isVideoEnabled,
+    isAudioEnabled,
+    isRetrying,
+    chatReady,
+    showEmojiPicker,
+    activeView,
+    webRTCLogs,
+    remoteStream,
+    localStream,
+    messageContainerRef,
+    localVideoRef,
+    remoteVideoRef,
+    emojiPickerRef,
+    logContainerRef,
+    setInputText: (value: string) => {
+      inputText.value = value;
+    },
+    setShowEmojiPicker: (value: boolean) => {
+      showEmojiPicker.value = value;
+    },
+    setActiveView: (value: 'video' | 'log') => {
+      activeView.value = value;
+    },
+    handleAccept,
+    handleReject,
+    handleEmojiClick,
+    sendMessage,
+    handleKeyPress,
+    handleToggleVideo,
+    handleToggleAudio,
+    handleRetry,
+    handleExit,
+  };
+};
