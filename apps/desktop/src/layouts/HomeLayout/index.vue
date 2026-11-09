@@ -307,33 +307,12 @@ useSystemNotify(() => store.userInfo.uuid);
       <div style="padding: 16px 0">
         <p style="margin-bottom: 16px">{{ t('homeLayout.selectCloseMethod') }}</p>
         <div style="display: flex; gap: 12px; justify-content: center">
-          <button
-            type="button"
-            style="
-              padding: 8px 24px;
-              border-radius: 6px;
-              border: 1px solid #d9d9d9;
-              background: #fff;
-              cursor: pointer;
-            "
-            @click="hideToTray"
-          >
+          <a-button @click="hideToTray">
             {{ t('homeLayout.minimizeToTray') }}
-          </button>
-          <button
-            type="button"
-            style="
-              padding: 8px 24px;
-              border-radius: 6px;
-              border: none;
-              background: #ff4d4f;
-              color: #fff;
-              cursor: pointer;
-            "
-            @click="quitApp"
-          >
+          </a-button>
+          <a-button danger type="primary" @click="quitApp">
             {{ t('homeLayout.quitApp') }}
-          </button>
+          </a-button>
         </div>
       </div>
     </a-modal>
