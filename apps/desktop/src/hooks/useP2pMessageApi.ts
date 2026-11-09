@@ -1,0 +1,94 @@
+import { ref } from 'vue';
+import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
+import { useBearStore } from '@/stores/app';
+import type { WebviewOptions } from '@tauri-apps/api/webview';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import type { WindowOptions } from '@tauri-apps/api/window';
+import type { P2pInitMsg, P2pMsg } from '@workspace/types';
+import { useBackendEvent } from './useBackendEvent';
+
+// TODO p2p通信后续不再默认视频通话，支持文本表情图片文件等
+// 接受到p2p请求，打开视频接收组件，
+const openMessageHandler = async (p2pInitMsg: P2pInitMsg) => {
+  const width = window.screen.width;
+  const height = window.screen.height;
+  console.log('屏幕分辨率:', width, 'x', height);
+
+  const labelWidth = 280;
+  const labelHeight = 140;
+
+  const x = width - labelWidth - 80;
+  const y = height - labelHeight - 80;
+
+  // 通过URL参数传递数据
+  const urlParams = new URLSearchParams({
+    p2pInitMsg: JSON.stringify(p2pInitMsg),
+    mediaType: '1',
+  });
+
+  const webviewOptions: WebviewOptions = {
+    x,
+    y,
+    url: `/media/handler?${urlParams.toString()}`,
+    height: labelHeight,
+    width: labelWidth,
+  };
+  const config: WindowOptions = {};
+  await openNewWindowWithoutClose('音视频处理窗口', webviewOptions, config);
+};
+
+// 打开隐私聊天窗口
+const openPrivacyChatHandler = async (uuid: string) => {
+  // 关闭已存在的隐私窗口，避免同 label 创建失败或复用上一会话
+  const existing = await WebviewWindow.getByLabel('隐私聊天').catch(() => null);
+  if (existing) {
+    await existing.close().catch(() => {});
+  }
+  const webviewOptions: WebviewOptions = {
+    x: 0,
+    y: 0,
+    url: `/privacy/chat?friendId=${uuid}`,
+    height: 600,
+    width: 800,
+  };
+  const config: WindowOptions = {
+    center: true,
+  };
+  await openNewWindowWithoutClose('隐私聊天', webviewOptions, config);
+};
+
+export const useP2pMessageApi = () => {
+  const state = ref<boolean>(false);
+  const store = useBearStore();
+
+  const processP2pMsg = async (p2pMsg: P2pMsg) => {
+    if (p2pMsg.type === 102) {
+      // 接收到p2p请求信息
+      const p2pInitMsg = JSON.parse(p2pMsg.raw) as P2pInitMsg;
+      // 设置状态（用于其他组件使用）
+      store.setRequestMediaMsg({ mediaType: 1, p2pInitMsg });
+      // 直接传递数据打开窗口
+      await openMessageHandler(p2pInitMsg);
+    } else if (p2pMsg.type === 104) {
+      // 接收到p2p拒绝信息
+    } else {
+      console.log('接受到意料之外的信息', p2pMsg);
+    }
+  };
+
+  useBackendEvent('listen_p2p_request', (payload) => {
+    console.log('接收到的数据', payload);
+    const p2pMsg = JSON.parse(payload) as P2pMsg;
+    console.log('接受到p2p信息', p2pMsg);
+    processP2pMsg(p2pMsg);
+  });
+
+  // P2P 传输就绪(监听端已开始监听/连接端已连上)后再打开隐私聊天窗口。
+  // 服务端/客户端角色由 NAT 决定，不能只依赖服务端的 103 事件。
+  useBackendEvent('p2p_ready', (friendId) => {
+    if (!friendId) return;
+    openPrivacyChatHandler(friendId);
+  });
+
+  return { state };
+};

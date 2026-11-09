@@ -2,7 +2,8 @@
 /**
  * pre-push 推送保护钩子(与 CI 对齐的本地拦截):
  *
- *   前端: apps/pc      -> pnpm lint:pc      (max lint: eslint + stylelint)
+ *   前端: apps/desktop -> pnpm lint:desktop (eslint)
+ *         apps/pc      -> pnpm lint:pc      (max lint: eslint + stylelint, legacy)
  *         apps/mobile  -> pnpm lint:mobile  (eslint)
  *         apps/web     -> pnpm lint:web     (eslint)
  *   Rust: src-tauri    -> pnpm lint:rust:fmt    (cargo +nightly fmt --all --check)
@@ -99,13 +100,27 @@ function collectChangedFiles() {
 
 function pickTargets(files) {
   if (files === null) {
-    return { pc: true, mobile: true, web: true, rust: true, reason: '无法确定推送范围' };
+    return {
+      desktop: true,
+      pc: true,
+      mobile: true,
+      web: true,
+      rust: true,
+      reason: '无法确定推送范围',
+    };
   }
 
-  const targets = { pc: false, mobile: false, web: false, rust: false };
+  const targets = {
+    desktop: false,
+    pc: false,
+    mobile: false,
+    web: false,
+    rust: false,
+  };
 
   for (const file of files) {
-    if (file.startsWith('apps/pc/')) targets.pc = true;
+    if (file.startsWith('apps/desktop/')) targets.desktop = true;
+    else if (file.startsWith('apps/pc/')) targets.pc = true;
     else if (file.startsWith('apps/mobile/')) targets.mobile = true;
     else if (file.startsWith('apps/web/')) targets.web = true;
 
@@ -113,6 +128,7 @@ function pickTargets(files) {
       file.startsWith('packages/') ||
       SHARED_PATHS.some((path) => (path.endsWith('/') ? file.startsWith(path) : file === path));
     if (shared) {
+      targets.desktop = true;
       targets.pc = true;
       targets.mobile = true;
       targets.web = true;
@@ -127,13 +143,15 @@ function pickTargets(files) {
 function buildChecks(targets) {
   const checks = [];
 
+  if (targets.desktop)
+    checks.push(['apps/desktop lint (eslint)', 'pnpm', ['lint:desktop']]);
   if (targets.pc) checks.push(['apps/pc lint (eslint + stylelint)', 'pnpm', ['lint:pc']]);
   if (targets.mobile) checks.push(['apps/mobile lint (eslint)', 'pnpm', ['lint:mobile']]);
   if (targets.web) checks.push(['apps/web lint (eslint)', 'pnpm', ['lint:web']]);
 
   if (targets.rust) {
     // src-tauri 编译时通过 tauri::generate_context! 内嵌前端产物, 缺 dist 会编译失败
-    if (!existsSync(join(repoRoot, 'apps', 'pc', 'dist'))) {
+    if (!existsSync(join(repoRoot, 'apps', 'desktop', 'dist'))) {
       checks.push(['src-tauri 前置检查 (缺少前端产物)', '__missing_dist__', []]);
     } else {
       checks.push(['src-tauri fmt (cargo +nightly fmt --all --check)', 'pnpm', ['lint:rust:fmt']]);
@@ -180,7 +198,7 @@ function main() {
     if (command === '__missing_dist__') {
       failures.push(label);
       log(
-        '\n[pre-push] ✖ 缺少 apps/pc/dist: src-tauri 编译需要前端产物, 请先执行 `pnpm build` (或 `pnpm dev` 生成一次)',
+        '\n[pre-push] ✖ 缺少 apps/desktop/dist: src-tauri 编译需要前端产物, 请先执行 `pnpm build` (或 `pnpm dev` 生成一次)',
       );
       continue;
     }
