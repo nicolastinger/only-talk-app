@@ -221,7 +221,13 @@ useSystemNotify(() => store.userInfo.uuid);
     >
       <a-layout-header
         :class="styles.rightSideBarTool"
-        :style="{ padding: 0, background: 'transparent', lineHeight: 'normal' }"
+        :style="{
+          height: '44px',
+          flex: '0 0 44px',
+          padding: 0,
+          background: 'transparent',
+          lineHeight: 'normal',
+        }"
       >
         <div
           :class="styles.tools"
