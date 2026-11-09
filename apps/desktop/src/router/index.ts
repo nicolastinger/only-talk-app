@@ -32,7 +32,7 @@ const routes: RouteRecordRaw[] = [
             children: [
               {
                 path: '',
-                redirect: 'dashboard',
+                redirect: '/home/chats/dashboard',
               },
               {
                 path: 'chat',
@@ -84,7 +84,7 @@ const routes: RouteRecordRaw[] = [
             children: [
               {
                 path: '',
-                redirect: 'dashboard',
+                redirect: '/home/contacts/dashboard',
               },
               {
                 path: 'dashboard',
