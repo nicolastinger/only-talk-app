@@ -1,5 +1,7 @@
 # README
 
+> 旧版 React/Umi 桌面端（legacy），仅保留回退参考。当前 PC 桌面端见 `apps/desktop`（Vue3 + Vite + Ant Design Vue）。
+
 ## 项目介绍
 
 这是一个基于 `@umijs/max` 和 Tauri 的桌面端应用项目，结合了前端 React 技术栈和 Rust 后端能力。该项目实现了聊天、媒体处理、P2P 通信等功能。
