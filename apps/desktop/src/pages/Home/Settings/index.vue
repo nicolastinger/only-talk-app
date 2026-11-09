@@ -97,7 +97,11 @@ const onMenuClick = ({ key }: { key: string | number }) => {
 
 <template>
   <a-layout :class="styles.settingsContainer">
-    <a-layout-sider :width="250" :class="styles.settingsSidebar">
+    <a-layout-sider
+      :width="250"
+      :class="styles.settingsSidebar"
+      :style="{ background: 'var(--glass-bg-light)' }"
+    >
       <div :class="styles.sidebarTitle">{{ t('settings.title') }}</div>
       <a-menu
         mode="inline"
