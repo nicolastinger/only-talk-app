@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue';
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
+import { toHashRoute } from '@/utils/hashRoute';
 import { useBearStore } from '@/stores/app';
 import { invoke } from '@tauri-apps/api/core';
 import type { WebviewOptions } from '@tauri-apps/api/webview';
@@ -126,7 +127,9 @@ const openWebRTCChatHandler = async (
   }
 
   const label = getWebRTCWindowLabel(friendId);
-  let url = `/webrtc/chat?friendId=${friendId}&localUserId=${localUserId}&initiator=${isInitiator}`;
+  let url = toHashRoute(
+    `/webrtc/chat?friendId=${friendId}&localUserId=${localUserId}&initiator=${isInitiator}`,
+  );
   if (signalData) {
     url += `&signalData=${encodeURIComponent(signalData)}`;
   }

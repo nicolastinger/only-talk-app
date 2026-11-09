@@ -30,6 +30,7 @@ import { PRIVACY_POLICY_URL } from '@workspace/types';
 import type { HttpResponse, ResponseData } from '@workspace/types';
 import { useI18n } from '@/i18n';
 import { feedback } from '@/utils/feedback';
+import { toHashRoute } from '@/utils/hashRoute';
 import styles from './index.module.less';
 
 interface QuickLoginUser {
@@ -151,7 +152,7 @@ const handleQuickLogin = async () => {
     if (isBackendSuccess(data.code)) {
       feedback.message.success(t('signIn.success'));
       const webviewOptions: WebviewOptions = {
-        url: '/home/chats',
+        url: toHashRoute('/home/chats'),
         height: 600,
         width: 800,
         x: 200,
@@ -259,7 +260,7 @@ const fetchData = async (account: string, pwd: string) => {
     if (isBackendSuccess(data.code)) {
       feedback.message.success(t('signIn.success'));
       const webviewOptions: WebviewOptions = {
-        url: '/home/chats',
+        url: toHashRoute('/home/chats'),
         height: 600,
         width: 800,
         x: 200,
@@ -318,7 +319,7 @@ const handleGithubLogin = async () => {
     if (isBackendSuccess(data.code)) {
       feedback.message.success(t('signIn.success'));
       const webviewOptions: WebviewOptions = {
-        url: '/home/chats',
+        url: toHashRoute('/home/chats'),
         height: 600,
         width: 800,
         x: 200,

@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
+import { toHashRoute } from '@/utils/hashRoute';
 import { useBearStore } from '@/stores/app';
 import type { WebviewOptions } from '@tauri-apps/api/webview';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -29,7 +30,7 @@ const openMessageHandler = async (p2pInitMsg: P2pInitMsg) => {
   const webviewOptions: WebviewOptions = {
     x,
     y,
-    url: `/media/handler?${urlParams.toString()}`,
+    url: toHashRoute(`/media/handler?${urlParams.toString()}`),
     height: labelHeight,
     width: labelWidth,
   };
@@ -47,7 +48,7 @@ const openPrivacyChatHandler = async (uuid: string) => {
   const webviewOptions: WebviewOptions = {
     x: 0,
     y: 0,
-    url: `/privacy/chat?friendId=${uuid}`,
+    url: toHashRoute(`/privacy/chat?friendId=${uuid}`),
     height: 600,
     width: 800,
   };

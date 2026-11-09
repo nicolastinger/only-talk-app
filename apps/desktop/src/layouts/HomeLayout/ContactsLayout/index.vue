@@ -10,6 +10,7 @@ import type { WebviewOptions } from '@tauri-apps/api/webview';
 import type { WindowOptions } from '@tauri-apps/api/window';
 import SearchBar from '@/components/SearchBar/index.vue';
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
+import { toHashRoute } from '@/utils/hashRoute';
 import CreateGroupModal from '@/pages/Home/Contacts/components/CreateGroupModal.vue';
 import FriendList from '@/pages/Home/Contacts/components/FriendList.vue';
 import GroupList from '@/pages/Home/Contacts/components/GroupList.vue';
@@ -50,7 +51,7 @@ const openAddFriendWindow = async () => {
   const webviewOptions: WebviewOptions = {
     x: 0,
     y: 0,
-    url: `/search/friend`,
+    url: toHashRoute('/search/friend'),
     height: 500,
     width: 300,
   };
