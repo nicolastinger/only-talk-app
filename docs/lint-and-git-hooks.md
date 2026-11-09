@@ -7,20 +7,26 @@
 | 命令 | 内容 |
 | --- | --- |
 | `pnpm lint` | **格式化**（全仓库 `prettier --cache --write .`），不是检查 |
-| `pnpm lint:pc` | apps/pc 检查：`max lint --eslint-only` + `max lint --stylelint-only` |
+| `pnpm lint:desktop` | apps/desktop 检查：`eslint src --ext .ts,.vue` |
+| `pnpm lint:pc` | apps/pc（legacy）检查：`max lint --eslint-only` + `max lint --stylelint-only` |
 | `pnpm lint:mobile` | apps/mobile 检查：`eslint src --ext .ts,.vue` |
 | `pnpm lint:web` | apps/web 检查：`eslint src --ext .ts,.vue` |
-| `pnpm lint:fe` | 上面三个前端检查依次执行 |
+| `pnpm lint:fe` | 上面四个前端检查依次执行 |
 | `pnpm lint:rust:fmt` | `cd src-tauri && cargo +nightly fmt --all --check` |
 | `pnpm lint:rust:clippy` | `cd src-tauri && cargo +stable clippy --all-targets` |
 | `pnpm lint:rust` | fmt + clippy |
-| `pnpm --filter @workspace/<app> lint:fix` | 自动修复前端问题（app 取 `app-pc` / `app-mobile` / `app-web`） |
+| `pnpm --filter @workspace/<app> lint:fix` | 自动修复前端问题（app 取 `app-desktop` / `app-pc` / `app-mobile` / `app-web`） |
 
 命令实现分别在根 `package.json` 与各 app 的 `package.json` 中，钩子脚本只是按需调用它们。
 
 ## 二、各工程 lint 配置
 
-### apps/pc（Umi Max / React）
+### apps/desktop（Vue 3 + TS + Vite）
+
+- 配置：`apps/desktop/.eslintrc.cjs`，与 apps/mobile 同一基线
+- `eslint:recommended` + `plugin:vue/vue3-essential` + `plugin:@typescript-eslint/recommended`
+
+### apps/pc（Umi Max / React，legacy）
 
 - ESLint：`apps/pc/.eslintrc.cjs` → `extends: require.resolve('@umijs/max/eslint')`
 - Stylelint：`apps/pc/.stylelintrc.js` → `extends: require.resolve('@umijs/max/stylelint')`
@@ -46,10 +52,11 @@
 
 | 改动的路径 | 触发的检查 |
 | --- | --- |
+| `apps/desktop/**` | `pnpm lint:desktop` |
 | `apps/pc/**` | `pnpm lint:pc` |
 | `apps/mobile/**` | `pnpm lint:mobile` |
 | `apps/web/**` | `pnpm lint:web` |
-| `packages/**`、根级配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`tsconfig.json`、`typings.d.ts`、`.husky/**`、`scripts/pre-push.mjs`） | 三个前端全跑 |
+| `packages/**`、根级配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`tsconfig.json`、`typings.d.ts`、`.husky/**`、`scripts/pre-push.mjs`） | 四个前端全跑 |
 | `src-tauri/**` | `pnpm lint:rust:fmt` → `pnpm lint:rust:clippy` |
 | 新分支 / 浅克隆等**无法确定推送范围**的情况 | 全量检查（前端 + Rust） |
 
@@ -58,7 +65,7 @@
 ### 跳过与注意事项
 
 - 跳过全部检查：`git push --no-verify`、`SKIP_GIT_HOOKS=1 git push`、`HUSKY=0 git push`
-- Rust 检查会编译 `src-tauri`，而 `tauri::generate_context!` 需要内嵌前端产物 `apps/pc/dist`；缺失时钩子会直接提示先执行 `pnpm build`，而不是抛出难懂的编译错误
+- Rust 检查会编译 `src-tauri`，而 `tauri::generate_context!` 需要内嵌前端产物 `apps/desktop/dist`；缺失时钩子会直接提示先执行 `pnpm build`，而不是抛出难懂的编译错误
 - clippy 与 CI 保持一致：不加 `-D warnings`（`serde_json::json!` 宏内部的 `unwrap` 会命中 `disallowed-methods`，属既有噪音）
 
 ## 四、依赖锁定注意（容易踩的坑）

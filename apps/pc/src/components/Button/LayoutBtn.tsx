@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { LayoutBtnProps } from '@workspace/types';
 import styles from './style/index.less';
 const LayoutBtn = (props: LayoutBtnProps) => {
@@ -5,7 +6,7 @@ const LayoutBtn = (props: LayoutBtnProps) => {
 
   return (
     <div className={`${styles.container} ${active ? styles.active : ''}`}>
-      {icon}
+      {icon as ReactNode}
       {unreadCount > 0 && (
         <div className={styles.unreadBadge}>
           {unreadCount > 99 ? '99+' : unreadCount}

@@ -1,10 +1,10 @@
-import React from "react";
 import { TextQuicMsgVo } from "../backend";
 
 interface LayoutBtnProps {
   text: string;
   url: string;
-  icon?: React.ReactNode;
+  /** 图标节点由各端自行解释（React Node / Vue VNode） */
+  icon?: unknown;
   active: boolean;
   unreadCount: number;
 }

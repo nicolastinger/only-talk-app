@@ -1,24 +1,27 @@
 # OnlyTalk App
 
-> Cross-platform Instant Messaging Client — React + Tauri + Vue3 + P2P + WebRTC
+> Cross-platform Instant Messaging Client — Vue3 + Tauri + P2P + WebRTC
 
 [中文版本](README.md)
 
 ## Project Overview
 
-OnlyTalk App is a cross-platform instant messaging client that supports desktop (Windows/macOS/Linux) and mobile platforms. The desktop version is built with React + Tauri, while the mobile version uses Vue3 + Vant, providing features such as real-time chat, P2P communication, and video calls.
+OnlyTalk App is a cross-platform instant messaging client that supports desktop (Windows/macOS/Linux) and mobile platforms. Both desktop and mobile are built with Vue3, providing features such as real-time chat, P2P communication, and video calls.
+
+> The active desktop app lives in `apps/desktop` (Vue3 + Vite + Ant Design Vue). `apps/pc` is the legacy React/Umi implementation kept for rollback/reference and is no longer the default Tauri frontend.
 
 ## Tech Stack
 
-### Desktop (PC)
+### Desktop
 
 | Component | Technology | Description |
 |------|------|------|
-| Frontend Framework | Umi Max (React 18) | Enterprise-level frontend framework |
-| UI Component Library | Ant Design 5.x | Enterprise-level UI design language |
-| State Management | Zustand 5.x | Lightweight state management |
+| Frontend Framework | Vue 3 | Progressive JavaScript framework |
+| UI Component Library | Ant Design Vue 4.x | Enterprise-level UI design language |
+| Build Tool | Vite 5 | Next-generation frontend build tool |
+| State Management | Vue reactive stores | Lightweight singleton stores aligned with mobile |
 | Desktop Framework | Tauri 2.0 | Rust-powered cross-platform desktop app |
-| Markdown Rendering | react-markdown | Markdown rendering |
+| Markdown Rendering | marked + DOMPurify | Markdown rendering and sanitization |
 | Styling | Less | CSS preprocessor |
 
 ### Mobile
@@ -42,7 +45,7 @@ OnlyTalk App is a cross-platform instant messaging client that supports desktop 
 ```
 only-talk-app/
 ├── apps/
-│   ├── pc/                      # Desktop application
+│   ├── desktop/                # Desktop application (Vue3 + Vite)
 │   │   ├── src/
 │   │   │   ├── components/      # Common components
 │   │   │   ├── pages/           # Page components
@@ -52,13 +55,15 @@ only-talk-app/
 │   │   │   │   ├── Privacy/     # Privacy mode
 │   │   │   │   └── WebRTC/      # WebRTC communication
 │   │   │   ├── layouts/         # Layout components
-│   │   │   ├── locales/         # Internationalization (zh-CN, en-US, zh-TW)
-│   │   │   ├── models/          # Data models
+│   │   │   ├── router/          # Vue Router routes
+│   │   │   ├── stores/          # State management
+│   │   │   ├── i18n/            # i18n wrapper
 │   │   │   ├── services/        # WebRTC service
-│   │   │   ├── hooks/          # Custom hooks
-│   │   │   └── utils/          # Utility functions
-│   │   ├── .umirc.ts           # Umi configuration
+│   │   │   ├── hooks/           # Composables
+│   │   │   └── utils/           # Utility functions
+│   │   ├── vite.config.ts       # Vite configuration
 │   │   └── package.json
+│   ├── pc/                      # Legacy React/Umi desktop app
 │   └── mobile/                 # Mobile application
 │       ├── src/
 │       │   ├── components/     # Common components
@@ -126,7 +131,7 @@ pnpm dev
 pnpm tauri dev
 ```
 
-After starting, the default frontend address: http://localhost:8000
+After starting, the default frontend address: http://localhost:8080
 
 #### Mobile Development
 
@@ -152,9 +157,9 @@ pnpm tauri build
 ```
 
 Build outputs:
-- Web frontend: `apps/pc/dist`
+- Desktop frontend: `apps/desktop/dist`
 - Mobile: `apps/mobile/dist`
-- Desktop application: `apps/pc/src-tauri/target/release`
+- Desktop application: `src-tauri/target/release`
 
 ### 5. Other Common Commands
 
@@ -217,7 +222,8 @@ pnpm build:services
 
 The project uses pnpm workspace to manage the monorepo, including:
 
-- **apps/pc**: Desktop application
+- **apps/desktop**: Desktop application (Vue3 + Vite, default Tauri frontend)
+- **apps/pc**: Legacy React/Umi desktop app
 - **apps/mobile**: Mobile application
 - **packages/services**: Shared API services
 - **packages/types**: Shared type definitions
@@ -226,9 +232,9 @@ The project uses pnpm workspace to manage the monorepo, including:
 
 #### Desktop
 
-1. Create a page directory under `apps/pc/src/pages/`
-2. Create page component (`.tsx`) and style file (`.less`)
-3. Configure route in `apps/pc/src/route/index.ts`
+1. Create a page directory under `apps/desktop/src/pages/`
+2. Create page component (`.vue`) and style file (`.module.less`)
+3. Configure route in `apps/desktop/src/router/index.ts`
 
 #### Mobile
 
@@ -256,10 +262,10 @@ The project uses pnpm workspace to manage the monorepo, including:
 
 ## Documentation Resources
 
-- [Umi Max Documentation](https://umijs.org/docs/max/introduce)
-- [Tauri Documentation](https://tauri.app/)
-- [Ant Design Components](https://ant.design/)
 - [Vue 3 Documentation](https://vuejs.org/)
+- [Vite Documentation](https://vitejs.dev/)
+- [Ant Design Vue](https://antdv.com/)
+- [Tauri Documentation](https://tauri.app/)
 - [Vant Components](https://vant-ui.github.io/vant/)
 
 ## License
