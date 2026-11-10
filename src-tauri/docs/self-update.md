@@ -19,7 +19,7 @@ GitHub Release(附带 GitHub 自动生成的 SHA-256 `digest`)→ 客户端「�
         │
         ▼
 GitHub Actions (client-ci.yml)
-  ├─ frontend: pnpm build (apps/pc) ────────────── 构建前端产物
+  ├─ frontend: pnpm build (apps/desktop) ──────── 构建前端产物
   ├─ rust: nightly fmt check + clippy + test ───── 质量门禁
   └─ bundle (仅 tag/main/手动): 装静态 OpenSSL →
         pnpm tauri build --bundles nsis →          Windows NSIS 安装包
@@ -95,7 +95,7 @@ GitHub Actions (client-ci.yml)
   `@tauri-apps/api/app` 的 `getVersion()`, 即 Tauri 编译期写入的应用版本(config.version 优先)——
   与安装包 / 更新包版本始终一致。
 - 非 Tauri 运行时(浏览器直接开 dev server, 如 `pnpm dev` / `pnpm dev:mobile`): 回退到构建期注入的
-  `__APP_VERSION__`(apps/pc/.umirc.ts 与 apps/mobile/vite.config.ts 都直接 import
+  `__APP_VERSION__`(apps/desktop/vite.config.ts 与 apps/mobile/vite.config.ts 都直接 import
   `src-tauri/tauri.conf.json`), 因此不会再出现写死 `1.0.0` 那种陈旧版本号。
 - PC 端「设置-关于」与 Mobile 端「设置-关于」都走这个 helper, 初值即为构建期版本, 挂载后再用运行时
   版本校正(不会闪一下旧版本号)。

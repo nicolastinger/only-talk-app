@@ -1,7 +1,7 @@
 /**
  * 移动端(apps/mobile) ESLint 配置: Vue 3 + TypeScript + Vite
  *
- * 与 apps/pc 的 Umi 预设不同, 这里采用社区基线:
+ * 与 desktop 的基线一致, 这里采用社区基线:
  * eslint:recommended + eslint-plugin-vue(vue3-essential) + @typescript-eslint/recommended
  * 只做静态检查, 不做格式化(格式化交给 prettier)。
  */

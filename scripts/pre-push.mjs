@@ -3,7 +3,6 @@
  * pre-push 推送保护钩子(与 CI 对齐的本地拦截):
  *
  *   前端: apps/desktop -> pnpm lint:desktop (eslint)
- *         apps/pc      -> pnpm lint:pc      (max lint: eslint + stylelint, legacy)
  *         apps/mobile  -> pnpm lint:mobile  (eslint)
  *         apps/web     -> pnpm lint:web     (eslint)
  *   Rust: src-tauri    -> pnpm lint:rust:fmt    (cargo +nightly fmt --all --check)
@@ -11,8 +10,7 @@
  *
  * 只跑"本次推送确实涉及"的工程, 避免前端改动也要等 clippy;
  * 拿不到推送范围(新分支、浅克隆等)时退化为全量检查。
- * 共享包 packages/** 与根级配置改动会影响全部前端, 因此触发三个前端一起检查。
- *
+ * 共享包 packages/** 与根级配置改动会影响全部前端, 因此触发三个前端一起检查。 *
  * 跳过方式: git push --no-verify / SKIP_GIT_HOOKS=1 / HUSKY=0
  */
 import { spawnSync } from 'node:child_process';
@@ -112,7 +110,6 @@ function pickTargets(files) {
 
   const targets = {
     desktop: false,
-    pc: false,
     mobile: false,
     web: false,
     rust: false,
@@ -120,7 +117,6 @@ function pickTargets(files) {
 
   for (const file of files) {
     if (file.startsWith('apps/desktop/')) targets.desktop = true;
-    else if (file.startsWith('apps/pc/')) targets.pc = true;
     else if (file.startsWith('apps/mobile/')) targets.mobile = true;
     else if (file.startsWith('apps/web/')) targets.web = true;
 
@@ -129,7 +125,6 @@ function pickTargets(files) {
       SHARED_PATHS.some((path) => (path.endsWith('/') ? file.startsWith(path) : file === path));
     if (shared) {
       targets.desktop = true;
-      targets.pc = true;
       targets.mobile = true;
       targets.web = true;
     }
@@ -145,7 +140,6 @@ function buildChecks(targets) {
 
   if (targets.desktop)
     checks.push(['apps/desktop lint (eslint)', 'pnpm', ['lint:desktop']]);
-  if (targets.pc) checks.push(['apps/pc lint (eslint + stylelint)', 'pnpm', ['lint:pc']]);
   if (targets.mobile) checks.push(['apps/mobile lint (eslint)', 'pnpm', ['lint:mobile']]);
   if (targets.web) checks.push(['apps/web lint (eslint)', 'pnpm', ['lint:web']]);
 

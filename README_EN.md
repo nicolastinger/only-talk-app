@@ -8,7 +8,7 @@
 
 OnlyTalk App is a cross-platform instant messaging client that supports desktop (Windows/macOS/Linux) and mobile platforms. Both desktop and mobile are built with Vue3, providing features such as real-time chat, P2P communication, and video calls.
 
-> The active desktop app lives in `apps/desktop` (Vue3 + Vite + Ant Design Vue). `apps/pc` is the legacy React/Umi implementation kept for rollback/reference and is no longer the default Tauri frontend.
+> The desktop app lives in `apps/desktop` (Vue3 + Vite + Ant Design Vue) and is the default Tauri frontend.
 
 ## Tech Stack
 
@@ -223,7 +223,6 @@ pnpm build:services
 The project uses pnpm workspace to manage the monorepo, including:
 
 - **apps/desktop**: Desktop application (Vue3 + Vite, default Tauri frontend)
-- **apps/pc**: Legacy React/Umi desktop app
 - **apps/mobile**: Mobile application
 - **packages/services**: Shared API services
 - **packages/types**: Shared type definitions

@@ -6,7 +6,7 @@
  *   因此与安装包 / 更新包的版本号始终一致。
  * - 非 Tauri 运行时(浏览器直接开 dev server, 如 `pnpm dev` / `pnpm dev:mobile`):
  *   回退到构建期注入的 `__APP_VERSION__`。该值由各 app 的构建配置从
- *   `src-tauri/tauri.conf.json` 读取(apps/pc/.umirc.ts、apps/mobile/vite.config.ts),
+ *   `src-tauri/tauri.conf.json` 读取(apps/desktop/vite.config.ts、apps/mobile/vite.config.ts),
  *   避免出现"写死 1.0.0"这种与真实版本不一致的展示。
  */
 import { getVersion } from "@tauri-apps/api/app";

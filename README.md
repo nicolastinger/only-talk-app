@@ -8,7 +8,7 @@
 
 OnlyTalk App 是一个跨平台即时通讯客户端，支持桌面端（Windows/macOS/Linux）和移动端。桌面端与移动端均采用 Vue3 开发，提供实时聊天、P2P 通信、视频通话等功能。
 
-> 桌面端当前版本位于 `apps/desktop`（Vue3 + Vite + Ant Design Vue）。`apps/pc` 为旧版 React/Umi 实现，保留作回退参考，不再是 Tauri 默认前端。
+> 桌面端位于 `apps/desktop`（Vue3 + Vite + Ant Design Vue），即 Tauri 默认前端。
 
 ## 技术栈
 
@@ -168,9 +168,8 @@ pnpm tauri build
 pnpm lint
 
 # 各端代码检查（只检查、不修改）
-pnpm lint:fe        # = lint:desktop + lint:pc + lint:mobile + lint:web
+pnpm lint:fe        # = lint:desktop + lint:mobile + lint:web
 pnpm lint:desktop   # apps/desktop eslint
-pnpm lint:pc        # apps/pc      eslint + stylelint（legacy）
 pnpm lint:mobile    # apps/mobile  eslint
 pnpm lint:web       # apps/web     eslint
 
@@ -181,7 +180,6 @@ pnpm lint:rust:clippy
 
 # 自动修复前端问题
 pnpm --filter @workspace/app-desktop lint:fix
-pnpm --filter @workspace/app-pc lint:fix
 pnpm --filter @workspace/app-mobile lint:fix
 pnpm --filter @workspace/app-web lint:fix
 
@@ -274,7 +272,6 @@ pnpm tauri dev
 项目采用 pnpm workspace 管理 monorepo，包含：
 
 - **apps/desktop**: 桌面端应用（Vue3 + Vite，Tauri 默认前端）
-- **apps/pc**: 旧版 React/Umi 桌面端（legacy）
 - **apps/mobile**: 移动端应用
 - **packages/services**: 共享 API 服务
 - **packages/types**: 共享类型定义
@@ -308,7 +305,7 @@ pnpm tauri dev
 ### 代码规范
 
 - 使用 Prettier 进行代码格式化（`pnpm lint` 为全仓库 `prettier --write`）
-- 使用 ESLint 做静态检查：apps/desktop / apps/mobile / apps/web 走 `eslint:recommended + plugin:vue/vue3-essential + @typescript-eslint/recommended`；apps/pc（legacy）走 Umi Max 预设（含 stylelint）
+- 使用 ESLint 做静态检查：apps/desktop / apps/mobile / apps/web 走 `eslint:recommended + plugin:vue/vue3-essential + @typescript-eslint/recommended`
 - src-tauri 使用 `cargo +nightly fmt`（rustfmt.toml 含 nightly 专属选项）与 `cargo clippy` 检查
 - Husky 推送前钩子（pre-push）按改动范围自动跑上述检查，见 [docs/lint-and-git-hooks.md](docs/lint-and-git-hooks.md)
 - TypeScript 严格模式

@@ -76,7 +76,7 @@ src-tauri/gen/android/app/build/outputs/apk/universal/release/Only.Talk_1.0.4_un
 
 ## 3. 构建配置：PC 与移动端分离
 
-- PC 构建沿用 `src-tauri/tauri.conf.json`（前端指向 `apps/pc`，`beforeBuildCommand` 构建 PC 前端）。
+- PC 构建沿用 `src-tauri/tauri.conf.json`（前端指向 `apps/desktop`，`beforeBuildCommand` 构建桌面端前端）。
 - 移动端（Android）构建由 Tauri 自动合并 `src-tauri/tauri.android.conf.json`（JSON Merge Patch RFC 7396），覆盖为移动端前端：
 
 ```json

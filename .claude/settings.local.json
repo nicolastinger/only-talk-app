@@ -19,7 +19,7 @@
       "WebFetch(domain:github.com)",
       "Read(//c/Program Files \\\\\\(x86\\\\\\)/Microsoft/Edge/Application/**)",
       "Read(//c/Program Files/Microsoft/Edge/Application/**)",
-      "Bash(node .claude/tmp-serve-dist.mjs apps/pc/dist 8899)"
+      "Bash(node .claude/tmp-serve-dist.mjs apps/desktop/dist 8899)"
     ]
   }
 }

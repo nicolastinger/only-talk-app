@@ -8,14 +8,13 @@
 | --- | --- |
 | `pnpm lint` | **格式化**（全仓库 `prettier --cache --write .`），不是检查 |
 | `pnpm lint:desktop` | apps/desktop 检查：`eslint src --ext .ts,.vue` |
-| `pnpm lint:pc` | apps/pc（legacy）检查：`max lint --eslint-only` + `max lint --stylelint-only` |
 | `pnpm lint:mobile` | apps/mobile 检查：`eslint src --ext .ts,.vue` |
 | `pnpm lint:web` | apps/web 检查：`eslint src --ext .ts,.vue` |
-| `pnpm lint:fe` | 上面四个前端检查依次执行 |
+| `pnpm lint:fe` | 上面三个前端检查依次执行 |
 | `pnpm lint:rust:fmt` | `cd src-tauri && cargo +nightly fmt --all --check` |
 | `pnpm lint:rust:clippy` | `cd src-tauri && cargo +stable clippy --all-targets` |
 | `pnpm lint:rust` | fmt + clippy |
-| `pnpm --filter @workspace/<app> lint:fix` | 自动修复前端问题（app 取 `app-desktop` / `app-pc` / `app-mobile` / `app-web`） |
+| `pnpm --filter @workspace/<app> lint:fix` | 自动修复前端问题（app 取 `app-desktop` / `app-mobile` / `app-web`） |
 
 命令实现分别在根 `package.json` 与各 app 的 `package.json` 中，钩子脚本只是按需调用它们。
 
@@ -25,12 +24,6 @@
 
 - 配置：`apps/desktop/.eslintrc.cjs`，与 apps/mobile 同一基线
 - `eslint:recommended` + `plugin:vue/vue3-essential` + `plugin:@typescript-eslint/recommended`
-
-### apps/pc（Umi Max / React，legacy）
-
-- ESLint：`apps/pc/.eslintrc.cjs` → `extends: require.resolve('@umijs/max/eslint')`
-- Stylelint：`apps/pc/.stylelintrc.js` → `extends: require.resolve('@umijs/max/stylelint')`
-- **配置文件必须是 `.cjs` 后缀**：`apps/pc/package.json` 声明了 `"type": "module"`，`.js` 会被当作 ESM 解析，`module.exports` 直接报错（ESLint 会以 `Cannot read config file` 终止）。
 
 ### apps/mobile、apps/web（Vue 3 + TS + Vite）
 
@@ -53,10 +46,9 @@
 | 改动的路径 | 触发的检查 |
 | --- | --- |
 | `apps/desktop/**` | `pnpm lint:desktop` |
-| `apps/pc/**` | `pnpm lint:pc` |
 | `apps/mobile/**` | `pnpm lint:mobile` |
 | `apps/web/**` | `pnpm lint:web` |
-| `packages/**`、根级配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`tsconfig.json`、`typings.d.ts`、`.husky/**`、`scripts/pre-push.mjs`） | 四个前端全跑 |
+| `packages/**`、根级配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`tsconfig.json`、`typings.d.ts`、`.husky/**`、`scripts/pre-push.mjs`） | 三个前端全跑 |
 | `src-tauri/**` | `pnpm lint:rust:fmt` → `pnpm lint:rust:clippy` |
 | 新分支 / 浅克隆等**无法确定推送范围**的情况 | 全量检查（前端 + Rust） |
 
@@ -76,6 +68,6 @@
 "pnpm": { "overrides": { "table>ajv": "8.17.1" } }
 ```
 
-原因：`ajv` 从 8.18 起收紧 `package.json` 的 `exports`，而 stylelint 14（经 `table`）会 `require('ajv/dist/runtime/equal')`，升级后 stylelint CLI 直接以
-`Error: Cannot find module 'ajv/dist/runtime/equal'` 崩溃（`pnpm lint:pc` 的 stylelint 部分会失效）。
-锁定 `table` 的 `ajv` 为 8.17.1 即可，其它依赖（如 `schema-utils`）不受影响。若要移除该覆盖，请先确认 stylelint CLI 仍能正常运行。
+原因：`ajv` 从 8.18 起收紧 `package.json` 的 `exports`，而 ESLint 8 依赖的 `table` 会 `require('ajv/dist/runtime/equal')`，升级后相关 CLI 直接以
+`Error: Cannot find module 'ajv/dist/runtime/equal'` 崩溃。
+锁定 `table` 的 `ajv` 为 8.17.1 即可，其它依赖（如 `schema-utils`）不受影响。若要移除该覆盖，请先确认 ESLint 等 CLI 仍能正常运行。
