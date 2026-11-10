@@ -9,8 +9,6 @@ import {
   MailOutlined,
   ManOutlined,
   PhoneOutlined,
-  PictureOutlined,
-  UploadOutlined,
   UserOutlined,
   WomanOutlined,
 } from '@ant-design/icons-vue';
@@ -24,18 +22,12 @@ import { feedback } from '@/utils/feedback';
 import { calcAgeFromBirthday } from '@/utils/format';
 import {
   block_friend,
-  clearFriendChatBackground,
   get_friend_info,
   get_user_info_with_cache,
   getFiles,
-  getFriendChatBackground,
-  importFriendChatBackground,
   openImagePreviewWindow,
-  pickChatBackgroundImage,
   refresh_user_info,
-  resolveChatBackgroundUrl,
   unblock_friend,
-  type FriendChatBackgroundVo,
 } from '@workspace/services';
 import type { FriendVo, UserInfo } from '@workspace/types';
 import styles from './styles/FriendInfo.module.less';
@@ -53,9 +45,6 @@ const loading = ref(false);
 const isBlocked = ref(false);
 /** 是否为自己的好友（非好友时只展示资料卡，不显示拉黑） */
 const isFriend = ref(false);
-// 好友专属聊天背景(仅客户端); null 表示使用全局背景
-const chatBg = ref<FriendChatBackgroundVo | null>(null);
-const bgUploading = ref(false);
 
 // 好友手动状态(仅好友且有状态时展示)
 const presence = computed(
@@ -188,50 +177,6 @@ watch(
   { immediate: true },
 );
 
-// 读取该好友的专属聊天背景(未设置时回退全局背景)
-watch(
-  () => props.uuid,
-  (uuid, _oldValue, onCleanup) => {
-    let mounted = true;
-    getFriendChatBackground(uuid)
-      .then((bg) => {
-        if (mounted) chatBg.value = bg;
-      })
-      .catch(() => {
-        if (mounted) chatBg.value = null;
-      });
-    onCleanup(() => {
-      mounted = false;
-    });
-  },
-  { immediate: true },
-);
-
-const handleBgUpload = async () => {
-  const path = await pickChatBackgroundImage();
-  if (!path) return;
-  bgUploading.value = true;
-  try {
-    const bg = await importFriendChatBackground(props.uuid, path);
-    chatBg.value = bg;
-    feedback.message.success(t('friendInfo.chatBackgroundApplied'));
-  } catch (e) {
-    console.log('设置好友聊天背景失败', e);
-    feedback.message.error(t('friendInfo.chatBackgroundFailed'));
-  } finally {
-    bgUploading.value = false;
-  }
-};
-
-const handleBgClear = async () => {
-  try {
-    await clearFriendChatBackground(props.uuid);
-    chatBg.value = null;
-  } catch (e) {
-    console.log('恢复全局聊天背景失败', e);
-    feedback.message.error(t('friendInfo.chatBackgroundFailed'));
-  }
-};
 
 const routeToChat = async () => {
   try {
@@ -281,16 +226,6 @@ const displayAccount = computed(
   () => userInfo.value?.account || currentFriend.value?.friend_account || '-',
 );
 const friendAge = computed(() => calcAgeFromBirthday(userInfo.value?.birthday));
-
-const bgPreviewStyle = computed(() =>
-  chatBg.value
-    ? {
-        backgroundImage: `url("${resolveChatBackgroundUrl(
-          chatBg.value.file_path,
-        )}")`,
-      }
-    : undefined,
-);
 
 const handleImgError = (e: Event) => {
   (e.target as HTMLImageElement).src = DEFAULT_ICON;
@@ -382,35 +317,6 @@ const handleImgError = (e: Event) => {
             </div>
           </a-collapse-panel>
         </a-collapse>
-      </div>
-
-      <div v-if="isFriend" :class="styles.bgSection">
-        <div :class="styles.bgTitle">
-          {{ t('friendInfo.chatBackground') }}
-        </div>
-        <div :class="styles.bgBody">
-          <div :class="styles.bgPreview" :style="bgPreviewStyle">
-            <PictureOutlined v-if="!chatBg" />
-          </div>
-          <div :class="styles.bgActions">
-            <a-button
-              size="small"
-              type="primary"
-              ghost
-              :loading="bgUploading"
-              @click="handleBgUpload"
-            >
-              <template #icon><UploadOutlined /></template>
-              {{ t('friendInfo.chatBackgroundUpload') }}
-            </a-button>
-            <a-button v-if="chatBg" size="small" @click="handleBgClear">
-              {{ t('friendInfo.chatBackgroundReset') }}
-            </a-button>
-            <span :class="styles.bgHint">
-              {{ t('friendInfo.chatBackgroundHint') }}
-            </span>
-          </div>
-        </div>
       </div>
 
       <div :class="styles.footer">
