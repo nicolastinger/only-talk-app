@@ -130,14 +130,7 @@ const handleCreateGroupSuccess = (group: GroupInfoVo) => {
           @change="handleTabChange"
         >
           <template #label="{ value }">
-            <div
-              :style="{
-                padding: '4px 8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }"
-            >
+            <div :class="styles.tabLabel">
               <UserOutlined v-if="value === 'friends'" />
               <TeamOutlined v-else />
               <span>
