@@ -18,6 +18,8 @@ export const CLIENT_CONFIG_KEYS = {
   autoDownloadWifi: "app.auto_download_wifi",
   autoDownloadCellular: "app.auto_download_cellular",
   appAutoLogin: "app.auto_login",
+  uiChatListWidth: "ui.chat_list_width",
+  uiContactListWidth: "ui.contact_list_width",
 } as const;
 
 /** 客户端配置项 */

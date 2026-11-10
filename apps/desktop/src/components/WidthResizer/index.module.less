@@ -1,0 +1,33 @@
+.resizer {
+  position: relative;
+  flex: 0 0 6px;
+  width: 6px;
+  align-self: stretch;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 5;
+
+  // 常态只显示 1px 分隔线，hover/拖拽时高亮为 2px 主色
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    background: var(--glass-border-soft);
+    transition: width 0.15s ease, background 0.15s ease;
+  }
+
+  &:hover::after,
+  &.dragging::after {
+    width: 2px;
+    background: var(--color-primary);
+    opacity: 0.6;
+  }
+}
+
+.dragging {
+  cursor: col-resize;
+}

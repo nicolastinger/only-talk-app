@@ -6,15 +6,54 @@ import MessageBox from '@/pages/Home/Chats/components/MessageBox.vue';
 import Search from '@/pages/Home/Chats/components/Search.vue';
 import { useBearStore } from '@/stores/app';
 import { invoke } from '@tauri-apps/api/core';
-import { clearAllUnreadSessions } from '@workspace/services';
-import type { ChatSessionVo } from '@workspace/types';
+import { clearAllUnreadSessions, getConfig, setConfig } from '@workspace/services';
+import { CLIENT_CONFIG_KEYS, type ChatSessionVo } from '@workspace/types';
 import { useI18n } from '@/i18n';
+import WidthResizer from '@/components/WidthResizer/index.vue';
 import styles from './index.module.less';
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const store = useBearStore();
+
+/** 会话列表面板宽度约束(px) */
+const LIST_MIN_WIDTH = 220;
+const LIST_MAX_WIDTH = 520;
+const LIST_DEFAULT_WIDTH = 320;
+const LIST_DEFAULT_RATIO = 0.32;
+const LIST_MIN_CONTENT_WIDTH = 360;
+
+const containerRef = ref<HTMLElement>();
+const listWidth = ref(LIST_DEFAULT_WIDTH);
+/** 双击复位用的默认宽度(首次按容器 32% 计算，与旧布局一致) */
+const defaultListWidth = ref(LIST_DEFAULT_WIDTH);
+
+/** 读取上次保存的面板宽度 */
+const loadListWidth = () => {
+  const containerWidth = containerRef.value?.clientWidth ?? 0;
+  if (containerWidth > 0) {
+    defaultListWidth.value = Math.min(
+      LIST_MAX_WIDTH,
+      Math.max(LIST_MIN_WIDTH, Math.round(containerWidth * LIST_DEFAULT_RATIO)),
+    );
+  }
+  const value = Number(getConfig(CLIENT_CONFIG_KEYS.uiChatListWidth));
+  if (Number.isFinite(value) && value > 0) {
+    listWidth.value = Math.min(
+      LIST_MAX_WIDTH,
+      Math.max(LIST_MIN_WIDTH, value),
+    );
+  } else {
+    listWidth.value = defaultListWidth.value;
+  }
+};
+
+/** 拖拽结束后持久化面板宽度 */
+const persistListWidth = (value: number) => {
+  listWidth.value = value;
+  setConfig(CLIENT_CONFIG_KEYS.uiChatListWidth, String(value)).catch(() => {});
+};
 
 const chatSessionList = ref<ChatSessionVo[]>([]);
 const selectedSessionKey = ref<string>('');
@@ -138,6 +177,7 @@ const get_chat_session = async () => {
 };
 
 onMounted(() => {
+  loadListWidth();
   get_chat_session();
 });
 
@@ -225,8 +265,11 @@ const sessionKeyOf = (item: ChatSessionVo) =>
 </script>
 
 <template>
-  <div :class="styles.container">
-    <div :class="styles.left" style="flex: 0 0 32%">
+  <div ref="containerRef" :class="styles.container">
+    <div
+      :class="styles.left"
+      :style="{ width: `${listWidth}px`, flex: `0 0 ${listWidth}px` }"
+    >
       <div style="height: 100%">
         <div :class="styles.header">
           <Search @select="(item) => routeToChat(item)" />
@@ -285,6 +328,14 @@ const sessionKeyOf = (item: ChatSessionVo) =>
         </div>
       </div>
     </div>
+    <WidthResizer
+      v-model="listWidth"
+      :min="LIST_MIN_WIDTH"
+      :max="LIST_MAX_WIDTH"
+      :min-right="LIST_MIN_CONTENT_WIDTH"
+      :default-width="defaultListWidth"
+      @change="persistListWidth"
+    />
     <div :class="styles.right" style="width: auto; flex: 1; min-width: 0">
       <!-- query 变化(切换好友/群聊)时强制重建页面，避免聊天监听仍指向旧会话 -->
       <router-view :key="route.fullPath" />

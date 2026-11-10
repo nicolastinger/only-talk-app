@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   TeamOutlined,
@@ -9,13 +9,15 @@ import {
 import type { WebviewOptions } from '@tauri-apps/api/webview';
 import type { WindowOptions } from '@tauri-apps/api/window';
 import SearchBar from '@/components/SearchBar/index.vue';
+import WidthResizer from '@/components/WidthResizer/index.vue';
 import { openNewWindowWithoutClose } from '@/components/Window/OpenWindow';
 import { toHashRoute } from '@/utils/hashRoute';
 import CreateGroupModal from '@/pages/Home/Contacts/components/CreateGroupModal.vue';
 import FriendList from '@/pages/Home/Contacts/components/FriendList.vue';
 import GroupList from '@/pages/Home/Contacts/components/GroupList.vue';
 import { useI18n } from '@/i18n';
-import type { GroupInfoVo } from '@workspace/types';
+import { getConfig, setConfig } from '@workspace/services';
+import { CLIENT_CONFIG_KEYS, type GroupInfoVo } from '@workspace/types';
 import styles from './index.module.less';
 
 type ContactsTabType = 'friends' | 'groups';
@@ -32,6 +34,35 @@ const router = useRouter();
 
 const activeTab = ref<ContactsTabType>('friends');
 const createGroupVisible = ref(false);
+
+/** 好友/群组列表面板宽度约束(px) */
+const LIST_MIN_WIDTH = 220;
+const LIST_MAX_WIDTH = 480;
+const LIST_DEFAULT_WIDTH = 280;
+const LIST_MIN_CONTENT_WIDTH = 360;
+
+const listWidth = ref(LIST_DEFAULT_WIDTH);
+
+/** 读取上次保存的面板宽度 */
+const loadListWidth = () => {
+  const value = Number(getConfig(CLIENT_CONFIG_KEYS.uiContactListWidth));
+  if (Number.isFinite(value) && value > 0) {
+    listWidth.value = Math.min(
+      LIST_MAX_WIDTH,
+      Math.max(LIST_MIN_WIDTH, value),
+    );
+  }
+};
+
+/** 拖拽结束后持久化面板宽度 */
+const persistListWidth = (value: number) => {
+  listWidth.value = value;
+  setConfig(CLIENT_CONFIG_KEYS.uiContactListWidth, String(value)).catch(
+    () => {},
+  );
+};
+
+onMounted(loadListWidth);
 
 const tabOptions = ['friends', 'groups'];
 
@@ -82,7 +113,10 @@ const handleCreateGroupSuccess = (group: GroupInfoVo) => {
 
 <template>
   <div :class="styles.container">
-    <div :class="styles.left">
+    <div
+      :class="styles.left"
+      :style="{ width: `${listWidth}px`, flex: `0 0 ${listWidth}px` }"
+    >
       <div :class="styles.header">
         <SearchBar @search-select="handleSearchSelect" />
       </div>
@@ -124,6 +158,14 @@ const handleCreateGroupSuccess = (group: GroupInfoVo) => {
         <TeamOutlined v-else />
       </div>
     </div>
+    <WidthResizer
+      v-model="listWidth"
+      :min="LIST_MIN_WIDTH"
+      :max="LIST_MAX_WIDTH"
+      :min-right="LIST_MIN_CONTENT_WIDTH"
+      :default-width="LIST_DEFAULT_WIDTH"
+      @change="persistListWidth"
+    />
     <div :class="styles.right">
       <router-view />
     </div>

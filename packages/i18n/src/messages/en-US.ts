@@ -1538,6 +1538,7 @@ const messages: LocaleMessages = {
     "networkError": "Network request failed",
     "loadMore": "Load more",
     "image": "Image",
+    "dragToResize": "Drag to resize",
   },
   "login": {
     "serverSettings": "Server Settings",

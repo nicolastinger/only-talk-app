@@ -1538,6 +1538,7 @@ const messages: LocaleMessages = {
     "networkError": "网络请求失败",
     "loadMore": "加载更多",
     "image": "图片",
+    "dragToResize": "拖拽调整宽度",
   },
   "login": {
     "serverSettings": "服务器设置",
