@@ -36,7 +36,7 @@
   align-items: stretch;
   padding: 0 0 24px;
   background: var(--glass-bg);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   box-shadow: var(--glass-shadow);
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--glass-blur);
@@ -185,7 +185,7 @@
   margin: 18px 24px 0;
   padding: 6px 14px;
   background: var(--bg-white-40);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   border: 1px solid var(--border-white-lightest);
 }
 
@@ -206,7 +206,7 @@
     height: 28px;
     display: grid;
     place-items: center;
-    border-radius: 9px;
+    border-radius: var(--radius-card);
     font-size: 14px;
     color: var(--color-primary);
     background: var(--hover-bg-primary-light);
@@ -246,7 +246,7 @@
       padding: 8px 10px !important;
       margin: 4px -10px 2px;
       border: none !important;
-      border-radius: 10px;
+      border-radius: var(--radius-card);
       font-size: 13px;
       font-weight: 500;
       transition: background 0.2s ease;
@@ -291,7 +291,7 @@
 
   :global(.ant-btn) {
     height: 44px;
-    border-radius: 12px;
+    border-radius: var(--radius-card);
     font-size: 14px;
     font-weight: 600;
     transition: all 0.25s ease;

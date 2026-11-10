@@ -97,6 +97,8 @@
   --radius-lg: 22px;
   --radius-xl: 28px;
   --radius-full: 999px;
+  // 卡片(资料卡/设置面板/弹窗/抽屉)统一圆角
+  --radius-card: 8px;
 
   // 聊天区文字缩放比例 (small=0.875 / medium=1 / large=1.125)
   --chat-font-scale: 1;
@@ -380,7 +382,7 @@ body {
 .glass-panel {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   box-shadow: var(--glass-shadow);
   backdrop-filter: var(--glass-blur);
 }
@@ -401,7 +403,7 @@ body {
 }
 
 .ant-modal .ant-modal-content {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   overflow: hidden;
 }
 
@@ -411,15 +413,15 @@ body {
 }
 
 .ant-drawer-right .ant-drawer-content {
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
 }
 
 .ant-drawer-left .ant-drawer-content {
-  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
 }
 
 .ant-drawer-bottom .ant-drawer-content {
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
 }
 
 .ant-dropdown .ant-dropdown-menu,
@@ -435,7 +437,7 @@ body {
 }
 
 .ant-notification .ant-notification-notice {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
 }
 
 // 遮罩加一层轻模糊, 突出前景玻璃浮层
