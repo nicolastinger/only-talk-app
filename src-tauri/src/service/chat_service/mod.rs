@@ -39,7 +39,7 @@ pub use recall::{
 pub use record::{
     delete_chat_record_service, delete_group_chat_record_service, get_chat_record_by_type_service,
     get_chat_record_service, get_group_chat_record_service, get_pending_send_records_service,
-    mark_read_service,
+    mark_read_service, search_chat_record_service,
 };
 pub use send::{
     ignore_send_msg_service, prepare_pending_msg_for_send, process_no_send_success_msg,

@@ -1,0 +1,132 @@
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 4px 0 12px;
+  background: var(--glass-bg-dark);
+  border-bottom: 1px solid var(--glass-border-soft);
+}
+
+.subtitle {
+  margin-bottom: 8px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.filterSelect {
+  min-width: 130px;
+  flex: 1 1 130px;
+}
+
+.customRange {
+  margin-top: 10px;
+}
+
+.body {
+  padding-top: 8px;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  font-size: 13px;
+  color: var(--color-gray-6, #999);
+}
+
+.emptyTitle {
+  font-size: 14px;
+  color: var(--text-color-secondary);
+}
+
+.emptyHint {
+  font-size: 12px;
+  color: var(--color-gray-6, #999);
+}
+
+.dateHeader {
+  padding: 10px 4px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-gray-6, #999);
+}
+
+.item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-white-40, rgba(255, 255, 255, 40%));
+  border: 1px solid var(--glass-border-soft);
+  border-radius: var(--radius-card);
+
+  &:hover {
+    background: var(--bg-white-50, rgba(255, 255, 255, 50%));
+  }
+}
+
+.itemHead {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+}
+
+.sender {
+  max-width: 40%;
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.typeTag {
+  flex: none;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--color-primary);
+  background: var(--hover-bg-primary-light);
+  border-radius: 4px;
+}
+
+.itemTime {
+  margin-left: auto;
+  flex: none;
+  color: var(--color-gray-6, #999);
+}
+
+.preview {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-color);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+
+.noMore {
+  font-size: 12px;
+  color: var(--color-gray-6, #999);
+}

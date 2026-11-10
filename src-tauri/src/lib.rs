@@ -41,7 +41,7 @@ use crate::cmd::chat_record_controller::{
     delete_chat_record, delete_group_chat_record, forward_chat_messages, get_chat_record_by_type,
     get_chat_record_from_store, get_group_chat_record_from_store, get_pending_send_records,
     ignore_send_msg, mark_group_read, mark_read, recall_chat_message, recall_group_chat_message,
-    retry_send_msg, send_call_control_msg, send_file_msg, send_group_file_msg,
+    retry_send_msg, search_chat_record, send_call_control_msg, send_file_msg, send_group_file_msg,
     send_group_image_msg, send_group_text_msg, send_group_voice_msg, send_image_msg,
     send_self_text_msg, send_text_msg, send_voice_msg, send_webrtc_signal,
 };
@@ -309,6 +309,7 @@ pub fn run() {
             get_chat_record_from_store,
             get_chat_record_by_type,
             get_group_chat_record_from_store,
+            search_chat_record,
             get_pending_send_records,
             retry_send_msg,
             ignore_send_msg,

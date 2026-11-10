@@ -980,6 +980,19 @@ onUnmounted(() => {
 
 const goBack = () => router.back();
 
+/** 打开该会话的聊天记录（移动端独立页面） */
+const goHistory = () => {
+  router.push({
+    path: '/chats/history',
+    query: {
+      friendId,
+      title: isSelf.value
+        ? t('chats.selfChatName')
+        : friendInfo.name || friendId,
+    },
+  });
+};
+
 /* ============ 图片预览 ============ */
 const preview = ref<{ urls: string[]; index: number } | null>(null);
 
@@ -1061,6 +1074,17 @@ const handleAvatarClick = ({
         <UserTypeTag v-if="!isSelf" :type="friendInfo.user_type" />
       </div>
       <div class="header-actions">
+        <button
+          class="header-more"
+          :aria-label="t('chatHistory.title')"
+          @click="goHistory"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13 3a9 9 0 1 0 8.94 10.06 1 1 0 0 0-1.99-.2A7 7 0 1 1 13 5a1 1 0 0 0 0-2zm-1 4a1 1 0 0 1 1 1v4.59l3.2 3.2a1 1 0 0 1-1.4 1.42l-3.5-3.5A1 1 0 0 1 11 12.7V8a1 1 0 0 1 1-1z"
+            />
+          </svg>
+        </button>
         <button
           v-if="!isSelf"
           class="header-more"

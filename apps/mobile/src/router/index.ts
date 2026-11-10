@@ -53,6 +53,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/chats/history",
+    name: "ChatHistory",
+    component: () => import("@/pages/Chats/History/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/friends",
     name: "Friends",
     component: () => import("@/pages/Friends/index.vue"),

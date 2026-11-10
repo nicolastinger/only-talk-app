@@ -4,7 +4,7 @@ use super::recall::{reconcile_group_recalls, reconcile_single_recalls};
 use super::session::update_last_read_msg_from_db;
 use crate::dao::chat_record_db::{
     delete_chat_record_db, query_chat_record_by_id_from_db, query_chat_record_by_type_from_db,
-    query_chat_record_from_db,
+    query_chat_record_filtered, query_chat_record_from_db,
 };
 use crate::dao::chat_record_send::query_chat_record_send_by_user;
 use crate::dao::group_chat_record_db::{
@@ -66,6 +66,41 @@ pub async fn get_group_chat_record_service(
     let limit = page.size;
     let offset = (page.current - 1) * page.size;
     query_group_chat_record_from_db(&group_id, limit, offset).await
+}
+
+/// 多维度检索聊天记录(单聊/群聊通用, 按时间倒序分页)。
+///
+/// - `conversation_id`: 单聊=对方 uuid, 群聊=群 uuid
+/// - `send_user`: 仅看某个发送者(群聊按成员、单聊按我方/对方)
+/// - `text_types`: 消息类型过滤(空/None = 全部)
+/// - `keyword`: raw 模糊匹配(空 = 不过滤)
+#[allow(clippy::too_many_arguments)]
+pub async fn search_chat_record_service(
+    conversation_id: String,
+    is_group: bool,
+    start_time: Option<i64>,
+    end_time: Option<i64>,
+    send_user: Option<String>,
+    text_types: Option<Vec<u16>>,
+    keyword: Option<String>,
+    page: Page,
+) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let limit = page.size.max(1);
+    let offset = (page.current.max(1) - 1) * page.size.max(1);
+    query_chat_record_filtered(
+        &me,
+        &conversation_id,
+        is_group,
+        start_time,
+        end_time,
+        send_user.as_deref(),
+        text_types.as_deref(),
+        keyword.as_deref(),
+        limit,
+        offset,
+    )
+    .await
 }
 
 /// 单聊已读: 按 nano_id 取本地记录并推进已读水位。

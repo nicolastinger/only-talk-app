@@ -1,5 +1,7 @@
 // 本地聊天记录sql
 
+use sqlx::{QueryBuilder, Sqlite};
+
 use crate::dao::{get_db_client, get_private_db_client};
 use crate::models::entity::chat_record_read::ChatRecordRead;
 use crate::models::vo::text_quic_msg::TextQuicMsgVo;
@@ -222,4 +224,65 @@ pub async fn query_read_peers(
     .fetch_all(&pool_sqlite)
     .await?;
     Ok(rows)
+}
+
+/// 多维度检索聊天记录(按时间倒序分页)。
+///
+/// 单聊按 `(me, peer)` 双向匹配; 群聊按 `recv_user = group_id`。
+/// 日期区间为闭区间(毫秒), 其余过滤项为 `None` 时忽略。
+#[allow(clippy::too_many_arguments)]
+pub async fn query_chat_record_filtered(
+    me: &str,
+    conversation_id: &str,
+    is_group: bool,
+    start_time: Option<i64>,
+    end_time: Option<i64>,
+    send_user: Option<&str>,
+    text_types: Option<&[u16]>,
+    keyword: Option<&str>,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<TextQuicMsgVo>, anyhow::Error> {
+    let pool_sqlite = get_private_db_client().await?;
+    let mut qb = QueryBuilder::<Sqlite>::new(
+        "SELECT nano_id, text_type, raw, recv_user, send_user, timestamp FROM chat_record WHERE deleted = 0",
+    );
+    if is_group {
+        qb.push(" AND recv_user = ").push_bind(conversation_id.to_string());
+    } else {
+        qb.push(" AND ((send_user = ")
+            .push_bind(me.to_string())
+            .push(" AND recv_user = ")
+            .push_bind(conversation_id.to_string())
+            .push(") OR (send_user = ")
+            .push_bind(conversation_id.to_string())
+            .push(" AND recv_user = ")
+            .push_bind(me.to_string())
+            .push("))");
+    }
+    if let Some(start) = start_time {
+        qb.push(" AND timestamp >= ").push_bind(start);
+    }
+    if let Some(end) = end_time {
+        qb.push(" AND timestamp <= ").push_bind(end);
+    }
+    if let Some(sender) = send_user.filter(|s| !s.is_empty()) {
+        qb.push(" AND send_user = ").push_bind(sender.to_string());
+    }
+    if let Some(types) = text_types.filter(|t| !t.is_empty()) {
+        qb.push(" AND text_type IN (");
+        {
+            let mut separated = qb.separated(", ");
+            for text_type in types {
+                separated.push_bind(i64::from(*text_type));
+            }
+            separated.push_unseparated(")");
+        }
+    }
+    if let Some(keyword) = keyword.map(str::trim).filter(|k| !k.is_empty()) {
+        qb.push(" AND raw LIKE ").push_bind(format!("%{keyword}%"));
+    }
+    qb.push(" ORDER BY timestamp DESC LIMIT ").push_bind(limit).push(" OFFSET ").push_bind(offset);
+    let records = qb.build_query_as::<TextQuicMsgVo>().fetch_all(&pool_sqlite).await?;
+    Ok(records)
 }

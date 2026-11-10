@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import type { MenuProps } from 'ant-design-vue';
 import {
   DeleteOutlined,
+  HistoryOutlined,
   MoreOutlined,
   SettingOutlined,
   UserOutlined,
@@ -16,6 +17,7 @@ import { delete_friend } from '@workspace/services';
 import type { FriendVo } from '@workspace/types';
 import { feedback } from '@/utils/feedback';
 import { useI18n } from '@/i18n';
+import ChatHistoryDrawer from './ChatHistoryDrawer.vue';
 import FriendSettingsPanel from './FriendSettingsPanel.vue';
 import styles from './styles/TopBar.module.less';
 
@@ -31,6 +33,7 @@ const presenceStore = usePresenceStore();
 
 const deleteModalVisible = ref(false);
 const friendSettingsOpen = ref(false);
+const historyOpen = ref(false);
 
 // 好友手动状态(忙碌/学习中/自定义等)
 const presence = computed(
@@ -87,6 +90,11 @@ const menuItems = computed<MenuProps['items']>(() => [
     icon: h(SettingOutlined),
   },
   {
+    key: 'history',
+    label: t('chatHistory.title'),
+    icon: h(HistoryOutlined),
+  },
+  {
     type: 'divider',
   },
   {
@@ -105,6 +113,9 @@ const onMenuClick: MenuProps['onClick'] = ({ key }) => {
       break;
     case 'settings':
       friendSettingsOpen.value = true;
+      break;
+    case 'history':
+      historyOpen.value = true;
       break;
     case 'delete':
       handleDeleteFriend();
@@ -150,6 +161,12 @@ const onMenuClick: MenuProps['onClick'] = ({ key }) => {
       v-model:open="friendSettingsOpen"
       :friend-info="friendInfo"
       @changed="store.triggerRefresh()"
+    />
+    <ChatHistoryDrawer
+      v-if="friendInfo?.friend_id"
+      v-model:open="historyOpen"
+      :conversation-id="friendInfo.friend_id"
+      :peer-name="friendInfo.friend_name || title"
     />
   </div>
 </template>

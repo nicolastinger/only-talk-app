@@ -17,8 +17,9 @@ use app_lib::dao::chat_record_ack::{
 };
 use app_lib::dao::chat_record_db::{
     delete_chat_record_db, insert_chat_record, local_max_server_id,
-    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
-    query_last_chat_record, query_last_read_msg, recall_chat_record_db, set_chat_record_server_id,
+    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_filtered,
+    query_chat_record_from_db, query_last_chat_record, query_last_read_msg, recall_chat_record_db,
+    set_chat_record_server_id,
 };
 use app_lib::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
@@ -571,6 +572,111 @@ async fn chat_record_db_insert_dedup_query_paging_type_filter() {
         // 按 nano_id + 本人 uuid 查询
         let by_id = query_chat_record_by_id_from_db("m4", ME).await.expect("按id查询失败");
         assert_eq!(by_id.raw, "world");
+    })
+    .await;
+}
+
+/// 多维度检索: 日期区间 / 发送者 / 类型 / 关键词 / 群聊范围 / 倒序分页。
+#[tokio::test]
+async fn chat_record_filtered_query_dimensions() {
+    with_private_db(|_pool| async move {
+        for (nano, ts, ty, raw, send, recv) in [
+            ("f1", 100i64, 1u16, r#"{"text":"hi"}"#, ME, FRIEND),
+            ("f2", 200i64, 2u16, r#"{"biz_id":"b1"}"#, ME, FRIEND),
+            ("f3", 300i64, 3u16, r#"{"file_name":"a.txt"}"#, FRIEND, ME),
+            ("g1", 400i64, 2001u16, r#"{"text":"group"}"#, ME, "group-1"),
+        ] {
+            let msg = TextQuicMsgVo {
+                nano_id: nano.to_string(),
+                text_type: ty,
+                raw: raw.to_string(),
+                recv_user: recv.to_string(),
+                send_user: send.to_string(),
+                timestamp: ts,
+            };
+            assert!(insert_chat_record(&msg).await.expect("插入消息失败"));
+        }
+
+        // 单聊全量: 时间倒序, 不包含群消息
+        let all = query_chat_record_filtered(
+            ME, FRIEND, false, None, None, None, None, None, 10, 0,
+        )
+        .await
+        .expect("单聊全量查询失败");
+        assert_eq!(all.len(), 3);
+        assert_eq!(
+            all.iter().map(|m| m.nano_id.as_str()).collect::<Vec<_>>(),
+            vec!["f3", "f2", "f1"]
+        );
+
+        // 日期区间(闭区间)
+        let ranged =
+            query_chat_record_filtered(ME, FRIEND, false, Some(150), Some(250), None, None, None, 10, 0)
+                .await
+                .expect("日期过滤失败");
+        assert_eq!(ranged.len(), 1);
+        assert_eq!(ranged[0].nano_id, "f2");
+
+        // 发送者
+        let sent_by_friend =
+            query_chat_record_filtered(ME, FRIEND, false, None, None, Some(FRIEND), None, None, 10, 0)
+                .await
+                .expect("发送者过滤失败");
+        assert_eq!(sent_by_friend.len(), 1);
+        assert_eq!(sent_by_friend[0].nano_id, "f3");
+
+        // 类型
+        let files = query_chat_record_filtered(
+            ME,
+            FRIEND,
+            false,
+            None,
+            None,
+            None,
+            Some(&[2u16, 3u16]),
+            None,
+            10,
+            0,
+        )
+        .await
+        .expect("类型过滤失败");
+        assert_eq!(files.len(), 2);
+        assert!(files.iter().all(|m| m.text_type == 2 || m.text_type == 3));
+
+        // 关键词(raw 模糊)
+        let by_keyword =
+            query_chat_record_filtered(ME, FRIEND, false, None, None, None, None, Some("a.txt"), 10, 0)
+                .await
+                .expect("关键词过滤失败");
+        assert_eq!(by_keyword.len(), 1);
+        assert_eq!(by_keyword[0].nano_id, "f3");
+
+        // 群聊范围
+        let group = query_chat_record_filtered(
+            ME,
+            "group-1",
+            true,
+            None,
+            None,
+            None,
+            None,
+            None,
+            10,
+            0,
+        )
+        .await
+        .expect("群聊查询失败");
+        assert_eq!(group.len(), 1);
+        assert_eq!(group[0].nano_id, "g1");
+
+        // 倒序分页: 第二页第一条
+        let page2 = query_chat_record_filtered(
+            ME, FRIEND, false, None, None, None, None, None, 1, 1,
+        )
+        .await
+        .expect("分页查询失败");
+        assert_eq!(page2.len(), 1);
+        assert_eq!(page2[0].nano_id, "f2");
     })
     .await;
 }

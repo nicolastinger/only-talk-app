@@ -1016,6 +1016,18 @@ onUnmounted(() => {
 
 const goBack = () => router.back();
 
+/** 打开群聊记录（移动端独立页面） */
+const goHistory = () => {
+  router.push({
+    path: '/chats/history',
+    query: {
+      isGroup: '1',
+      groupId,
+      title: groupInfo.group_name || t('chats.groupChat'),
+    },
+  });
+};
+
 /* ============ 图片预览 ============ */
 const preview = ref<{ urls: string[]; index: number } | null>(null);
 
@@ -1067,21 +1079,34 @@ const handlePreview = async (msg: UiChatMessage) => {
           t("chat.memberCountShort", { count: groupInfo.member_count })
         }}</span>
       </div>
-      <button
-        class="more-btn"
-        :aria-label="t('chat.groupSettings')"
-        @click="goGroupSettings"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style="width: 20px; height: 20px"
+      <div class="header-actions">
+        <button
+          class="more-btn"
+          :aria-label="t('chatHistory.title')"
+          @click="goHistory"
         >
-          <path
-            d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
-          />
-        </svg>
-      </button>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13 3a9 9 0 1 0 8.94 10.06 1 1 0 0 0-1.99-.2A7 7 0 1 1 13 5a1 1 0 0 0 0-2zm-1 4a1 1 0 0 1 1 1v4.59l3.2 3.2a1 1 0 0 1-1.4 1.42l-3.5-3.5A1 1 0 0 1 11 12.7V8a1 1 0 0 1 1-1z"
+            />
+          </svg>
+        </button>
+        <button
+          class="more-btn"
+          :aria-label="t('chat.groupSettings')"
+          @click="goGroupSettings"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style="width: 20px; height: 20px"
+          >
+            <path
+              d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div v-if="globalUploading" class="global-upload-bar">
@@ -1242,6 +1267,12 @@ const handlePreview = async (msg: UiChatMessage) => {
   font-size: 12px;
   color: var(--text-placeholder);
   margin-left: 6px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .more-btn {
   width: 36px;

@@ -11,10 +11,11 @@ use crate::service::chat_service::{
     get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
     get_pending_send_records_service, ignore_send_msg_service, mark_read_service,
     recall_chat_message_service, recall_group_chat_message_service, retry_send_msg_service,
-    send_call_control_msg_service, send_file_msg_service, send_group_file_msg_service,
-    send_group_image_msg_service, send_group_text_msg_service, send_group_voice_msg_service,
-    send_image_msg_service, send_self_text_msg_service, send_text_msg_service,
-    send_voice_msg_service, send_webrtc_signal_service, update_group_last_read_msg_service,
+    search_chat_record_service, send_call_control_msg_service, send_file_msg_service,
+    send_group_file_msg_service, send_group_image_msg_service, send_group_text_msg_service,
+    send_group_voice_msg_service, send_image_msg_service, send_self_text_msg_service,
+    send_text_msg_service, send_voice_msg_service, send_webrtc_signal_service,
+    update_group_last_read_msg_service,
 };
 use crate::GLOBAL_MSG_SEND_LOCK;
 
@@ -154,6 +155,33 @@ pub async fn get_group_chat_record_from_store(
     page: Page,
 ) -> Result<Vec<TextQuicMsgVo>, String> {
     get_group_chat_record_service(group_id, page).await.map_err(|e| e.to_string())
+}
+
+/// 多维度检索聊天记录(单聊/群聊通用): 日期区间、发送者、类型、关键词 + 分页。
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn search_chat_record(
+    conversation_id: String,
+    is_group: bool,
+    start_time: Option<i64>,
+    end_time: Option<i64>,
+    send_user: Option<String>,
+    text_types: Option<Vec<u16>>,
+    keyword: Option<String>,
+    page: Page,
+) -> Result<Vec<TextQuicMsgVo>, String> {
+    search_chat_record_service(
+        conversation_id,
+        is_group,
+        start_time,
+        end_time,
+        send_user,
+        text_types,
+        keyword,
+        page,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// 群消息已读
