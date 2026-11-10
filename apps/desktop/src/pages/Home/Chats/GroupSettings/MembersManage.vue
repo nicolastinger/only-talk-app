@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
+import type { MenuProps } from 'ant-design-vue';
 import UserTypeTag from '@/components/UserTypeTag/index.vue';
 import { DEFAULT_ICON } from '@/constants';
 import { useAvatarMap } from '@/hooks/useAvatarMap';
@@ -163,12 +164,10 @@ const handleSetRole = async (member: GroupMemberVo, role: number) => {
   }
 };
 
-const getMemberActions = (member: GroupMemberVo) => {
-  const items: Array<{
-    key: string;
-    label: string | ReturnType<typeof h>;
-    onClick: () => void;
-  }> = [];
+const getMemberActions = (
+  member: GroupMemberVo,
+): NonNullable<MenuProps['items']> => {
+  const items: NonNullable<MenuProps['items']> = [];
   const isSelf = member.user_uuid === store.userInfo?.uuid;
 
   if (isSelf) {
@@ -180,38 +179,46 @@ const getMemberActions = (member: GroupMemberVo) => {
       items.push({
         key: 'admin',
         label: t('groupSettings.members.setAdmin'),
-        onClick: () => handleSetRole(member, 1),
       });
     }
     if (member.role === 1) {
       items.push({
         key: 'member',
         label: t('groupSettings.members.removeAdmin'),
-        onClick: () => handleSetRole(member, 0),
       });
     }
     items.push({
       key: 'kick',
-      label: h(
-        'span',
-        { style: { color: 'var(--color-error)' } },
-        t('groupSettings.members.removeMember'),
-      ),
-      onClick: () => handleKick(member),
+      label: t('groupSettings.members.removeMember'),
+      danger: true,
     });
   } else if (isAdmin() && member.role === 0) {
     items.push({
       key: 'kick',
-      label: h(
-        'span',
-        { style: { color: 'var(--color-error)' } },
-        t('groupSettings.members.removeMember'),
-      ),
-      onClick: () => handleKick(member),
+      label: t('groupSettings.members.removeMember'),
+      danger: true,
     });
   }
 
   return items;
+};
+
+/** 下拉菜单点击：antdv 4 的 Dropdown 只认 `#overlay` 插槽，菜单点击在这里统一分发 */
+const onMemberMenuClick = (
+  member: GroupMemberVo,
+  { key }: { key: string | number },
+) => {
+  switch (String(key)) {
+    case 'admin':
+      handleSetRole(member, 1);
+      break;
+    case 'member':
+      handleSetRole(member, 0);
+      break;
+    case 'kick':
+      handleKick(member);
+      break;
+  }
 };
 
 const filteredMembers = computed(() =>
@@ -294,10 +301,15 @@ const filteredMembers = computed(() =>
           </div>
           <a-dropdown
             v-if="getMemberActions(member).length > 0"
-            :menu="{ items: getMemberActions(member) }"
             placement="bottomRight"
             :trigger="['click']"
           >
+            <template #overlay>
+              <a-menu
+                :items="getMemberActions(member)"
+                @click="onMemberMenuClick(member, $event)"
+              />
+            </template>
             <a-button type="text" size="small">
               <template #icon><MoreOutlined /></template>
             </a-button>

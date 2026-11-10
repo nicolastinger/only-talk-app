@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, h, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import type { MenuProps } from 'ant-design-vue';
 import {
   BellOutlined,
   DeleteOutlined,
@@ -115,49 +116,61 @@ const confirmBlock = async () => {
   }
 };
 
-const menuItems = computed(() => ({
-  items: [
-    {
-      key: 'profile',
-      label: t('chat.topBar.viewProfile'),
-      icon: h(UserOutlined),
-      onClick: handleViewProfile,
-    },
-    {
-      key: 'mute',
-      label: t('chat.topBar.muteNotifications'),
-      icon: h(BellOutlined),
-      onClick: handleMute,
-    },
-    {
-      key: 'block',
-      label:
-        props.friendInfo?.is_block === 1
-          ? t('chat.topBar.unblockFriend')
-          : t('chat.topBar.blockFriend'),
-      icon: h(StopOutlined),
-      onClick: handleBlock,
-    },
-    {
-      key: 'report',
-      label: t('report.action'),
-      icon: h(WarningOutlined),
-      onClick: () => {
-        reportModalVisible.value = true;
-      },
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'delete',
-      label: t('chat.topBar.deleteFriend'),
-      icon: h(DeleteOutlined),
-      danger: true,
-      onClick: handleDeleteFriend,
-    },
-  ],
-}));
+const menuItems = computed<MenuProps['items']>(() => [
+  {
+    key: 'profile',
+    label: t('chat.topBar.viewProfile'),
+    icon: h(UserOutlined),
+  },
+  {
+    key: 'mute',
+    label: t('chat.topBar.muteNotifications'),
+    icon: h(BellOutlined),
+  },
+  {
+    key: 'block',
+    label:
+      props.friendInfo?.is_block === 1
+        ? t('chat.topBar.unblockFriend')
+        : t('chat.topBar.blockFriend'),
+    icon: h(StopOutlined),
+  },
+  {
+    key: 'report',
+    label: t('report.action'),
+    icon: h(WarningOutlined),
+  },
+  {
+    type: 'divider',
+  },
+  {
+    key: 'delete',
+    label: t('chat.topBar.deleteFriend'),
+    icon: h(DeleteOutlined),
+    danger: true,
+  },
+]);
+
+/** 下拉菜单点击：antdv 4 的 Dropdown 只认 `#overlay` 插槽，菜单点击在这里统一分发 */
+const onMenuClick: MenuProps['onClick'] = ({ key }) => {
+  switch (String(key)) {
+    case 'profile':
+      handleViewProfile();
+      break;
+    case 'mute':
+      handleMute();
+      break;
+    case 'block':
+      handleBlock();
+      break;
+    case 'report':
+      reportModalVisible.value = true;
+      break;
+    case 'delete':
+      handleDeleteFriend();
+      break;
+  }
+};
 </script>
 
 <template>
@@ -168,7 +181,10 @@ const menuItems = computed(() => ({
       <PresenceTag :presence="presence" />
     </div>
     <div :class="styles.rightContainer">
-      <a-dropdown :menu="menuItems" :trigger="['click']" placement="bottomRight">
+      <a-dropdown :trigger="['click']" placement="bottomRight">
+        <template #overlay>
+          <a-menu :items="menuItems" @click="onMenuClick" />
+        </template>
         <MoreOutlined :class="styles.moreIcon" />
       </a-dropdown>
     </div>

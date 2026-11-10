@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, h, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import type { MenuProps } from 'ant-design-vue';
 import { MoreOutlined, WarningOutlined } from '@ant-design/icons-vue';
 import { invoke } from '@tauri-apps/api/core';
 import { ReportTargetType } from '@workspace/types';
@@ -40,44 +41,57 @@ const handleViewGroupInfo = () => {
   router.push(`/home/chats/group-info?groupId=${props.groupId}`);
 };
 
-const menuItems = computed(() => ({
-  items: [
-    {
-      key: 'info',
-      label: t('chat.group.groupInfo'),
-      onClick: handleViewGroupInfo,
-    },
-    {
-      key: 'settings',
-      label: t('chat.group.groupSettings'),
-      onClick: () => router.push(`/home/chats/group-settings?groupId=${props.groupId}`),
-    },
-    {
-      key: 'report',
-      label: t('report.action'),
-      icon: h(WarningOutlined),
-      onClick: () => {
-        reportModalVisible.value = true;
-      },
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'leave',
-      label: t('chat.group.leaveGroup'),
-      danger: true,
-      onClick: handleLeaveGroup,
-    },
-  ],
-}));
+const menuItems = computed<MenuProps['items']>(() => [
+  {
+    key: 'info',
+    label: t('chat.group.groupInfo'),
+  },
+  {
+    key: 'settings',
+    label: t('chat.group.groupSettings'),
+  },
+  {
+    key: 'report',
+    label: t('report.action'),
+    icon: h(WarningOutlined),
+  },
+  {
+    type: 'divider',
+  },
+  {
+    key: 'leave',
+    label: t('chat.group.leaveGroup'),
+    danger: true,
+  },
+]);
+
+/** 下拉菜单点击：antdv 4 的 Dropdown 只认 `#overlay` 插槽，菜单点击在这里统一分发 */
+const onMenuClick: MenuProps['onClick'] = ({ key }) => {
+  switch (String(key)) {
+    case 'info':
+      handleViewGroupInfo();
+      break;
+    case 'settings':
+      router.push(`/home/chats/group-settings?groupId=${props.groupId}`);
+      break;
+    case 'report':
+      reportModalVisible.value = true;
+      break;
+    case 'leave':
+      handleLeaveGroup();
+      break;
+  }
+};
 </script>
 
 <template>
   <div :class="styles.container">
     <div :class="styles.leftContainer">{{ title }}</div>
     <div :class="styles.rightContainer">
-      <a-dropdown :menu="menuItems" :trigger="['click']" placement="bottomRight">
+      <a-dropdown :trigger="['click']" placement="bottomRight">
+        <template #overlay>
+          <a-menu :items="menuItems" @click="onMenuClick" />
+        </template>
         <MoreOutlined :class="styles.moreIcon" />
       </a-dropdown>
     </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, h, ref } from 'vue';
+import type { MenuProps } from 'ant-design-vue';
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -183,22 +184,27 @@ const handleShowInFolder = async () => {
 };
 
 // 下拉菜单选项
-const menuItems = computed(() => ({
-  items: [
-    {
-      key: 'open',
-      label: t('chat.openFile'),
-      icon: h(DownloadOutlined),
-      onClick: handleOpenFile,
-    },
-    {
-      key: 'showInFolder',
-      label: t('chat.openFileLocation'),
-      icon: h(FolderOpenOutlined),
-      onClick: handleShowInFolder,
-    },
-  ],
-}));
+const menuItems = computed<MenuProps['items']>(() => [
+  {
+    key: 'open',
+    label: t('chat.openFile'),
+    icon: h(DownloadOutlined),
+  },
+  {
+    key: 'showInFolder',
+    label: t('chat.openFileLocation'),
+    icon: h(FolderOpenOutlined),
+  },
+]);
+
+/** 下拉菜单点击：antdv 4 的 Dropdown 只认 `#overlay` 插槽，菜单点击在这里统一分发 */
+const onMenuClick: MenuProps['onClick'] = ({ key }) => {
+  if (String(key) === 'open') {
+    handleOpenFile();
+  } else if (String(key) === 'showInFolder') {
+    handleShowInFolder();
+  }
+};
 </script>
 
 <template>
@@ -237,7 +243,10 @@ const menuItems = computed(() => ({
         />
       </div>
     </div>
-    <a-dropdown :menu="menuItems" :trigger="['click']">
+    <a-dropdown :trigger="['click']">
+      <template #overlay>
+        <a-menu :items="menuItems" @click="onMenuClick" />
+      </template>
       <div
         :class="[styles.downloadBtn, downloading ? styles.downloading : '']"
         :title="
