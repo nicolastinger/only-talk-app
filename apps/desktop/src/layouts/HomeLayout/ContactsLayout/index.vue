@@ -64,7 +64,9 @@ const persistListWidth = (value: number) => {
 
 onMounted(loadListWidth);
 
-const tabOptions = ['friends', 'groups'];
+// 只给 value，不给 label：让 #label 插槽接管渲染（含翻译 + 图标）
+// 若直接传字符串数组，antdv 会预置 label，插槽会被忽略，页面就会显示 friends/groups
+const tabOptions = [{ value: 'friends' }, { value: 'groups' }];
 
 const handleTabChange = (value: string | number) => {
   activeTab.value = value as ContactsTabType;
