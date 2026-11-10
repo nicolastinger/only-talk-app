@@ -505,9 +505,15 @@ const managementItems = computed(() => [
   },
 ]);
 
-const getMemberActions = (member: GroupMemberVo) => {
-  const actions: { label: string | ReturnType<typeof h>; onClick: () => void }[] =
-    [];
+type MemberAction = {
+  label: string;
+  /** 危险操作：红色文字 */
+  danger?: boolean;
+  onClick: () => void;
+};
+
+const getMemberActions = (member: GroupMemberVo): MemberAction[] => {
+  const actions: MemberAction[] = [];
   const isSelf = member.user_uuid === userInfo.value?.uuid;
   if (!isSelf && isOwner.value) {
     if (member.role === 0) {
@@ -523,20 +529,14 @@ const getMemberActions = (member: GroupMemberVo) => {
       });
     }
     actions.push({
-      label: h(
-        'span',
-        { style: { color: 'var(--color-error)' } },
-        t('groupSettings.members.removeMember'),
-      ),
+      label: t('groupSettings.members.removeMember'),
+      danger: true,
       onClick: () => handleKick(member),
     });
   } else if (!isSelf && isAdmin.value && member.role === 0) {
     actions.push({
-      label: h(
-        'span',
-        { style: { color: 'var(--color-error)' } },
-        t('groupSettings.members.removeMember'),
-      ),
+      label: t('groupSettings.members.removeMember'),
+      danger: true,
       onClick: () => handleKick(member),
     });
   }
@@ -781,6 +781,7 @@ const handleBack = () => {
                 :key="idx"
                 type="text"
                 size="small"
+                :danger="action.danger"
                 :class="styles.actionBtn"
                 @click="action.onClick"
               >
