@@ -3,7 +3,10 @@ import { ref, watch } from 'vue';
 import { getApiBase, setConfig } from '@workspace/services';
 import { CLIENT_CONFIG_KEYS } from '@workspace/types';
 import { feedback } from '@/utils/feedback';
+import { useI18n } from '@/i18n';
 import styles from './index.module.less';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   open: boolean;
@@ -50,16 +53,16 @@ const handleOk = async () => {
       ? PRESET_PROD
       : custom.value.trim();
   if (!value) {
-    feedback.message.warning('请输入服务器地址');
+    feedback.message.warning(t('login.serverRequired'));
     return;
   }
   saving.value = true;
   try {
     await setConfig(CLIENT_CONFIG_KEYS.serverApiBase, value);
-    feedback.message.success('服务器地址已保存');
+    feedback.message.success(t('login.serverSaved'));
     emit('close');
   } catch (e) {
-    feedback.message.error(`保存失败: ${String(e)}`);
+    feedback.message.error(t('login.saveFailed', { error: String(e) }));
   } finally {
     saving.value = false;
   }
@@ -69,27 +72,29 @@ const handleOk = async () => {
 <template>
   <a-modal
     :open="open"
-    title="设置"
+    :title="t('settings.title')"
     :closable="false"
     :confirm-loading="saving"
-    ok-text="保存"
-    cancel-text="取消"
+    :ok-text="t('common.save')"
+    :cancel-text="t('common.cancel')"
     :width="420"
     destroy-on-close
     @ok="handleOk"
     @cancel="emit('close')"
   >
     <div :class="styles.section">
-      <div :class="styles.sectionTitle">服务器设置</div>
+      <div :class="styles.sectionTitle">{{ t('login.serverSettings') }}</div>
       <a-radio-group v-model:value="mode">
         <a-space direction="vertical" :size="10">
           <a-radio value="dev">
-            开发环境 <span :class="styles.hint">{{ PRESET_DEV }}</span>
+            {{ t('login.presetDev') }}
+            <span :class="styles.hint">{{ PRESET_DEV }}</span>
           </a-radio>
           <a-radio value="prod">
-            生产环境 <span :class="styles.hint">{{ PRESET_PROD }}</span>
+            {{ t('login.presetProd') }}
+            <span :class="styles.hint">{{ PRESET_PROD }}</span>
           </a-radio>
-          <a-radio value="custom">自定义</a-radio>
+          <a-radio value="custom">{{ t('login.presetCustom') }}</a-radio>
         </a-space>
       </a-radio-group>
       <a-input
@@ -99,7 +104,7 @@ const handleOk = async () => {
         placeholder="https://your-domain.com"
       />
       <a-typography-text type="secondary" :class="styles.tip">
-        当前生效: {{ currentBase }}
+        {{ t('login.currentServer', { url: currentBase }) }}
       </a-typography-text>
     </div>
   </a-modal>

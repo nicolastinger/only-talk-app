@@ -92,6 +92,46 @@ export const setHttpErrorHandler = (handler: HttpErrorHandler | null) => {
   httpErrorHandler = handler;
 };
 
+/**
+ * 内部错误文案的翻译器: 由平台注册(PC 走 umi intl / 移动端走 @workspace/i18n)。
+ * services 层不依赖任何 UI 框架，默认回退到中文文案。
+ */
+export type HttpErrorMessageResolver = (
+  key: string,
+  params?: Record<string, unknown>
+) => string;
+
+const DEFAULT_HTTP_ERROR_MESSAGES: Record<string, string> = {
+  "http.networkError": "网络请求失败",
+  "http.businessError": "业务处理失败",
+  "http.unauthorized": "未登录或登录已过期",
+  "http.forbidden": "无权限访问",
+  "http.notFound": "请求的资源不存在",
+  "http.genericFailed": "请求失败",
+  "http.requestFailed": "请求失败({status})",
+};
+
+const defaultHttpErrorMessageResolver: HttpErrorMessageResolver = (
+  key,
+  params
+) => {
+  const template = DEFAULT_HTTP_ERROR_MESSAGES[key] ?? key;
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    params[name] !== undefined ? String(params[name]) : match
+  );
+};
+
+let httpErrorMessageResolver: HttpErrorMessageResolver =
+  defaultHttpErrorMessageResolver;
+
+/** 注册错误文案翻译器(应用启动时调用一次，传 null 恢复默认中文兜底) */
+export const setHttpErrorMessageResolver = (
+  resolver: HttpErrorMessageResolver | null
+) => {
+  httpErrorMessageResolver = resolver ?? defaultHttpErrorMessageResolver;
+};
+
 /** 从 604 响应体提取规则错误(兼容信封 {code,data} 与裸校验对象两种形态) */
 const extractValidationErrors = (
   res: RustResponse
@@ -116,7 +156,11 @@ export const normalizeRustResponse = <T = unknown>(
   res: RustResponse
 ): NormalizedResult<T> => {
   if (!res.netSuccess) {
-    return { ok: false, kind: "network", message: res.error || "网络请求失败" };
+    return {
+      ok: false,
+      kind: "network",
+      message: res.error || httpErrorMessageResolver("http.networkError"),
+    };
   }
   const { status, body } = res.res;
   // HTTP 204 或空 body 的 200: 成功无数据
@@ -154,7 +198,7 @@ export const normalizeRustResponse = <T = unknown>(
       ok: false,
       kind: "business",
       status,
-      message: message || "业务处理失败",
+      message: message || httpErrorMessageResolver("http.businessError"),
     };
   }
   // HTTP 状态码分支
@@ -164,23 +208,30 @@ export const normalizeRustResponse = <T = unknown>(
         ok: false,
         kind: "unauthorized",
         status,
-        message: "未登录或登录已过期",
+        message: httpErrorMessageResolver("http.unauthorized"),
       };
     case 403:
-      return { ok: false, kind: "forbidden", status, message: "无权限访问" };
+      return {
+        ok: false,
+        kind: "forbidden",
+        status,
+        message: httpErrorMessageResolver("http.forbidden"),
+      };
     case 404:
       return {
         ok: false,
         kind: "not_found",
         status,
-        message: "请求的资源不存在",
+        message: httpErrorMessageResolver("http.notFound"),
       };
     default:
       return {
         ok: false,
         kind: "unknown",
         status,
-        message: HttpStatusMap.get(status) || `请求失败(${status})`,
+        message:
+          HttpStatusMap.get(status) ||
+          httpErrorMessageResolver("http.requestFailed", { status }),
       };
   }
 };
@@ -250,7 +301,7 @@ export const getBackendErrorMessage = (
  */
 export const parseBackendResponse = <T>(res: RustResponse): T => {
   if (!res.netSuccess) {
-    throw new Error(res.error || "网络请求失败");
+    throw new Error(res.error || httpErrorMessageResolver("http.networkError"));
   }
   const body = res.res.body;
   // 兼容真·HTTP 204 空响应体：视为成功但无数据
@@ -268,7 +319,7 @@ export const parseBackendResponse = <T>(res: RustResponse): T => {
   if (messages.length > 0) {
     throw new Error(messages.join("\n"));
   }
-  throw new Error(json.message || "请求失败");
+  throw new Error(json.message || httpErrorMessageResolver("http.genericFailed"));
 };
 
 /** 请求选项 */

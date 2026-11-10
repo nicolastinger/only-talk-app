@@ -78,7 +78,8 @@ const load = async (targetUuid: string) => {
     }
   } catch (e) {
     console.error(e);
-    if (token === loadToken) error.value = (e as Error).message || '加载失败';
+    if (token === loadToken)
+      error.value = (e as Error).message || t('common.operationFailed');
   }
 };
 
@@ -104,7 +105,9 @@ const handleLike = async (e: MouseEvent) => {
       : Math.max(0, likeCount.value - 1);
   } catch (e) {
     console.error(e);
-    feedback.message.error((e as Error).message || '操作失败');
+    feedback.message.error(
+      (e as Error).message || t('common.operationFailed'),
+    );
   } finally {
     liking.value = false;
   }
@@ -122,7 +125,9 @@ const handleFollow = async () => {
   } catch (e) {
     console.error(e);
     isFollowing.value = prev;
-    feedback.message.error((e as Error).message || '操作失败');
+    feedback.message.error(
+      (e as Error).message || t('common.operationFailed'),
+    );
   } finally {
     following.value = false;
   }
@@ -146,7 +151,9 @@ const handleDelete = () => {
         feedback.message.success(t('moments.deleteSuccess'));
         router.back();
       } catch (err) {
-        feedback.message.error((err as Error).message || '操作失败');
+        feedback.message.error(
+          (err as Error).message || t('common.operationFailed'),
+        );
       }
     },
   });
@@ -192,7 +199,7 @@ const previewAvatar = () => {
         <div :class="styles.authorMeta">
           <div :class="styles.usernameRow">
             <span :class="styles.username">
-              {{ moment.username || '用户' }}
+              {{ moment.username || t('media.defaultUserName') }}
               <UserTypeTag :type="moment.user_type" />
             </span>
             <span v-if="isMine" :class="styles.mineBadge">

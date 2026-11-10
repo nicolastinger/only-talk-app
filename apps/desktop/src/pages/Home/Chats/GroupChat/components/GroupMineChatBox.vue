@@ -14,11 +14,14 @@ import type {
   GroupFileRecord,
   GroupVoiceRecord,
 } from '@workspace/types';
+import { useI18n } from '@/i18n';
 import ChatFile from '../../components/ChatFile.vue';
 import ChatImage from '../../components/ChatImage.vue';
 import ChatVoice from '../../components/ChatVoice.vue';
 import TextBox from '../../components/TextBox.vue';
 import styles from '../../components/styles/MineChatBox.module.less';
+
+const { t } = useI18n();
 
 const imageCache = new Map<string, string>();
 
@@ -304,7 +307,7 @@ const handleImgError = (e: Event) => {
       <div v-if="ackFlag === 1" :class="styles.ackStatus">
         <div :class="styles.ackError">
           <span :class="styles.ackIcon">!</span>
-          <span>发送失败</span>
+          <span>{{ t('chat.statusFailed') }}</span>
         </div>
       </div>
       <div
@@ -350,7 +353,7 @@ const handleImgError = (e: Event) => {
               :upload-progress="uploadProgress"
               :send-phase="sendPhase"
             />
-            <div v-else :class="styles.container">[文件]</div>
+            <div v-else :class="styles.container">{{ t('chat.typeFile') }}</div>
           </template>
           <ChatVoice
             v-else-if="textType === MSG_TYPE_GROUP_VOICE"
@@ -365,7 +368,9 @@ const handleImgError = (e: Event) => {
           <TextBox v-else :raw="raw" />
           <span v-if="ackFlag === 101" :class="styles.sentBadge" />
         </div>
-        <span v-if="ackFlag === 101" :class="styles.sentLabel">已发送</span>
+        <span v-if="ackFlag === 101" :class="styles.sentLabel">
+          {{ t('chat.statusSent') }}
+        </span>
         <div :class="styles.tooltip">{{ formatFullTime(timestamp) }}</div>
       </div>
     </div>

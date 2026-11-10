@@ -4,8 +4,11 @@
  */
 import type { Ref } from 'vue';
 import { VideoCameraOutlined } from '@ant-design/icons-vue';
+import { useI18n } from '@/i18n';
 import type { CallPhase } from '../lib/callState';
 import styles from '../index.module.less';
+
+const { t } = useI18n();
 
 defineProps<{
   remoteVideoRef: Ref<HTMLVideoElement | null>;
@@ -34,7 +37,7 @@ defineProps<{
         v-if="!isInCall && callPhase !== 'Calling' && callPhase !== 'Ringing'"
         :class="styles.waitingOverlay"
       >
-        <span>等待对方连接...</span>
+        <span>{{ t('privacyChat.waitingPeer') }}</span>
       </div>
     </div>
 

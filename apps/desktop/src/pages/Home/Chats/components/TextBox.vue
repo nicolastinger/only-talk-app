@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from '@/i18n';
+
+const { t } = useI18n();
 
 type TextMsgRaw = {
   text?: string;
@@ -12,7 +15,7 @@ const props = defineProps<{
 
 const text = computed(() => {
   if (!props.raw) {
-    return '[空消息]';
+    return t('chat.typeEmpty');
   }
 
   try {

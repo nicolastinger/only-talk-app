@@ -141,14 +141,14 @@ const handleOpenFile = async () => {
         console.log('Opening file path:', localPath);
         await openPath(localPath);
       } else {
-        feedback.message.error('无法获取文件路径');
+        feedback.message.error(t('chat.noFilePath'));
       }
     } else {
-      feedback.message.error('文件不存在');
+      feedback.message.error(t('chat.fileNotExist'));
     }
   } catch (error) {
     console.error('打开文件失败:', error);
-    feedback.message.error('打开文件失败');
+    feedback.message.error(t('chat.openFileFailed'));
   } finally {
     downloading.value = false;
   }
@@ -169,14 +169,14 @@ const handleShowInFolder = async () => {
         console.log('Revealing file in folder:', localPath);
         await revealItemInDir(localPath);
       } else {
-        feedback.message.error('无法获取文件路径');
+        feedback.message.error(t('chat.noFilePath'));
       }
     } else {
-      feedback.message.error('文件不存在');
+      feedback.message.error(t('chat.fileNotExist'));
     }
   } catch (error) {
     console.error('打开文件夹失败:', error);
-    feedback.message.error('打开文件夹失败');
+    feedback.message.error(t('chat.openFileFailed'));
   } finally {
     downloading.value = false;
   }
@@ -187,13 +187,13 @@ const menuItems = computed(() => ({
   items: [
     {
       key: 'open',
-      label: '打开文件',
+      label: t('chat.openFile'),
       icon: h(DownloadOutlined),
       onClick: handleOpenFile,
     },
     {
       key: 'showInFolder',
-      label: '打开所在文件夹',
+      label: t('chat.openFileLocation'),
       icon: h(FolderOpenOutlined),
       onClick: handleShowInFolder,
     },
@@ -240,7 +240,11 @@ const menuItems = computed(() => ({
     <a-dropdown :menu="menuItems" :trigger="['click']">
       <div
         :class="[styles.downloadBtn, downloading ? styles.downloading : '']"
-        :title="downloading ? `下载中 ${percent}%` : '点击选择操作'"
+        :title="
+          downloading
+            ? t('chat.downloadingPercent', { percent })
+            : t('chat.clickToChooseAction')
+        "
       >
         <div v-if="downloading || sending" :class="styles.loadingIcon">
           <LoadingOutlined />

@@ -33,13 +33,13 @@ const blockLoading = ref(false);
 
 const parseUser = (res: RustResponse): UserInfo | null => {
   if (!res.netSuccess) {
-    throw new Error(res.error || "网络请求失败");
+    throw new Error(res.error || t("common.networkError"));
   }
   const data = JSON.parse(res.res.body);
   if (isBackendSuccess(data.code) && data.data) {
     return data.data as UserInfo;
   }
-  throw new Error(data.message || "请求失败");
+  throw new Error(data.message || t("common.requestFailed"));
 };
 
 const loadList = async () => {

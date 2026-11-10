@@ -24,22 +24,22 @@ const dropdownStyle = ref<Record<string, string | number>>({});
 // 格式化消息内容
 const formatMessage = (message: string, textType: number): string => {
   if (isRecallMessage(textType, message)) {
-    return '撤回了一条消息';
+    return t('chat.recalled');
   }
   if (textType === 2 || textType === 2002) {
-    return '[图片]';
+    return t('chat.typeImage');
   }
   if (textType === 3 || textType === 2003) {
-    return '[文件]';
+    return t('chat.typeFile');
   }
   if (textType === 21 || textType === 2006) {
-    return '[语音]';
+    return t('chat.typeVoice');
   }
   if (textType === 5) {
-    return '[视频通话]';
+    return t('chat.typeVideoCall');
   }
   if (textType === 2004) {
-    return '[群通知]';
+    return t('chat.typeGroupNotice');
   }
   try {
     const parsed = JSON.parse(message);

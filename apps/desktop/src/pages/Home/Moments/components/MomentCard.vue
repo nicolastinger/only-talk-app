@@ -96,7 +96,9 @@ const handleLike = async (e: MouseEvent) => {
       : Math.max(0, likeCount.value - 1);
   } catch (e) {
     console.error(e);
-    feedback.message.error((e as Error).message || '操作失败');
+    feedback.message.error(
+      (e as Error).message || t('common.operationFailed'),
+    );
   } finally {
     liking.value = false;
   }
@@ -115,7 +117,9 @@ const handleFollow = async (e: MouseEvent) => {
   } catch (e) {
     console.error(e);
     isFollowing.value = prev;
-    feedback.message.error((e as Error).message || '操作失败');
+    feedback.message.error(
+      (e as Error).message || t('common.operationFailed'),
+    );
   } finally {
     following.value = false;
   }
@@ -134,7 +138,9 @@ const handleDelete = async (e: MouseEvent) => {
         feedback.message.success(t('moments.deleteSuccess'));
         emit('deleted', props.moment);
       } catch (err) {
-        feedback.message.error((err as Error).message || '操作失败');
+        feedback.message.error(
+          (err as Error).message || t('common.operationFailed'),
+        );
       }
     },
   });
@@ -181,7 +187,7 @@ const handleOpenComments = (e: MouseEvent) => {
         <div :class="styles.userMeta">
           <div :class="styles.usernameRow">
             <span :class="styles.username" @click="handleOpenUser">
-              {{ moment.username || '用户' }}
+              {{ moment.username || t('media.defaultUserName') }}
               <UserTypeTag :type="moment.user_type" />
             </span>
             <span v-if="isMine" :class="styles.mineBadge">

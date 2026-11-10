@@ -130,10 +130,10 @@ const handleDeleteUser = async (e: MouseEvent) => {
       currentUserIndex.value = newIndex;
       loadUserAvatar(newUsers[newIndex]);
     }
-    feedback.message.success('已删除');
+    feedback.message.success(t('login.deleted'));
   } catch (err) {
     console.log(err);
-    feedback.message.error('删除失败');
+    feedback.message.error(t('login.deleteFailed'));
   }
 };
 
@@ -165,12 +165,12 @@ const handleQuickLogin = async () => {
         'Only Talk',
       );
     } else {
-      feedback.message.error('免登录失败，请手动登录');
+      feedback.message.error(t('login.quickLoginFailed'));
       showQuickLogin.value = false;
     }
   } catch (error) {
     console.log(error);
-    feedback.message.error('免登录失败，请手动登录');
+    feedback.message.error(t('login.quickLoginFailed'));
     showQuickLogin.value = false;
   } finally {
     quickLoginLoading.value = false;
@@ -393,7 +393,7 @@ const showQuickLoginPanel = () => {
       <div :class="styles.windowControls">
         <div
           :class="styles.settingsBtn"
-          title="设置"
+          :title="t('settings.title')"
           @click="settingsOpen = true"
         >
           <SettingOutlined />
@@ -436,7 +436,11 @@ const showQuickLoginPanel = () => {
           </div>
         </div>
         <div :class="styles.quickLoginName">
-          {{ currentUser?.username || currentUser?.account || '用户' }}
+          {{
+            currentUser?.username ||
+            currentUser?.account ||
+            t('media.defaultUserName')
+          }}
         </div>
         <div v-if="quickUsers.length > 1" :class="styles.userIndicator">
           <span
@@ -461,10 +465,10 @@ const showQuickLoginPanel = () => {
           @click="handleQuickLogin"
         >
           <span v-if="quickLoginLoading" :class="styles.loadingDot">...</span>
-          <template v-else>一键登录</template>
+          <template v-else>{{ t('login.oneClick') }}</template>
         </button>
         <a :class="styles.switchToPassword" @click.prevent="showPasswordLogin">
-          使用密码登录
+          {{ t('login.usePassword') }}
         </a>
       </div>
 
@@ -555,13 +559,13 @@ const showQuickLoginPanel = () => {
           >
             <GithubOutlined :class="styles.githubIcon" />
             <span v-if="githubLoading" :class="styles.loadingDot">...</span>
-            <template v-else>使用 GitHub 登录</template>
+            <template v-else>{{ t('login.githubLogin') }}</template>
           </button>
 
           <div :class="styles.footerLinks">
             <template v-if="hasQuickUsers">
               <a :class="styles.link" @click.prevent="showQuickLoginPanel">
-                免登录
+                {{ t('login.quickLoginLink') }}
               </a>
               <span :class="styles.divider">|</span>
             </template>

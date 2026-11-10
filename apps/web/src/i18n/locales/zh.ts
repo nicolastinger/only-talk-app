@@ -20,6 +20,8 @@ export default {
     switchThemeLight: "切换到浅色主题",
     switchThemeDark: "切换到深色主题",
     switchLang: "切换语言",
+    openMenu: "打开菜单",
+    closeMenu: "关闭菜单",
   },
   home: {
     heroTitle: "Only Talk",

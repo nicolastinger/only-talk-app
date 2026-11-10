@@ -20,6 +20,8 @@ export default {
     switchThemeLight: "Switch to light theme",
     switchThemeDark: "Switch to dark theme",
     switchLang: "Switch language",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
   },
   home: {
     heroTitle: "Only Talk",

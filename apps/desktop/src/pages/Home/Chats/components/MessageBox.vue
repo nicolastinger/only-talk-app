@@ -6,7 +6,10 @@ import { formatMessageTime } from '@/utils/format';
 import { isRecallMessage } from '@/utils/recall';
 import { getFiles } from '@workspace/services';
 import type { MessageQueueProps } from '@workspace/types';
+import { useI18n } from '@/i18n';
 import styles from './styles/MessageBox.module.less';
+
+const { t } = useI18n();
 
 const props = defineProps<
   MessageQueueProps & {
@@ -29,23 +32,23 @@ const loading = ref(false);
 
 const displayMessage = computed(() => {
   if (isRecallMessage(props.text_type ?? -1, props.message)) {
-    return '撤回了一条消息';
+    return t('chat.recalled');
   }
 
   if (props.text_type === 2 || props.text_type === 2002) {
-    return '[图片]';
+    return t('chat.typeImage');
   }
 
   if (props.text_type === 3 || props.text_type === 2003) {
-    return '[文件]';
+    return t('chat.typeFile');
   }
 
   if (props.text_type === 21 || props.text_type === 2006) {
-    return '[语音]';
+    return t('chat.typeVoice');
   }
 
   if (props.text_type === 2004) {
-    return '[群通知]';
+    return t('chat.typeGroupNotice');
   }
 
   try {
@@ -133,8 +136,12 @@ const handleImgError = (e: Event) => {
           <div :class="styles.title">
             {{ title }}
             <UserTypeTag :type="userType" />
-            <span v-if="isGroup" :class="styles.groupBadge">群</span>
-            <span v-if="isSelfChat" :class="styles.selfChatBadge">📝 笔记</span>
+            <span v-if="isGroup" :class="styles.groupBadge">
+              {{ t('chat.groupBadge') }}
+            </span>
+            <span v-if="isSelfChat" :class="styles.selfChatBadge">
+              📝 {{ t('chat.selfChat.notes') }}
+            </span>
           </div>
           <div :class="styles.end">
             <div :class="styles.endTime">{{ timeStr }}</div>

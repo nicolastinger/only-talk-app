@@ -42,7 +42,7 @@ const props = withDefaults(
     sendPhase?: string;
   }>(),
   {
-    alt: '图片消息',
+    alt: undefined,
     maxWidth: '300px',
     maxHeight: '300px',
     borderRadius: '5px',
@@ -177,11 +177,11 @@ const handleDownload = async () => {
     if (tauriFilePath) {
       localSrc.value = tauriFilePath;
     } else {
-      feedback.message.error('图片下载失败');
+      feedback.message.error(t('chat.imageDownloadFailed'));
     }
   } catch (error) {
     console.error('图片下载失败:', error);
-    feedback.message.error('图片下载失败');
+    feedback.message.error(t('chat.imageDownloadFailed'));
   } finally {
     downloading.value = false;
   }
@@ -204,7 +204,9 @@ const handlePreviewClick = () => {
     }"
   >
     <a-progress :percent="percent" size="small" status="active" />
-    <span :class="styles.downloadText">下载中… {{ percent }}%</span>
+    <span :class="styles.downloadText">
+      {{ t('chat.downloadingPercent', { percent }) }}
+    </span>
   </div>
   <div
     v-else-if="needsDownload"
@@ -218,7 +220,9 @@ const handlePreviewClick = () => {
     @click="handleDownload"
   >
     <DownloadOutlined :class="styles.downloadIcon" />
-    <span :class="styles.downloadText">点击下载图片</span>
+    <span :class="styles.downloadText">
+      {{ t('chat.tapToDownloadImage') }}
+    </span>
   </div>
   <!-- loading / 无 bizId 时沿用 AppImage 的加载与错误态 -->
   <div v-else :class="styles.imageWrap">
@@ -226,7 +230,7 @@ const handlePreviewClick = () => {
       <AppImage
         :src="resolvedSrc"
         :loading="loading || autoDownload || checkingLocal"
-        :alt="alt"
+        :alt="alt || t('chat.imageMessage')"
         :class-name="className"
         :style="style"
         :max-width="maxWidth"

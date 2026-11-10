@@ -54,13 +54,13 @@ const formatRaw = (record: ChatRecordSend): string => {
         return parsed.text ?? record.raw;
       }
       case 2:
-        return '[图片]';
+        return t('chat.typeImage');
       case 3: {
         const parsed = JSON.parse(record.raw);
-        return parsed.file_name ?? '[文件]';
+        return parsed.file_name ?? t('chat.typeFile');
       }
       case 21:
-        return '[语音]';
+        return t('chat.typeVoice');
       default:
         return record.raw;
     }

@@ -7,7 +7,10 @@ import {
 } from '@ant-design/icons-vue';
 import { convertPathToTauriUrl, getChatFileByBizId } from '@workspace/services';
 import { feedback } from '@/utils/feedback';
+import { useI18n } from '@/i18n';
 import styles from './styles/ChatVoice.module.less';
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -104,7 +107,7 @@ const bindAudio = (url: string) => {
   el.onerror = () => {
     playing.value = false;
     currentTime.value = 0;
-    feedback.message.error('语音播放失败');
+    feedback.message.error(t('chat.voice.playFailed'));
   };
   el.src = url;
   audioEl = el;
@@ -121,7 +124,7 @@ const toggle = async () => {
   try {
     const url = await ensureSrc();
     if (!url) {
-      feedback.message.error('语音播放失败');
+      feedback.message.error(t('chat.voice.playFailed'));
       return;
     }
     if (!audioEl || audioEl.src !== url) bindAudio(url);
@@ -129,7 +132,7 @@ const toggle = async () => {
     playing.value = true;
   } catch (e) {
     console.error('播放语音失败:', e);
-    feedback.message.error('语音播放失败');
+    feedback.message.error(t('chat.voice.playFailed'));
   } finally {
     loading.value = false;
   }

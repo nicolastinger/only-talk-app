@@ -11,7 +11,10 @@ import {
   VideoCameraOutlined,
 } from '@ant-design/icons-vue';
 import type { MediaControlState } from '@workspace/types';
+import { useI18n } from '@/i18n';
 import styles from '../index.module.less';
+
+const { t } = useI18n();
 
 defineProps<{
   mediaState: MediaControlState;
@@ -31,7 +34,13 @@ defineEmits<{
 <template>
   <div :class="styles.controls">
     <!-- 音频开关按钮 -->
-    <a-tooltip :title="mediaState.audioEnabled ? '关闭麦克风' : '开启麦克风'">
+    <a-tooltip
+      :title="
+        mediaState.audioEnabled
+          ? t('webrtc.closeMicrophone')
+          : t('webrtc.openMicrophone')
+      "
+    >
       <a-button
         :type="mediaState.audioEnabled ? 'primary' : 'default'"
         shape="circle"
@@ -47,7 +56,13 @@ defineEmits<{
     </a-tooltip>
 
     <!-- 视频开关按钮 -->
-    <a-tooltip :title="mediaState.videoEnabled ? '关闭摄像头' : '开启摄像头'">
+    <a-tooltip
+      :title="
+        mediaState.videoEnabled
+          ? t('webrtc.closeCamera')
+          : t('webrtc.openCamera')
+      "
+    >
       <a-button
         :type="mediaState.videoEnabled ? 'primary' : 'default'"
         shape="circle"
@@ -60,7 +75,7 @@ defineEmits<{
     </a-tooltip>
 
     <!-- 重启媒体按钮 - 作为黑屏问题的兜底方案 -->
-    <a-tooltip title="重启视频/音频 (解决黑屏问题)">
+    <a-tooltip :title="t('privacyChat.restartMedia')">
       <a-button
         type="default"
         shape="circle"
@@ -74,7 +89,7 @@ defineEmits<{
     </a-tooltip>
 
     <!-- 结束通话按钮 -->
-    <a-tooltip title="结束通话">
+    <a-tooltip :title="t('privacyChat.endCall')">
       <a-button
         type="primary"
         danger
@@ -88,7 +103,7 @@ defineEmits<{
     </a-tooltip>
 
     <!-- 退出按钮 -->
-    <a-tooltip title="退出隐私聊天">
+    <a-tooltip :title="t('privacyChat.exitChat')">
       <a-button
         type="default"
         danger

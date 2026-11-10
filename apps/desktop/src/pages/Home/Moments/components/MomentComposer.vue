@@ -73,15 +73,17 @@ const handleSelect = async () => {
           if (preview) images.value = [...images.value, preview];
           fileIds.value = [...fileIds.value, json.data];
         } else {
-          feedback.message.error(json?.message || '上传失败');
+          feedback.message.error(
+            json?.message || t('moments.composer.uploadImageFailed'),
+          );
         }
       } else {
-        feedback.message.error('上传失败');
+        feedback.message.error(t('moments.composer.uploadImageFailed'));
       }
     }
   } catch (e) {
     console.error('上传动态图片失败:', e);
-    feedback.message.error('上传动态图片失败');
+    feedback.message.error(t('moments.composer.uploadFailed'));
   } finally {
     uploading.value = false;
   }
@@ -107,7 +109,9 @@ const handlePublish = async () => {
     }
   } catch (e) {
     console.error('发布动态失败:', e);
-    feedback.message.error((e as Error).message || '发布动态失败');
+    feedback.message.error(
+      (e as Error).message || t('moments.composer.publishFailed'),
+    );
   } finally {
     loading.value = false;
   }

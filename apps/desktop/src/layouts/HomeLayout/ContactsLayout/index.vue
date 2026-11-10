@@ -104,7 +104,13 @@ const handleCreateGroupSuccess = (group: GroupInfoVo) => {
             >
               <UserOutlined v-if="value === 'friends'" />
               <TeamOutlined v-else />
-              <span>{{ value === 'friends' ? '好友' : '群组' }}</span>
+              <span>
+                {{
+                  value === 'friends'
+                    ? t('contacts.tabFriends')
+                    : t('contacts.tabGroups')
+                }}
+              </span>
             </div>
           </template>
         </a-segmented>

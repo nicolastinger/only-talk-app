@@ -14,11 +14,25 @@ static PULSING: AtomicBool = AtomicBool::new(false);
 /// 闪烁轮数(每轮 500ms,一轮亮提醒图标一轮恢复,约 6s)
 const PULSE_ROUNDS: u32 = 12;
 
+/// 托盘菜单文案(跟随客户端配置 `app.language`, 未配置/未知语言回退简体中文)
+fn tray_labels() -> (&'static str, &'static str) {
+    let lang = crate::config::get_config(crate::utils::global_static_str::CONFIG_APP_LANGUAGE)
+        .unwrap_or_default();
+    if lang.starts_with("en") {
+        ("Show main window", "Quit app")
+    } else if lang.starts_with("zh-TW") || lang.starts_with("zh-HK") {
+        ("顯示主介面", "退出應用")
+    } else {
+        ("显示主界面", "退出应用")
+    }
+}
+
 pub fn setup_tray<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<TrayIcon<R>, Box<dyn std::error::Error>> {
-    let show_window = MenuItem::with_id(app, "show_window", "显示主界面", true, None::<&str>)?;
-    let quit_app = MenuItem::with_id(app, "quit_app", "退出应用", true, None::<&str>)?;
+    let (label_show, label_quit) = tray_labels();
+    let show_window = MenuItem::with_id(app, "show_window", label_show, true, None::<&str>)?;
+    let quit_app = MenuItem::with_id(app, "quit_app", label_quit, true, None::<&str>)?;
 
     let menu = Menu::with_items(app, &[&show_window, &quit_app])?;
 

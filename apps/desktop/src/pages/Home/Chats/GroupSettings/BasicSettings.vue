@@ -19,7 +19,10 @@ import type { GroupVo } from '@workspace/types';
 import { CameraOutlined, LoadingOutlined } from '@ant-design/icons-vue';
 import { invoke } from '@tauri-apps/api/core';
 import { feedback } from '@/utils/feedback';
+import { useI18n } from '@/i18n';
 import styles from './index.module.less';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   groupInfo: GroupVo;
@@ -41,8 +44,8 @@ const formState = reactive({
 
 const rules = {
   group_name: [
-    { required: true, message: '请输入群名称' },
-    { max: 50, message: '群名称不能超过50个字符' },
+    { required: true, message: t('contacts.createGroup.nameRequired') },
+    { max: 50, message: t('groupSettings.nameMaxLength', { max: 50 }) },
   ],
 };
 
@@ -87,16 +90,18 @@ const handleAvatarUpload = async () => {
 
         if (tauriFilePath) {
           avatarUrl.value = tauriFilePath;
-          feedback.message.success('群头像更新成功');
+          feedback.message.success(t('groupSettings.avatar.updateSuccess'));
           emit('update');
         } else {
-          feedback.message.error('获取群头像文件失败');
+          feedback.message.error(t('groupSettings.avatar.getFileFailed'));
         }
       } else {
-        feedback.message.error(responseBody?.msg || '群头像上传失败');
+        feedback.message.error(
+          responseBody?.msg || t('groupSettings.avatar.uploadFailed'),
+        );
       }
     } else {
-      feedback.message.error('群头像上传失败');
+      feedback.message.error(t('groupSettings.avatar.uploadFailed'));
     }
   } catch (error) {
     if (error instanceof Error && error.message === CROP_CANCELLED_ERROR) {
@@ -104,7 +109,8 @@ const handleAvatarUpload = async () => {
     }
     console.error('群头像更新失败:', error);
     feedback.message.error(
-      (error instanceof Error ? error.message : String(error)) || '群头像更新失败',
+      (error instanceof Error ? error.message : String(error)) ||
+        t('groupSettings.avatar.updateFailed'),
     );
   } finally {
     avatarUploading.value = false;
@@ -122,10 +128,10 @@ const handleSave = async (values: {
       group_name: values.group_name,
       description: values.description,
     });
-    feedback.message.success('保存成功');
+    feedback.message.success(t('groupSettings.saveSuccess'));
     emit('update');
   } catch (error) {
-    feedback.message.error('保存失败');
+    feedback.message.error(t('groupSettings.saveFailed'));
   } finally {
     saving.value = false;
   }
@@ -167,7 +173,9 @@ const handleAvatarClick = () => {
           <CameraOutlined style="font-size: 20px; color: #fff" />
         </div>
       </div>
-      <span :class="styles.avatarHint">点击更换头像</span>
+      <span :class="styles.avatarHint">
+        {{ t('groupSettings.changeAvatarHint') }}
+      </span>
     </div>
 
     <a-form
@@ -177,19 +185,22 @@ const handleAvatarClick = () => {
       @finish="handleSave"
     >
       <div :class="styles.formSection">
-        <label :class="styles.formLabel">群名称</label>
+        <label :class="styles.formLabel">{{ t('groupSettings.nameLabel') }}</label>
         <a-form-item name="group_name">
-          <a-input v-model:value="formState.group_name" placeholder="请输入群名称" />
+          <a-input
+            v-model:value="formState.group_name"
+            :placeholder="t('groupSettings.namePlaceholder')"
+          />
         </a-form-item>
       </div>
 
       <div :class="styles.formSection">
-        <label :class="styles.formLabel">群简介</label>
+        <label :class="styles.formLabel">{{ t('groupSettings.descLabel') }}</label>
         <a-form-item name="description">
           <a-textarea
             v-model:value="formState.description"
             :rows="4"
-            placeholder="请输入群简介（选填）"
+            :placeholder="t('groupSettings.descPlaceholderOptional')"
             :maxlength="200"
             show-count
           />
@@ -198,15 +209,15 @@ const handleAvatarClick = () => {
 
       <a-form-item>
         <a-button type="primary" html-type="submit" :loading="saving">
-          保存修改
+          {{ t('groupSettings.saveChanges') }}
         </a-button>
       </a-form-item>
     </a-form>
 
     <div style="margin-top: 24px; color: var(--color-gray-text); font-size: 12px">
-      <div>群ID: {{ groupInfo.group_uuid }}</div>
+      <div>{{ t('groupSettings.groupId') }}: {{ groupInfo.group_uuid }}</div>
       <div>
-        创建时间:
+        {{ t('groupSettings.createdAt') }}:
         {{
           groupInfo.created_at
             ? new Date(groupInfo.created_at).toLocaleDateString('zh-CN')

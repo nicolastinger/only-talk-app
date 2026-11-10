@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from '@/i18n';
 import styles from './index.module.less';
 
+const { t } = useI18n();
 const router = useRouter();
 
 const visible = ref(false);
@@ -113,7 +115,7 @@ const handleMiniDoubleClick = () => {
     :style="{ left: `${position.x}px`, top: `${position.y}px` }"
     @mousedown="handleMouseDown"
   >
-    <a-tooltip title="双击打开开发助手" placement="left">
+    <a-tooltip :title="t('devAssistant.openTooltip')" placement="left">
       <div
         :class="styles.miniBtn"
         @click="handleMiniClick"
@@ -140,13 +142,13 @@ const handleMiniDoubleClick = () => {
 
     <div :class="styles.body">
       <div :class="styles.expandBtn" @click="handleExpand">
-        {{ expanded ? '收起' : '跳转URL' }}
+        {{ expanded ? t('devAssistant.collapse') : t('devAssistant.jumpUrl') }}
       </div>
 
       <div v-if="expanded" :class="styles.inputWrapper">
         <a-input
           v-model:value="url"
-          placeholder="输入路由路径，如 /home/chats"
+          :placeholder="t('devAssistant.routePlaceholder')"
           size="small"
           autofocus
           @press-enter="handleKeyPress"

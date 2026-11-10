@@ -3,17 +3,21 @@ import { ref } from 'vue';
 import { DisconnectOutlined } from '@ant-design/icons-vue';
 import { invoke } from '@tauri-apps/api/core';
 import { feedback } from '@/utils/feedback';
+import { useI18n } from '@/i18n';
 import styles from './QuicDisconnectButton.module.less';
 
+const { t } = useI18n();
 const loading = ref(false);
 
 const handleDisconnect = async () => {
   try {
     loading.value = true;
     await invoke('disconnect_quic_command');
-    feedback.message.success('QUIC连接已断开');
+    feedback.message.success(t('quicDisconnect.disconnectSuccess'));
   } catch (error) {
-    feedback.message.error(`断开连接失败: ${error}`);
+    feedback.message.error(
+      t('quicDisconnect.disconnectFailed', { error: String(error) }),
+    );
   } finally {
     loading.value = false;
   }
@@ -21,7 +25,7 @@ const handleDisconnect = async () => {
 </script>
 
 <template>
-  <a-tooltip title="断开QUIC连接" placement="bottom">
+  <a-tooltip :title="t('quicDisconnect.disconnect')" placement="bottom">
     <div
       :class="styles.quicButton"
       :style="{ opacity: loading ? 0.5 : 1 }"

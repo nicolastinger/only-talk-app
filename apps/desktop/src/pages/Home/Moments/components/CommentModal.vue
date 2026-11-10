@@ -81,7 +81,9 @@ const handleSubmit = async () => {
     await loadComments();
   } catch (e) {
     console.error(e);
-    feedback.message.error((e as Error).message || '评论失败');
+    feedback.message.error(
+      (e as Error).message || t('moments.detail.commentFailed'),
+    );
   } finally {
     submitting.value = false;
   }

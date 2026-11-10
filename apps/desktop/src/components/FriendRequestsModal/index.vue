@@ -218,7 +218,7 @@ const update_local_friend_list = async () => {
 const handleAccept = async (requestUserId: string | undefined) => {
   if (!requestUserId) return;
   const friendRequestInfoDTO: FriendRequestInfoDTO = {
-    accept_message: '我通过了你的好友申请',
+    accept_message: t('friendRequest.acceptMessage'),
     request_user: requestUserId,
     add_type: 'card',
     version: 0,
@@ -234,7 +234,7 @@ const handleAccept = async (requestUserId: string | undefined) => {
 const handleReject = async (requestUserId: string | undefined) => {
   if (!requestUserId) return;
   const friendRequestInfoDTO: FriendRequestInfoDTO = {
-    accept_message: '我拒绝了你的好友申请',
+    accept_message: t('friendRequest.rejectMessage'),
     request_user: requestUserId,
     add_type: 'card',
     version: 0,
@@ -298,14 +298,14 @@ const pendingAcceptCount = computed(
           {{ t('friendRequest.title') }}
         </span>
         <a-popconfirm
-          title="确定清空所有未读通知？"
-          ok-text="确定"
-          cancel-text="取消"
+          :title="t('friendRequest.clearUnreadConfirm')"
+          :ok-text="t('common.confirm')"
+          :cancel-text="t('common.cancel')"
           @confirm="handleClearAll"
         >
           <a-button type="text" size="small">
             <template #icon><ClearOutlined /></template>
-            清空未读
+            {{ t('notification.clearUnread') }}
           </a-button>
         </a-popconfirm>
       </div>

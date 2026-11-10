@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { BulbFilled, BulbOutlined } from '@ant-design/icons-vue';
 import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/i18n';
 import styles from './ThemeButton.module.less';
 
+const { t } = useI18n();
 const { mode, setMode } = useTheme();
 
 const toggleTheme = (e: MouseEvent) => {
@@ -15,7 +17,11 @@ const toggleTheme = (e: MouseEvent) => {
 
 <template>
   <a-tooltip
-    :title="mode === 'dark' ? '切换亮色主题' : '切换暗色主题'"
+    :title="
+      mode === 'dark'
+        ? t('settings.generalSettings.switchLightTheme')
+        : t('settings.generalSettings.switchDarkTheme')
+    "
     placement="bottom"
   >
     <div :class="styles.themeButton" @click="toggleTheme">

@@ -1,6 +1,7 @@
 import { defaultWindowIcon } from '@tauri-apps/api/app';
 import { Menu } from '@tauri-apps/api/menu';
 import { TrayIcon } from '@tauri-apps/api/tray';
+import { t } from '@/i18n';
 
 const setupTrayIcon = async () => {
   const icon = (await defaultWindowIcon()) || '';
@@ -9,15 +10,15 @@ const setupTrayIcon = async () => {
     items: [
       {
         id: 'quit',
-        text: '离开',
+        text: t('onlineStatus.away'),
       },
       {
         id: 'home',
-        text: '首页',
+        text: t('menu.home'),
       },
       {
         id: 'offline',
-        text: '离线',
+        text: t('homeLayout.connOffline'),
       },
     ],
   });

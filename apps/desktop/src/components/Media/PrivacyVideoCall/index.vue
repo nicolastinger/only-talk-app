@@ -24,6 +24,7 @@
  */
 import { useAvatarMap } from '@/hooks/useAvatarMap';
 import { feedback } from '@/utils/feedback';
+import { useI18n } from '@/i18n';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { get_user_info_with_cache } from '@workspace/services';
 import type {
@@ -58,6 +59,8 @@ import type { CallPhase } from './lib/callState';
 import { defaultMediaConfig, dlog, IS_WEBCODECS_SUPPORTED } from './lib/config';
 import { createMediaSession } from './lib/mediaSession';
 import * as transport from './transport/p2pTransport';
+
+const { t } = useI18n();
 
 // ==================== 组件属性接口 ====================
 
@@ -184,7 +187,9 @@ const friendAvatar = computed(
 /** 对方显示名称：优先邀请信息里的名字，其次用户信息昵称，最后兜底 */
 const friendName = computed(
   () =>
-    props.inviteInfo?.from_name || friendUserInfo.value?.username || '对方',
+    props.inviteInfo?.from_name ||
+    friendUserInfo.value?.username ||
+    t('privacyChat.other'),
 );
 
 /** 派生：是否正在重启媒体接收器 */
@@ -463,7 +468,7 @@ const initLocalMedia = async () => {
     }
   } catch (error) {
     console.error('初始化本地媒体失败:', error);
-    feedback.message.error('无法访问摄像头或麦克风');
+    feedback.message.error(t('privacyChat.mediaError'));
     transition('Ended');
   }
 };
@@ -873,19 +878,19 @@ const setupMediaListeners = async () => {
     onVideoCallAccept: (payload) => {
       console.log('对方接受了视频通话:', payload);
       transition('Connecting');
-      feedback.message.success('对方已接受视频通话');
+      feedback.message.success(t('privacyChat.peerAccepted'));
       // 通过 ref 调用最新版本的 initLocalMedia，避免闭包陷阱
       initLocalMediaRef.value();
     },
     onVideoCallReject: (payload) => {
       console.log('对方拒绝了视频通话:', payload);
-      feedback.message.info('对方拒绝了视频通话');
+      feedback.message.info(t('privacyChat.peerRejected'));
       // 关闭视频通话（本方主动结束，通知对方）
       handleEndCall(true);
     },
     onVideoCallEnd: (payload) => {
       console.log('对方结束了视频通话:', payload);
-      feedback.message.info('对方已结束视频通话');
+      feedback.message.info(t('privacyChat.peerEnded'));
       // 对方已结束，本方不需要再发送结束通知，仅做本地清理
       handleEndCall(false);
     },
@@ -1108,10 +1113,10 @@ const handleRestartMedia = async () => {
     }
 
     console.log('[PrivacyVideoCall] 媒体接收器重启完成');
-    feedback.message.success('媒体接收器已重启');
+    feedback.message.success(t('privacyChat.receiverRestarted'));
   } catch (error) {
     console.error('重启媒体接收器失败:', error);
-    feedback.message.error('重启媒体接收器失败');
+    feedback.message.error(t('privacyChat.receiverRestartFailed'));
   } finally {
     // 状态机：恢复通话阶段（仅当未结束通话时）
     if (!isCallEndedRef.value) {
@@ -1132,7 +1137,7 @@ const sendVideoCallInvite = async () => {
     transition('Calling');
   } catch (error) {
     console.error('发送视频通话邀请失败:', error);
-    feedback.message.error('发送视频通话邀请失败');
+    feedback.message.error(t('privacyChat.inviteFailed'));
     handleEndCall(true);
   }
 };
@@ -1147,7 +1152,7 @@ onMounted(async () => {
     await setupMediaListeners();
   } catch (error) {
     console.error('[PrivacyVideoCall] 注册媒体通道失败:', error);
-    feedback.message.error('无法访问摄像头或麦克风');
+    feedback.message.error(t('privacyChat.mediaError'));
     handleEndCall(false);
     return;
   }
@@ -1214,7 +1219,7 @@ onUnmounted(() => {
 
     <!-- 加载状态遮罩 - 建立连接中 -->
     <div v-if="callPhase === 'Connecting'" :class="styles.loadingOverlay">
-      <a-spin size="large" tip="正在建立视频连接..." />
+      <a-spin size="large" :tip="t('privacyChat.establishingVideo')" />
     </div>
 
     <!-- 视频区域 -->

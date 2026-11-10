@@ -4,7 +4,10 @@
  */
 import { DEFAULT_ICON } from '@/constants';
 import { PhoneOutlined } from '@ant-design/icons-vue';
+import { useI18n } from '@/i18n';
 import styles from '../index.module.less';
+
+const { t } = useI18n();
 
 defineProps<{
   friendAvatar: string;
@@ -33,10 +36,14 @@ const handleAvatarError = (e: Event) => {
       </div>
       <div :class="styles.ringName">{{ friendName }}</div>
       <div :class="styles.ringStatus">
-        {{ isWaitingResponse ? '正在呼叫对方...' : '等待对方接听...' }}
+        {{
+          isWaitingResponse
+            ? t('privacyChat.callingPeer')
+            : t('privacyChat.waitingAnswer')
+        }}
       </div>
       <div :class="styles.ringActions">
-        <a-tooltip title="取消通话">
+        <a-tooltip :title="t('privacyChat.cancelCall')">
           <a-button
             type="primary"
             danger

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { StyleValue } from 'vue';
+import { useI18n } from '@/i18n';
 import styles from './index.module.less';
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -19,12 +22,21 @@ const props = withDefaults(
     fill?: boolean;
   }>(),
   {
-    alt: '图片',
+    alt: undefined,
     objectFit: 'contain',
-    errorText: '图片加载失败',
-    loadingText: '加载中...',
+    errorText: undefined,
+    loadingText: undefined,
     fill: false,
   },
+);
+
+/** 文案兜底: 未显式传入时走 i18n */
+const altText = computed(() => props.alt || t('common.image'));
+const errorTextResolved = computed(
+  () => props.errorText || t('chat.imageLoadFailed'),
+);
+const loadingTextResolved = computed(
+  () => props.loadingText || t('common.loadingDots'),
 );
 
 const emit = defineEmits<{
@@ -85,7 +97,7 @@ const handleError = () => {
     :class="[styles.state, className]"
     :style="stateStyle"
   >
-    <span>{{ loading ? loadingText : errorText }}</span>
+    <span>{{ loading ? loadingTextResolved : errorTextResolved }}</span>
   </div>
   <div
     v-else-if="failed"
@@ -97,25 +109,25 @@ const handleError = () => {
         d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V5h14v14zm-8-4h2v2h-2v-2zm0-6h2v4h-2V9z"
       />
     </svg>
-    <span>{{ errorText }}</span>
+    <span>{{ errorTextResolved }}</span>
   </div>
   <div v-else-if="fill" :class="[styles.fillWrap, className]">
     <img
       :src="src"
-      :alt="alt"
+      :alt="altText"
       :class="styles.imgFill"
       :style="imgStyle"
       @load="handleLoad"
       @error="handleError"
     />
     <div v-if="loading && !loaded" :class="styles.overlay">
-      <span>{{ loadingText }}</span>
+      <span>{{ loadingTextResolved }}</span>
     </div>
   </div>
   <img
     v-else
     :src="src"
-    :alt="alt"
+    :alt="altText"
     :class="[styles.img, className]"
     :style="imgStyle"
     @load="handleLoad"

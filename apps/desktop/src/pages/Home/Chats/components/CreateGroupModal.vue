@@ -9,6 +9,9 @@ import {
 } from '@workspace/services';
 import type { FriendVo, GroupInfoVo } from '@workspace/types';
 import { feedback } from '@/utils/feedback';
+import { useI18n } from '@/i18n';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   visible: boolean;
@@ -47,7 +50,7 @@ watch(
 
 const handleCreate = async () => {
   if (!groupName.value.trim()) {
-    feedback.message.warning('请输入群名称');
+    feedback.message.warning(t('contacts.createGroup.nameRequired'));
     return;
   }
   loading.value = true;
@@ -59,13 +62,13 @@ const handleCreate = async () => {
       await invite_group_members(group.group_uuid, selectedFriends.value);
     }
     await create_group_chat_session(group.group_uuid);
-    feedback.message.success('群聊创建成功');
+    feedback.message.success(t('contacts.createGroup.success'));
     emit('success', group.group_uuid);
     emit('cancel');
     router.push('/home/chats/group-chat?groupId=' + group.group_uuid);
   } catch (err) {
     console.log('创建群聊失败', err);
-    feedback.message.error('创建群聊失败');
+    feedback.message.error(t('contacts.createGroup.failed'));
   } finally {
     loading.value = false;
   }
@@ -74,30 +77,30 @@ const handleCreate = async () => {
 
 <template>
   <a-modal
-    title="发起群会话"
+    :title="t('groupSettings.sessionTitle')"
     :open="visible"
     :closable="false"
     :confirm-loading="loading"
-    ok-text="创建"
-    cancel-text="取消"
+    :ok-text="t('contacts.createGroup.create')"
+    :cancel-text="t('contacts.createGroup.cancel')"
     @ok="handleCreate"
     @cancel="emit('cancel')"
   >
     <div style="margin-bottom: 16px">
-      <label>群名称</label>
+      <label>{{ t('contacts.createGroup.nameLabel') }}</label>
       <a-input
         v-model:value="groupName"
-        placeholder="输入群聊名称"
+        :placeholder="t('groupSettings.sessionNamePlaceholder')"
         style="margin-top: 8px"
       />
     </div>
     <div>
-      <label>选择成员</label>
+      <label>{{ t('groupSettings.selectMember') }}</label>
       <a-select
         v-model:value="selectedFriends"
         mode="multiple"
         style="width: 100%; margin-top: 8px"
-        placeholder="选择好友"
+        :placeholder="t('groupSettings.members.selectFriend')"
         :options="friendList.map((f) => ({ label: f.friend_name, value: f.friend_id }))"
       />
     </div>

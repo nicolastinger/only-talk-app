@@ -150,7 +150,7 @@ const toggleLang = () => {
         <button
           class="menu-toggle"
           type="button"
-          :aria-label="menuOpen ? '关闭菜单' : '打开菜单'"
+          :aria-label="menuOpen ? t.common.closeMenu : t.common.openMenu"
           :aria-expanded="menuOpen"
           @click="menuOpen = !menuOpen"
         >

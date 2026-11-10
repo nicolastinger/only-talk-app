@@ -16,11 +16,14 @@ import type {
   GroupImageRecord,
   GroupVoiceRecord,
 } from '@workspace/types';
+import { useI18n } from '@/i18n';
 import ChatFile from '../../components/ChatFile.vue';
 import ChatImage from '../../components/ChatImage.vue';
 import ChatVoice from '../../components/ChatVoice.vue';
 import TextBox from '../../components/TextBox.vue';
 import styles from '../../components/styles/CustomerChatBox.module.less';
+
+const { t } = useI18n();
 
 const imageCache = new Map<string, string>();
 
@@ -286,7 +289,7 @@ const handleImgError = (e: Event) => {
             :nano-id="nanoId"
             :loading="loading"
           />
-          <div v-else :class="styles.container">[文件]</div>
+          <div v-else :class="styles.container">{{ t('chat.typeFile') }}</div>
         </template>
         <ChatVoice
           v-else-if="textType === MSG_TYPE_GROUP_VOICE"

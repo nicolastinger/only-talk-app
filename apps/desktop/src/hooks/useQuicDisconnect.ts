@@ -1,5 +1,6 @@
 import { onUnmounted, ref } from 'vue';
 import { useBearStore } from '@/stores/app';
+import { t } from '@/i18n';
 import { useBackendEvent } from './useBackendEvent';
 
 type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected';
@@ -56,7 +57,7 @@ export const useQuicDisconnect = () => {
   useBackendEvent('quic_disconnected', (payload) => {
     isConnected.value = false;
     connectionState.value = 'disconnected';
-    message.value = payload || 'QUIC连接已断开';
+    message.value = payload || t('quicDisconnect.disconnectSuccess');
     statusTag.value = wasConnected ? 'offline' : null;
     // 重复广播不降级：重连中不回退为已离线
     if (wasConnected) {
