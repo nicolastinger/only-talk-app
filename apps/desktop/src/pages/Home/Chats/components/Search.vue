@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { SearchOutlined } from '@ant-design/icons-vue';
-import { isRecallMessage } from '@/utils/recall';
 import { invoke } from '@tauri-apps/api/core';
 import UserTypeTag from '@/components/UserTypeTag/index.vue';
+import { resolveMessagePreview } from '@workspace/services';
 import type { ChatSessionVo } from '@workspace/types';
 import { useI18n } from '@/i18n';
 import styles from './styles/Search.module.less';
@@ -21,36 +21,9 @@ const containerRef = ref<HTMLDivElement>();
 const inputRef = ref<HTMLInputElement>();
 const dropdownStyle = ref<Record<string, string | number>>({});
 
-// 格式化消息内容
-const formatMessage = (message: string, textType: number): string => {
-  if (isRecallMessage(textType, message)) {
-    return t('chat.recalled');
-  }
-  if (textType === 2 || textType === 2002) {
-    return t('chat.typeImage');
-  }
-  if (textType === 3 || textType === 2003) {
-    return t('chat.typeFile');
-  }
-  if (textType === 21 || textType === 2006) {
-    return t('chat.typeVoice');
-  }
-  if (textType === 5) {
-    return t('chat.typeVideoCall');
-  }
-  if (textType === 2004) {
-    return t('chat.typeGroupNotice');
-  }
-  try {
-    const parsed = JSON.parse(message);
-    if (parsed.text) {
-      return parsed.text;
-    }
-  } catch (e) {
-    // 解析失败，直接返回原始消息
-  }
-  return message;
-};
+// 格式化消息内容(与会话列表共用同一套预览状态机)
+const formatMessage = (message: string, textType: number): string =>
+  resolveMessagePreview(textType, message, t).text;
 
 const handleSearch = async (keyword: string) => {
   if (!keyword.trim()) {

@@ -3,8 +3,7 @@ import { computed, ref, watch } from 'vue';
 import UserTypeTag from '@/components/UserTypeTag/index.vue';
 import { DEFAULT_ICON } from '@/constants';
 import { formatMessageTime } from '@/utils/format';
-import { isRecallMessage } from '@/utils/recall';
-import { getFiles } from '@workspace/services';
+import { getFiles, resolveMessagePreview } from '@workspace/services';
 import type { MessageQueueProps } from '@workspace/types';
 import { useI18n } from '@/i18n';
 import styles from './styles/MessageBox.module.less';
@@ -30,39 +29,9 @@ const isSelfChat = computed(
 const friendIcon = ref<string>('');
 const loading = ref(false);
 
-const displayMessage = computed(() => {
-  if (isRecallMessage(props.text_type ?? -1, props.message)) {
-    return t('chat.recalled');
-  }
-
-  if (props.text_type === 2 || props.text_type === 2002) {
-    return t('chat.typeImage');
-  }
-
-  if (props.text_type === 3 || props.text_type === 2003) {
-    return t('chat.typeFile');
-  }
-
-  if (props.text_type === 21 || props.text_type === 2006) {
-    return t('chat.typeVoice');
-  }
-
-  if (props.text_type === 2004) {
-    return t('chat.typeGroupNotice');
-  }
-
-  try {
-    console.log('MessageBox message:', props.message);
-    const parsed = JSON.parse(props.message);
-    if (parsed.text) {
-      return parsed.text;
-    }
-  } catch (e) {
-    console.error('Failed to parse message:', e);
-  }
-
-  return props.message;
-});
+const displayMessage = computed(
+  () => resolveMessagePreview(props.text_type, props.message, t).text,
+);
 
 // 获取用户头像
 const getUserIcon = async (icon: string): Promise<string> => {

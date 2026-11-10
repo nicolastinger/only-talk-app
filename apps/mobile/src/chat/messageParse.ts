@@ -8,24 +8,16 @@ import type {
   VoiceRecord,
 } from "@workspace/types";
 import {
-  MSG_TYPE_FILE,
-  MSG_TYPE_GROUP_FILE,
-  MSG_TYPE_GROUP_IMAGE,
-  MSG_TYPE_GROUP_NOTIFICATION,
   MSG_TYPE_GROUP_TEXT,
-  MSG_TYPE_GROUP_VOICE,
-  MSG_TYPE_IMAGE,
-  MSG_TYPE_P2P,
-  MSG_TYPE_P2P_VIDEO_CALL,
   MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
   MSG_TYPE_P2P_VIDEO_CALL_END,
   MSG_TYPE_P2P_VIDEO_CALL_INVITE,
   MSG_TYPE_P2P_VIDEO_CALL_REJECT,
   MSG_TYPE_RECALL,
   MSG_TYPE_TEXT,
-  MSG_TYPE_VOICE,
   MSG_TYPE_WEBRTC_SIGNAL,
 } from "./messageTypes";
+import { resolveMessagePreview } from "@workspace/services";
 import { t } from "@/i18n";
 
 /**
@@ -198,36 +190,16 @@ export const isRecallMessage = (textType: number, raw: string): boolean =>
 
 /* ==================== 预览/兜底文案 ==================== */
 
-/** 会话列表 / 未知类型 的兜底文案（对齐 PC Search.formatMessage） */
+/**
+ * 会话列表 / 未知类型 的兜底文案。
+ *
+ * 直接复用 `@workspace/services` 的预览状态机：它先按 raw 形状识别
+ * (兼容服务端 last_preview 只有 raw、没有 text_type 的会话)，再按 text_type 兜底。
+ */
 export const getMessageDisplayText = (
   text_type: number,
   raw: string
-): string => {
-  if (isRecallMessage(text_type, raw)) return t("chat.recalled");
-  switch (text_type) {
-    case MSG_TYPE_TEXT:
-      return parsePrivateText(raw);
-    case MSG_TYPE_GROUP_TEXT:
-      return parseGroupText(raw);
-    case MSG_TYPE_IMAGE:
-    case MSG_TYPE_GROUP_IMAGE:
-      return t("chat.typeImage");
-    case MSG_TYPE_FILE:
-    case MSG_TYPE_GROUP_FILE:
-      return t("chat.typeFile");
-    case MSG_TYPE_VOICE:
-    case MSG_TYPE_GROUP_VOICE:
-      return t("chat.typeVoice");
-    case MSG_TYPE_P2P:
-      return t("chat.typePrivate");
-    case MSG_TYPE_P2P_VIDEO_CALL:
-      return t("chat.typeVideoCall");
-    case MSG_TYPE_GROUP_NOTIFICATION:
-      return parseSystemContent(raw);
-    default:
-      return raw || t("chat.typeUnknown");
-  }
-};
+): string => resolveMessagePreview(text_type, raw, t).text;
 
 /** 时间分隔判断：与上一条相隔 > 10 分钟 则展示时间 */
 export const needTimeDivider = (

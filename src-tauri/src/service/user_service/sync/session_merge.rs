@@ -56,7 +56,14 @@ async fn merge_local_session(me: &str, s: &SessionListItem) -> Result<(), anyhow
     };
     let group_id = if s.session_type == 2 { Some(s.session_uuid.clone()) } else { None };
     let res = sqlx::query(
-        r#"UPDATE chat_session SET session_uuid = ?1, is_top = ?2, last_message = ?3, timestamp = ?4, last_message_id = ?5 WHERE recv_user = ?6 AND send_user = ?7 AND session_type = ?8"#,
+        r#"UPDATE chat_session SET
+               session_uuid = ?1,
+               is_top = ?2,
+               last_message = CASE WHEN ?4 >= timestamp THEN ?3 ELSE last_message END,
+               text_type = CASE WHEN ?4 >= timestamp THEN 0 ELSE text_type END,
+               timestamp = CASE WHEN ?4 >= timestamp THEN ?4 ELSE timestamp END,
+               last_message_id = MAX(last_message_id, ?5)
+           WHERE recv_user = ?6 AND send_user = ?7 AND session_type = ?8"#,
     )
     .bind(&s.session_uuid)
     .bind(s.pinned)
