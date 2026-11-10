@@ -143,8 +143,8 @@ const handleCreateGroupSuccess = (group: GroupInfoVo) => {
               <span>
                 {{
                   value === 'friends'
-                    ? t('contacts.tabFriends')
-                    : t('contacts.tabGroups')
+                    ? t('friends.tabFriends')
+                    : t('friends.tabGroups')
                 }}
               </span>
             </div>
