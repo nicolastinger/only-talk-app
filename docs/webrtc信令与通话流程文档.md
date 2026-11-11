@@ -1,7 +1,7 @@
 # WebRTC 信令与通话流程文档
 
 > 本文描述 `only-talk-app` 中 WebRTC 视频/语音通话的**控制消息**、**信令消息**、**存储模型**与**端到端流程**，含前端(PC)与 Rust 后端(Tauri + QUIC)两侧。
-> 相关代码：`apps/pc/src/services/webrtcService`、`apps/pc/src/pages/WebRTC/Chat`、`apps/pc/src/pages/Home/Chats/components`、`src-tauri/src/quic_service/center_service`、`src-tauri/src/dao/webrtc_signal_db.rs`。
+> 相关代码：`apps/pc/src/services/webrtcService`、`apps/pc/src/pages/WebRTC/Chat`、`apps/pc/src/pages/Home/Chats/components`、`src-tauri/src/quic_core/center_service`、`src-tauri/src/dao/webrtc_signal_db.rs`。
 
 ## 1. 总体架构
 

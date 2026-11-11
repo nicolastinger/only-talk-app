@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   showToast,
   showConfirmDialog,
@@ -15,12 +14,16 @@ import {
   get_pending_invitations,
   get_group_list,
   delete_friend,
+  subscribe,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { parseResponse } from "@/utils/api";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import { usePresenceStore } from "@/stores/presence";
+import PresenceTag from "@/components/PresenceTag.vue";
 import type {
   FriendVo,
+  GroupVo,
   GroupListItemVo,
   FriendRequestInfo,
   FriendRequestInfoDTO,
@@ -30,6 +33,7 @@ import { useI18n } from "@/i18n";
 const router = useRouter();
 const { t } = useI18n();
 const { getAvatarUrl } = useAvatar();
+const { presenceOf, loadFriendPresence } = usePresenceStore();
 
 const friends = ref<FriendVo[]>([]);
 const groups = ref<GroupListItemVo[]>([]);
@@ -37,6 +41,15 @@ const refreshing = ref(false);
 const sectionTab = ref(0);
 const pendingRequestCount = ref(0);
 const pendingGroupCount = ref(0);
+
+// 顶部搜索框: 与 PC 端 contacts 搜索一致, 走本地库的 search_friend/search_group
+const searchText = ref("");
+const searching = ref(false);
+const searchFriends = ref<FriendVo[]>([]);
+const searchGroups = ref<GroupVo[]>([]);
+const isSearchActive = computed(() => searchText.value.trim().length > 0);
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+let searchSeq = 0;
 
 const avatarMap = ref<Record<string, string | null>>({});
 const groupAvatarMap = ref<Record<string, string | null>>({});
@@ -76,6 +89,8 @@ watch(
 const loadFriendList = async () => {
   try {
     friends.value = (await invoke("get_friend_list")) || [];
+    // 一次性拉取这批好友的手动状态(服务端只存 48 小时)
+    loadFriendPresence(friends.value.map((friend) => friend.friend_id));
   } catch (e) {
     console.error(e);
   }
@@ -110,15 +125,38 @@ const loadPendingGroupCount = async () => {
   }
 };
 
+const syncFriendListFromBackend = async () => {
+  try {
+    await invoke("update_local_friend_list");
+  } catch (e) {
+    console.error("同步好友列表失败", e);
+  }
+};
+
+const syncGroupListFromBackend = async () => {
+  try {
+    await invoke("sync_group_list_command");
+  } catch (e) {
+    console.error("同步群组列表失败", e);
+  }
+};
+
 const onRefresh = async () => {
   refreshing.value = true;
-  await Promise.all([
-    loadFriendList(),
-    loadGroups(),
-    loadPendingRequestCount(),
-    loadPendingGroupCount(),
-  ]);
-  refreshing.value = false;
+  try {
+    await Promise.all([
+      syncFriendListFromBackend(),
+      syncGroupListFromBackend(),
+    ]);
+    await Promise.all([
+      loadFriendList(),
+      loadGroups(),
+      loadPendingRequestCount(),
+      loadPendingGroupCount(),
+    ]);
+  } finally {
+    refreshing.value = false;
+  }
 };
 const handleDelete = async (friend: FriendVo) => {
   try {
@@ -176,6 +214,145 @@ const getAvatar = (friend: FriendVo) => {
   return DEFAULT_AVATAR;
 };
 
+const resolveSearchAvatars = async () => {
+  const icons = new Set<string>();
+  for (const f of searchFriends.value) {
+    if (f.friend_icon) icons.add(f.friend_icon);
+  }
+  for (const g of searchGroups.value) {
+    if (g.avatar) icons.add(g.avatar);
+  }
+  await Promise.all(
+    [...icons]
+      .filter((icon) => avatarMap.value[icon] === undefined)
+      .map(async (icon) => {
+        avatarMap.value[icon] = await getAvatarUrl(icon);
+      })
+  );
+};
+
+const runSearch = async (keyword: string, seq: number) => {
+  try {
+    const [friendList, groupList] = await Promise.all([
+      invoke<FriendVo[]>("search_friend", { keyword }),
+      invoke<GroupVo[]>("search_group", { keyword }),
+    ]);
+    // 输入变化后旧请求的回包直接丢弃
+    if (seq !== searchSeq) return;
+    searchFriends.value = friendList || [];
+    searchGroups.value = groupList || [];
+    resolveSearchAvatars();
+  } catch (e) {
+    if (seq !== searchSeq) return;
+    console.error("搜索好友/群聊失败", e);
+    searchFriends.value = [];
+    searchGroups.value = [];
+  } finally {
+    if (seq === searchSeq) searching.value = false;
+  }
+};
+
+const clearSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchSeq++;
+  searchText.value = "";
+  searchFriends.value = [];
+  searchGroups.value = [];
+  searching.value = false;
+};
+
+watch(searchText, (val) => {
+  if (searchTimer) clearTimeout(searchTimer);
+  // 每次输入都换代, 之前未返回的请求作废
+  const seq = ++searchSeq;
+  const keyword = val.trim();
+  if (!keyword) {
+    searchFriends.value = [];
+    searchGroups.value = [];
+    searching.value = false;
+    return;
+  }
+  // 防抖期间也显示"搜索中", 避免短暂展示上一轮结果
+  searching.value = true;
+  searchTimer = setTimeout(() => runSearch(keyword, seq), 200);
+});
+
+interface SearchResultItem {
+  key: string;
+  type: "friend" | "group";
+  name: string;
+  account?: string;
+  desc?: string;
+  icon?: string;
+  friend?: FriendVo;
+  group?: GroupVo;
+}
+
+/** 好友在前、群聊在后, 与 PC 端 SearchBar 的结果顺序一致 */
+const searchResults = computed<SearchResultItem[]>(() => [
+  ...searchFriends.value.map((f) => ({
+    key: `friend-${f.friend_id}`,
+    type: "friend" as const,
+    name: f.friend_name || f.friend_account || "",
+    account: f.friend_account ? `@${f.friend_account}` : undefined,
+    icon: f.friend_icon,
+    friend: f,
+  })),
+  ...searchGroups.value.map((g) => ({
+    key: `group-${g.group_uuid}`,
+    type: "group" as const,
+    name: g.group_name || "",
+    desc: t("friends.memberCount", { count: g.member_count }),
+    icon: g.avatar,
+    group: g,
+  })),
+]);
+
+const resultAvatar = (item: SearchResultItem): string | null => {
+  const icon = item.icon;
+  if (icon && avatarMap.value[icon] != null) {
+    return avatarMap.value[icon];
+  }
+  return null;
+};
+
+/** 按当前输入切分文本, 命中片段交给模板高亮 */
+const highlightSegments = (text: string) => {
+  const keyword = searchText.value.trim().toLowerCase();
+  if (!keyword || !text) return [{ text, match: false }];
+  const lower = text.toLowerCase();
+  const segments: { text: string; match: boolean }[] = [];
+  let index = 0;
+  let found = lower.indexOf(keyword);
+  while (found !== -1) {
+    if (found > index) {
+      segments.push({ text: text.slice(index, found), match: false });
+    }
+    segments.push({
+      text: text.slice(found, found + keyword.length),
+      match: true,
+    });
+    index = found + keyword.length;
+    found = lower.indexOf(keyword, index);
+  }
+  if (index < text.length) {
+    segments.push({ text: text.slice(index), match: false });
+  }
+  return segments;
+};
+
+const openSearchResult = (item: SearchResultItem) => {
+  if (item.type === "friend" && item.friend) {
+    clearSearch();
+    goDetail(item.friend);
+    return;
+  }
+  if (item.group) {
+    clearSearch();
+    goGroupChat(item.group);
+  }
+};
+
 const getGroupAvatar = (group: GroupListItemVo) => {
   const icon = group.avatar;
   if (icon && groupAvatarMap.value[icon] != null) {
@@ -186,138 +363,257 @@ const getGroupAvatar = (group: GroupListItemVo) => {
 
 const hasGroupAvatar = (group: GroupListItemVo) => !!getGroupAvatar(group);
 
-let unlistenFriends: UnlistenFn | undefined;
+let unlistenFriends: (() => void) | undefined;
 
-onMounted(async () => {
+onMounted(() => {
   loadFriendList();
   loadGroups();
   loadPendingRequestCount();
   loadPendingGroupCount();
-  try {
-    unlistenFriends = await listen("friend_list_changed", () => {
-      loadFriendList();
-      loadGroups();
-      loadPendingRequestCount();
-      loadPendingGroupCount();
-    });
-  } catch (e) {
-    console.error("监听好友列表变更失败", e);
-  }
+  unlistenFriends = subscribe("friend_list_changed", () => {
+    loadFriendList();
+    loadGroups();
+    loadPendingRequestCount();
+    loadPendingGroupCount();
+  });
 });
 
 onUnmounted(() => {
   if (unlistenFriends) unlistenFriends();
+  if (searchTimer) clearTimeout(searchTimer);
+  searchSeq++;
 });
 </script>
 
 <template>
   <div class="friends-page">
     <div class="header">
-      <svg class="title-icon" viewBox="0 0 24 24" fill="currentColor">
-        <path
-          d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
-        />
-      </svg>
-      <span class="page-title">{{ t("friends.title") }}</span>
-    </div>
-
-    <div class="search-section" @click="goSearch">
-      <div class="search-bar">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor">
+      <div class="header-top">
+        <svg class="title-icon" viewBox="0 0 24 24" fill="currentColor">
           <path
-            d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
           />
         </svg>
-        <span class="search-placeholder">{{
-          t("friends.searchPlaceholder")
-        }}</span>
+        <span class="page-title">{{ t("friends.title") }}</span>
+        <div class="header-actions">
+          <button
+            class="header-action"
+            type="button"
+            :aria-label="t('friends.addFriend')"
+            :title="t('friends.addFriend')"
+            @click="goSearch"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              />
+            </svg>
+          </button>
+          <button
+            class="header-action"
+            type="button"
+            :aria-label="t('friends.createGroup')"
+            :title="t('friends.createGroup')"
+            @click="goCreateGroup"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M8 10H5V7H3v3H0v2h3v3h2v-3h3v-2zm10 1c1.66 0 2.99-1.34 2.99-3S19.66 5 18 5c-.32 0-.63.05-.91.14.57.81.9 1.79.9 2.86s-.34 2.04-.9 2.86c.28.09.59.14.91.14zm-5 0c1.66 0 2.99-1.34 2.99-3S14.66 5 13 5s-3 1.34-3 3 1.34 3 3 3zm6.62 2.16c.83.73 1.38 1.66 1.38 2.84v2h3v-2c0-1.54-2.37-2.49-4.38-2.84zM13 13c-2 0-6 1-6 3v2h12v-2c0-2-4-3-6-3z"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
-
-    <div class="entries">
-      <div class="entry-card" @click="goRequests">
-        <div class="entry-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor">
+      <div class="search-section">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor">
             <path
-              d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
             />
           </svg>
+          <input
+            v-model="searchText"
+            type="text"
+            :placeholder="t('common.search')"
+            class="search-input"
+          />
+          <button
+            v-if="searchText"
+            class="clear-btn"
+            type="button"
+            :aria-label="t('common.clear')"
+            @click="clearSearch"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
+            </svg>
+          </button>
         </div>
-        <div class="entry-info">
-          <span class="entry-title">{{ t("friends.requests") }}</span>
-          <span class="entry-desc">{{ t("friends.requestsDesc") }}</span>
-        </div>
-        <span v-if="pendingRequestCount > 0" class="entry-badge">{{
-          pendingRequestCount > 99 ? "99+" : pendingRequestCount
-        }}</span>
-        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-        </svg>
       </div>
+    </div>
 
-      <div class="entry-card" @click="goGroupRequests">
-        <div class="entry-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
-            />
+    <template v-if="!isSearchActive">
+      <div class="entries">
+        <div class="entry-card" @click="goRequests">
+          <div class="entry-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              />
+            </svg>
+          </div>
+          <div class="entry-info">
+            <span class="entry-title">{{ t("friends.requests") }}</span>
+            <span class="entry-desc">{{ t("friends.requestsDesc") }}</span>
+          </div>
+          <span v-if="pendingRequestCount > 0" class="entry-badge">{{
+            pendingRequestCount > 99 ? "99+" : pendingRequestCount
+          }}</span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
           </svg>
         </div>
-        <div class="entry-info">
-          <span class="entry-title">{{ t("friends.groupRequests") }}</span>
-          <span class="entry-desc">{{ t("friends.groupRequestsDesc") }}</span>
+
+        <div class="entry-card" @click="goGroupRequests">
+          <div class="entry-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+              />
+            </svg>
+          </div>
+          <div class="entry-info">
+            <span class="entry-title">{{ t("friends.groupRequests") }}</span>
+            <span class="entry-desc">{{ t("friends.groupRequestsDesc") }}</span>
+          </div>
+          <span v-if="pendingGroupCount > 0" class="entry-badge">{{
+            pendingGroupCount > 99 ? "99+" : pendingGroupCount
+          }}</span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+          </svg>
         </div>
-        <span v-if="pendingGroupCount > 0" class="entry-badge">{{
-          pendingGroupCount > 99 ? "99+" : pendingGroupCount
-        }}</span>
-        <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-        </svg>
       </div>
-    </div>
 
-    <div class="seg-tabs">
-      <button
-        class="seg-tab"
-        :class="{ active: sectionTab === 0 }"
-        @click="sectionTab = 0"
-      >
-        {{ t("friends.tabFriends") }}
-      </button>
-      <button
-        class="seg-tab"
-        :class="{ active: sectionTab === 1 }"
-        @click="sectionTab = 1"
-      >
-        {{ t("friends.tabGroups") }}
-      </button>
-    </div>
+      <div class="seg-tabs">
+        <button
+          class="seg-tab"
+          :class="{ active: sectionTab === 0 }"
+          @click="sectionTab = 0"
+        >
+          {{ t("friends.tabFriends") }}
+        </button>
+        <button
+          class="seg-tab"
+          :class="{ active: sectionTab === 1 }"
+          @click="sectionTab = 1"
+        >
+          {{ t("friends.tabGroups") }}
+        </button>
+      </div>
 
-    <div v-show="sectionTab === 0" class="tab-panel">
-      <PullRefresh
-        v-model="refreshing"
-        :head-height="80"
-        :pulling-text="t('common.pullDown')"
-        :loosing-text="t('common.pullRelease')"
-        :loading-text="t('common.loadingDots')"
-        @refresh="onRefresh"
-      >
-        <div v-if="friends.length > 0" class="friend-list">
-          <SwipeCell v-for="friend in friends" :key="friend.friend_id">
-            <div class="friend-item" @click="goDetail(friend)">
-              <div class="friend-avatar-wrap">
-                <img
-                  :src="getAvatar(friend) || DEFAULT_AVATAR"
-                  class="friend-avatar"
-                  @error="
-                    ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
-                  "
-                />
+      <div v-show="sectionTab === 0" class="tab-panel">
+        <PullRefresh
+          v-model="refreshing"
+          :head-height="80"
+          :pulling-text="t('common.pullDown')"
+          :loosing-text="t('common.pullRelease')"
+          :loading-text="t('common.loadingDots')"
+          @refresh="onRefresh"
+        >
+          <div v-if="friends.length > 0" class="friend-list">
+            <SwipeCell v-for="friend in friends" :key="friend.friend_id">
+              <div class="friend-item" @click="goDetail(friend)">
+                <div class="friend-avatar-wrap">
+                  <img
+                    :src="getAvatar(friend) || DEFAULT_AVATAR"
+                    class="friend-avatar"
+                    @error="
+                      ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
+                    "
+                  />
+                </div>
+                <div class="friend-info">
+                  <div class="friend-title-row">
+                    <span class="friend-name">{{ friend.friend_name }}</span>
+                    <PresenceTag :presence="presenceOf(friend.friend_id)" />
+                  </div>
+                  <UserTypeTag :type="friend.friend_user_type" />
+                  <span class="friend-account"
+                    >@{{ friend.friend_account }}</span
+                  >
+                </div>
+                <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+                  />
+                </svg>
+              </div>
+              <template #right>
+                <div class="swipe-chat" @click="goChat(friend)">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+                    />
+                  </svg>
+                  <span>{{ t("friends.sendMessage") }}</span>
+                </div>
+                <div class="swipe-delete" @click="handleDelete(friend)">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                    />
+                  </svg>
+                  <span>{{ t("common.delete") }}</span>
+                </div>
+              </template>
+            </SwipeCell>
+          </div>
+          <Empty v-else :description="t('friends.emptyFriends')" />
+        </PullRefresh>
+      </div>
+
+      <div v-show="sectionTab === 1" class="tab-panel">
+        <PullRefresh
+          v-model="refreshing"
+          :head-height="80"
+          :pulling-text="t('common.pullDown')"
+          :loosing-text="t('common.pullRelease')"
+          :loading-text="t('common.loadingDots')"
+          @refresh="onRefresh"
+        >
+          <div v-if="groups.length > 0" class="friend-list">
+            <div
+              v-for="group in groups"
+              :key="group.group_uuid"
+              class="friend-item"
+              @click="goGroupChat(group)"
+            >
+              <template v-if="hasGroupAvatar(group)">
+                <div class="friend-avatar-wrap">
+                  <img
+                    :src="getGroupAvatar(group)!"
+                    class="friend-avatar"
+                    @error="
+                      ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
+                    "
+                  />
+                </div>
+              </template>
+              <div v-else class="group-avatar-fallback">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+                  />
+                </svg>
               </div>
               <div class="friend-info">
-                <span class="friend-name">{{ friend.friend_name }}</span>
-                <UserTypeTag :type="friend.friend_user_type" />
-                <span class="friend-account">@{{ friend.friend_account }}</span>
+                <span class="friend-name">{{ group.group_name }}</span>
+                <span class="friend-account">{{
+                  t("friends.memberCount", { count: group.member_count })
+                }}</span>
               </div>
               <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
                 <path
@@ -325,96 +621,82 @@ onUnmounted(() => {
                 />
               </svg>
             </div>
-            <template #right>
-              <div class="swipe-chat" @click="goChat(friend)">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-                  />
-                </svg>
-                <span>{{ t("friends.sendMessage") }}</span>
-              </div>
-              <div class="swipe-delete" @click="handleDelete(friend)">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-                  />
-                </svg>
-                <span>{{ t("common.delete") }}</span>
-              </div>
-            </template>
-          </SwipeCell>
-        </div>
-        <Empty v-else :description="t('friends.emptyFriends')" />
-      </PullRefresh>
-    </div>
+          </div>
+          <Empty v-else :description="t('friends.emptyGroups')" />
+        </PullRefresh>
+      </div>
+    </template>
 
-    <div v-show="sectionTab === 1" class="tab-panel">
-      <PullRefresh
-        v-model="refreshing"
-        :head-height="80"
-        :pulling-text="t('common.pullDown')"
-        :loosing-text="t('common.pullRelease')"
-        :loading-text="t('common.loadingDots')"
-        @refresh="onRefresh"
-      >
-        <div v-if="groups.length > 0" class="friend-list">
-          <div
-            v-for="group in groups"
-            :key="group.group_uuid"
-            class="friend-item"
-            @click="goGroupChat(group)"
-          >
-            <template v-if="hasGroupAvatar(group)">
-              <div class="friend-avatar-wrap">
-                <img
-                  :src="getGroupAvatar(group)!"
-                  class="friend-avatar"
-                  @error="
-                    ($event.target as HTMLImageElement).src = DEFAULT_AVATAR
-                  "
-                />
-              </div>
-            </template>
-            <div v-else class="group-avatar-fallback">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
-                />
-              </svg>
-            </div>
-            <div class="friend-info">
-              <span class="friend-name">{{ group.group_name }}</span>
-              <span class="friend-account"
-                >{{ t("friends.memberCount", { count: group.member_count }) }}</span
-              >
-            </div>
-            <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+    <div v-else class="search-results">
+      <div v-if="searching" class="search-tip">
+        {{ t("search.searching") }}
+      </div>
+      <div v-else-if="searchResults.length === 0" class="search-tip">
+        {{ t("search.noResults") }}
+      </div>
+      <div v-else class="friend-list">
+        <div
+          v-for="item in searchResults"
+          :key="item.key"
+          class="friend-item"
+          @click="openSearchResult(item)"
+        >
+          <div v-if="item.type === 'friend'" class="friend-avatar-wrap">
+            <img
+              :src="resultAvatar(item) || DEFAULT_AVATAR"
+              class="friend-avatar"
+              @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
+            />
+          </div>
+          <div v-else-if="resultAvatar(item)" class="friend-avatar-wrap">
+            <img
+              :src="resultAvatar(item)!"
+              class="friend-avatar"
+              @error="($event.target as HTMLImageElement).src = DEFAULT_AVATAR"
+            />
+          </div>
+          <div v-else class="group-avatar-fallback">
+            <svg viewBox="0 0 24 24" fill="currentColor">
               <path
-                d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+                d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
               />
             </svg>
           </div>
+          <div class="friend-info">
+            <div class="friend-title-row">
+              <span class="friend-name">
+                <template
+                  v-for="(seg, i) in highlightSegments(item.name)"
+                  :key="i"
+                >
+                  <span v-if="seg.match" class="hl">{{ seg.text }}</span>
+                  <template v-else>{{ seg.text }}</template>
+                </template>
+              </span>
+              <span class="result-tag" :class="item.type">{{
+                item.type === "group"
+                  ? t("search.groupTag")
+                  : t("search.friendTag")
+              }}</span>
+            </div>
+            <span v-if="item.account" class="friend-account">
+              <template
+                v-for="(seg, i) in highlightSegments(item.account)"
+                :key="i"
+              >
+                <span v-if="seg.match" class="hl">{{ seg.text }}</span>
+                <template v-else>{{ seg.text }}</template>
+              </template>
+            </span>
+            <span v-else-if="item.desc" class="friend-account">{{
+              item.desc
+            }}</span>
+          </div>
+          <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+          </svg>
         </div>
-        <Empty v-else :description="t('friends.emptyGroups')" />
-      </PullRefresh>
-    </div>
-
-    <div class="fab" @click="sectionTab === 0 ? goSearch() : goCreateGroup()">
-      <template v-if="sectionTab === 0">
-        <svg viewBox="0 0 24 24" fill="white">
-          <path
-            d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-          />
-        </svg>
-      </template>
-      <template v-else>
-        <svg viewBox="0 0 24 24" fill="white">
-          <path
-            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
-          />
-        </svg>
-      </template>
+      </div>
     </div>
   </div>
 </template>
@@ -423,20 +705,24 @@ onUnmounted(() => {
 .friends-page {
   min-height: 100vh;
   background: var(--page-bg);
-  padding-bottom: 80px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .header {
-  padding: max(16px, env(safe-area-inset-top)) 20px;
+  padding: max(16px, env(safe-area-inset-top)) 20px 0;
   background: var(--header-bg);
   backdrop-filter: blur(20px);
   position: sticky;
   top: 0;
   z-index: 50;
   border-bottom: 1px solid var(--border-light);
+}
+
+.header-top {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-bottom: 12px;
 }
 
 .title-icon {
@@ -458,35 +744,112 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
+.header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-action {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  background: var(--glass-bg);
+  color: var(--brand-blue);
+  box-shadow: var(--shadow-xs);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--transition-fast);
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:active {
+    background: var(--surface-hover);
+    transform: scale(0.94);
+  }
+}
+
 .search-section {
-  padding: 12px 20px;
+  padding: 0 0 12px;
 }
 
 .search-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  padding: 9px 16px;
+  transition: all var(--transition-normal);
   box-shadow: var(--shadow-xs);
-  &:active {
-    background: var(--surface-hover);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+
+  &:focus-within {
+    border-color: var(--brand-blue);
+    box-shadow: var(--shadow-glow-sm);
   }
 }
 
 .search-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
-.search-placeholder {
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
   font-size: 14px;
-  color: var(--text-placeholder);
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
+}
+
+.clear-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-hover);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.search-results {
+  margin-top: 12px;
+}
+
+.search-tip {
+  padding: 60px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-tertiary);
 }
 
 .seg-tabs {
@@ -494,17 +857,19 @@ onUnmounted(() => {
   display: flex;
   gap: 4px;
   padding: 4px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-xs);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 .seg-tab {
   flex: 1;
   height: 34px;
   border: none;
-  border-radius: calc(var(--radius-lg) - 5px);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-secondary);
   font-size: 14px;
@@ -517,7 +882,7 @@ onUnmounted(() => {
     background: var(--gradient-primary);
     color: #fff;
     font-weight: 600;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 6px 16px rgba(74, 144, 255, 0.32);
   }
 }
 
@@ -528,11 +893,11 @@ onUnmounted(() => {
 .entries {
   display: flex;
   flex-direction: column;
-  margin: 0 12px 12px;
+  margin: 12px 12px 12px;
   background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -612,9 +977,9 @@ onUnmounted(() => {
   flex-direction: column;
   margin: 0 12px 12px;
   background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -677,6 +1042,12 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 4px;
 }
+.friend-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 .friend-name {
   font-size: 16px;
   font-weight: 600;
@@ -691,6 +1062,33 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 搜索结果: 好友/群聊标记(与 PC 端 SearchBar 一致) */
+.result-tag {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  font-size: 10px;
+  line-height: 1.6;
+  font-weight: 600;
+  border-radius: 4px;
+
+  &.friend {
+    color: var(--brand-blue);
+    background: var(--brand-blue-bg);
+    border: 1px solid var(--brand-blue-border, rgba(64, 150, 255, 0.3));
+  }
+
+  &.group {
+    color: var(--text-secondary);
+    background: var(--surface-hover);
+    border: 1px solid var(--border-light);
+  }
+}
+
+.hl {
+  color: var(--brand-blue);
+  font-weight: 600;
 }
 
 .arrow {
@@ -733,30 +1131,6 @@ onUnmounted(() => {
   svg {
     width: 20px;
     height: 20px;
-  }
-}
-
-.fab {
-  position: fixed;
-  bottom: 84px;
-  right: 20px;
-  width: 52px;
-  height: 52px;
-  background: var(--fab-bg);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--fab-shadow);
-  cursor: pointer;
-  z-index: 100;
-  transition: all var(--transition-normal);
-  svg {
-    width: 26px;
-    height: 26px;
-  }
-  &:active {
-    transform: scale(0.95);
   }
 }
 

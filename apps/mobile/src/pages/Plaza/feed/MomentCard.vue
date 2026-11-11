@@ -35,6 +35,25 @@ const isSelf = computed(() => props.moment.author_uuid === myUuid.value);
 const busy = ref(false);
 const showReport = ref(false);
 
+// 点赞/关注走乐观更新: 用本地状态渲染, 不直接改写父组件传入的 moment prop
+const likedByMe = ref(!!props.moment.liked_by_me);
+const likeCount = ref(props.moment.like_count || 0);
+const followedByMe = ref(!!props.moment.followed_by_me);
+
+// 父组件刷新数据后, 用最新的 prop 值重新同步本地状态
+watch(
+  () => [
+    props.moment.liked_by_me,
+    props.moment.like_count,
+    props.moment.followed_by_me,
+  ] as const,
+  ([liked, count, followed]) => {
+    likedByMe.value = !!liked;
+    likeCount.value = count || 0;
+    followedByMe.value = !!followed;
+  }
+);
+
 const loadAvatar = async () => {
   if (!props.moment.icon) {
     avatarUrl.value = "";
@@ -84,15 +103,15 @@ const openDetail = () => {
 const onToggleLike = async () => {
   if (busy.value) return;
   busy.value = true;
-  const liked = props.moment.liked_by_me;
-  const prev = props.moment.like_count || 0;
-  props.moment.liked_by_me = !liked;
-  props.moment.like_count = Math.max(0, prev + (liked ? -1 : 1));
+  const liked = likedByMe.value;
+  const prev = likeCount.value;
+  likedByMe.value = !liked;
+  likeCount.value = Math.max(0, prev + (liked ? -1 : 1));
   try {
     await switch_moment_like({ moment_uuid: props.moment.uuid });
   } catch {
-    props.moment.liked_by_me = liked;
-    props.moment.like_count = prev;
+    likedByMe.value = liked;
+    likeCount.value = prev;
     showToast(t("plaza.moment.opFailed"));
   } finally {
     busy.value = false;
@@ -102,17 +121,17 @@ const onToggleLike = async () => {
 const onToggleFollow = async () => {
   if (busy.value) return;
   busy.value = true;
-  const prev = !!props.moment.followed_by_me;
-  props.moment.followed_by_me = !prev;
+  const prev = followedByMe.value;
+  followedByMe.value = !prev;
   try {
     await switch_user_follow({ target_user_uuid: props.moment.author_uuid });
     showToast(
-      props.moment.followed_by_me
+      followedByMe.value
         ? t("plaza.moment.followed")
         : t("plaza.moment.followedCancel")
     );
   } catch {
-    props.moment.followed_by_me = prev;
+    followedByMe.value = prev;
     showToast(t("plaza.moment.opFailed"));
   } finally {
     busy.value = false;
@@ -166,10 +185,10 @@ const onDelete = async () => {
         <button
           v-if="!isSelf"
           class="follow-btn"
-          :class="{ on: moment.followed_by_me }"
+          :class="{ on: followedByMe }"
           @click.stop="onToggleFollow"
         >
-          {{ moment.followed_by_me ? t("plaza.moment.followed") : t("plaza.moment.follow") }}
+          {{ followedByMe ? t("plaza.moment.followed") : t("plaza.moment.follow") }}
         </button>
         <button
           v-if="!isSelf"
@@ -198,12 +217,12 @@ const onDelete = async () => {
     <div class="m-actions">
       <div
         class="m-act"
-        :class="{ liked: moment.liked_by_me }"
+        :class="{ liked: likedByMe }"
         @click.stop="onToggleLike"
       >
         <svg
           viewBox="0 0 24 24"
-          :fill="moment.liked_by_me ? 'currentColor' : 'none'"
+          :fill="likedByMe ? 'currentColor' : 'none'"
           stroke="currentColor"
           stroke-width="1.8"
         >
@@ -211,7 +230,7 @@ const onDelete = async () => {
             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
           />
         </svg>
-        <span>{{ moment.like_count || 0 }}</span>
+        <span>{{ likeCount }}</span>
       </div>
       <div class="m-act" @click.stop="openDetail">
         <svg

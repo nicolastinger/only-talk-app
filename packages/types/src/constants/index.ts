@@ -11,7 +11,15 @@ export const CLIENT_CONFIG_KEYS = {
   serverDomain: "server.domain",
   appTheme: "app.theme",
   appLanguage: "app.language",
+  messageSound: "app.message_sound",
+  doNotDisturb: "app.do_not_disturb",
+  doNotDisturbStart: "app.do_not_disturb_start",
+  doNotDisturbEnd: "app.do_not_disturb_end",
   autoDownloadWifi: "app.auto_download_wifi",
+  autoDownloadCellular: "app.auto_download_cellular",
+  appAutoLogin: "app.auto_login",
+  uiChatListWidth: "ui.chat_list_width",
+  uiContactListWidth: "ui.contact_list_width",
 } as const;
 
 /** 客户端配置项 */
@@ -28,6 +36,16 @@ export const UPLOAD_LIMITS = {
   image: 100 * 1024 * 1024,
   file: 500 * 1024 * 1024,
 } as const;
+
+/**
+ * 官网地址与法务页面(与 apps/web 的路由保持一致)。
+ * 客户端"用户协议/隐私协议"入口统一指向官网页面, 不内置正文。
+ */
+export const OFFICIAL_SITE_URL = "https://www.onlytalk.cn";
+/** 隐私协议页面 */
+export const PRIVACY_POLICY_URL = `${OFFICIAL_SITE_URL}/privacy`;
+/** 用户使用协议页面 */
+export const USER_AGREEMENT_URL = `${OFFICIAL_SITE_URL}/agreement`;
 
 export const HTTP_METHOD = {
   GET: "get_request",

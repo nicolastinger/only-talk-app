@@ -9,9 +9,9 @@ use anyhow::anyhow;
 use log::info;
 use sqlx::sqlite::SqlitePoolOptions;
 
-use crate::cmd::user_controller::get_user_map;
 use crate::dao::create_table::init_user_ddl;
 use crate::utils::global_static_str::{APP_PATH, SQLITE_PATH, USER_DB};
+use crate::utils::user_state::get_user_info;
 use crate::{config, GLOBAL_SQL_POOL};
 
 pub async fn init_sqlite() -> Result<(), anyhow::Error> {
@@ -47,7 +47,7 @@ async fn get_db_path() -> String {
         sleep(Duration::from_secs(3));
         panic!("获取应用路径失败");
     });
-    let uuid = get_user_map("uuid".to_string()).await.expect("获取用户uuid失败");
+    let uuid = get_user_info("uuid").await.expect("获取用户uuid失败");
     let sqlite_path = Path::new(&app_path).join(SQLITE_PATH);
 
     let db_data_dir = Path::new(&app_path).join(SQLITE_PATH).join(&uuid);

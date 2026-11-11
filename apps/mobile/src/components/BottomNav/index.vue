@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUnreadStore } from "@/stores/unread";
 
@@ -43,13 +43,101 @@ const active = computed(() => {
   return best || "/chats";
 });
 
+// 选中项下标，用于滑块式选中指示器
+const activeIndex = computed(() => {
+  const index = navItems.findIndex((item) => item.path === active.value);
+  return index < 0 ? 0 : index;
+});
+
 const onChange = (path: string) => {
   router.replace(path);
 };
+
+/**
+ * 软键盘避让。
+ *
+ * 导航栏是 position: fixed，而 Android 端 MainActivity 用 decorView 的 IME padding
+ * 模拟 adjustResize，键盘弹起时 webview 会整体缩小，fixed 元素就跟着"上跳"到键盘上方。
+ * 这里在键盘弹出期间把导航栏下移淡出（真机上本来也会被键盘挡住），收起后复原。
+ *
+ * - 输入框聚焦时立刻隐藏，避免跟随窗口缩放的动画抖动；
+ * - 之后按可见高度回落情况校正（硬件键盘等不弹键盘的场景会恢复显示）。
+ */
+const keyboardVisible = ref(false);
+// 无键盘时的可见高度基准（取历史最大值，忽略收起过程中的中间值）
+let baselineHeight = 0;
+let measureRaf = 0;
+let verifyTimer: ReturnType<typeof setTimeout> | null = null;
+
+const visibleHeight = () => {
+  const vv = window.visualViewport;
+  return Math.min(window.innerHeight, vv ? vv.height : window.innerHeight);
+};
+
+const isEditable = (el: Element | null) =>
+  !!el &&
+  (el instanceof HTMLInputElement ||
+    el instanceof HTMLTextAreaElement ||
+    (el instanceof HTMLElement && el.isContentEditable));
+
+const measure = () => {
+  const height = visibleHeight();
+  if (height > baselineHeight) baselineHeight = height;
+  keyboardVisible.value = baselineHeight - height > 60;
+};
+
+const scheduleMeasure = () => {
+  if (measureRaf) return;
+  measureRaf = requestAnimationFrame(() => {
+    measureRaf = 0;
+    measure();
+  });
+};
+
+const onFocusIn = (event: FocusEvent) => {
+  if (!isEditable(event.target as Element | null)) return;
+  keyboardVisible.value = true;
+  // 600ms 后复核：只有窗口确实被压缩才保持隐藏
+  if (verifyTimer) clearTimeout(verifyTimer);
+  verifyTimer = setTimeout(measure, 600);
+};
+
+const onOrientationChange = () => {
+  // 横竖屏基准高度不同，重置后重新采样
+  baselineHeight = 0;
+  keyboardVisible.value = false;
+  setTimeout(measure, 300);
+};
+
+onMounted(() => {
+  measure();
+  window.addEventListener("resize", scheduleMeasure);
+  window.addEventListener("focusin", onFocusIn);
+  window.addEventListener("orientationchange", onOrientationChange);
+  window.visualViewport?.addEventListener("resize", scheduleMeasure);
+  window.visualViewport?.addEventListener("scroll", scheduleMeasure);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", scheduleMeasure);
+  window.removeEventListener("focusin", onFocusIn);
+  window.removeEventListener("orientationchange", onOrientationChange);
+  window.visualViewport?.removeEventListener("resize", scheduleMeasure);
+  window.visualViewport?.removeEventListener("scroll", scheduleMeasure);
+  if (measureRaf) cancelAnimationFrame(measureRaf);
+  if (verifyTimer) clearTimeout(verifyTimer);
+});
 </script>
 
 <template>
-  <div class="bottom-nav">
+  <div class="bottom-nav" :class="{ 'keyboard-hidden': keyboardVisible }">
+    <!-- 液态玻璃选中滑块: 跟随当前 tab 平滑移动 -->
+    <div
+      class="nav-indicator"
+      :style="{
+        transform: `translate3d(calc(${activeIndex} * 100%), -50%, 0)`,
+      }"
+    />
     <button
       v-for="item in navItems"
       :key="item.path"
@@ -222,20 +310,12 @@ const onChange = (path: string) => {
           stroke-width="2"
           stroke-linecap="round"
         />
-        <circle
-          class="accent-dot"
-          cx="27"
-          cy="7"
-          r="2.5"
-          fill="var(--nav-active-color)"
-        />
+        <circle class="accent-dot" cx="27" cy="7" r="2.5" fill="currentColor" />
       </svg>
 
-      <span
-        v-if="badgeOf(item.name) > 0"
-        class="nav-badge"
-        >{{ formatBadge(badgeOf(item.name)) }}</span
-      >
+      <span v-if="badgeOf(item.name) > 0" class="nav-badge">{{
+        formatBadge(badgeOf(item.name))
+      }}</span>
     </button>
   </div>
 </template>
@@ -243,21 +323,76 @@ const onChange = (path: string) => {
 <style scoped lang="less">
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
-  background: var(--nav-bg, rgba(255, 255, 255, 0.92));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--nav-border, rgba(74, 144, 255, 0.08));
+  left: 12px;
+  right: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  height: 62px;
   display: flex;
   justify-content: space-around;
   align-items: center;
+  padding: 0 6px;
   z-index: 1000;
-  padding: 0 8px;
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2px 20px rgba(74, 144, 255, 0.06);
+  border-radius: 26px;
+  background: var(--nav-glass-bg, rgba(255, 255, 255, 0.55));
+  border: 1px solid var(--nav-glass-border, rgba(255, 255, 255, 0.7));
+  box-shadow: var(--nav-glass-shadow, 0 14px 34px rgba(31, 63, 120, 0.18)),
+    inset 0 1px 0 var(--nav-glass-highlight, rgba(255, 255, 255, 0.9)),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  overflow: hidden;
+  transition: transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.2s ease;
+}
+
+/* 软键盘弹出: 下移出屏幕并淡出, 避免 fixed 跟随缩小后的视窗上跳 */
+.bottom-nav.keyboard-hidden {
+  transform: translateY(calc(100% + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 液态玻璃高光层: 左上角柔光 + 斜向光带 */
+.bottom-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(
+    --nav-glass-sheen,
+    radial-gradient(
+      120% 90% at 15% 0%,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0) 55%
+    )
+  );
+  pointer-events: none;
+}
+
+/* 液态玻璃选中滑块: 中性玻璃胶囊, 随当前 tab 平滑移动 */
+.nav-indicator {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: calc((100% - 12px) / 5);
+  height: 46px;
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 48px;
+    height: 46px;
+    border-radius: 15px;
+    background: var(--nav-glass-active-bg);
+    border: 1px solid var(--nav-glass-active-border);
+    box-shadow: inset 0 1px 0 var(--nav-glass-highlight),
+      var(--nav-glass-active-shadow, 0 4px 12px rgba(31, 63, 120, 0.1));
+    transform: translate(-50%, -50%);
+  }
 }
 
 .nav-btn {
@@ -274,40 +409,26 @@ const onChange = (path: string) => {
   -webkit-tap-highlight-color: transparent;
   padding: 0;
 
-  /* 活跃态由图标颜色 + 底部小圆点指示 */
   .nav-icon {
     position: relative;
+    z-index: 1;
     width: var(--nav-icon-size, 28px);
     height: var(--nav-icon-size, 28px);
     color: var(--nav-inactive-color, #b0c4de);
-    transition: color 0.15s ease;
+    transition: color 0.2s ease, transform 0.2s ease;
   }
 
+  /* 选中项: 品牌色图标 + 轻微放大, 与中性玻璃胶囊构成选中样式 */
   &.active .nav-icon {
     color: var(--nav-active-color);
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: 7px;
-    left: 50%;
-    transform: translateX(-50%) scale(0);
-    width: 4px;
-    height: 4px;
-    background: var(--nav-active-color);
-    border-radius: 50%;
-    transition: transform 0.15s ease;
-  }
-
-  &.active::after {
-    transform: translateX(-50%) scale(1);
+    transform: scale(1.04);
   }
 
   .nav-badge {
     position: absolute;
     top: 7px;
     left: calc(50% + 9px);
+    z-index: 2;
     min-width: 18px;
     height: 18px;
     padding: 0 5px;

@@ -1,6 +1,6 @@
-import { ref, onMounted, onUnmounted } from "vue";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { ref } from "vue";
 import type { TextQuicMsgVo } from "@workspace/types";
+import { useBackendEvent } from "./useBackendEvent";
 
 /**
  * 监听群消息送达 ack 回执（对齐 PC useGroupMessageAckApi）
@@ -9,26 +9,15 @@ import type { TextQuicMsgVo } from "@workspace/types";
  */
 export function useGroupMessageAck(groupId: string) {
   const groupAckMessage = ref<TextQuicMsgVo | null>(null);
-  let unlisten: UnlistenFn | null = null;
 
-  onMounted(() => {
-    listen<string>("group_message_ack", (event) => {
-      try {
-        const msg: TextQuicMsgVo = JSON.parse(event.payload);
-        if (msg.recv_user && msg.recv_user !== groupId) return;
-        groupAckMessage.value = msg;
-      } catch (e) {
-        console.error("解析 group_message_ack 失败:", e);
-      }
-    })
-      .then((fn) => {
-        unlisten = fn;
-      })
-      .catch(console.error);
-  });
-
-  onUnmounted(() => {
-    if (unlisten) unlisten();
+  useBackendEvent("group_message_ack", (payload) => {
+    try {
+      const msg: TextQuicMsgVo = JSON.parse(payload);
+      if (msg.recv_user && msg.recv_user !== groupId) return;
+      groupAckMessage.value = msg;
+    } catch (e) {
+      console.error("解析 group_message_ack 失败:", e);
+    }
   });
 
   return { groupAckMessage };

@@ -112,7 +112,7 @@
 | 模块 | 文件路径 |
 |------|---------|
 | 后端通知构造 | `only-talk-rs/crates/http_service/src/http_service/notify_service/service/system_notification.rs` |
-| 客户端接收分发 | `only-talk-app/src-tauri/src/quic_service/center_service/process_text_msg_from_server.rs` |
+| 客户端接收分发 | `only-talk-app/src-tauri/src/quic_core/center_service/process_text_msg_from_server.rs` |
 | 好友通知处理 | `only-talk-app/src-tauri/src/service/friend_service.rs` |
 | 群组通知处理 | `only-talk-app/src-tauri/src/service/group_service.rs` |
 | 通知实体 | `only-talk-app/src-tauri/src/entity/system_notification.rs` |

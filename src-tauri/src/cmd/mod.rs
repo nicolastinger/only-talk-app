@@ -1,5 +1,6 @@
 pub mod api_controller;
 pub mod auth_controller;
+pub mod chat_background_controller;
 pub mod chat_record_controller;
 pub mod chat_session_controller;
 pub mod config_controller;
@@ -8,6 +9,7 @@ pub mod file_controller;
 pub mod friend_controller;
 pub mod group_controller;
 pub mod log_controller;
+pub mod moment_cache_controller;
 pub mod network_controller;
 pub mod notification_controller;
 pub mod p2p_controller;

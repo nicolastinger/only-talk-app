@@ -25,23 +25,11 @@ const platformInfo = (id: (typeof DOWNLOADS)[number]["id"]) =>
           <div class="platform-actions">
             <a
               class="btn btn-primary btn-sm"
-              :href="item.releaseUrl"
+              :href="item.url"
               target="_blank"
               rel="noopener noreferrer"
             >
               {{ t.download.viaReleases }}
-            </a>
-            <a
-              class="btn btn-ghost btn-sm"
-              :href="item.localUrl"
-              :download="item.isPlaceholder ? undefined : item.localUrl"
-              target="_blank"
-            >
-              {{
-                item.isPlaceholder
-                  ? t.download.placeholderDirect
-                  : t.download.direct
-              }}
             </a>
           </div>
         </div>

@@ -1,5 +1,5 @@
 use crate::dao::get_common_db_client;
-use crate::entity::client_config::ClientConfig;
+use crate::models::entity::client_config::ClientConfig;
 use crate::utils::time::get_now_time_stamp_as_millis;
 
 fn now_ms() -> Result<i64, anyhow::Error> {

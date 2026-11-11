@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { reactive, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { kv_get, kv_set } from "@workspace/services";
+import {
+  getDoNotDisturbRange,
+  isDoNotDisturbEnabled,
+  isMessageSoundEnabled,
+  kv_get,
+  kv_set,
+  playMessageSound,
+  setDoNotDisturbEnabled,
+  setDoNotDisturbRange,
+  setMessageSoundEnabled,
+} from "@workspace/services";
 import { useI18n } from "@/i18n";
 
 interface NotifyItem {
@@ -42,21 +52,43 @@ const defaultPrefs = (): NotifyPrefs => ({
 });
 
 const prefs = reactive<NotifyPrefs>(defaultPrefs());
+// 免打扰时段(持久化在 client_config: app.do_not_disturb_start/end)
+const dndRange = reactive(getDoNotDisturbRange());
 
 watch(
   prefs,
   (value) => {
-    kv_set(STORAGE_KEY, JSON.stringify(value)).catch(() => {});
+    // sound / nightDnd 由 client_config 持久化，不写进本地偏好快照
+    const { receive, vibration, preview } = value;
+    kv_set(STORAGE_KEY, JSON.stringify({ receive, vibration, preview })).catch(
+      () => {}
+    );
   },
   { deep: true }
 );
 
 onMounted(async () => {
   Object.assign(prefs, await loadPrefs());
+  prefs.sound = isMessageSoundEnabled();
+  prefs.nightDnd = isDoNotDisturbEnabled();
 });
 
 const toggle = (key: keyof NotifyPrefs, checked: boolean) => {
   prefs[key] = checked;
+  if (key === "sound") {
+    setMessageSoundEnabled(checked).catch(() => {});
+    // 打开时试听一次，方便确认效果
+    if (checked) playMessageSound();
+  } else if (key === "nightDnd") {
+    setDoNotDisturbEnabled(checked).catch(() => {});
+  }
+};
+
+const onDndTimeChange = (which: "start" | "end", event: Event) => {
+  const value = (event.target as HTMLInputElement).value;
+  if (!value) return;
+  dndRange[which] = value;
+  setDoNotDisturbRange(dndRange.start, dndRange.end).catch(() => {});
 };
 
 const messageItems = ref<NotifyItem[]>([
@@ -159,6 +191,30 @@ const goBack = () => router.back();
             @update:model-value="toggle(item.key as keyof NotifyPrefs, $event)"
           />
         </div>
+        <div class="notify-row">
+          <span class="notify-name">{{
+            t("settings.notificationSettings.doNotDisturbRange")
+          }}</span>
+          <div class="dnd-range" :class="{ disabled: !prefs.nightDnd }">
+            <input
+              class="dnd-time"
+              type="time"
+              step="300"
+              :value="dndRange.start"
+              :disabled="!prefs.nightDnd"
+              @change="onDndTimeChange('start', $event)"
+            />
+            <span class="dnd-sep">–</span>
+            <input
+              class="dnd-time"
+              type="time"
+              step="300"
+              :value="dndRange.end"
+              :disabled="!prefs.nightDnd"
+              @change="onDndTimeChange('end', $event)"
+            />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -224,6 +280,31 @@ const goBack = () => router.back();
 .notify-name {
   font-size: 15px;
   color: var(--text-primary);
+}
+
+.dnd-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &.disabled {
+    opacity: 0.45;
+  }
+}
+
+.dnd-time {
+  min-width: 92px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.dnd-sep {
+  color: var(--text-tertiary);
 }
 
 .notify-desc {

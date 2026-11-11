@@ -7,6 +7,7 @@ import {
   selectFile,
   convertPathToTauriUrl,
   create_moment,
+  clear_moment_cache,
   isBackendSuccess,
   isHttpSuccess,
 } from "@workspace/services";
@@ -149,6 +150,8 @@ const publish = async () => {
       visibility: visibility.value,
       file_ids: fileIds.value,
     });
+    // 清掉「我的」缓存, 下次进入强制回源看到刚发布的动态
+    void clear_moment_cache("mine");
     showToast({ message: t("plaza.compose.publishSuccess"), icon: "success" });
     setTimeout(() => router.back(), 500);
   } catch (e) {

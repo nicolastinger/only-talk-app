@@ -7,6 +7,7 @@
 export const MSG_TYPE_TEXT = 1; // 单聊文本
 export const MSG_TYPE_IMAGE = 2; // 单聊图片
 export const MSG_TYPE_FILE = 3; // 单聊文件
+export const MSG_TYPE_VOICE = 21; // 单聊语音
 export const MSG_TYPE_P2P = 4; // P2P 隐私消息
 export const MSG_TYPE_P2P_VIDEO_CALL = 5; // P2P 视频通话
 export const MSG_TYPE_P2P_VIDEO_DATA = 6;
@@ -32,6 +33,7 @@ export const MSG_TYPE_GROUP_TEXT = 2001; // 群聊文本
 export const MSG_TYPE_GROUP_IMAGE = 2002; // 群聊图片
 export const MSG_TYPE_GROUP_FILE = 2003; // 群聊文件
 export const MSG_TYPE_GROUP_NOTIFICATION = 2004; // 群通知
+export const MSG_TYPE_GROUP_VOICE = 2006; // 群聊语音
 export const MSG_TYPE_GROUP_ACK = 2201; // 群送达 ack
 
 // 系统
@@ -49,16 +51,20 @@ export const ACK_TYPES = [
 export const MEDIA_TYPES = [
   MSG_TYPE_IMAGE,
   MSG_TYPE_FILE,
+  MSG_TYPE_VOICE,
   MSG_TYPE_GROUP_IMAGE,
   MSG_TYPE_GROUP_FILE,
+  MSG_TYPE_GROUP_VOICE,
 ];
 
 /** 发送后收到 ack 需要重载历史（把本地临时路径替换为服务器记录）的媒体消息 */
 export const RELOAD_ON_ACK_TYPES = [
   MSG_TYPE_IMAGE,
   MSG_TYPE_FILE,
+  MSG_TYPE_VOICE,
   MSG_TYPE_GROUP_IMAGE,
   MSG_TYPE_GROUP_FILE,
+  MSG_TYPE_GROUP_VOICE,
 ];
 
 /** 居中灰条展示的消息：群通知 / 系统消息 */

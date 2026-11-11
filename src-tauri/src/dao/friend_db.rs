@@ -1,7 +1,7 @@
 use log::error;
 
 use crate::dao::get_db_client;
-use crate::entity::friend::Friend;
+use crate::models::entity::friend::Friend;
 
 /// 获取好友信息表
 pub async fn query_friend_info_db(uuid: &str) -> Result<Vec<Friend>, anyhow::Error> {

@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { showToast, Tabs, Tab, Badge, Empty, Button } from "vant";
 import { clearUnreadByLevel } from "@workspace/services";
 import {
@@ -10,6 +9,7 @@ import {
   type NotificationCategoryKey,
 } from "@workspace/types";
 import { useUnreadStore } from "@/stores/unread";
+import { onNotifyChange } from "@/events/notifyRouter";
 import { useI18n } from "@/i18n";
 import type { SystemNotification } from "@workspace/types";
 
@@ -22,7 +22,7 @@ const goBack = () => router.back();
 const notifications = ref<SystemNotification[]>([]);
 const loading = ref(false);
 const activeTab = ref(0);
-let unlisteners: UnlistenFn[] = [];
+let unlisteners: (() => void)[] = [];
 
 interface Category {
   key: string;
@@ -226,14 +226,13 @@ const handleNotifyEvent = () => {
   refreshUnread();
 };
 
-const setupListeners = async () => {
-  unlisteners.push(await listen("listen_notify_msg", handleNotifyEvent));
-  unlisteners.push(await listen("listen_notify_read", handleNotifyEvent));
+const setupListeners = () => {
+  unlisteners.push(onNotifyChange(handleNotifyEvent));
 };
 
 onMounted(() => {
   loadNotifications();
-  setupListeners().catch((e) => console.error("监听通知事件失败", e));
+  setupListeners();
 });
 
 onUnmounted(() => {

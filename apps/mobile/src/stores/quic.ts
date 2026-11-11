@@ -1,6 +1,6 @@
 import { reactive } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { subscribe } from "@workspace/services";
 import { t } from "@/i18n";
 
 type ConnectionState = "idle" | "connected" | "disconnected";
@@ -21,7 +21,7 @@ const state = reactive({
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 let statusTagTimer: ReturnType<typeof setTimeout> | null = null;
 let wasConnected = true;
-let unlisteners: UnlistenFn[] = [];
+let unlisteners: (() => void)[] = [];
 let monitorStarted = false;
 
 const clearSyncTimer = () => {
@@ -55,12 +55,12 @@ const markConnected = () => {
   state.message = "";
 };
 
-const registerListeners = async () => {
+const registerListeners = () => {
   unlisteners.push(
-    await listen<string>("quic_disconnected", (event) => {
+    subscribe("quic_disconnected", (payload) => {
       state.isConnected = false;
       state.connectionState = "disconnected";
-      state.message = event.payload || t("quicDisconnect.defaultMessage");
+      state.message = payload || t("quicDisconnect.defaultMessage");
       // 首次断连显示"已离线"；重复广播不降级(重连中不回退)
       if (wasConnected) {
         wasConnected = false;
@@ -69,19 +69,19 @@ const registerListeners = async () => {
     })
   );
   unlisteners.push(
-    await listen<string>("quic_connected", () => {
+    subscribe("quic_connected", () => {
       markConnected();
       wasConnected = true;
       showStatusTag("online");
     })
   );
   unlisteners.push(
-    await listen<string>("quic_reconnecting", () => {
+    subscribe("quic_reconnecting", () => {
       showStatusTag("reconnecting");
     })
   );
   unlisteners.push(
-    await listen<string>("quic_sync_start", () => {
+    subscribe("quic_sync_start", () => {
       state.isSyncing = true;
       clearSyncTimer();
       syncTimer = setTimeout(() => {
@@ -90,7 +90,7 @@ const registerListeners = async () => {
     })
   );
   unlisteners.push(
-    await listen<string>("quic_sync_complete", () => {
+    subscribe("quic_sync_complete", () => {
       clearSyncTimer();
       state.isSyncing = false;
     })
@@ -116,9 +116,11 @@ export const useQuicStore = () => ({
 export function startQuicMonitor() {
   if (monitorStarted) return;
   monitorStarted = true;
-  registerListeners().catch((e) => {
+  try {
+    registerListeners();
+  } catch (e) {
     console.error("QUIC 连接监控初始化失败", e);
-  });
+  }
 }
 
 export function stopQuicMonitor() {

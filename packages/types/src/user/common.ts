@@ -1,10 +1,10 @@
-import React from "react";
 import { TextQuicMsgVo } from "../backend";
 
 interface LayoutBtnProps {
   text: string;
   url: string;
-  icon?: React.ReactNode;
+  /** 图标节点由各端自行解释（React Node / Vue VNode） */
+  icon?: unknown;
   active: boolean;
   unreadCount: number;
 }
@@ -87,6 +87,28 @@ interface SendVerifyCodeRequest {
   email: string;
 }
 
+/** 忘记密码(未登录)第一步: 向已绑定的二次认证因素发送找回验证码 */
+interface ForgotPasswordSendCodeRequest {
+  /** 登录账号(同一邮箱可能被多个账号绑定, 需账号定位用户) */
+  account: string;
+  /** 认证因素类型: 0=email 1=phone 2=other(当前仅 email) */
+  factor_type: number;
+  /** 已绑定的因素值(邮箱/手机号) */
+  factor_value: string;
+}
+
+/** 忘记密码(未登录)第二步: 校验验证码并重置密码 */
+interface ForgotPasswordResetRequest {
+  /** 登录账号 */
+  account: string;
+  /** 认证因素类型: 0=email 1=phone 2=other(当前仅 email) */
+  factor_type: number;
+  /** 已绑定的因素值(邮箱/手机号), 需与发码时一致 */
+  factor_value: string;
+  verification_code: string;
+  new_password: string;
+}
+
 /** 登录/刷新令牌响应(POST /user/sign_in, /user/refresh_token 返回) — 镜像 rs SignInResponseVO */
 interface SignInResponseVo {
   access_token: string;
@@ -135,8 +157,19 @@ interface P2pInitMsg {
   request_addr: string;
   request_uuid: string;
   request_token: string;
+  accept_uuid: string;
   accept: boolean;
   ip_type: number;
+  step: number;
+  is_server: boolean;
+  /** 发起方 P2P 会话证书(PEM)，用于连接端证书指纹固定 */
+  request_cert?: string;
+  /** 接收方 P2P 会话证书(PEM)，用于发起端证书指纹固定 */
+  accept_cert?: string;
+  /** 发起方是否支持 IPv6(双方都支持时优先走 IPv6 P2P) */
+  request_ipv6?: boolean;
+  /** 接收方是否支持 IPv6 */
+  accept_ipv6?: boolean;
 }
 
 interface RequestMediaMsg {
@@ -161,5 +194,7 @@ export type {
   SignUpStep1Response,
   CompleteProfileRequest,
   SendVerifyCodeRequest,
+  ForgotPasswordSendCodeRequest,
+  ForgotPasswordResetRequest,
   SignInResponseVo,
 };

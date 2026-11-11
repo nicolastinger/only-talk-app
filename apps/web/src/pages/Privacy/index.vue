@@ -7,7 +7,7 @@ const { t } = useMessages();
 </script>
 
 <template>
-  <LegalLayout :title="t.privacy.title" updated-at="2026-01-01">
+  <LegalLayout :title="t.privacy.title" updated-at="2026-10-12">
     <LegalSection
       v-for="section in t.privacy.sections"
       :key="section.title"

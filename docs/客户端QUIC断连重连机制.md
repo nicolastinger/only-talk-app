@@ -1,6 +1,6 @@
 # 客户端 QUIC 断连重连机制
 
-本文档说明客户端（Tauri 桌面端）与中央服务器 QUIC 连接的建立、心跳、断连判定、断连反馈与自动重连逻辑。所有实现集中在 `src-tauri/src/quic_service/`。
+本文档说明客户端（Tauri 桌面端）与中央服务器 QUIC 连接的建立、心跳、断连判定、断连反馈与自动重连逻辑。所有实现集中在 `src-tauri/src/quic_core/`。
 
 ## 1. 连接生命周期概览
 
@@ -13,7 +13,7 @@
        └─ 5s 后重试
 ```
 
-连接状态机（`src-tauri/src/quic_service/connection_state.rs`）：
+连接状态机（`src-tauri/src/quic_core/connection_state.rs`）：
 `Idle → Connecting → Connected → Disconnected`
 
 | 状态 | 含义 |

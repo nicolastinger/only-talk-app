@@ -4,16 +4,15 @@ use std::path::Path;
 use log::{error, info, warn};
 use tauri::path::BaseDirectory;
 use tauri::{Manager, Runtime};
-#[cfg(not(target_os = "android"))]
 use tauri_plugin_opener::OpenerExt;
 
 use crate::config::get_config;
+use crate::models::vo::file_vo::{FileVo, LocalFileVo};
 use crate::service::file_service::{
     delete_local_file_service, get_file_by_biz_id_service, get_local_file_list_service,
-    has_local_chat_file_service,
+    has_local_chat_file_service, open_local_file_service,
 };
 use crate::utils::global_static_str::{talk_api_base, DEFAULT_IMAGE, RESOURCE_PATH};
-use crate::vo::file_vo::{FileVo, LocalFileVo};
 
 /// 增加持久化数据 - 从应用可访问目录读取资源文件
 #[tauri::command]
@@ -224,6 +223,23 @@ pub async fn get_local_file_size(path: String) -> Result<u64, String> {
     Ok(metadata.len())
 }
 
+/// 打开外部链接（跨平台）
+/// - 桌面: 系统默认浏览器
+/// - Android/iOS: 经 opener 插件走系统 Intent / 默认程序
+#[tauri::command]
+pub async fn open_external_url<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    url: String,
+) -> Result<(), String> {
+    if url.is_empty() {
+        return Err("URL 不能为空".to_string());
+    }
+    app.opener().open_url(url, None::<&str>).map_err(|e| {
+        error!("打开外部链接失败: {}", e);
+        e.to_string()
+    })
+}
+
 /// 打开本地文件（跨平台）
 /// - 桌面: 直接交给系统默认程序打开
 /// - Android: 复制到 cache 目录后交给 tauri-plugin-view，
@@ -234,55 +250,7 @@ pub async fn open_local_file<R: Runtime>(
     app: tauri::AppHandle<R>,
     path: String,
 ) -> Result<(), String> {
-    if path.is_empty() {
-        return Err("文件路径不能为空".to_string());
-    }
-    let file_path = Path::new(&path);
-    if !file_path.is_file() {
-        warn!("文件不存在: {}", path);
-        return Err(format!("文件不存在: {}", path));
-    }
-
-    #[cfg(target_os = "android")]
-    {
-        // Android: 复制到 cache/open 目录后交给 view 插件打开,
-        // 复用 manifest 声明的 ${applicationId}.fileprovider + file_paths.xml 的 cache-path
-        let cache_dir = app.path().cache_dir().map_err(|e| format!("获取缓存目录失败: {}", e))?;
-        let open_dir = cache_dir.join("open");
-        fs::create_dir_all(&open_dir).map_err(|e| format!("创建打开目录失败: {}", e))?;
-
-        let file_name = file_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .ok_or_else(|| "无法获取文件名".to_string())?;
-
-        // 目标文件已存在则跳过复制(同名文件复用)
-        let dest = open_dir.join(file_name);
-        if !dest.is_file() {
-            fs::copy(file_path, &dest).map_err(|e| format!("复制文件到缓存失败: {}", e))?;
-        }
-
-        info!("Android 打开文件: {:?}", dest);
-        use tauri_plugin_view::ViewExt;
-        app.view()
-            .view(tauri_plugin_view::ViewRequest {
-                path: Some(dest.to_string_lossy().into_owned()),
-            })
-            .map_err(|e| {
-                error!("Android 打开文件失败: {}", e);
-                e.to_string()
-            })?;
-        Ok(())
-    }
-
-    #[cfg(not(target_os = "android"))]
-    {
-        info!("打开本地文件: {}", path);
-        app.opener().open_path(path, None::<String>).map_err(|e| {
-            error!("打开文件失败: {}", e);
-            e.to_string()
-        })
-    }
+    open_local_file_service(app, path).await
 }
 
 /// 获取本地文件列表（文件管理: 分类筛选 + 名称/日期排序）
@@ -299,6 +267,57 @@ pub async fn get_local_file_list(
 #[tauri::command]
 pub async fn delete_local_file(id: i64) -> Result<(), String> {
     delete_local_file_service(id).await.map_err(|e| e.to_string())
+}
+
+/// 读取本地文件原始字节并以「原始字节响应」返回(JS 侧 `invoke` 得到 ArrayBuffer)。
+///
+/// 移动端语音播放使用: Android WebView 对 `asset:` 协议的媒体加载不可靠
+/// (媒体资源加载不经过 shouldInterceptRequest), `<audio>` 直接播 asset URL 会失败。
+/// 前端改为取字节后构造 Blob URL 播放；读取走阻塞线程池, 避免大文件卡住异步命令。
+#[tauri::command]
+pub async fn read_local_file_bytes(file_path: String) -> Result<tauri::ipc::Response, String> {
+    let bytes = tokio::task::spawn_blocking(move || fs::read(&file_path))
+        .await
+        .map_err(|e| format!("读取文件线程异常: {}", e))?
+        .map_err(|e| format!("读取文件失败: {}", e))?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// 将前端录音产生的音频字节写入应用临时目录, 返回 Rust 可读的绝对路径。
+///
+/// 前端 WebView 的 MediaRecorder 只能得到 Blob(blob: URL), Rust 侧无法直接读取,
+/// 故先落盘为真实文件再由 `send_voice_msg` / `send_group_voice_msg` 走附件上传管道。
+/// `ext` 为容器扩展名(如 webm/ogg/m4a), 决定服务端 MIME 识别与文件名。
+#[tauri::command]
+pub async fn save_voice_temp_file<R: Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    bytes: Vec<u8>,
+    ext: String,
+) -> Result<String, String> {
+    if bytes.is_empty() {
+        return Err("录音数据为空".to_string());
+    }
+
+    // 仅保留字母数字, 避免路径注入; 缺省 webm
+    let safe_ext: String =
+        ext.chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_lowercase();
+    let safe_ext = if safe_ext.is_empty() { "webm".to_string() } else { safe_ext };
+
+    let base_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let temp_dir = base_dir.join("umi_gitee_temp");
+    fs::create_dir_all(&temp_dir).map_err(|e| format!("创建临时目录失败: {}", e))?;
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let file_name = format!("voice_{}_{}.{}", timestamp, nanoid::nanoid!(8), safe_ext);
+    let file_path = temp_dir.join(file_name);
+
+    fs::write(&file_path, &bytes).map_err(|e| format!("写入录音文件失败: {}", e))?;
+    info!("录音文件已保存: {} ({} 字节)", file_path.display(), bytes.len());
+
+    Ok(file_path.to_string_lossy().to_string())
 }
 
 /// 调试命令：列出所有资源路径和文件

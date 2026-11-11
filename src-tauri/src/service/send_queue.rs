@@ -7,7 +7,7 @@ use log::{info, warn};
 use tokio::sync::Mutex;
 
 use crate::dao::chat_record_send::query_record_send_from_db;
-use crate::quic_service::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
+use crate::quic_core::connection_state::{QuicConnectionState, GLOBAL_QUIC_STATE};
 use crate::service::chat_service::send_msg;
 use crate::{GLOBAL_MSG_SEND_LOCK, GLOBAL_QUIC_SERVER_LIST};
 

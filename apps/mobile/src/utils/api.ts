@@ -6,10 +6,11 @@ import {
   parseValidationMessages,
   VALIDATION_ERROR_CODE,
 } from "@workspace/services";
+import { t } from "@/i18n";
 
 export function parseResponse<T>(res: RustResponse): T {
   if (!res.netSuccess) {
-    throw new Error(res.error || "网络请求失败");
+    throw new Error(res.error || t("common.networkError"));
   }
   // 兼容真·HTTP 204 空响应体：视为成功但无数据
   if (!res.res.body) {
@@ -27,7 +28,7 @@ export function parseResponse<T>(res: RustResponse): T {
         throw new Error(messages.join("\n"));
       }
     }
-    throw new Error(data.message || "请求失败");
+    throw new Error(data.message || t("common.requestFailed"));
   }
   return data.data as T;
 }

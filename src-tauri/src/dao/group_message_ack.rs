@@ -1,5 +1,5 @@
 use crate::dao::get_private_db_client;
-use crate::entity::group_message_ack::GroupMessageAck;
+use crate::models::entity::group_message_ack::GroupMessageAck;
 
 /// 插入群消息 ack 记录
 pub async fn insert_group_message_ack(ack: &GroupMessageAck) -> Result<(), anyhow::Error> {

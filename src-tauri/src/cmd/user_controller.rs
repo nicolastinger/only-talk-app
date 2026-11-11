@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::dto::http_result::HttpResult;
-use crate::dto::update_user_dto::UpdateUserDTO;
-use crate::entity::user_info::UserInfo;
-use crate::quic_service::connection_state::GLOBAL_QUIC_STATE;
-use crate::service::api_service::{get_with_token, post_json};
+use crate::models::dto::http_result::HttpResult;
+use crate::models::dto::update_user_dto::UpdateUserDTO;
+use crate::models::entity::user_info::UserInfo;
+use crate::quic_core::connection_state::GLOBAL_QUIC_STATE;
+use crate::service::api_service::{get_with_token, parse_http_result, post_json};
 use crate::service::user_service::{disconnect_quic, reconnect_quic};
 use crate::utils::global_static_str::talk_api_base;
 use crate::GLOBAL_QUIC_USER_INFO;
@@ -24,20 +24,20 @@ pub struct UserInfoWithCache {
 /// 增加持久化数据
 #[tauri::command]
 pub async fn add_user_map(map: HashMap<String, String>) -> Result<String, String> {
-    GLOBAL_QUIC_USER_INFO.write().await.extend(map.into_iter());
+    crate::utils::user_state::extend_user_map(map).await;
     Ok("success".to_string())
 }
 
 /// 获取持久化数据
 #[tauri::command]
 pub async fn get_user_map(key: String) -> Result<String, String> {
-    Ok(GLOBAL_QUIC_USER_INFO.read().await.get(&key).cloned().ok_or("not found")?.to_string())
+    crate::utils::user_state::get_user_map(&key).await
 }
 
 /// 删除持久化数据
 #[tauri::command]
 pub async fn remove_user_map(key: String) -> Result<(), String> {
-    GLOBAL_QUIC_USER_INFO.write().await.remove(&key);
+    crate::utils::user_state::remove_user_map(&key).await;
     Ok(())
 }
 
@@ -109,7 +109,7 @@ pub async fn get_user_info_with_cache(uuid: String) -> Result<UserInfoWithCache,
         return Err(format!("HTTP错误: {}", status));
     }
 
-    let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    let http_result: HttpResult = parse_http_result(&body).map_err(|e| e.to_string())?;
 
     if http_result.code != 200 {
         return Err(http_result.message);
@@ -141,7 +141,7 @@ pub async fn refresh_user_info(uuid: String) -> Result<UserInfo, String> {
         return Err(format!("HTTP错误: {}", status));
     }
 
-    let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    let http_result: HttpResult = parse_http_result(&body).map_err(|e| e.to_string())?;
 
     if http_result.code != 200 {
         return Err(http_result.message);
@@ -167,7 +167,7 @@ pub async fn update_user_info_command(update_dto: UpdateUserDTO) -> Result<Strin
     let body = response.text().await.map_err(|e| e.to_string())?;
 
     if status.is_success() {
-        let http_result: HttpResult = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+        let http_result: HttpResult = parse_http_result(&body).map_err(|e| e.to_string())?;
         // 后端 update 走 success_empty()，业务成功码为 204（无数据），与 200 同样视为成功
         if http_result.code == 200 || http_result.code == 204 {
             if let Some(uuid) = GLOBAL_QUIC_USER_INFO.read().await.get("uuid").cloned() {

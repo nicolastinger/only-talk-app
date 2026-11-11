@@ -2,19 +2,23 @@
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { showDialog, showToast } from "vant";
-import { getVersion } from "@tauri-apps/api/app";
 import {
+  buildAppVersion,
   checkForUpdate,
   downloadUpdatePackage,
   formatFileSize,
+  getAppVersion,
   installUpdate,
+  openExternalUrl,
 } from "@workspace/services";
+import { PRIVACY_POLICY_URL, USER_AGREEMENT_URL } from "@workspace/types";
 import type { UpdateInfo } from "@workspace/types";
 import { useI18n } from "@/i18n";
 
 const router = useRouter();
 const { t } = useI18n();
-const version = ref("1.0.0");
+// 先展示构建期版本(与 tauri.conf.json 同源), 挂载后再用 Tauri 运行时版本校正
+const version = ref(buildAppVersion);
 const checking = ref(false);
 const downloading = ref(false);
 const installing = ref(false);
@@ -24,11 +28,8 @@ const progressTotal = ref(0);
 const updateInfo = ref<UpdateInfo | null>(null);
 
 onMounted(async () => {
-  try {
-    version.value = await getVersion();
-  } catch {
-    // 浏览器环境中无 Tauri 运行时，展示静态版本号
-  }
+  // 运行时读取 Tauri 应用版本(无 Tauri 运行时自动回退到构建期注入的版本)
+  version.value = await getAppVersion();
 });
 
 const goBack = () => router.back();
@@ -97,7 +98,10 @@ const onDownload = async () => {
     });
     toast.close();
     localPath.value = path;
-    showToast({ message: t("settings.aboutApp.downloadDone"), icon: "success" });
+    showToast({
+      message: t("settings.aboutApp.downloadDone"),
+      icon: "success",
+    });
     await askInstall();
   } catch (e) {
     console.error("下载更新失败:", e);
@@ -147,6 +151,10 @@ const onComingSoon = (row: string) => {
     icon: "none",
   });
 };
+
+/** 打开官网法务页面(用户协议 / 隐私协议) */
+const onOpenUserAgreement = () => void openExternalUrl(USER_AGREEMENT_URL);
+const onOpenPrivacy = () => void openExternalUrl(PRIVACY_POLICY_URL);
 </script>
 
 <template>
@@ -202,28 +210,26 @@ const onComingSoon = (row: string) => {
             installing
               ? t("settings.aboutApp.installing")
               : downloading
-                ? t("settings.aboutApp.downloading")
-                : ""
+              ? t("settings.aboutApp.downloading")
+              : ""
           }}
         </span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <div
-        class="menu-item"
-        @click="onComingSoon(t('settings.aboutApp.userAgreement'))"
-      >
-        <span class="menu-name">{{ t("settings.aboutApp.userAgreement") }}</span>
+      <div class="menu-item" @click="onOpenUserAgreement">
+        <span class="menu-name">{{
+          t("settings.aboutApp.userAgreement")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </div>
-      <div
-        class="menu-item"
-        @click="onComingSoon(t('settings.aboutApp.privacyPolicy'))"
-      >
-        <span class="menu-name">{{ t("settings.aboutApp.privacyPolicy") }}</span>
+      <div class="menu-item" @click="onOpenPrivacy">
+        <span class="menu-name">{{
+          t("settings.aboutApp.privacyPolicy")
+        }}</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>

@@ -17,8 +17,9 @@ use app_lib::dao::chat_record_ack::{
 };
 use app_lib::dao::chat_record_db::{
     delete_chat_record_db, insert_chat_record, local_max_server_id,
-    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_from_db,
-    query_last_chat_record, query_last_read_msg, recall_chat_record_db, set_chat_record_server_id,
+    query_chat_record_by_id_from_db, query_chat_record_by_type_from_db, query_chat_record_filtered,
+    query_chat_record_from_db, query_last_chat_record, query_last_read_msg, recall_chat_record_db,
+    set_chat_record_server_id,
 };
 use app_lib::dao::chat_record_send::{
     insert_chat_record_send, query_chat_record_send_by_user, query_record_send_from_db,
@@ -56,28 +57,29 @@ use app_lib::dao::session_db::{
 use app_lib::dao::sync_task_db::{
     history, list_batch_tasks, prune_batches, record_forward_catchup,
 };
-use app_lib::entity::app_log::LOG_LEVEL_INFO;
-use app_lib::entity::chat_record::ChatRecord;
-use app_lib::entity::chat_record_ack::ChatRecordAck;
-use app_lib::entity::chat_record_send::ChatRecordSend;
-use app_lib::entity::chat_session::ChatSession;
-use app_lib::entity::file_record::FileRecord;
-use app_lib::entity::friend::Friend;
-use app_lib::entity::group::Group;
-use app_lib::entity::group_chat_record::GroupChatRecord;
-use app_lib::entity::group_member::GroupMember;
-use app_lib::entity::group_message_ack::GroupMessageAck;
-use app_lib::entity::group_message_read::GroupMessageRead;
-use app_lib::entity::sync_task::{SYNC_STATUS_FAILED, SYNC_STATUS_SUCCESS};
-use app_lib::entity::system_notification::SystemNotification;
-use app_lib::entity::user_info::UserInfo;
-use app_lib::entity::user_token::UserToken;
+use app_lib::models::entity::app_log::LOG_LEVEL_INFO;
+use app_lib::models::entity::chat_record::ChatRecord;
+use app_lib::models::entity::chat_record_ack::ChatRecordAck;
+use app_lib::models::entity::chat_record_send::ChatRecordSend;
+use app_lib::models::entity::chat_session::ChatSession;
+use app_lib::models::entity::file_record::FileRecord;
+use app_lib::models::entity::friend::Friend;
+use app_lib::models::entity::group::Group;
+use app_lib::models::entity::group_chat_record::GroupChatRecord;
+use app_lib::models::entity::group_member::GroupMember;
+use app_lib::models::entity::group_message_ack::GroupMessageAck;
+use app_lib::models::entity::group_message_read::GroupMessageRead;
+use app_lib::models::entity::moment_cache::{MomentCache, MomentCacheItem};
+use app_lib::models::entity::sync_task::{SYNC_STATUS_FAILED, SYNC_STATUS_SUCCESS};
+use app_lib::models::entity::system_notification::SystemNotification;
+use app_lib::models::entity::user_info::UserInfo;
+use app_lib::models::entity::user_token::UserToken;
 use app_lib::service::user_service::insert_user_info;
 use app_lib::service::chat_service::{
     reconcile_group_recalls, reconcile_single_recalls, resolve_group_recall_target,
     resolve_single_recall_target,
 };
-use app_lib::vo::text_quic_msg::TextQuicMsgVo;
+use app_lib::models::vo::text_quic_msg::TextQuicMsgVo;
 
 use common::{with_common_db, with_private_db, with_user_db};
 use sqlx::Row;
@@ -86,6 +88,125 @@ const ME: &str = "00000000-0000-0000-0000-000000000001";
 const FRIEND: &str = "00000000-0000-0000-0000-000000000002";
 
 // ---------- user.db (明文) ----------
+
+// ---------- 动态(朋友圈)本地缓存 ----------
+
+fn moment_item(uuid: &str, author: &str, created_at: i64) -> MomentCacheItem {
+    (
+        uuid.to_string(),
+        author.to_string(),
+        created_at,
+        format!("{{\"uuid\":\"{}\",\"author_uuid\":\"{}\",\"created_at\":{}}}", uuid, author, created_at),
+    )
+}
+
+#[tokio::test]
+async fn moment_cache_upsert_lists_newest_first_and_upserts_duplicates() {
+    with_user_db(|_pool| async move {
+        let items =
+            vec![moment_item("m1", ME, 1000), moment_item("m2", ME, 3000), moment_item("m3", ME, 2000)];
+        let written = MomentCache::upsert_many("plaza", &items, MomentCache::MAX_PER_FEED)
+            .await
+            .expect("写入缓存失败");
+        assert_eq!(written, 3);
+
+        let list = MomentCache::list_payloads("plaza", 100).await.expect("读取缓存失败");
+        assert_eq!(list.len(), 3);
+        // created_at 倒序: m2(3000) -> m3(2000) -> m1(1000)
+        assert!(list[0].contains("\"m2\""));
+        assert!(list[1].contains("\"m3\""));
+        assert!(list[2].contains("\"m1\""));
+
+        // 同一 uuid 重复写入: 更新而非新增, 条数不变
+        let updated = vec![(
+            "m1".to_string(),
+            ME.to_string(),
+            4000,
+            "{\"uuid\":\"m1\",\"content\":\"updated\"}".to_string(),
+        )];
+        MomentCache::upsert_many("plaza", &updated, MomentCache::MAX_PER_FEED)
+            .await
+            .expect("更新缓存失败");
+        assert_eq!(MomentCache::count("plaza").await.expect("统计失败"), 3);
+        let list = MomentCache::list_payloads("plaza", 100).await.expect("读取缓存失败");
+        assert!(list[0].contains("updated"));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn moment_cache_trims_to_limit_and_keeps_newest() {
+    with_user_db(|_pool| async move {
+        let items: Vec<MomentCacheItem> =
+            (0..105).map(|i| moment_item(&format!("m{}", i), ME, i as i64)).collect();
+        MomentCache::upsert_many("following", &items, MomentCache::MAX_PER_FEED)
+            .await
+            .expect("写入缓存失败");
+
+        assert_eq!(
+            MomentCache::count("following").await.expect("统计失败"),
+            MomentCache::MAX_PER_FEED
+        );
+        let list = MomentCache::list_payloads("following", MomentCache::MAX_PER_FEED)
+            .await
+            .expect("读取缓存失败");
+        assert_eq!(list.len() as i64, MomentCache::MAX_PER_FEED);
+        // 最新一条是 m104, 最旧的 m0..m4 被裁掉
+        assert!(list[0].contains("\"m104\""));
+        assert!(list.iter().all(|p| !p.contains("\"m4\"")));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn moment_cache_isolated_by_feed_and_supports_delete() {
+    with_user_db(|_pool| async move {
+        MomentCache::upsert_many(
+            "plaza",
+            &[moment_item("a", ME, 1000), moment_item("b", ME, 2000)],
+            MomentCache::MAX_PER_FEED,
+        )
+        .await
+        .expect("写入 plaza 失败");
+        MomentCache::upsert_many(
+            "mine",
+            &[moment_item("a", ME, 1000)],
+            MomentCache::MAX_PER_FEED,
+        )
+        .await
+        .expect("写入 mine 失败");
+
+        assert_eq!(MomentCache::count("plaza").await.expect("统计失败"), 2);
+        assert_eq!(MomentCache::count("mine").await.expect("统计失败"), 1);
+        // 相同 uuid 在不同 feed 下互不影响(不覆盖)
+        assert_eq!(MomentCache::list_payloads("mine", 10).await.expect("读取失败").len(), 1);
+
+        // 删除单条: 会从所有 feed 中移除(动态已在服务端删除)
+        let affected = MomentCache::delete_by_uuid("a").await.expect("删除失败");
+        assert_eq!(affected, 2);
+        assert_eq!(MomentCache::count("plaza").await.expect("统计失败"), 1);
+        assert_eq!(MomentCache::count("mine").await.expect("统计失败"), 0);
+
+        let affected = MomentCache::clear_feed("plaza").await.expect("清空失败");
+        assert_eq!(affected, 1);
+        assert_eq!(MomentCache::count("plaza").await.expect("统计失败"), 0);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn moment_cache_ignores_empty_feed_or_items() {
+    with_user_db(|_pool| async move {
+        let written = MomentCache::upsert_many("", &[moment_item("x", ME, 1)], 100)
+            .await
+            .expect("空 feed 写入失败");
+        assert_eq!(written, 0);
+        let written = MomentCache::upsert_many("plaza", &[], 100).await.expect("空列表写入失败");
+        assert_eq!(written, 0);
+        assert_eq!(MomentCache::count("plaza").await.expect("统计失败"), 0);
+    })
+    .await;
+}
 
 #[tokio::test]
 async fn friend_db_upsert_query_block_soft_delete_roundtrip() {
@@ -451,6 +572,111 @@ async fn chat_record_db_insert_dedup_query_paging_type_filter() {
         // 按 nano_id + 本人 uuid 查询
         let by_id = query_chat_record_by_id_from_db("m4", ME).await.expect("按id查询失败");
         assert_eq!(by_id.raw, "world");
+    })
+    .await;
+}
+
+/// 多维度检索: 日期区间 / 发送者 / 类型 / 关键词 / 群聊范围 / 倒序分页。
+#[tokio::test]
+async fn chat_record_filtered_query_dimensions() {
+    with_private_db(|_pool| async move {
+        for (nano, ts, ty, raw, send, recv) in [
+            ("f1", 100i64, 1u16, r#"{"text":"hi"}"#, ME, FRIEND),
+            ("f2", 200i64, 2u16, r#"{"biz_id":"b1"}"#, ME, FRIEND),
+            ("f3", 300i64, 3u16, r#"{"file_name":"a.txt"}"#, FRIEND, ME),
+            ("g1", 400i64, 2001u16, r#"{"text":"group"}"#, ME, "group-1"),
+        ] {
+            let msg = TextQuicMsgVo {
+                nano_id: nano.to_string(),
+                text_type: ty,
+                raw: raw.to_string(),
+                recv_user: recv.to_string(),
+                send_user: send.to_string(),
+                timestamp: ts,
+            };
+            assert!(insert_chat_record(&msg).await.expect("插入消息失败"));
+        }
+
+        // 单聊全量: 时间倒序, 不包含群消息
+        let all = query_chat_record_filtered(
+            ME, FRIEND, false, None, None, None, None, None, 10, 0,
+        )
+        .await
+        .expect("单聊全量查询失败");
+        assert_eq!(all.len(), 3);
+        assert_eq!(
+            all.iter().map(|m| m.nano_id.as_str()).collect::<Vec<_>>(),
+            vec!["f3", "f2", "f1"]
+        );
+
+        // 日期区间(闭区间)
+        let ranged =
+            query_chat_record_filtered(ME, FRIEND, false, Some(150), Some(250), None, None, None, 10, 0)
+                .await
+                .expect("日期过滤失败");
+        assert_eq!(ranged.len(), 1);
+        assert_eq!(ranged[0].nano_id, "f2");
+
+        // 发送者
+        let sent_by_friend =
+            query_chat_record_filtered(ME, FRIEND, false, None, None, Some(FRIEND), None, None, 10, 0)
+                .await
+                .expect("发送者过滤失败");
+        assert_eq!(sent_by_friend.len(), 1);
+        assert_eq!(sent_by_friend[0].nano_id, "f3");
+
+        // 类型
+        let files = query_chat_record_filtered(
+            ME,
+            FRIEND,
+            false,
+            None,
+            None,
+            None,
+            Some(&[2u16, 3u16]),
+            None,
+            10,
+            0,
+        )
+        .await
+        .expect("类型过滤失败");
+        assert_eq!(files.len(), 2);
+        assert!(files.iter().all(|m| m.text_type == 2 || m.text_type == 3));
+
+        // 关键词(raw 模糊)
+        let by_keyword =
+            query_chat_record_filtered(ME, FRIEND, false, None, None, None, None, Some("a.txt"), 10, 0)
+                .await
+                .expect("关键词过滤失败");
+        assert_eq!(by_keyword.len(), 1);
+        assert_eq!(by_keyword[0].nano_id, "f3");
+
+        // 群聊范围
+        let group = query_chat_record_filtered(
+            ME,
+            "group-1",
+            true,
+            None,
+            None,
+            None,
+            None,
+            None,
+            10,
+            0,
+        )
+        .await
+        .expect("群聊查询失败");
+        assert_eq!(group.len(), 1);
+        assert_eq!(group[0].nano_id, "g1");
+
+        // 倒序分页: 第二页第一条
+        let page2 = query_chat_record_filtered(
+            ME, FRIEND, false, None, None, None, None, None, 1, 1,
+        )
+        .await
+        .expect("分页查询失败");
+        assert_eq!(page2.len(), 1);
+        assert_eq!(page2[0].nano_id, "f2");
     })
     .await;
 }

@@ -2,112 +2,34 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use log::info;
-use reqwest::header::HeaderMap;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tauri::command;
 
+pub use crate::service::api_service::ApiResponse;
 use crate::service::api_service::{
-    post_form_data, upload_file, upload_file_with_fields, upload_multiple_files,
-    upload_multiple_files_with_fields,
+    delete_request as service_delete_request, get_request as service_get_request, post_form_data,
+    post_request as service_post_request, put_request as service_put_request, upload_file,
+    upload_file_with_fields, upload_multiple_files, upload_multiple_files_with_fields,
 };
-use crate::utils::http_client::http_client;
 use crate::utils::image_utils::{compress_image_to_webp, crop_image_to_webp};
-use crate::GLOBAL_QUIC_USER_INFO;
-
-#[derive(Serialize, Deserialize)]
-pub struct ApiResponse {
-    pub status: u16,
-    pub body: String,
-}
 
 #[command]
 pub async fn get_request(url: String) -> Result<ApiResponse, String> {
-    let client = http_client();
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
-    let mut headers = HeaderMap::new();
-    headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
-
-    let response = client.get(&url).headers(headers).send().await.map_err(|e| e.to_string())?;
-
-    let status = response.status().as_u16();
-    let body = response.text().await.map_err(|e| e.to_string())?;
-
-    Ok(ApiResponse { status, body })
+    service_get_request(url).await
 }
 
 #[command]
 pub async fn post_request(url: String, body: String) -> Result<ApiResponse, String> {
-    let client = http_client();
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
-    info!("token: {}", token);
-    let mut headers = HeaderMap::new();
-    headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
-
-    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
-
-    let response = client
-        .post(&url)
-        .json(&json_body)
-        .headers(headers)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let status = response.status().as_u16();
-    let response_body = response.text().await.map_err(|e| e.to_string())?;
-
-    Ok(ApiResponse { status, body: response_body })
+    service_post_request(url, body).await
 }
 
 #[command]
 pub async fn put_request(url: String, body: String) -> Result<ApiResponse, String> {
-    let client = http_client();
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
-    let mut headers = HeaderMap::new();
-    headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
-
-    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
-
-    let response = client
-        .put(&url)
-        .json(&json_body)
-        .headers(headers)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let status = response.status().as_u16();
-    let response_body = response.text().await.map_err(|e| e.to_string())?;
-
-    Ok(ApiResponse { status, body: response_body })
+    service_put_request(url, body).await
 }
 
 #[command]
 pub async fn delete_request(url: String, body: String) -> Result<ApiResponse, String> {
-    let client = http_client();
-    let empty_token = String::new();
-    let token = GLOBAL_QUIC_USER_INFO.read().await.get("token").unwrap_or(&empty_token).clone();
-    let mut headers = HeaderMap::new();
-    headers.insert("Authorization", token.parse().map_err(|_| "token错误".to_string())?);
-
-    let json_body: Value = serde_json::from_str(&body).unwrap_or(Value::String(body));
-
-    let response = client
-        .delete(&url)
-        .json(&json_body)
-        .headers(headers)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let status = response.status().as_u16();
-    let response_body = response.text().await.map_err(|e| e.to_string())?;
-
-    Ok(ApiResponse { status, body: response_body })
+    service_delete_request(url, body).await
 }
 
 #[command]

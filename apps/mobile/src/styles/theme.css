@@ -1,6 +1,6 @@
 :root {
   /* PC theme tokens, shared by all mobile pages. */
-  --bg-color: #fff;
+  --bg-color: #eef3fd;
   --text-color: #121212;
   --brand-blue: rgb(64, 150, 255);
   --brand-blue-dark: #1a5cff;
@@ -25,32 +25,50 @@
   --blue-900: rgb(0, 40, 140);
 
   /* ===== Page Backgrounds ===== */
-  --page-bg: #f5f8fd;
-  --page-bg-alt: #f5f5f5;
-  --header-bg: rgba(255, 255, 255, 0.85);
-  --card-bg: #fff;
-  --card-bg-hover: #fff;
+  /* 柔和光斑渐变: 半透明玻璃面板需要有可透出的层次 */
+  --page-bg: radial-gradient(
+      120% 80% at 0% 0%,
+      #e3ecff 0%,
+      rgba(227, 236, 255, 0) 58%
+    ),
+    radial-gradient(110% 70% at 100% 0%, #e0f3ff 0%, rgba(224, 243, 255, 0) 55%),
+    radial-gradient(
+      130% 80% at 50% 100%,
+      #eae7ff 0%,
+      rgba(234, 231, 255, 0) 60%
+    ),
+    linear-gradient(180deg, #f8fbff 0%, #edf3fd 100%);
+  --page-bg-alt: #edf3fd;
+  --header-bg: rgba(255, 255, 255, 0.52);
+  --card-bg: rgba(255, 255, 255, 0.62);
+  --card-bg-hover: rgba(255, 255, 255, 0.8);
 
-  /* ===== Surfaces & Cards ===== */
-  --surface: #ffffff;
-  --surface-alt: #f0f2f5;
-  --surface-hover: #f5f7fa;
-  --surface-active: #e8ecf1;
+  /* ===== Surfaces & Cards (半透明玻璃层) ===== */
+  --surface: rgba(255, 255, 255, 0.62);
+  --surface-alt: rgba(255, 255, 255, 0.38);
+  --surface-hover: rgba(255, 255, 255, 0.82);
+  --surface-active: rgba(232, 241, 255, 0.92);
 
   /* ===== Text Colors ===== */
-  --text-primary: rgb(31, 37, 51);
-  --text-secondary: rgb(71, 83, 102);
-  --text-tertiary: rgb(122, 135, 153);
-  --text-placeholder: rgb(184, 192, 204);
+  --text-primary: rgb(24, 32, 48);
+  --text-secondary: rgb(66, 80, 100);
+  --text-tertiary: rgb(112, 126, 148);
+  --text-placeholder: rgb(166, 178, 198);
   --text-inverse: #ffffff;
 
   /* ===== Glassmorphism ===== */
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-bg-light: rgba(255, 255, 255, 0.6);
-  --glass-bg-dark: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-light: rgba(255, 255, 255, 0.36);
+  --glass-bg-dark: rgba(255, 255, 255, 0.84);
+  --glass-border: rgba(255, 255, 255, 0.66);
   --glass-border-active: rgba(64, 150, 255, 0.35);
-  --glass-blur: blur(10px);
+  --glass-blur: blur(22px) saturate(180%);
+  --glass-sheen: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0) 45%
+  );
+  --header-shadow: 0 6px 20px rgba(31, 63, 120, 0.06);
 
   /* ===== Gradients ===== */
   --gradient-primary: linear-gradient(135deg, #1a5cff 0%, #4a90ff 100%);
@@ -58,33 +76,60 @@
   --gradient-accent: linear-gradient(135deg, #4a90ff 0%, #007bff 100%);
   --gradient-hero: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
 
-  /* ===== Shadows ===== */
-  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.15);
+  /* ===== Shadows (带内高光的悬浮投影) ===== */
+  --shadow-xs: 0 2px 10px rgba(31, 63, 120, 0.06),
+    0 1px 2px rgba(31, 63, 120, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  --shadow-sm: 0 6px 18px rgba(31, 63, 120, 0.09),
+    0 2px 6px rgba(31, 63, 120, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-md: 0 10px 28px rgba(31, 63, 120, 0.12),
+    0 4px 10px rgba(31, 63, 120, 0.06);
+  --shadow-lg: 0 16px 40px rgba(31, 63, 120, 0.16);
+  --shadow-xl: 0 24px 60px rgba(31, 63, 120, 0.2);
   --shadow-glow: 0 0 20px rgba(100, 180, 255, 0.5);
   --shadow-glow-sm: 0 0 8px rgba(64, 150, 255, 0.25);
 
   /* ===== Borders ===== */
-  --border-light: rgba(0, 0, 0, 0.04);
-  --border-medium: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(64, 150, 255, 0.2);
+  --border-light: rgba(31, 63, 120, 0.08);
+  --border-medium: rgba(31, 63, 120, 0.14);
+  --border-strong: rgba(64, 150, 255, 0.3);
 
   /* ===== Nav Bar ===== */
-  --nav-bg: rgba(255, 255, 255, 0.92);
+  --nav-bg: rgba(255, 255, 255, 0.55);
   --nav-border: rgba(74, 144, 255, 0.08);
   --nav-icon-size: 28px;
   --nav-active-color: rgb(64, 150, 255);
   --nav-inactive-color: rgb(122, 135, 153);
   --nav-active-glow: 0 0 16px rgba(74, 144, 255, 0.5);
 
+  /* ===== 液态玻璃底部导航 ===== */
+  --nav-glass-bg: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.74) 0%,
+    rgba(255, 255, 255, 0.42) 100%
+  );
+  --nav-glass-border: rgba(255, 255, 255, 0.72);
+  --nav-glass-highlight: rgba(255, 255, 255, 0.92);
+  /* 选中胶囊: 用深色半透明压出对比度(浅色面板本身接近白色) */
+  --nav-glass-active-bg: rgba(181, 197, 240, 0.12);
+  --nav-glass-active-border: rgba(255, 255, 255, 0.55);
+  --nav-glass-active-shadow: 0 4px 12px rgba(31, 63, 120, 0.12);
+  --nav-glass-shadow: 0 14px 34px rgba(31, 63, 120, 0.18);
+  --nav-glass-sheen: radial-gradient(
+      120% 90% at 15% 0%,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(255, 255, 255, 0) 45%
+    );
+
   /* ===== Input Fields ===== */
-  --input-bg: rgba(255, 255, 255, 0.95);
-  --input-border: rgba(0, 0, 0, 0.06);
-  --input-border-focus: rgba(64, 150, 255, 0.3);
-  --input-shadow-focus: 0 0 0 3px rgba(64, 150, 255, 0.1);
+  --input-bg: rgba(255, 255, 255, 0.7);
+  --input-border: rgba(31, 63, 120, 0.1);
+  --input-border-focus: rgba(64, 150, 255, 0.35);
+  --input-shadow-focus: 0 0 0 3px rgba(64, 150, 255, 0.12);
 
   /* ===== Status Colors ===== */
   --color-success: #52c41a;
@@ -105,14 +150,15 @@
 
   /* ===== FAB ===== */
   --fab-bg: var(--gradient-primary);
-  --fab-shadow: 0 4px 20px rgba(74, 144, 255, 0.4);
+  --fab-shadow: 0 10px 26px rgba(74, 144, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 
   /* ===== Radius ===== */
-  --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
   --radius-full: 9999px;
 
   /* ===== Profile 卡片(主题可感知) ===== */
@@ -131,39 +177,90 @@
 }
 
 :root[data-theme="dark"] {
-  --bg-color: #000;
+  --bg-color: #0b0f17;
   --text-color: #fff;
-  --page-bg: #1a1a1a;
-  --page-bg-alt: #282c34;
-  --header-bg: rgba(30, 30, 30, 0.92);
-  --card-bg: rgb(50, 54, 62);
-  --card-bg-hover: rgb(58, 62, 70);
-  --surface: rgb(40, 44, 52);
-  --surface-alt: #23272e;
-  --surface-hover: #32363e;
-  --surface-active: #3a3f48;
-  --text-primary: #e6e6e6;
-  --text-secondary: #b3b3b3;
-  --text-tertiary: #808080;
-  --text-placeholder: #666c7a;
+  --page-bg: radial-gradient(
+      120% 80% at 0% 0%,
+      rgba(64, 150, 255, 0.24) 0%,
+      rgba(64, 150, 255, 0) 58%
+    ),
+    radial-gradient(
+      110% 70% at 100% 0%,
+      rgba(88, 200, 255, 0.14) 0%,
+      rgba(88, 200, 255, 0) 55%
+    ),
+    radial-gradient(
+      130% 80% at 50% 100%,
+      rgba(96, 96, 255, 0.14) 0%,
+      rgba(96, 96, 255, 0) 60%
+    ),
+    linear-gradient(180deg, #10151f 0%, #0a0e16 100%);
+  --page-bg-alt: #0f1420;
+  --header-bg: rgba(20, 26, 38, 0.55);
+  --card-bg: rgba(38, 45, 60, 0.55);
+  --card-bg-hover: rgba(46, 54, 72, 0.7);
+  --surface: rgba(36, 43, 58, 0.58);
+  --surface-alt: rgba(44, 52, 68, 0.42);
+  --surface-hover: rgba(58, 68, 88, 0.6);
+  --surface-active: rgba(68, 80, 104, 0.72);
+  --text-primary: #e9eef8;
+  --text-secondary: #b3bfd2;
+  --text-tertiary: #8494ac;
+  --text-placeholder: #64748b;
   --text-inverse: #fff;
-  --glass-bg: rgba(30, 30, 30, 0.8);
-  --glass-bg-light: rgba(30, 30, 30, 0.6);
-  --glass-bg-dark: rgba(40, 40, 40, 0.95);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --border-light: rgba(255, 255, 255, 0.06);
-  --border-medium: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(30, 38, 52, 0.55);
+  --glass-bg-light: rgba(30, 38, 52, 0.36);
+  --glass-bg-dark: rgba(28, 35, 48, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-sheen: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0) 45%
+  );
+  --header-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.12);
   --border-strong: rgba(64, 150, 255, 0.3);
-  --nav-bg: rgba(30, 30, 30, 0.95);
+  --nav-bg: rgba(20, 26, 38, 0.7);
   --nav-border: rgba(255, 255, 255, 0.08);
-  --nav-inactive-color: #808080;
-  --input-bg: rgba(40, 40, 40, 0.8);
+  --nav-inactive-color: #8494ac;
+  /* ===== 液态玻璃底部导航(暗色) ===== */
+  --nav-glass-bg: linear-gradient(
+    135deg,
+    rgba(66, 72, 84, 0.78) 0%,
+    rgba(32, 35, 42, 0.62) 100%
+  );
+  --nav-glass-border: rgba(255, 255, 255, 0.16);
+  --nav-glass-highlight: rgba(255, 255, 255, 0.24);
+  /* 选中胶囊: 暗色下改用高光白提亮(深色面板上压暗会看不见) */
+  --nav-glass-active-bg: rgba(255, 255, 255, 0.2);
+  --nav-glass-active-border: rgba(255, 255, 255, 0.24);
+  --nav-glass-active-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --nav-glass-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  --nav-glass-sheen: radial-gradient(
+      120% 90% at 15% 0%,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0) 55%
+    ),
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0) 45%
+    );
+  --input-bg: rgba(30, 38, 52, 0.62);
   --input-border: rgba(255, 255, 255, 0.1);
-  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-xs: 0 2px 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.6);
   --shadow-glow-sm: 0 0 8px rgba(64, 150, 255, 0.35);
   --color-info-bg: rgba(64, 150, 255, 0.15);
+  /* Vant 浮层(暗色玻璃) */
+  --van-background: rgba(30, 38, 52, 0.78);
+  --van-background-2: rgba(26, 33, 46, 0.9);
 
   /* ===== Profile 卡片暗色覆写 ===== */
   --profile-hero-grad: linear-gradient(
@@ -197,8 +294,8 @@ textarea {
   --van-text-color: var(--text-primary);
   --van-text-color-2: var(--text-secondary);
   --van-text-color-3: var(--text-tertiary);
-  --van-background: var(--surface);
-  --van-background-2: var(--surface-alt);
+  --van-background: var(--glass-bg);
+  --van-background-2: var(--glass-bg-dark);
   --van-border-color: var(--border-medium);
   --van-cell-background: var(--surface);
   --van-cell-text-color: var(--text-primary);
@@ -207,6 +304,76 @@ textarea {
   --van-nav-bar-title-text-color: var(--text-primary);
   --van-field-input-text-color: var(--text-primary);
   --van-field-placeholder-text-color: var(--text-placeholder);
+  --van-dialog-border-radius: var(--radius-xl);
+  --van-popup-round-radius: var(--radius-xl);
+  --van-action-sheet-border-radius: var(--radius-xl);
+}
+
+/* ===== 悬浮玻璃: 固定 chrome 与浮层统一毛玻璃 ===== */
+.header,
+.van-nav-bar,
+.van-tabbar,
+.van-popup,
+.van-dialog,
+.van-action-sheet,
+.van-toast,
+.van-notice-bar,
+.van-dropdown-menu__bar,
+.van-search,
+.van-search__content {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* 浮层/弹窗: 悬浮圆角 + 柔和投影, 与页面卡片同一套玻璃语言 */
+.van-dialog {
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-xl);
+}
+
+.van-popup--bottom.van-popup--round,
+.van-action-sheet {
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.van-popup--round,
+.van-toast {
+  border-radius: var(--radius-lg);
+}
+
+.van-action-sheet {
+  overflow: hidden;
+}
+
+.van-button--primary {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  box-shadow: 0 8px 22px rgba(74, 144, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.van-button--primary:active {
+  filter: brightness(0.96);
+}
+
+.van-cell-group--inset {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+/* 吸顶页头: 与内容之间留出悬浮层次 */
+.header {
+  box-shadow: var(--header-shadow);
+}
+
+/* 通用玻璃面板: 页面内需要额外毛玻璃时可直接挂类名 */
+.glass-panel {
+  background: var(--surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 /* 禁止双指缩放/双击缩放, 保持可滚动 */

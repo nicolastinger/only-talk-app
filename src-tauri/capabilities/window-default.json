@@ -6,6 +6,7 @@
   "permissions": [
     "core:window:allow-start-dragging",
     "core:app:allow-default-window-icon",
+    "core:app:allow-version",
     "core:tray:allow-new",
     "core:tray:default",
     "core:menu:allow-new",

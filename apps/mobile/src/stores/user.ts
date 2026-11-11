@@ -62,7 +62,9 @@ export const useUserStore = () => {
             userInfo = cached;
           }
         }
-      } catch {}
+      } catch {
+        // KV 里没有 me / 解析失败: 忽略, 走下面的 sqlite 缓存
+      }
 
       if (!userInfo) {
         userInfo = await get_cached_user_info(uuid).catch(() => null);

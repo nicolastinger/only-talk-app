@@ -8,12 +8,16 @@ import {
   closeToast,
   showConfirmDialog,
   ActionSheet,
-  Overlay,
 } from "vant";
 import type { HttpResponse, ResponseData, UserInfo } from "@workspace/types";
-import { CLIENT_CONFIG_KEYS, AuthFactorType } from "@workspace/types";
+import {
+  CLIENT_CONFIG_KEYS,
+  AuthFactorType,
+  PRIVACY_POLICY_URL,
+} from "@workspace/types";
 import {
   getApiBase,
+  getConfig,
   setConfig,
   getFiles,
   get_cached_user_info_by_account,
@@ -23,9 +27,11 @@ import {
   get_quic_servers,
   list_auth_factors,
   isBackendSuccess,
+  openExternalUrl,
 } from "@workspace/services";
 import { useAuthStore } from "@/stores/auth";
 import { parseResponse } from "@/utils/api";
+import { hasTriedAutoLogin, markAutoLoginTried } from "@/utils/autoLogin";
 import { useI18n } from "@/i18n";
 
 const router = useRouter();
@@ -35,8 +41,6 @@ const { setLoggedIn, clearAuth } = useAuthStore();
 const form = reactive({ account: "", password: "" });
 const agreed = ref(false);
 const loading = ref(false);
-const showPrivacy = ref(false);
-const privacyContent = ref("");
 const accountError = ref("");
 const passwordError = ref("");
 
@@ -174,31 +178,56 @@ const handleDeleteUser = async () => {
   }
 };
 
-const handleQuickLogin = async () => {
-  const user = currentQuickUser.value;
-  if (!user?.refresh_token) return;
+/** 用指定免登录账号换 token 登录, 返回是否成功(成功后已进入应用) */
+const quickLogin = async (user: QuickLoginUser | null): Promise<boolean> => {
+  if (!user?.refresh_token) return false;
   quickLoginLoading.value = true;
-  const failQuickLogin = () => {
-    showQuickLogin.value = false;
-    showToast({ message: t("login.quickLoginFailed"), icon: "fail" });
-  };
   try {
     const response: HttpResponse = await invoke("quick_login", {
       refreshToken: user.refresh_token,
       url: getApiBase(),
     });
     const data: ResponseData = JSON.parse(response.body);
-    if (isBackendSuccess(data.code)) {
-      await enterApp();
-    } else {
-      failQuickLogin();
-    }
+    if (!isBackendSuccess(data.code)) return false;
+    await enterApp();
+    return true;
   } catch (error) {
     console.log(error);
-    failQuickLogin();
+    return false;
   } finally {
     quickLoginLoading.value = false;
   }
+};
+
+const handleQuickLogin = async () => {
+  const user = currentQuickUser.value;
+  if (!user?.refresh_token) return;
+  if (await quickLogin(user)) return;
+  showQuickLogin.value = false;
+  showToast({ message: t("login.quickLoginFailed"), icon: "fail" });
+};
+
+/**
+ * 打开应用自动登录第一个账号(免登录列表中最近使用的那一个)。
+ * 每次启动只尝试一次; 设置-通用中可关闭(app.auto_login = "0")。
+ */
+const tryAutoLogin = async () => {
+  if (hasTriedAutoLogin()) return;
+  const first = quickUsers.value[0];
+  if (!first?.refresh_token) return;
+  if (getConfig(CLIENT_CONFIG_KEYS.appAutoLogin) === "0") return;
+  markAutoLoginTried();
+  currentUserIndex.value = 0;
+  showLoadingToast({
+    message: t("login.autoLoggingIn"),
+    forbidClick: true,
+    duration: 0,
+  });
+  const ok = await quickLogin(first);
+  if (ok) return; // enterApp 已关闭 loading 并跳转
+  closeToast();
+  // 自动登录失败时保留免登录界面, 用户可换账号或改用密码登录
+  showToast({ message: t("login.quickLoginFailed"), icon: "fail" });
 };
 
 const toPasswordLogin = () => {
@@ -216,6 +245,10 @@ const toQuickLogin = async () => {
 
 const toRegister = () => {
   router.push("/signup");
+};
+
+const toForgotPassword = () => {
+  router.push("/forgot-password");
 };
 
 const validateAccount = (value: string): boolean => {
@@ -381,7 +414,9 @@ const onLogin = async () => {
           showToast({ message: t("login.invalidCredentials"), icon: "fail" });
           return;
         }
-      } catch {}
+      } catch {
+        // 非 JSON 错误体: 按网络错误处理
+      }
     }
     showToast({ message: t("login.networkError"), icon: "fail" });
   } finally {
@@ -389,21 +424,14 @@ const onLogin = async () => {
   }
 };
 
-const loadPrivacyMd = async () => {
-  try {
-    privacyContent.value = await (await fetch("/markdown/privacy.md")).text();
-  } catch {
-    privacyContent.value = t("login.privacyLoadFailed");
-  }
-};
-const onOpenPrivacy = async () => {
-  await loadPrivacyMd();
-  showPrivacy.value = true;
-};
-onMounted(() => {
+/** 打开官网隐私协议页面 */
+const onOpenPrivacy = () => void openExternalUrl(PRIVACY_POLICY_URL);
+onMounted(async () => {
   clearAuth();
   accountAvatar.value = null;
-  loadQuickUsers();
+  await loadQuickUsers();
+  // 打开应用默认登录第一个账号(最近使用); 失败则留在登录页
+  await tryAutoLogin();
 });
 </script>
 
@@ -588,9 +616,9 @@ onMounted(() => {
             ></label>
             <span class="agreement-text"
               >{{ t("login.agreePrefix")
-              }}<a class="privacy-link" @click.prevent="onOpenPrivacy"
-                >{{ t("login.privacyPolicyLink") }}</a
-              ></span
+              }}<a class="privacy-link" @click.prevent="onOpenPrivacy">{{
+                t("login.privacyPolicyLink")
+              }}</a></span
             >
           </div>
           <button class="login-btn" :disabled="loading" @click="onLogin">
@@ -607,6 +635,10 @@ onMounted(() => {
               }}</a>
               <span class="divider">|</span>
             </template>
+            <a class="switch-link" @click="toForgotPassword">{{
+              t("login.forgotPassword")
+            }}</a>
+            <span class="divider">|</span>
             <a class="switch-link" @click="toRegister">{{
               t("login.register")
             }}</a>
@@ -614,26 +646,6 @@ onMounted(() => {
         </div>
       </template>
     </div>
-    <Overlay :show="showPrivacy" @click="showPrivacy = false">
-      <div class="privacy-modal" @click.stop>
-        <div class="privacy-header">
-          <h2>{{ t("login.privacyTitle") }}</h2>
-          <button class="privacy-close" @click="showPrivacy = false">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-              />
-            </svg>
-          </button>
-        </div>
-        <div class="privacy-body" v-html="privacyContent"></div>
-        <div class="privacy-footer">
-          <button class="privacy-confirm" @click="showPrivacy = false">
-            {{ t("login.gotIt") }}
-          </button>
-        </div>
-      </div>
-    </Overlay>
     <ActionSheet
       v-model:show="showApiSheet"
       :actions="apiActions"

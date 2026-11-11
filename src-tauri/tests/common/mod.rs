@@ -89,6 +89,51 @@ where
     teardown(pool, &path).await;
 }
 
+/// 同时初始化 user(明文) 与 private(加密) 两个库。
+///
+/// 入站消息分发会同时写 private(聊天记录) 与 user(会话/好友), 需要两个全局池并存。
+pub async fn with_user_and_private_db<F, Fut>(f: F)
+where
+    F: FnOnce(SqlitePool, SqlitePool) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    let _guard = DB_TEST_LOCK.lock().await;
+    clear_all_global_pools().await;
+    {
+        let mut last = LAST_DB_FILE.lock().expect("获取 LAST_DB_FILE 锁失败");
+        if let Some(prev) = last.take() {
+            remove_db_files(&prev);
+        }
+    }
+
+    let user_path = temp_db_path(DbKind::User);
+    let private_path = temp_db_path(DbKind::Private);
+    {
+        let mut last = LAST_DB_FILE.lock().expect("获取 LAST_DB_FILE 锁失败");
+        *last = Some(user_path.clone());
+    }
+
+    let user_pool = open_pool(DbKind::User, &user_path).await;
+    init_user_ddl(&user_pool).await.expect("初始化 user 表结构失败");
+    *GLOBAL_SQL_POOL.write().await = Some(Arc::new(user_pool.clone()));
+
+    let private_pool = open_pool(DbKind::Private, &private_path).await;
+    init_private_ddl(&private_pool).await.expect("初始化 private 表结构失败");
+    *GLOBAL_PRIVATE_SQL_POOL.write().await = Some(Arc::new(private_pool.clone()));
+
+    f(user_pool.clone(), private_pool.clone()).await;
+
+    private_pool.close().await;
+    user_pool.close().await;
+    clear_all_global_pools().await;
+    remove_db_files(&user_path);
+    remove_db_files(&private_path);
+    {
+        let mut last = LAST_DB_FILE.lock().expect("获取 LAST_DB_FILE 锁失败");
+        *last = None;
+    }
+}
+
 async fn setup(kind: DbKind) -> (SqlitePool, PathBuf) {
     // 1. 释放上一次(可能 panic 残留)的全局池, 确保旧文件可被删除
     clear_all_global_pools().await;
@@ -108,28 +153,7 @@ async fn setup(kind: DbKind) -> (SqlitePool, PathBuf) {
         *last = Some(path.clone());
     }
 
-    let pool = match kind {
-        DbKind::Private => {
-            let opts = SqliteConnectOptions::new()
-                .filename(&path)
-                .create_if_missing(true)
-                // sqlx 会把 pragma 值原样拼进 SQL, 需自带引号(与生产代码一致)
-                .pragma("key", format!("'{}'", TEST_PRIVATE_KEY));
-            SqlitePoolOptions::new()
-                .max_connections(1)
-                .connect_with(opts)
-                .await
-                .expect("创建 private 测试数据库失败")
-        }
-        _ => {
-            let opts = SqliteConnectOptions::new().filename(&path).create_if_missing(true);
-            SqlitePoolOptions::new()
-                .max_connections(1)
-                .connect_with(opts)
-                .await
-                .expect("创建测试数据库失败")
-        }
-    };
+    let pool = open_pool(kind, &path).await;
 
     match kind {
         DbKind::User => {
@@ -153,6 +177,32 @@ async fn teardown(pool: SqlitePool, path: &Path) {
     {
         let mut last = LAST_DB_FILE.lock().expect("获取 LAST_DB_FILE 锁失败");
         *last = None;
+    }
+}
+
+/// 打开(必要时创建)指定类型的测试库连接池。
+async fn open_pool(kind: DbKind, path: &Path) -> SqlitePool {
+    match kind {
+        DbKind::Private => {
+            let opts = SqliteConnectOptions::new()
+                .filename(path)
+                .create_if_missing(true)
+                // sqlx 会把 pragma 值原样拼进 SQL, 需自带引号(与生产代码一致)
+                .pragma("key", format!("'{}'", TEST_PRIVATE_KEY));
+            SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect_with(opts)
+                .await
+                .expect("创建 private 测试数据库失败")
+        }
+        _ => {
+            let opts = SqliteConnectOptions::new().filename(path).create_if_missing(true);
+            SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect_with(opts)
+                .await
+                .expect("创建测试数据库失败")
+        }
     }
 }
 

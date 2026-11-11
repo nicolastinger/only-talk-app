@@ -1,0 +1,922 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--ant-color-bg-container);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background-color: var(--ant-color-bg-elevated);
+  border-bottom: 1px solid var(--ant-color-border);
+  -webkit-app-region: drag;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.headerAvatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid var(--ant-color-border);
+}
+
+.title {
+  max-width: 220px;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerTimer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #52c41a;
+  background-color: rgba(82, 196, 26, 12%);
+  border-radius: 999px;
+}
+
+.headerTimerDot {
+  width: 6px;
+  height: 6px;
+  background-color: #52c41a;
+  border-radius: 50%;
+  animation: dot-blink 1.6s ease-in-out infinite;
+}
+
+.headerButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.headerBtn {
+  -webkit-app-region: no-drag;
+}
+
+.exitBtn {
+  -webkit-app-region: no-drag;
+}
+
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.videoPanel {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  background-color: #0b0d12;
+}
+
+.stageArea {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 20%,
+    #232733 0%,
+    #0b0d12 60%,
+    #05060a 100%
+  );
+}
+
+.remoteVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: #000;
+}
+
+.stagePlaceholder {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.stageAvatarHalo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 128px;
+  height: 128px;
+  margin-bottom: 8px;
+}
+
+.stageAvatarRing {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(82, 196, 26, 35%);
+  border-radius: 50%;
+  animation: ring-pulse 2.4s ease-out infinite;
+}
+
+.stageAvatar {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 20%);
+  border-radius: 50%;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 45%);
+}
+
+.stageName {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.stageHint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 65%);
+}
+
+.callInfoBar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 45%);
+  border: 1px solid rgba(255, 255, 255, 12%);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+}
+
+.infoDot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  background-color: rgba(255, 255, 255, 45%);
+  border-radius: 50%;
+}
+
+.infoDotLive {
+  background-color: #52c41a;
+  animation: dot-blink 1.6s ease-in-out infinite;
+}
+
+.infoName {
+  max-width: 180px;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.infoDivider {
+  width: 1px;
+  height: 12px;
+  background-color: rgba(255, 255, 255, 20%);
+}
+
+.infoTimer {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 65%);
+}
+
+.infoTimerLive {
+  font-weight: 600;
+  color: #fff;
+}
+
+.localVideoContainer {
+  position: absolute;
+  right: 20px;
+  bottom: 104px;
+  z-index: 8;
+  width: 176px;
+  height: 132px;
+  overflow: hidden;
+  background-color: #000;
+  border: 1px solid rgba(255, 255, 255, 22%);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 50%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 55%);
+    transform: translateY(-2px) scale(1.02);
+  }
+}
+
+.localVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// 关闭摄像头只隐藏，不卸载 <video>，否则重新开启时 srcObject 丢失会黑屏
+.localVideoHidden {
+  display: none;
+}
+
+// 采集失败（无视频轨）时的占位提示，避免小窗只显示一块黑
+.localEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 70%);
+  text-align: center;
+}
+
+.localBadge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 50%);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+
+.localMutedBadge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  color: #fff;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+}
+
+.controlDock {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 18px;
+  background-color: rgba(16, 18, 24, 60%);
+  border: 1px solid rgba(255, 255, 255, 12%);
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 45%);
+  backdrop-filter: blur(18px);
+  transform: translateX(-50%);
+  animation: dock-in 0.3s ease;
+}
+
+.dockBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  color: #fff;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 14%);
+  border: 1px solid rgba(255, 255, 255, 18%);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 26%);
+    transform: translateY(-1px);
+  }
+}
+
+.dockBtnOff {
+  color: #1a1a1a;
+  background-color: #fff;
+  border-color: #fff;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 88%);
+  }
+}
+
+.hangupBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ff7875 0%, #ff4d4f 100%);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(255, 77, 79, 45%);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 10px 24px rgba(255, 77, 79, 55%);
+    transform: translateY(-1px);
+  }
+}
+
+.chatPanel {
+  width: 20%;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ant-color-bg-container);
+  border-left: 1px solid var(--ant-color-border);
+}
+
+.hint {
+  padding: 8px 16px;
+  background-color: var(--ant-color-info-bg);
+  color: var(--ant-color-info);
+  font-size: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.messageContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  background-color: var(--ant-color-bg-layout);
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 15%);
+    border-radius: 2px;
+  }
+}
+
+.messageRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  animation: slide-in 0.3s ease;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.messageItem {
+  max-width: 95%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+
+.senderName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ant-color-text);
+}
+
+.messageBubble {
+  padding: 10px 14px;
+  border-radius: 12px 4px 12px 12px;
+  word-wrap: break-word;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 100%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 10%);
+}
+
+.mineBubble {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  color: #fff;
+}
+
+.friendBubble {
+  background-color: var(--ant-color-bg-elevated);
+  color: var(--ant-color-text);
+  border: 1px solid var(--ant-color-border);
+}
+
+// 自己消息的送达/已读状态（只在 isMine 时渲染）
+.messageState {
+  margin-top: 3px;
+  padding: 0 4px;
+  font-size: 11px;
+  color: #52c41a;
+}
+
+.messageTime {
+  font-size: 10px;
+  color: var(--ant-color-text-tertiary);
+  margin-top: 4px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ant-color-bg-elevated);
+  border-top: 1px solid var(--ant-color-border);
+  flex-shrink: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--ant-color-border);
+  background-color: var(--ant-color-bg-layout);
+}
+
+.toolbarBtn {
+  color: var(--ant-color-text-tertiary);
+  font-size: 18px;
+  padding: 4px 8px;
+
+  &:hover {
+    color: var(--ant-color-primary);
+    background-color: var(--ant-color-bg-text-hover);
+    border-radius: 4px;
+  }
+}
+
+.emojiWrapper {
+  position: relative;
+}
+
+.emojiPicker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 260px;
+  max-height: 240px;
+  background: var(--ant-color-bg-elevated);
+  border: 1px solid var(--ant-color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 15%);
+  padding: 8px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: fade-in 0.2s ease;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 15%);
+    border-radius: 2px;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+
+.emojiItem {
+  font-size: 18px;
+  cursor: pointer;
+  text-align: center;
+  padding: 6px 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(24, 144, 255, 10%);
+    transform: scale(1.15);
+  }
+}
+
+.inputArea {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 10px 12px;
+}
+
+.textArea {
+  flex: 1;
+  border-radius: 8px;
+  font-size: 13px;
+  resize: none;
+
+  &:focus {
+    border-color: var(--ant-color-primary);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 10%);
+  }
+}
+
+.sendBtn {
+  flex-shrink: 0;
+}
+
+.retryContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 12px;
+}
+
+.retryText {
+  color: var(--ant-color-error);
+}
+
+.connectingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+}
+
+.connectingText {
+  color: var(--ant-color-text-secondary);
+}
+
+.callScreen {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 15%,
+    #1e2432 0%,
+    #0b0d12 55%,
+    #05060a 100%
+  );
+}
+
+.callScreenBackdrop {
+  position: absolute;
+  inset: -60px;
+  background-position: center;
+  background-size: cover;
+  filter: blur(56px) saturate(1.3);
+  opacity: 0.32;
+}
+
+.callScreenContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.callAvatarHalo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 140px;
+  margin-bottom: 10px;
+}
+
+.callAvatarRing {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(82, 196, 26, 45%);
+  border-radius: 50%;
+  animation: ring-pulse 2.4s ease-out infinite;
+}
+
+.callAvatarRingSlow {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(82, 196, 26, 30%);
+  border-radius: 50%;
+  animation: ring-pulse 2.4s ease-out 1.2s infinite;
+}
+
+.callAvatar {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 25%);
+  border-radius: 50%;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 50%);
+}
+
+.callAvatarMedia {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border: 2px solid rgba(11, 13, 18, 85%);
+  border-radius: 50%;
+}
+
+.callName {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.callMediaLabel {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 50%);
+}
+
+.callStageText {
+  margin-top: 2px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 72%);
+}
+
+.callActions {
+  display: flex;
+  align-items: flex-start;
+  gap: 64px;
+  margin-top: 36px;
+}
+
+.callActionItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.callActionLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 65%);
+}
+
+.callAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+  color: #fff;
+  cursor: pointer;
+  border: none;
+  border-radius: 50%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.03);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.callActionAccept {
+  background: linear-gradient(135deg, #34d570 0%, #0fbf5b 100%);
+  box-shadow: 0 10px 26px rgba(15, 191, 91, 45%);
+}
+
+.callActionReject {
+  background: linear-gradient(135deg, #ff7875 0%, #e64646 100%);
+  box-shadow: 0 10px 26px rgba(230, 70, 70, 45%);
+}
+
+.callRingingDots {
+  display: flex;
+  gap: 6px;
+  margin-top: 24px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    background-color: rgba(255, 255, 255, 60%);
+    border-radius: 50%;
+    animation: dot-blink 1.2s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+@keyframes dot-blink {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ring-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.92);
+  }
+
+  70% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.viewTabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.viewTab {
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--ant-color-text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.viewTabActive {
+  color: var(--ant-color-primary);
+  background-color: var(--ant-color-primary-bg);
+  font-weight: 500;
+}
+
+.logPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  overflow: hidden;
+}
+
+.logHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.logTitle {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.logBody {
+  flex: 1;
+  overflow-y: auto;
+  font-family: Consolas, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  background-color: var(--ant-color-bg-layout);
+  border: 1px solid var(--ant-color-border);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.logEmpty {
+  color: var(--ant-color-text-secondary);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.logLine {
+  display: flex;
+  gap: 8px;
+  word-break: break-all;
+}
+
+.logTime {
+  color: var(--ant-color-text-secondary);
+  flex-shrink: 0;
+}
+
+.logLevel {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.logInfo {
+  color: var(--ant-color-primary);
+}
+
+.logWarn {
+  color: var(--ant-color-warning);
+}
+
+.logError {
+  color: var(--ant-color-error);
+}
+
+.logMessage {
+  color: var(--ant-color-text);
+  white-space: pre-wrap;
+}

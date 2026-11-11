@@ -2,7 +2,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
 
-const ROOT = normalize(process.argv[2] || 'apps/pc/dist');
+const ROOT = normalize(process.argv[2] || 'apps/desktop/dist');
 const PORT = Number(process.argv[3] || 8899);
 
 const MIME = {

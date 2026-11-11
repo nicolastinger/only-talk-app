@@ -8,7 +8,7 @@ const { t } = useMessages();
 </script>
 
 <template>
-  <LegalLayout :title="t.agreement.title" updated-at="2026-01-01">
+  <LegalLayout :title="t.agreement.title" updated-at="2026-10-12">
     <LegalSection
       v-for="section in t.agreement.sections"
       :key="section.title"

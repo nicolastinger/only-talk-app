@@ -1,9 +1,9 @@
 import { createApp } from "vue";
 import { showToast } from "vant";
-import { initAppConfig, setHttpErrorHandler } from "@workspace/services";
+import { initAppConfig, setHttpErrorHandler, setHttpErrorMessageResolver } from "@workspace/services";
 import App from "./App.vue";
 import router from "./router";
-import { initLocale } from "@/i18n";
+import { initLocale, t } from "@/i18n";
 import UserTypeTag from "@/components/UserTypeTag.vue";
 import "vant/lib/index.css";
 import "@/styles/theme.css";
@@ -44,6 +44,9 @@ document.addEventListener("selectstart", (event) => {
 
 const app = createApp(App);
 
+// HTTP 错误兜底文案走 i18n(services 层只拿 key, 具体翻译由各端提供)
+setHttpErrorMessageResolver((key, params) => t(key, params));
+
 // 注册统一 HTTP 错误中间层展示器(所有 http 接口的 604/500/401/403/404 等错误都在此统一展示)
 setHttpErrorHandler({
   show: (result) => {
@@ -52,7 +55,7 @@ setHttpErrorHandler({
       showToast(result.messages.join("\n"));
       return;
     }
-    showToast(result.message || "请求失败");
+    showToast(result.message || t("common.requestFailed"));
   },
 });
 

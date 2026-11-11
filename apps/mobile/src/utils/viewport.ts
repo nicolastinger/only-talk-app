@@ -15,14 +15,21 @@ export const getVisibleViewportHeight = (): number => {
   return Math.max(200, Math.min(inner, vvHeight));
 };
 
-/** 将元素高度绑定到可见视口高度，返回解绑函数 */
+/**
+ * 将元素高度绑定到可见视口高度，返回解绑函数。
+ *
+ * @param rootGetter 返回需要绑定高度的根元素
+ * @param onApplied  每次应用完可见高度后回调（如软键盘弹出/收起时重新贴底）
+ */
 export function attachViewportHeight(
-  rootGetter: () => HTMLElement | null
+  rootGetter: () => HTMLElement | null,
+  onApplied?: () => void
 ): () => void {
   const apply = () => {
     const el = rootGetter();
     if (!el) return;
     el.style.height = `${getVisibleViewportHeight()}px`;
+    onApplied?.();
   };
 
   apply();

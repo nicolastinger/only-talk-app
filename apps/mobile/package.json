@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint src --ext .ts,.vue",
+    "lint:fix": "eslint src --ext .ts,.vue --fix",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
@@ -15,11 +17,11 @@
     "format": "prettier --cache --write ."
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.5.0",
-    "@tauri-apps/plugin-dialog": "^2.4.2",
-    "@tauri-apps/plugin-fs": "^2.5.1",
-    "@tauri-apps/plugin-notification": "^2.4.0",
-    "@tauri-apps/plugin-opener": "^2.5.3",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
+    "@tauri-apps/plugin-fs": "^2.7.1",
+    "@tauri-apps/plugin-notification": "^2.7.0",
+    "@tauri-apps/plugin-opener": "^2.7.2",
     "@workspace/i18n": "workspace:*",
     "@workspace/services": "workspace:*",
     "@workspace/types": "workspace:*",
@@ -31,14 +33,19 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.0.0-rc.18",
+    "@tauri-apps/cli": "2.12.3",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-vue": "^5.0.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-vue": "^9.33.0",
     "less": "^4.2.0",
     "prettier": "^2.8.7",
     "prettier-plugin-organize-imports": "^3.2.2",
     "prettier-plugin-packagejson": "^2.4.3",
     "typescript": "^5.0.3",
     "vite": "^5.0.0",
+    "vue-eslint-parser": "^9.4.3",
     "vue-tsc": "^2.0.0"
   }
 }

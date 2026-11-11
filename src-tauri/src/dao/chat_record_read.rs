@@ -1,5 +1,5 @@
 use crate::dao::get_db_client;
-use crate::entity::chat_record_read::ChatRecordRead;
+use crate::models::entity::chat_record_read::ChatRecordRead;
 
 /// 更新已读消息
 pub async fn update_last_read_msg(chat_record_read: &ChatRecordRead) -> Result<(), anyhow::Error> {

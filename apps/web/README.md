@@ -8,8 +8,8 @@
 | ------------ | ------------------------------------ |
 | `/`          | 首页（Hero / 特性 / CTA）            |
 | `/download`  | 下载发布页（各平台客户端安装包）     |
-| `/privacy`   | 隐私协议（占位骨架，正文待补充）     |
-| `/agreement` | 用户使用协议（占位骨架，正文待补充） |
+| `/privacy`   | 隐私协议                             |
+| `/agreement` | 用户使用协议                         |
 
 ## 开发
 
@@ -25,15 +25,23 @@ pnpm --filter @workspace/app-web build    # 内置 vue-tsc 类型检查，产物
 
 ## 下载配置
 
-下载入口统一维护在 `src/config/downloads.ts`（单一数据源）。当前全部为占位符：
+下载入口统一维护在 `src/config/downloads.ts`（单一数据源），统一指向 GitHub 最新发行版页面：
 
-- `localUrl` 指向 nginx `/downloads/` 目录（真实安装包放入 `public/downloads/` 或服务器同名目录）
-- `releaseUrl` 指向 GitHub Releases
-- 正式发布后请更新配置并将 `isPlaceholder` 置为 `false`
+- `GITHUB_RELEASES_URL` / `LATEST_RELEASE_URL`：`https://github.com/nicolastinger/only-talk-app/releases/latest`
+- header 的两个仓库地址：`GITHUB_APP_REPO_URL` / `GITHUB_RS_REPO_URL`
 
-## 部署（nginx）
+不硬编码资产文件名，发新版后官网无需改动。
 
-参考 `nginx.conf.example`。核心是 SPA history 路由回退：
+## 部署（子域名 www.onlytalk.cn）
+
+官网与后端共用同一台部署机与 nginx 网关（配置在 `only-talk-rs/deploy/`）：
+
+1. 官网 CD：`.github/workflows/deploy-web.yml` 构建 `apps/web`，把 `dist` 同步到后端部署目录
+   `<home>/only-talk-rs-deploy/deploy/web`。
+2. 后端 nginx 网关以 `WEB_DOMAIN`（`www.onlytalk.cn`）托管该目录（bind-mount，同步即生效，无需 reload）。
+3. 证书由后端 certbot 以多 SAN 证书覆盖 `onlytalk.cn` + `www.onlytalk.cn`；80 端口保留给 ACME。
+
+核心是 SPA history 路由回退：
 
 ```nginx
 location / {
@@ -41,4 +49,4 @@ location / {
 }
 ```
 
-协议页 / 下载页 / 首页均为静态内容，无需后端接口。
+本地或独立 nginx 可参考 `nginx.conf.example`。协议页 / 下载页 / 首页均为静态内容，无需后端接口。

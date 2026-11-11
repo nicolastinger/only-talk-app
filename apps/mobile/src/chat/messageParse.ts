@@ -2,18 +2,13 @@ import type {
   FileRecord,
   GroupFileRecord,
   GroupImageRecord,
+  GroupVoiceRecord,
   ImageRecord,
   TextQuicMsgVo,
+  VoiceRecord,
 } from "@workspace/types";
 import {
-  MSG_TYPE_FILE,
-  MSG_TYPE_GROUP_FILE,
-  MSG_TYPE_GROUP_IMAGE,
-  MSG_TYPE_GROUP_NOTIFICATION,
   MSG_TYPE_GROUP_TEXT,
-  MSG_TYPE_IMAGE,
-  MSG_TYPE_P2P,
-  MSG_TYPE_P2P_VIDEO_CALL,
   MSG_TYPE_P2P_VIDEO_CALL_ACCEPT,
   MSG_TYPE_P2P_VIDEO_CALL_END,
   MSG_TYPE_P2P_VIDEO_CALL_INVITE,
@@ -22,6 +17,7 @@ import {
   MSG_TYPE_TEXT,
   MSG_TYPE_WEBRTC_SIGNAL,
 } from "./messageTypes";
+import { resolveMessagePreview } from "@workspace/services";
 import { t } from "@/i18n";
 
 /**
@@ -61,7 +57,7 @@ export const extensionOf = (fileName: string): string => {
   return dot >= 0 ? fileName.slice(dot + 1) : "";
 };
 
-/* ==================== 单聊（text_type 1/2/3） ==================== */
+/* ==================== 单聊（text_type 1/2/3/21） ==================== */
 
 /** 单聊文本：raw = {"text":"...","prev_id":"","platform":0} */
 export const parsePrivateText = (raw: string): string => {
@@ -82,7 +78,13 @@ export const parsePrivateFileRecord = (raw: string): FileRecord | null => {
   return tryParseJson<FileRecord>(raw);
 };
 
-/* ==================== 群聊（text_type 2001/2002/2003） ==================== */
+/** 单聊语音：raw = VoiceRecord JSON */
+export const parsePrivateVoiceRecord = (raw: string): VoiceRecord | null => {
+  if (isLocalFilePath(raw)) return null;
+  return tryParseJson<VoiceRecord>(raw);
+};
+
+/* ==================== 群聊（text_type 2001/2002/2003/2006） ==================== */
 
 /**
  * 解一层群聊外层 JSON：{"text":"<内容字符串>","send_user":"..."}
@@ -124,6 +126,14 @@ export const parseGroupFileRecord = (raw: string): GroupFileRecord | null => {
   const outer = unwrapGroupOuter(raw);
   const inner = outer?.text ?? raw;
   return tryParseJson<GroupFileRecord>(inner);
+};
+
+/** 群聊语音内层：raw 双层 JSON → GroupVoiceRecord */
+export const parseGroupVoiceRecord = (raw: string): GroupVoiceRecord | null => {
+  if (isLocalFilePath(raw)) return null;
+  const outer = unwrapGroupOuter(raw);
+  const inner = outer?.text ?? raw;
+  return tryParseJson<GroupVoiceRecord>(inner);
 };
 
 /* ==================== 通知/系统 ==================== */
@@ -180,33 +190,16 @@ export const isRecallMessage = (textType: number, raw: string): boolean =>
 
 /* ==================== 预览/兜底文案 ==================== */
 
-/** 会话列表 / 未知类型 的兜底文案（对齐 PC Search.formatMessage） */
+/**
+ * 会话列表 / 未知类型 的兜底文案。
+ *
+ * 直接复用 `@workspace/services` 的预览状态机：它先按 raw 形状识别
+ * (兼容服务端 last_preview 只有 raw、没有 text_type 的会话)，再按 text_type 兜底。
+ */
 export const getMessageDisplayText = (
   text_type: number,
   raw: string
-): string => {
-  if (isRecallMessage(text_type, raw)) return t("chat.recalled");
-  switch (text_type) {
-    case MSG_TYPE_TEXT:
-      return parsePrivateText(raw);
-    case MSG_TYPE_GROUP_TEXT:
-      return parseGroupText(raw);
-    case MSG_TYPE_IMAGE:
-    case MSG_TYPE_GROUP_IMAGE:
-      return t("chat.typeImage");
-    case MSG_TYPE_FILE:
-    case MSG_TYPE_GROUP_FILE:
-      return t("chat.typeFile");
-    case MSG_TYPE_P2P:
-      return t("chat.typePrivate");
-    case MSG_TYPE_P2P_VIDEO_CALL:
-      return t("chat.typeVideoCall");
-    case MSG_TYPE_GROUP_NOTIFICATION:
-      return parseSystemContent(raw);
-    default:
-      return raw || t("chat.typeUnknown");
-  }
-};
+): string => resolveMessagePreview(text_type, raw, t).text;
 
 /** 时间分隔判断：与上一条相隔 > 10 分钟 则展示时间 */
 export const needTimeDivider = (
@@ -215,6 +208,29 @@ export const needTimeDivider = (
 ): boolean => {
   if (!prevTimestamp) return true;
   return Math.abs(currentTimestamp - prevTimestamp) >= 10 * 60 * 1000;
+};
+
+/**
+ * 消息的纯文本内容（仅文本类消息；非文本类型返回空串）。
+ *
+ * 与 `parsePrivateText` / `parseGroupText` 不同：这里不带「空消息」等占位文案，
+ * 供多选复制等需要原始文本的场景使用。
+ */
+export const getCopyableText = (textType: number, raw: string): string => {
+  if (textType === MSG_TYPE_TEXT) {
+    if (isLocalFilePath(raw)) return "";
+    const parsed = tryParseJson<{ text?: string; content?: string }>(raw);
+    return parsed?.text || parsed?.content || raw;
+  }
+  if (textType === MSG_TYPE_GROUP_TEXT) {
+    if (isLocalFilePath(raw)) return "";
+    const outer = unwrapGroupOuter(raw);
+    const inner = outer ? outer.text : raw;
+    if (!inner) return "";
+    const nested = tryParseJson<{ text?: string }>(inner);
+    return typeof nested?.text === "string" ? nested.text : inner;
+  }
+  return "";
 };
 
 /** 判断某条消息是否需要按“自己发送/回执状态”渲染（mine 判定复用） */

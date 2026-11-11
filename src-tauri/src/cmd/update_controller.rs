@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Runtime};
 
+use crate::models::vo::update_vo::UpdateInfo;
 use crate::service::update_service;
-use crate::vo::update_vo::UpdateInfo;
 
 /// 查询 GitHub Releases 最新版本(含当前平台的安装包资产)。
 /// 无新发布或当前平台无匹配资产时返回 None, 网络失败返回 Err。

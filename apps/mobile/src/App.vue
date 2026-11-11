@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { showDialog } from "vant";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { subscribe } from "@workspace/services";
 import { onAction } from "@tauri-apps/plugin-notification";
 import BottomNav from "@/components/BottomNav/index.vue";
 import ConnectionStatusTag from "@/components/ConnectionStatusTag/index.vue";
@@ -16,8 +16,12 @@ import {
   useUnreadStore,
 } from "@/stores/unread";
 import { useAuthStore } from "@/stores/auth";
+import { markAutoLoginTried } from "@/utils/autoLogin";
 import { useTheme } from "@/stores/theme";
 import { useCallManager } from "@/webrtc/callManager";
+import { usePrivacyManager } from "@/privacy/manager";
+import PrivacyRequestOverlay from "@/components/privacy/PrivacyRequestOverlay.vue";
+import { useMessageSound } from "@/hooks/useMessageSound";
 import { clearUuidCache } from "@/utils/api";
 import { useI18n } from "@/i18n";
 import AnnouncementCenter from "@/components/AnnouncementCenter.vue";
@@ -28,13 +32,17 @@ const { t } = useI18n();
 const { isLoggedIn, clearAuth } = useAuthStore();
 useTheme();
 useCallManager();
+usePrivacyManager();
+// 来消息提示音(可在设置-通知中关闭)
+useMessageSound();
 
-let unlistenForceLogout: UnlistenFn | undefined;
+let unlistenForceLogout: (() => void) | undefined;
 let logoutTask: Promise<void> | undefined;
 
 const showNav = computed(() => {
   const path = route.path;
   if (path === "/call") return false;
+  if (path.startsWith("/privacy/chat/")) return false;
   if (path.startsWith("/chats/chat/")) return false;
   if (path === "/friends/search" || path.startsWith("/friends/detail/"))
     return false;
@@ -153,9 +161,8 @@ onMounted(() => {
   registerNotificationClick();
   setupForegroundTracking();
   // 收到服务端"账号已在其他设备登录"通知:弹窗确认后再退出登录
-  listen<string>("force_logout", (event) => {
-    const reason =
-      event.payload || t("homeLayout.forceLogoutContent");
+  unlistenForceLogout = subscribe("force_logout", (payload) => {
+    const reason = payload || t("homeLayout.forceLogoutContent");
     showDialog({
       title: t("homeLayout.forceLogoutTitle"),
       message: reason,
@@ -165,17 +172,13 @@ onMounted(() => {
       closeOnClickOverlay: false,
     })
       .then(() => {
+        // 被顶下线后不要自动登录回同一账号(仅本次启动生效)
+        markAutoLoginTried();
         clearAuth();
         router.replace("/login");
       })
       .catch(() => {});
-  })
-    .then((stop) => {
-      unlistenForceLogout = stop;
-    })
-    .catch((e) => {
-      console.error("force_logout 监听失败:", e);
-    });
+  });
 });
 
 onUnmounted(() => {
@@ -197,6 +200,7 @@ onUnmounted(() => {
     <QuicStatusBar />
     <SyncOverlay />
     <AnnouncementCenter />
+    <PrivacyRequestOverlay />
   </div>
 </template>
 
@@ -247,7 +251,7 @@ body {
   min-height: 100vh;
   background: var(
     --page-bg,
-    linear-gradient(180deg, #e8f4fd 0%, #f0f6ff 30%, #ffffff 100%)
+    linear-gradient(180deg, #f8fbff 0%, #edf3fd 100%)
   );
 }
 

@@ -7,8 +7,10 @@ export type InputTool =
   | "emoji"
   | "image"
   | "file"
+  | "voice"
   | "audio"
-  | "video";
+  | "video"
+  | "privacy";
 
 const props = defineProps<{
   modelValue: string;
@@ -22,7 +24,9 @@ const emit = defineEmits<{
   (e: "send", text: string): void;
   (e: "pick-image"): void;
   (e: "pick-file"): void;
+  (e: "record-voice"): void;
   (e: "call", media: "audio" | "video"): void;
+  (e: "privacy"): void;
 }>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -46,6 +50,10 @@ const toolDefs: Record<InputTool, { labelKey: string; svg: string }> = {
     labelKey: "chat.tools.file",
     svg: "M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z",
   },
+  voice: {
+    labelKey: "chat.tools.voice",
+    svg: "M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z",
+  },
   audio: {
     labelKey: "chat.tools.audio",
     svg: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
@@ -53,6 +61,10 @@ const toolDefs: Record<InputTool, { labelKey: string; svg: string }> = {
   video: {
     labelKey: "chat.tools.video",
     svg: "M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z",
+  },
+  privacy: {
+    labelKey: "chat.footer.privateChat",
+    svg: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
   },
 };
 
@@ -77,12 +89,20 @@ const clickTool = (tool: InputTool) => {
     emit("pick-file");
     return;
   }
+  if (tool === "voice") {
+    emit("record-voice");
+    return;
+  }
   if (tool === "audio") {
     emit("call", "audio");
     return;
   }
   if (tool === "video") {
     emit("call", "video");
+    return;
+  }
+  if (tool === "privacy") {
+    emit("privacy");
     return;
   }
 };

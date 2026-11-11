@@ -9,6 +9,7 @@ export * from "./moment";
 export * from "./notification";
 export * from "./p2p";
 export * from "./plaza";
+export * from "./presence";
 export * from "./report";
 export * from "./session";
 export * from "./theme";

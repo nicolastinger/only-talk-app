@@ -1,5 +1,5 @@
 use crate::dao::get_private_db_client;
-use crate::entity::chat_record_send::ChatRecordSend;
+use crate::models::entity::chat_record_send::ChatRecordSend;
 
 /// 插入一条发送记录
 pub async fn insert_chat_record_send(

@@ -7,11 +7,19 @@ import {
   MSG_TYPE_GROUP_FILE,
   MSG_TYPE_GROUP_IMAGE,
   MSG_TYPE_GROUP_NOTIFICATION,
+  MSG_TYPE_GROUP_VOICE,
   MSG_TYPE_IMAGE,
   MSG_TYPE_P2P,
   MSG_TYPE_SYSTEM,
+  MSG_TYPE_VOICE,
 } from "@/chat/messageTypes";
-import { getMessageDisplayText, isRecallMessage } from "@/chat/messageParse";
+import {
+  getMessageDisplayText,
+  isLocalFilePath,
+  isRecallMessage,
+  parseGroupVoiceRecord,
+  parsePrivateVoiceRecord,
+} from "@/chat/messageParse";
 import { isMessageSelectable } from "@/chat/useMessageSelection";
 import { useI18n } from "@/i18n";
 import FileMsgItem from "./FileMsgItem.vue";
@@ -19,6 +27,7 @@ import ImageMsg from "./ImageMsg.vue";
 import MsgTimeDivider from "./MsgTimeDivider.vue";
 import PrivacyMsg from "./PrivacyMsg.vue";
 import SystemMsg from "./SystemMsg.vue";
+import VoiceMsg from "./VoiceMsg.vue";
 
 const { t } = useI18n();
 
@@ -123,10 +132,12 @@ const isSystemRow = (msg: UiChatMessage): boolean => {
 /** 内容类型分发（对齐 PC MineChatBox/CustomerChatBox renderMessage） */
 const contentKind = (
   textType: number
-): "text" | "image" | "file" | "privacy" => {
+): "text" | "image" | "file" | "voice" | "privacy" => {
   if (textType === MSG_TYPE_IMAGE || textType === MSG_TYPE_GROUP_IMAGE)
     return "image";
   if (textType === MSG_TYPE_GROUP_FILE) return "file";
+  if (textType === MSG_TYPE_VOICE || textType === MSG_TYPE_GROUP_VOICE)
+    return "voice";
   if (textType === MSG_TYPE_P2P) return "privacy";
   return "text";
 };
@@ -134,6 +145,21 @@ const contentKind = (
 /** 单聊文件(3)/群文件(2003) 统一走文件卡片 */
 const isFileMsg = (textType: number): boolean =>
   textType === MSG_TYPE_FILE || textType === MSG_TYPE_GROUP_FILE;
+
+/** 语音消息解析：biz_id / duration / 发送中的本地路径 */
+const voiceInfo = (
+  msg: UiChatMessage
+): { bizId?: string; duration: number; localPath?: string } => {
+  const raw = msg.textMsg.raw;
+  if (isLocalFilePath(raw)) {
+    return { duration: msg.voiceDuration || 0, localPath: raw };
+  }
+  const record =
+    msg.textMsg.text_type === MSG_TYPE_GROUP_VOICE
+      ? parseGroupVoiceRecord(raw)
+      : parsePrivateVoiceRecord(raw);
+  return { bizId: record?.biz_id, duration: record?.duration || 0 };
+};
 
 const fallbackText = (msg: UiChatMessage): string =>
   getMessageDisplayText(msg.textMsg.text_type, msg.textMsg.raw);
@@ -258,6 +284,25 @@ const imageLoading = (msg: UiChatMessage): boolean =>
             </div>
           </template>
 
+          <!-- 语音消息 -->
+          <template v-else-if="contentKind(msg.textMsg.text_type) === 'voice'">
+            <div
+              class="voice-bubble mine-voice"
+              :class="showSentDot(msg) ? 'has-dot' : ''"
+            >
+              <VoiceMsg
+                :biz-id="voiceInfo(msg).bizId"
+                :duration="voiceInfo(msg).duration"
+                :local-path="voiceInfo(msg).localPath"
+                :nano-id="msg.textMsg.nano_id"
+                :sending="!!msg.sendingVoice && msg.ack === false && !msg.failed"
+                :upload-progress="msg.uploadProgress"
+                :send-phase="msg.sendPhase"
+              />
+              <span v-if="showSentDot(msg)" class="sent-dot" />
+            </div>
+          </template>
+
           <!-- P2P 隐私 -->
           <template
             v-else-if="contentKind(msg.textMsg.text_type) === 'privacy'"
@@ -284,7 +329,10 @@ const imageLoading = (msg: UiChatMessage): boolean =>
           </div>
           <span
             v-else-if="
-              msg.ack === false && !msg.sendingImage && !msg.sendingFile
+              msg.ack === false &&
+              !msg.sendingImage &&
+              !msg.sendingFile &&
+              !msg.sendingVoice
             "
             class="ack-label pending"
             >{{ t("chat.pending.sending") }}</span
@@ -333,6 +381,17 @@ const imageLoading = (msg: UiChatMessage): boolean =>
           <template v-else-if="isFileMsg(msg.textMsg.text_type)">
             <div class="file-bubble friend-file">
               <FileMsgItem :msg="msg" />
+            </div>
+          </template>
+          <template
+            v-else-if="contentKind(msg.textMsg.text_type) === 'voice'"
+          >
+            <div class="voice-bubble friend-voice">
+              <VoiceMsg
+                :biz-id="voiceInfo(msg).bizId"
+                :duration="voiceInfo(msg).duration"
+                :nano-id="msg.textMsg.nano_id"
+              />
             </div>
           </template>
           <template
@@ -453,6 +512,27 @@ const imageLoading = (msg: UiChatMessage): boolean =>
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-xs);
   background: var(--surface);
+}
+
+.voice-bubble {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-xs);
+  max-width: 100%;
+}
+.mine-voice {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: #fff;
+}
+.friend-voice {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+.voice-bubble.has-dot {
+  padding-right: 4px;
 }
 
 /* 媒体消息包裹层（用于定位绿点） */

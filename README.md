@@ -1,24 +1,27 @@
 # OnlyTalk App
 
-> 跨平台即时通讯客户端 — React + Tauri + Vue3 + P2P + WebRTC
+> 跨平台即时通讯客户端 — Vue3 + Tauri + P2P + WebRTC
 
 [English Version](README_EN.md)
 
 ## 项目简介
 
-OnlyTalk App 是一个跨平台即时通讯客户端，支持桌面端（Windows/macOS/Linux）和移动端。桌面端采用 React + Tauri 构建，移动端采用 Vue3 + Vant 开发，提供实时聊天、P2P 通信、视频通话等功能。
+OnlyTalk App 是一个跨平台即时通讯客户端，支持桌面端（Windows/macOS/Linux）和移动端。桌面端与移动端均采用 Vue3 开发，提供实时聊天、P2P 通信、视频通话等功能。
+
+> 桌面端位于 `apps/desktop`（Vue3 + Vite + Ant Design Vue），即 Tauri 默认前端。
 
 ## 技术栈
 
-### 桌面端（PC）
+### 桌面端（Desktop）
 
 | 组件 | 技术 | 说明 |
 |------|------|------|
-| 前端框架 | Umi Max (React 18) | 企业级前端框架 |
-| UI 组件库 | Ant Design 5.x | 企业级 UI 设计语言 |
-| 状态管理 | Zustand 5.x | 轻量级状态管理 |
+| 前端框架 | Vue 3 | 渐进式 JavaScript 框架 |
+| UI 组件库 | Ant Design Vue 4.x | 企业级 UI 设计语言 |
+| 构建工具 | Vite 5 | 下一代前端构建工具 |
+| 状态管理 | Vue reactive stores | 与移动端一致的轻量单例状态 |
 | 桌面框架 | Tauri 2.0 | Rust 驱动的跨平台桌面应用 |
-| 标记语言 | react-markdown | Markdown 渲染 |
+| 标记语言 | marked + DOMPurify | Markdown 渲染与安全过滤 |
 | 样式方案 | Less | CSS 预处理器 |
 
 ### 移动端（Mobile）
@@ -42,23 +45,25 @@ OnlyTalk App 是一个跨平台即时通讯客户端，支持桌面端（Windows
 ```
 only-talk-app/
 ├── apps/
-│   ├── pc/                      # 桌面端应用
+│   ├── desktop/                # 桌面端应用（Vue3 + Vite）
 │   │   ├── src/
 │   │   │   ├── components/      # 公共组件
 │   │   │   ├── pages/           # 页面组件
 │   │   │   │   ├── Home/        # 主页（聊天、联系人、设置）
 │   │   │   │   ├── Sign/        # 登录注册
-│   │   │   │   ├── Media/        # 媒体处理（视频通话）
+│   │   │   │   ├── Media/       # 媒体处理（视频通话）
 │   │   │   │   ├── Privacy/     # 隐私模式
 │   │   │   │   └── WebRTC/      # WebRTC 通信
 │   │   │   ├── layouts/         # 布局组件
-│   │   │   ├── locales/         # 国际化（zh-CN, en-US, zh-TW）
-│   │   │   ├── models/          # 数据模型
+│   │   │   ├── router/          # Vue Router 路由
+│   │   │   ├── stores/          # 状态管理
+│   │   │   ├── i18n/            # 国际化封装
 │   │   │   ├── services/        # WebRTC 服务
-│   │   │   ├── hooks/          # 自定义 Hooks
-│   │   │   └── utils/          # 工具函数
-│   │   ├── .umirc.ts           # Umi 配置
+│   │   │   ├── hooks/           # 自定义 composables
+│   │   │   └── utils/           # 工具函数
+│   │   ├── vite.config.ts       # Vite 配置
 │   │   └── package.json
+│   ├── pc/                      # 旧版 React/Umi 桌面端（legacy）
 │   └── mobile/                 # 移动端应用
 │       ├── src/
 │       │   ├── components/     # 公共组件
@@ -126,7 +131,7 @@ pnpm dev
 pnpm tauri dev
 ```
 
-启动后，前端默认访问地址: http://localhost:8000
+启动后，前端默认访问地址: http://localhost:8080
 
 #### 移动端开发
 
@@ -152,15 +157,31 @@ pnpm tauri build
 ```
 
 构建产物：
-- Web 前端：`apps/pc/dist`
+- 桌面端前端：`apps/desktop/dist`
 - 移动端：`apps/mobile/dist`
-- 桌面应用：`apps/pc/src-tauri/target/release`
+- 桌面应用：`src-tauri/target/release`
 
 ### 5. 其他常用命令
 
 ```bash
-# 代码格式化
+# 代码格式化（全仓库 prettier --write）
 pnpm lint
+
+# 各端代码检查（只检查、不修改）
+pnpm lint:fe        # = lint:desktop + lint:mobile + lint:web
+pnpm lint:desktop   # apps/desktop eslint
+pnpm lint:mobile    # apps/mobile  eslint
+pnpm lint:web       # apps/web     eslint
+
+# src-tauri 检查
+pnpm lint:rust      # = lint:rust:fmt + lint:rust:clippy
+pnpm lint:rust:fmt  # cargo +nightly fmt --all --check
+pnpm lint:rust:clippy
+
+# 自动修复前端问题
+pnpm --filter @workspace/app-desktop lint:fix
+pnpm --filter @workspace/app-mobile lint:fix
+pnpm --filter @workspace/app-web lint:fix
 
 # 构建 types 包
 pnpm build:types
@@ -168,6 +189,8 @@ pnpm build:types
 # 构建 services 包
 pnpm build:services
 ```
+
+> 推送前 Git 钩子会自动执行对应端的 lint / fmt / clippy，详见 [docs/lint-and-git-hooks.md](docs/lint-and-git-hooks.md)。
 
 ## 本地运行环境与数据目录
 
@@ -248,7 +271,7 @@ pnpm tauri dev
 
 项目采用 pnpm workspace 管理 monorepo，包含：
 
-- **apps/pc**: 桌面端应用
+- **apps/desktop**: 桌面端应用（Vue3 + Vite，Tauri 默认前端）
 - **apps/mobile**: 移动端应用
 - **packages/services**: 共享 API 服务
 - **packages/types**: 共享类型定义
@@ -257,9 +280,9 @@ pnpm tauri dev
 
 #### 桌面端
 
-1. 在 `apps/pc/src/pages/` 下创建页面目录
-2. 创建页面组件（`.tsx`）和样式文件（`.less`）
-3. 在 `apps/pc/src/route/index.ts` 中配置路由
+1. 在 `apps/desktop/src/pages/` 下创建页面目录
+2. 创建页面组件（`.vue`）和样式文件（`.module.less`）
+3. 在 `apps/desktop/src/router/index.ts` 中配置路由
 
 #### 移动端
 
@@ -281,16 +304,18 @@ pnpm tauri dev
 
 ### 代码规范
 
-- 使用 Prettier 格码格式化
-- 使用 Husky + lint-staged 进行提交前检查
+- 使用 Prettier 进行代码格式化（`pnpm lint` 为全仓库 `prettier --write`）
+- 使用 ESLint 做静态检查：apps/desktop / apps/mobile / apps/web 走 `eslint:recommended + plugin:vue/vue3-essential + @typescript-eslint/recommended`
+- src-tauri 使用 `cargo +nightly fmt`（rustfmt.toml 含 nightly 专属选项）与 `cargo clippy` 检查
+- Husky 推送前钩子（pre-push）按改动范围自动跑上述检查，见 [docs/lint-and-git-hooks.md](docs/lint-and-git-hooks.md)
 - TypeScript 严格模式
 
 ## 文档资源
 
-- [Umi Max 官方文档](https://umijs.org/docs/max/introduce)
-- [Tauri 官方文档](https://tauri.app/)
-- [Ant Design 组件库](https://ant.design/)
 - [Vue 3 官方文档](https://vuejs.org/)
+- [Vite 官方文档](https://vitejs.dev/)
+- [Ant Design Vue](https://antdv.com/)
+- [Tauri 官方文档](https://tauri.app/)
 - [Vant 组件库](https://vant-ui.github.io/vant/)
 
 ## License

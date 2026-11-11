@@ -3,9 +3,9 @@
 //! P2P 媒体帧头(MediaFrameHeader)字节布局与 P2P 结构体序列化单元测试。
 //!
 //! 帧头布局固定 5 字节: [frame_type: u8][data_len: u32(大端序)]，
-//! 与 quic_service 媒体通道协议强相关，改动前必须保证此测试通过。
+//! 与 quic_core 媒体通道协议强相关，改动前必须保证此测试通过。
 
-use app_lib::entity::p2p_models::{
+use app_lib::models::bo::p2p_models::{
     MediaFrameHeader, MediaFrameType, P2pAudioConfig, P2pBufferConfig, P2pChannelType,
     P2pFileTransferRequest, P2pInitMsg, P2pMediaConfig, P2pMediaInfo, P2pMediaInfoType,
     P2pVideoConfig,
@@ -142,6 +142,10 @@ fn p2p_init_msg_serde_roundtrip() {
         ip_type: 1,
         step: 2,
         is_server: true,
+        request_cert: "-----BEGIN CERTIFICATE-----\na\n-----END CERTIFICATE-----\n".to_string(),
+        accept_cert: "-----BEGIN CERTIFICATE-----\nb\n-----END CERTIFICATE-----\n".to_string(),
+        request_ipv6: true,
+        accept_ipv6: false,
     };
     let json = serde_json::to_string(&msg).expect("序列化失败");
     let back: P2pInitMsg = serde_json::from_str(&json).expect("反序列化失败");
@@ -151,6 +155,39 @@ fn p2p_init_msg_serde_roundtrip() {
     assert_eq!(back.ip_type, 1);
     assert_eq!(back.step, 2);
     assert!(back.is_server);
+    assert_eq!(back.request_cert, msg.request_cert);
+    assert_eq!(back.accept_cert, msg.accept_cert);
+    assert!(back.request_ipv6);
+    assert!(!back.accept_ipv6);
+}
+
+#[test]
+fn p2p_init_msg_old_payload_defaults_certs() {
+    // 老版本客户端不会带 request_cert / accept_cert
+    let json = r#"{
+        "accept_addr": "",
+        "request_addr": "",
+        "request_uuid": "u1",
+        "request_token": "t",
+        "accept_uuid": "u2",
+        "accept": false,
+        "ip_type": 0,
+        "step": 0,
+        "is_server": false
+    }"#;
+    let msg: P2pInitMsg = serde_json::from_str(json).expect("反序列化失败");
+    assert!(msg.request_cert.is_empty());
+    assert!(msg.accept_cert.is_empty());
+    assert!(!msg.request_ipv6);
+    assert!(!msg.accept_ipv6);
+}
+
+#[test]
+fn p2p_ipv6_peer_address_parses() {
+    // NAT 服务端下发的 IPv6 地址形如 [2001:db8::1]:19563
+    let addr: std::net::SocketAddrV6 =
+        "[2001:db8::1]:19563".parse().expect("解析 IPv6 地址失败");
+    assert_eq!(addr.port(), 19563);
 }
 
 #[test]

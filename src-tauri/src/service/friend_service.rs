@@ -1,22 +1,21 @@
 use anyhow::anyhow;
 use log::{error, info};
 use serde_json::Value;
-use tauri::Emitter;
 use uuid::Uuid;
 
-use crate::cmd::api_controller::post_request;
 use crate::dao::friend_db::{
-    query_black_list_db, query_friend_info_db, search_friend_db, set_block_friend_db,
-    soft_delete_friend_db, update_friend_info_db,
+    query_black_list_db, query_friend_info_by_id_db, query_friend_info_db, search_friend_db,
+    set_block_friend_db, soft_delete_friend_db, update_friend_info_db, update_friend_profile_db,
 };
 use crate::dao::session_db::{hide_chat_session_db, show_chat_session_db};
-use crate::entity::friend::Friend;
-use crate::entity::system_notification::SystemNotification;
+use crate::models::entity::friend::Friend;
+use crate::models::entity::system_notification::SystemNotification;
+use crate::models::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};
+use crate::models::vo::http_response::Response;
+use crate::service::api_service::post_request;
 use crate::service::user_service::get_user_info;
+use crate::utils::events;
 use crate::utils::global_static_str::talk_api_base;
-use crate::vo::friend_vo::{BlackListVo, FriendListVO, FriendVo};
-use crate::vo::http_response::Response;
-use crate::APP_HANDLE;
 
 pub async fn process_friend_notify_message(
     system_notification: SystemNotification,
@@ -26,9 +25,7 @@ pub async fn process_friend_notify_message(
         1 => {
             // 好友发起请求通知
             info!("好友发起请求通知 {:?}", system_notification);
-            if let Some(handle) = APP_HANDLE.get() {
-                let _ = handle.emit("friend_list_changed", "request_received");
-            }
+            let _ = events::emit("friend_list_changed", "request_received");
         }
         2 => {
             // 处理好友通知
@@ -100,8 +97,8 @@ pub async fn update_friend_list() -> Result<(), anyhow::Error> {
                     friend_id: friend_vo.uuid,
                     friend_account: friend_vo.account,
                     friend_name: friend_vo.username,
-                    friend_icon: friend_vo.icon,
-                    friend_info: friend_vo.info,
+                    friend_icon: friend_vo.icon.unwrap_or_default(),
+                    friend_info: friend_vo.info.unwrap_or_default(),
                     friend_user_type: friend_vo.user_type,
                     friend_status: 0,
                     me: uuid.clone(),
@@ -170,6 +167,32 @@ pub async fn unblock_friend(friend_uuid: &str) -> Result<(), anyhow::Error> {
     }
 
     Ok(())
+}
+
+/// 获取好友列表(展示 VO)
+pub async fn get_friend_list() -> Result<Vec<FriendVo>, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friends = query_friend_info_db(&me).await?;
+    Ok(friends.into_iter().map(FriendVo::from).collect())
+}
+
+/// 获取单个好友信息(展示 VO)
+pub async fn get_friend_info(friend_uuid: &str) -> Result<FriendVo, anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    let friend = query_friend_info_by_id_db(&me, friend_uuid).await?;
+    Ok(FriendVo::from(friend))
+}
+
+/// 定向回写好友可展示资料(sqlite 单条更新)
+pub async fn update_friend_profile(
+    friend_uuid: &str,
+    account: &str,
+    name: &str,
+    icon: &str,
+    info: &str,
+) -> Result<(), anyhow::Error> {
+    let me = get_user_info("uuid").await?;
+    update_friend_profile_db(&me, friend_uuid, account, name, icon, info).await
 }
 
 /// 获取黑名单列表（优先从本地 is_block=1 的好友读取）

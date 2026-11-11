@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Only Talk",
-  "version": "1.0.1",
+  "version": "1.0.11",
   "identifier": "com.only.talk.app",
   "build": {
-    "frontendDist": "../apps/pc/dist",
+    "frontendDist": "../apps/desktop/dist",
     "devUrl": "http://localhost:8080",
-    "beforeDevCommand": "pnpm --filter @workspace/app-pc dev",
-    "beforeBuildCommand": "pnpm --filter @workspace/app-pc build"
+    "beforeDevCommand": "pnpm --filter @workspace/app-desktop dev",
+    "beforeBuildCommand": "pnpm --filter @workspace/app-desktop build"
   },
   "app": {
     "windows": [
@@ -25,7 +25,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data: http://asset.localhost; font-src 'self' asset: http://asset.localhost data:",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data: http://asset.localhost; media-src 'self' asset: http://asset.localhost blob: data:; font-src 'self' asset: http://asset.localhost data:",
       "assetProtocol": {
         "enable": true,
         "scope": [
@@ -43,6 +43,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "android": {
+      "versionCode": 1000011
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

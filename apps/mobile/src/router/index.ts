@@ -24,6 +24,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/pages/SignUp/index.vue"),
   },
   {
+    path: "/forgot-password",
+    name: "ForgotPassword",
+    component: () => import("@/pages/ForgotPassword/index.vue"),
+  },
+  {
     path: "/chats",
     name: "Chats",
     component: () => import("@/pages/Chats/index.vue"),
@@ -45,6 +50,12 @@ const routes: RouteRecordRaw[] = [
     path: "/chats/group-settings/:groupId",
     name: "GroupSettings",
     component: () => import("@/pages/Chats/GroupSettings.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/chats/history",
+    name: "ChatHistory",
+    component: () => import("@/pages/Chats/History/index.vue"),
     meta: { requiresAuth: true },
   },
   {
@@ -192,6 +203,12 @@ const routes: RouteRecordRaw[] = [
     path: "/call",
     name: "Call",
     component: () => import("@/pages/Call/index.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/privacy/chat/:friendId",
+    name: "PrivacyChat",
+    component: () => import("@/pages/Privacy/Chat/index.vue"),
     meta: { requiresAuth: true },
   },
   {

@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { showToast, Tabs, Tab, Badge, Empty } from "vant";
 import {
   get_accept_friend_request_list,
@@ -10,6 +9,7 @@ import {
   get_user_info_with_cache,
   process_friend_request,
   readContactsNotification,
+  subscribe,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useI18n } from "@/i18n";
@@ -28,8 +28,8 @@ const { getAvatarUrl } = useAvatar();
 const { refreshFriendCounts } = useUnreadStore();
 const goBack = () => router.back();
 
-const ACCEPT_MESSAGE = "我通过了你的好友申请";
-const REJECT_MESSAGE = "我拒绝了你的好友申请";
+const ACCEPT_MESSAGE = () => t("friendRequest.acceptMessage");
+const REJECT_MESSAGE = () => t("friendRequest.rejectMessage");
 
 const CLOCK_ICON =
   "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z";
@@ -137,7 +137,7 @@ const loadFriendRequests = async () => {
 const handleAccept = async (req: FriendRequestInfo) => {
   try {
     await process_friend_request({
-      accept_message: ACCEPT_MESSAGE,
+      accept_message: ACCEPT_MESSAGE(),
       request_user: req.request_user,
       add_type: "card",
       version: 0,
@@ -155,7 +155,7 @@ const handleAccept = async (req: FriendRequestInfo) => {
 const handleReject = async (req: FriendRequestInfo) => {
   try {
     await process_friend_request({
-      accept_message: REJECT_MESSAGE,
+      accept_message: REJECT_MESSAGE(),
       request_user: req.request_user,
       add_type: "card",
       version: 0,
@@ -222,18 +222,14 @@ const formatRequestTime = (ts?: number) => {
   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-let unlistenRequests: UnlistenFn | undefined;
+let unlistenRequests: (() => void) | undefined;
 
-onMounted(async () => {
+onMounted(() => {
   loadFriendRequests();
-  try {
-    unlistenRequests = await listen("friend_list_changed", () => {
-      loadFriendRequests();
-      refreshFriendCounts();
-    });
-  } catch (e) {
-    console.error("监听好友列表变更失败", e);
-  }
+  unlistenRequests = subscribe("friend_list_changed", () => {
+    loadFriendRequests();
+    refreshFriendCounts();
+  });
 });
 
 onUnmounted(() => {

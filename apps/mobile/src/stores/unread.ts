@@ -1,18 +1,18 @@
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   get_accept_friend_request_list,
   get_pending_invitations,
   getUnreadNotificationCounts,
+  subscribe,
 } from "@workspace/services";
 import { getMyUuid, parseResponse } from "@/utils/api";
+import { onNotifyChange } from "@/events/notifyRouter";
 import type {
   ChatSessionVo,
   ChatSessionEvent,
   FriendRequestInfo,
   FriendRequestInfoDTO,
-  SystemNotification,
 } from "@workspace/types";
 
 const sortSessions = (list: ChatSessionVo[]): ChatSessionVo[] =>
@@ -123,15 +123,15 @@ const hideSession = async (item: ChatSessionVo) => {
   }
 };
 
-let unlisteners: UnlistenFn[] = [];
+let unlisteners: (() => void)[] = [];
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let monitorStarted = false;
 
-const setupSessionListener = async () => {
+const setupSessionListener = () => {
   unlisteners.push(
-    await listen<string>("chat_session", async (event) => {
+    subscribe("chat_session", async (payload) => {
       try {
-        const evt: ChatSessionEvent = JSON.parse(event.payload);
+        const evt: ChatSessionEvent = JSON.parse(payload);
         const uuid = await getMyUuid();
         if (evt.data.recv_user !== uuid) return;
 
@@ -172,37 +172,24 @@ const setupSessionListener = async () => {
   );
 };
 
-const setupRealtimeListeners = async () => {
+const setupRealtimeListeners = () => {
   // 好友请求/群邀请被处理后，服务端通知刷新
   unlisteners.push(
-    await listen<string>("friend_list_changed", () => {
+    subscribe("friend_list_changed", () => {
       fetchFriendCounts().catch(console.error);
     })
   );
   // 断线重连/离线补拉完成后刷新未读
-  unlisteners.push(await listen<string>("quic_connected", refreshAll));
-  unlisteners.push(await listen<string>("quic_sync_complete", refreshAll));
-  // 系统通知到达(含交友广场心动/匹配、动态点赞/评论)，刷新未读
-  unlisteners.push(
-    await listen<string>("listen_notify_msg", async (event) => {
-      try {
-        const notify: SystemNotification = JSON.parse(event.payload);
-        const uuid = await getMyUuid();
-        if (notify.user_id && notify.user_id !== uuid) return;
-        await refreshAll();
-      } catch (e) {
-        console.error("处理 listen_notify_msg 事件失败:", e);
-      }
-    })
-  );
-  // 任意位置标记已读/清空未读后，刷新未读
-  unlisteners.push(await listen("listen_notify_read", refreshAll));
+  unlisteners.push(subscribe("quic_connected", refreshAll));
+  unlisteners.push(subscribe("quic_sync_complete", refreshAll));
+  // 系统通知到达/已读（经 notifyRouter 单点订阅后扇出），刷新未读
+  unlisteners.push(onNotifyChange(refreshAll));
 };
 
 const startMonitor = async () => {
   await refreshAll();
-  await setupSessionListener();
-  await setupRealtimeListeners();
+  setupSessionListener();
+  setupRealtimeListeners();
   pollTimer = setInterval(refreshAll, 30000);
 };
 

@@ -15,6 +15,7 @@ import { useMessageApi } from "@/hooks/useMessageApi";
 import { useGroupMessageAck } from "@/hooks/useGroupMessageAck";
 import { useGroupMemberInfo } from "@/hooks/useGroupMemberInfo";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useChatBackgroundStore } from "@/stores/chatBackground";
 import { getMyUuid } from "@/utils/api";
 import { attachViewportHeight } from "@/utils/viewport";
 import { resolveContentToTempFile } from "@/utils/tempImage";
@@ -36,6 +37,7 @@ import {
   MSG_TYPE_GROUP_IMAGE,
   MSG_TYPE_GROUP_TEXT,
   MSG_TYPE_GROUP_FILE,
+  MSG_TYPE_GROUP_VOICE,
   MSG_TYPE_RECALL_SUCCESS,
   MSG_TYPE_RECALL_FAILURE,
   RELOAD_ON_ACK_TYPES,
@@ -48,9 +50,12 @@ import {
 } from "@/chat/messageParse";
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
+import { collectCopyableText, copyTextToClipboard } from "@/chat/clipboard";
 import { useMessageSelection } from "@/chat/useMessageSelection";
+import type { VoiceRecordingResult } from "@/chat/useVoiceRecorder";
 import MessageList from "@/components/chat/MessageList.vue";
 import MessageInputBar from "@/components/chat/MessageInputBar.vue";
+import VoiceRecordOverlay from "@/components/chat/VoiceRecordOverlay.vue";
 import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 import MessageSelectionBar from "@/components/chat/MessageSelectionBar.vue";
 import ForwardPicker from "@/components/chat/ForwardPicker.vue";
@@ -75,7 +80,22 @@ const groupInfo = reactive<Partial<GroupVo>>({
 });
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
+// 聊天背景(仅客户端): 有自定义背景时拉伸铺满, 否则保持主题背景
+const { activeUrl: chatBackgroundUrl, refresh: refreshChatBackground } =
+  useChatBackgroundStore();
+const chatBackgroundStyle = computed(() =>
+  chatBackgroundUrl.value
+    ? {
+        backgroundImage: `url("${chatBackgroundUrl.value}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }
+    : undefined
+);
 const meUuid = ref("");
+/** 是否停留在消息列表底部（决定软键盘弹起时是否自动贴底） */
+const isAtBottom = ref(true);
 
 let allowInfiniteScroll = false;
 
@@ -91,13 +111,20 @@ const allowImageAutoDownload = ref(false);
 /** 顶部全局上传进度条：是否有正在上传的消息 */
 const globalUploading = computed(() =>
   messages.value.some(
-    (m) => (m.sendingImage || m.sendingFile) && m.ack === false && !m.failed
+    (m) =>
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
+      m.ack === false &&
+      !m.failed
   )
 );
 const globalUploadPercent = computed(() => {
   let max = 0;
   for (const m of messages.value) {
-    if ((m.sendingImage || m.sendingFile) && m.ack === false && !m.failed) {
+    if (
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
+      m.ack === false &&
+      !m.failed
+    ) {
       max = Math.max(max, m.uploadProgress ?? 0);
     }
   }
@@ -107,7 +134,7 @@ const globalUploadPercent = computed(() => {
 const globalUploadIndeterminate = computed(() =>
   messages.value.some(
     (m) =>
-      (m.sendingImage || m.sendingFile) &&
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
       m.ack === false &&
       !m.failed &&
       m.sendPhase !== "uploading"
@@ -178,6 +205,8 @@ const markGroupDelivered = (nanoId: string) => {
     messages.value[idx].ack = true;
     messages.value[idx].failed = false;
     messages.value[idx].sendingImage = false;
+    messages.value[idx].sendingFile = false;
+    messages.value[idx].sendingVoice = false;
   }
 };
 
@@ -292,6 +321,23 @@ const showForward = ref(false);
 const openForward = () => {
   if (selectedMessages.value.length === 0) return;
   showForward.value = true;
+};
+
+/** 多选复制: 仅复制文本消息(图片/文件/语音跳过), 没有文字时提示 */
+const copySelected = async () => {
+  const text = collectCopyableText(selectedMessages.value);
+  if (!text) {
+    showToast(t("chat.noCopyableText"));
+    return;
+  }
+  try {
+    await copyTextToClipboard(text);
+    showToast({ message: t("chat.copySuccess"), icon: "success" });
+    exitSelect();
+  } catch (e) {
+    console.error("复制消息失败:", e);
+    showToast({ message: t("chat.copyFailed"), icon: "fail" });
+  }
 };
 
 const onActionSelect = (action: { key?: string; name: string }) => {
@@ -465,8 +511,9 @@ const reloadFirstPage = () => {
 
 const onScroll = () => {
   const el = containerRef.value;
+  if (!el) return;
+  isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
   if (
-    !el ||
     !allowInfiniteScroll ||
     loading.value ||
     loadingMore.value ||
@@ -487,6 +534,11 @@ const scrollToBottom = (smooth: boolean) => {
     top: el.scrollHeight,
     behavior: smooth ? "smooth" : ("instant" as ScrollBehavior),
   });
+};
+
+/** 软键盘弹出/收起改变可视高度后：原本就在底部时保持贴底 */
+const pinToBottomOnViewportChange = () => {
+  if (isAtBottom.value) scrollToBottom(false);
 };
 
 const pushMessage = async (msg: TextQuicMsgVo) => {
@@ -608,7 +660,6 @@ const selectAndSendGroup = async (
     messages.value.push(ui);
     await nextTick();
     scrollToBottom(true);
-    startAckTimer(textMsg.nano_id);
 
     const patch = (p: Partial<UiChatMessage>) => {
       const i = messages.value.findIndex(
@@ -688,6 +739,68 @@ const sendGroupImage = () =>
 const sendGroupFile = () =>
   selectAndSendGroup("file", MSG_TYPE_GROUP_FILE, "send_group_file_msg");
 
+/* ============ 群语音消息 ============ */
+const showVoiceRecord = ref(false);
+const openVoiceRecord = () => {
+  showVoiceRecord.value = true;
+};
+
+const sendGroupVoice = async (result: VoiceRecordingResult) => {
+  const textMsg: TextQuicMsgVo = {
+    nano_id: genNanoId(),
+    text_type: MSG_TYPE_GROUP_VOICE,
+    raw: result.path,
+    recv_user: groupId,
+    send_user: "",
+    timestamp: Date.now(),
+  };
+  const ui: UiChatMessage = {
+    from: "mine",
+    textMsg,
+    ack: false,
+    failed: false,
+    showTime:
+      messages.value.length === 0 ||
+      needTimeDivider(
+        messages.value[messages.value.length - 1].textMsg.timestamp,
+        Date.now()
+      ),
+    senderUuid: meUuid.value,
+    uploadProgress: 0,
+    sendPhase: "reading",
+    sendingVoice: true,
+    voiceDuration: result.duration,
+  };
+  messages.value.push(ui);
+  await nextTick();
+  scrollToBottom(true);
+
+  const patch = (p: Partial<UiChatMessage>) => {
+    const i = messages.value.findIndex(
+      (m) => m.textMsg.nano_id === textMsg.nano_id
+    );
+    if (i !== -1) Object.assign(messages.value[i], p);
+  };
+
+  try {
+    await invoke("send_group_voice_msg", {
+      textQuicMsg: textMsg,
+      duration: result.duration,
+    });
+    markGroupDelivered(textMsg.nano_id);
+  } catch (e) {
+    console.error("群语音发送失败:", e);
+    patch({
+      failed: true,
+      sendingVoice: false,
+      sendPhase: undefined,
+      uploadProgress: undefined,
+    });
+    const errText = typeof e === "string" ? e : (e as Error)?.message;
+    showToast({ message: errText || t("chat.voice.failed"), icon: "fail" });
+  }
+};
+
 /** 群聊失败重发：群消息无 retry_send_msg 通道，重新以新 nano_id 发送 */
 const handleRetry = async (msg: UiChatMessage) => {
   const idx = messages.value.findIndex(
@@ -724,11 +837,13 @@ const handleRetry = async (msg: UiChatMessage) => {
     ui.sendingImage = true;
   } else if (type === MSG_TYPE_GROUP_FILE) {
     ui.sendingFile = true;
+  } else if (type === MSG_TYPE_GROUP_VOICE) {
+    ui.sendingVoice = true;
+    ui.voiceDuration = msg.voiceDuration;
   }
   messages.value.push(ui);
   await nextTick();
   scrollToBottom(true);
-  startAckTimer(textMsg.nano_id);
 
   const command =
     type === MSG_TYPE_GROUP_TEXT
@@ -737,7 +852,14 @@ const handleRetry = async (msg: UiChatMessage) => {
       ? "send_group_image_msg"
       : "send_group_file_msg";
   try {
-    await invoke(command, { textQuicMsg: textMsg });
+    if (type === MSG_TYPE_GROUP_VOICE) {
+      await invoke("send_group_voice_msg", {
+        textQuicMsg: textMsg,
+        duration: msg.voiceDuration || 0,
+      });
+    } else {
+      await invoke(command, { textQuicMsg: textMsg });
+    }
     markGroupDelivered(textMsg.nano_id);
   } catch (e) {
     console.error("群消息重发失败:", e);
@@ -748,6 +870,7 @@ const handleRetry = async (msg: UiChatMessage) => {
       messages.value[i].failed = true;
       messages.value[i].sendingImage = false;
       messages.value[i].sendingFile = false;
+      messages.value[i].sendingVoice = false;
     }
     showToast({ message: t("chat.resendFailed"), icon: "fail" });
   }
@@ -843,6 +966,7 @@ const markReadSession = () => {
 };
 
 onMounted(async () => {
+  refreshChatBackground().catch(() => {});
   meUuid.value = await getMyUuid();
   if (!meUuid.value) {
     router.replace("/login");
@@ -868,7 +992,10 @@ onMounted(async () => {
     map: { current_session_friend: groupId },
   }).catch(() => {});
 
-  viewportCleanup = attachViewportHeight(() => chatPageRef.value);
+  viewportCleanup = attachViewportHeight(
+    () => chatPageRef.value,
+    pinToBottomOnViewportChange
+  );
   listenChatFileUploadProgress(applyUploadProgress)
     .then((fn) => {
       uploadUnlisten = fn;
@@ -888,6 +1015,18 @@ onUnmounted(() => {
 });
 
 const goBack = () => router.back();
+
+/** 打开群聊记录（移动端独立页面） */
+const goHistory = () => {
+  router.push({
+    path: '/chats/history',
+    query: {
+      isGroup: '1',
+      groupId,
+      title: groupInfo.group_name || t('chats.groupChat'),
+    },
+  });
+};
 
 /* ============ 图片预览 ============ */
 const preview = ref<{ urls: string[]; index: number } | null>(null);
@@ -913,7 +1052,11 @@ const handlePreview = async (msg: UiChatMessage) => {
 </script>
 
 <template>
-  <div class="group-chat-page" ref="chatPageRef">
+  <div
+    class="group-chat-page"
+    ref="chatPageRef"
+    :style="chatBackgroundStyle"
+  >
     <div class="header">
       <button class="back-btn" @click="goBack">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -936,21 +1079,34 @@ const handlePreview = async (msg: UiChatMessage) => {
           t("chat.memberCountShort", { count: groupInfo.member_count })
         }}</span>
       </div>
-      <button
-        class="more-btn"
-        :aria-label="t('chat.groupSettings')"
-        @click="goGroupSettings"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          style="width: 20px; height: 20px"
+      <div class="header-actions">
+        <button
+          class="more-btn"
+          :aria-label="t('chatHistory.title')"
+          @click="goHistory"
         >
-          <path
-            d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
-          />
-        </svg>
-      </button>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13 3a9 9 0 1 0 8.94 10.06 1 1 0 0 0-1.99-.2A7 7 0 1 1 13 5a1 1 0 0 0 0-2zm-1 4a1 1 0 0 1 1 1v4.59l3.2 3.2a1 1 0 0 1-1.4 1.42l-3.5-3.5A1 1 0 0 1 11 12.7V8a1 1 0 0 1 1-1z"
+            />
+          </svg>
+        </button>
+        <button
+          class="more-btn"
+          :aria-label="t('chat.groupSettings')"
+          @click="goGroupSettings"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style="width: 20px; height: 20px"
+          >
+            <path
+              d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div v-if="globalUploading" class="global-upload-bar">
@@ -1003,6 +1159,7 @@ const handlePreview = async (msg: UiChatMessage) => {
         :all-selected="allSelected"
         @cancel="exitSelect"
         @toggle-all="toggleAll"
+        @copy="copySelected"
         @forward="openForward"
         @delete="deleteSelected"
       />
@@ -1010,11 +1167,17 @@ const handlePreview = async (msg: UiChatMessage) => {
     <MessageInputBar
       v-if="!loading && !selectMode"
       v-model="inputText"
-      :tools="['emoji', 'image', 'file']"
+      :tools="['emoji', 'image', 'file', 'voice']"
       :placeholder="t('chat.inputPlaceholder')"
       @send="sendGroupText"
       @pick-image="sendGroupImage"
       @pick-file="sendGroupFile"
+      @record-voice="openVoiceRecord"
+    />
+
+    <VoiceRecordOverlay
+      v-model:show="showVoiceRecord"
+      @send="sendGroupVoice"
     />
 
     <van-action-sheet
@@ -1104,6 +1267,12 @@ const handlePreview = async (msg: UiChatMessage) => {
   font-size: 12px;
   color: var(--text-placeholder);
   margin-left: 6px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .more-btn {
   width: 36px;

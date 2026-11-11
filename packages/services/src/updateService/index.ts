@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { getVersion } from "@tauri-apps/api/app";
 import { UpdateInfo } from "@workspace/types";
+import { getAppVersion } from "../appVersion";
+import { subscribe } from "../eventHub";
 
 /** 检查更新结果 */
 export interface UpdateCheckResult {
@@ -25,15 +25,6 @@ const compareVersion = (a: string, b: string): number => {
     if (na < nb) return -1;
   }
   return 0;
-};
-
-/** 获取当前应用版本号(@tauri-apps/api/app getVersion) */
-export const getAppVersion = async (): Promise<string> => {
-  try {
-    return await getVersion();
-  } catch {
-    return "0.0.0";
-  }
 };
 
 /** 查询 GitHub Releases 最新版本并判断是否有更新(无新版本时 info 为 null) */
@@ -64,9 +55,8 @@ export const downloadUpdatePackage = async (
 ): Promise<string> => {
   let unlisten: (() => void) | undefined;
   if (onProgress) {
-    unlisten = await listen<UpdateDownloadProgress>(
-      "update_download_progress",
-      (event) => onProgress(event.payload)
+    unlisten = subscribe("update_download_progress", (payload) =>
+      onProgress(payload)
     );
   }
   try {

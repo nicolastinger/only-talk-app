@@ -11,11 +11,15 @@ import {
   SendVerifyCodeRequest,
   CompleteProfileRequest,
   BlackListVo,
+  PresenceMode,
+  PresenceVO,
+  FriendPresenceMap,
 } from "@workspace/types";
 import {
   getApiBase,
   invoke_rust,
   isBackendSuccess,
+  parseBackendResponse,
   RequestOptions,
 } from "../httpService";
 import { invoke } from "@tauri-apps/api/core";
@@ -219,4 +223,45 @@ export const update_user_info = async (updateDto: UpdateUserDTO) => {
     getApiBase() + "/user/update",
     JSON.stringify(updateDto)
   );
+};
+
+/**
+ * 设置/清除自己的手动状态。
+ * `mode=online` 表示清除状态; `text` 仅 `mode=custom` 时生效(最长 32 字符)。
+ */
+export const set_my_presence = async (
+  mode: PresenceMode,
+  text?: string
+): Promise<PresenceVO> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    getApiBase() + "/user/presence/set",
+    JSON.stringify({ mode, text }),
+    { autoShowError: false }
+  );
+  return parseBackendResponse<PresenceVO>(res);
+};
+
+/** 读取自己的手动状态(无状态时 `mode=online`) */
+export const get_my_presence = async (): Promise<PresenceVO> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    getApiBase() + "/user/presence/mine",
+    "",
+    { autoShowError: false }
+  );
+  return parseBackendResponse<PresenceVO>(res);
+};
+
+/** 批量读取好友的手动状态(非好友 uuid 会被服务端忽略) */
+export const get_friend_presence_batch = async (
+  uuids: string[]
+): Promise<FriendPresenceMap> => {
+  const res = await invoke_rust(
+    HTTP_METHOD.POST,
+    getApiBase() + "/user/presence/batch",
+    JSON.stringify({ uuids }),
+    { autoShowError: false }
+  );
+  return parseBackendResponse<FriendPresenceMap>(res);
 };

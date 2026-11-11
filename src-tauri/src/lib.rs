@@ -1,6 +1,6 @@
 use tauri::ipc::Channel;
 use tauri::{generate_handler, AppHandle, Manager, Wry};
-mod quic_service;
+mod quic_core;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, OnceLock};
@@ -14,17 +14,13 @@ use tokio::sync::{Mutex, RwLock};
 pub mod cmd;
 pub mod config;
 pub mod dao;
-pub mod dto;
 mod emit_app;
-pub mod entity;
 mod init_app;
+pub mod models;
 pub mod service;
-#[cfg(desktop)]
-mod tray;
 pub mod utils;
-pub mod vo;
 
-use entity::quic_connection::QuicConnection;
+use models::bo::quic_connection::QuicConnection;
 
 use crate::cmd::api_controller::{
     compress_image_to_webp_command, copy_file_to_temp, crop_image_to_webp_command, delete_request,
@@ -36,12 +32,18 @@ use crate::cmd::auth_controller::{
     clear_user_info, delete_quick_login_user, get_quick_login_users, github_login, logout,
     quick_login, refresh_token_command, sign_in,
 };
+use crate::cmd::chat_background_controller::{
+    clear_friend_chat_background, delete_chat_background, get_friend_chat_background,
+    import_chat_background, import_friend_chat_background, list_chat_backgrounds,
+    set_active_chat_background,
+};
 use crate::cmd::chat_record_controller::{
     delete_chat_record, delete_group_chat_record, forward_chat_messages, get_chat_record_by_type,
     get_chat_record_from_store, get_group_chat_record_from_store, get_pending_send_records,
     ignore_send_msg, mark_group_read, mark_read, recall_chat_message, recall_group_chat_message,
-    retry_send_msg, send_call_control_msg, send_file_msg, send_group_file_msg,
-    send_group_image_msg, send_group_text_msg, send_image_msg, send_text_msg, send_webrtc_signal,
+    retry_send_msg, search_chat_record, send_call_control_msg, send_file_msg, send_group_file_msg,
+    send_group_image_msg, send_group_text_msg, send_group_voice_msg, send_image_msg,
+    send_self_text_msg, send_text_msg, send_voice_msg, send_webrtc_signal,
 };
 use crate::cmd::chat_session_controller::{
     clear_all_unread_sessions, create_chat_session, get_chat_session_from_store, hide_chat_session,
@@ -53,7 +55,8 @@ use crate::cmd::config_controller::{
 use crate::cmd::device_controller::get_device_info;
 use crate::cmd::file_controller::{
     debug_resource_paths, delete_local_file, get_chat_file_by_biz_id, get_file_by_biz_id,
-    get_local_file, get_local_file_list, get_local_file_size, has_local_chat_file, open_local_file,
+    get_local_file, get_local_file_list, get_local_file_size, has_local_chat_file,
+    open_external_url, open_local_file, read_local_file_bytes, save_voice_temp_file,
 };
 use crate::cmd::friend_controller::{
     block_friend_command, delete_friend_command, get_black_list, get_friend_info, get_friend_list,
@@ -68,6 +71,9 @@ use crate::cmd::group_controller::{
 };
 use crate::cmd::log_controller::{
     clear_app_logs, get_app_logs, get_client_log_files, read_client_log_file,
+};
+use crate::cmd::moment_cache_controller::{
+    clear_moment_cache, delete_moment_cache, get_moment_cache, save_moment_cache,
 };
 use crate::cmd::network_controller::get_network_type;
 use crate::cmd::notification_controller::{
@@ -90,15 +96,25 @@ use crate::cmd::user_controller::{
     get_user_map, reconnect_quic_command, refresh_user_info, remove_user_map,
     update_user_info_command,
 };
-use crate::init_app::init_app;
-use crate::quic_service::models::TargetSendStream;
 #[cfg(desktop)]
-use crate::tray::setup_tray;
+use crate::emit_app::tray::setup_tray;
+use crate::init_app::init_app;
+use crate::quic_core::models::TargetSendStream;
 use crate::utils::global_static_str::APP_NAME;
 
 static APP_HANDLE: OnceLock<AppHandle<Wry>> = OnceLock::new();
 // 创建CRC-16/X25计算器
 const X25: Crc<u16> = Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
+
+/// 将 `utils::app_log` 的中性端口绑定到 dao 实现(组合根注册)。
+fn quic_log_sink<'a>(
+    level: i32,
+    source: &'a str,
+    raw: &'a str,
+    remote_addr: &'a str,
+) -> crate::utils::app_log::QuicLogFuture<'a> {
+    Box::pin(crate::dao::app_log_db::log_quic_event(level, source, raw, remote_addr))
+}
 
 /// P2P 媒体数据接收通道（前端注册，用于二进制帧直传）
 /// 使用 `InvokeResponseBody`：`Vec<u8>` 的 `IpcResponse` 实现会序列化为 JSON number 数组，
@@ -163,6 +179,15 @@ pub fn run() {
 
     #[cfg(desktop)]
     let builder = tauri::Builder::default()
+        // 单实例必须最先注册：第二实例启动时在此回调中聚焦已有窗口并直接退出，
+        // 避免重复初始化 QUIC/数据库等资源。
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
@@ -181,7 +206,11 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            APP_HANDLE.set(app.handle().clone()).expect("初始化app失败"); // 初始化全局状态
+            // 初始化全局状态
+            APP_HANDLE.set(app.handle().clone()).expect("初始化app失败");
+            // 注册中性端口的展示层/持久化实现(前端事件、系统通知、托盘、QUIC 日志)
+            crate::emit_app::register_ports();
+            crate::utils::app_log::register_quic_log(quic_log_sink);
             let handle = app.handle().clone();
             let root_path = handle
                 .path()
@@ -221,11 +250,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(generate_handler![
             send_text_msg,
+            send_self_text_msg,
             send_webrtc_signal,
             send_call_control_msg,
             send_group_text_msg,
             send_group_image_msg,
             send_group_file_msg,
+            send_group_voice_msg,
             get_request,
             post_request,
             put_request,
@@ -238,9 +269,12 @@ pub fn run() {
             compress_image_to_webp_command,
             crop_image_to_webp_command,
             copy_file_to_temp,
+            save_voice_temp_file,
+            read_local_file_bytes,
             get_device_info,
             get_network_type,
             get_local_file_size,
+            open_external_url,
             sign_in,
             refresh_token_command,
             github_login,
@@ -275,6 +309,7 @@ pub fn run() {
             get_chat_record_from_store,
             get_chat_record_by_type,
             get_group_chat_record_from_store,
+            search_chat_record,
             get_pending_send_records,
             retry_send_msg,
             ignore_send_msg,
@@ -300,11 +335,22 @@ pub fn run() {
             get_black_list,
             create_chat_session,
             get_system_notification,
+            save_moment_cache,
+            get_moment_cache,
+            delete_moment_cache,
+            clear_moment_cache,
             update_local_friend_list,
             get_client_config,
             set_client_config,
             get_all_client_config,
             reset_client_config,
+            import_chat_background,
+            list_chat_backgrounds,
+            set_active_chat_background,
+            delete_chat_background,
+            import_friend_chat_background,
+            get_friend_chat_background,
+            clear_friend_chat_background,
             update_friend_profile_command,
             batch_read_system_notification,
             clear_all_unread_notifications,
@@ -323,6 +369,7 @@ pub fn run() {
             debug_resource_paths,
             send_image_msg,
             send_file_msg,
+            send_voice_msg,
             disconnect_quic_command,
             reconnect_quic_command,
             get_quic_connection_state,

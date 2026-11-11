@@ -3,21 +3,20 @@ use std::time::Duration;
 use log::error;
 use tokio::time::timeout;
 
-use crate::dao::chat_record_db::{delete_chat_record_db, query_chat_record_by_id_from_db};
-use crate::dao::chat_record_send::query_chat_record_send_by_user;
-use crate::dao::group_chat_record_db::delete_group_chat_record_db;
-use crate::entity::chat_record_send::ChatRecordSend;
-use crate::entity::Page;
+use crate::models::entity::chat_record_send::ChatRecordSend;
+use crate::models::entity::Page;
+use crate::models::vo::text_quic_msg::TextQuicMsgVo;
 use crate::service::chat_service::{
-    forward_chat_messages_service, get_chat_record_by_type_service, get_chat_record_service,
-    get_group_chat_record_service, ignore_send_msg_service, recall_chat_message_service,
-    recall_group_chat_message_service, retry_send_msg_service, send_call_control_msg_service,
-    send_file_msg_service, send_group_file_msg_service, send_group_image_msg_service,
-    send_group_text_msg_service, send_image_msg_service, send_text_msg_service,
-    send_webrtc_signal_service, update_group_last_read_msg_service, update_last_read_msg_from_db,
+    delete_chat_record_service, delete_group_chat_record_service, forward_chat_messages_service,
+    get_chat_record_by_type_service, get_chat_record_service, get_group_chat_record_service,
+    get_pending_send_records_service, ignore_send_msg_service, mark_read_service,
+    recall_chat_message_service, recall_group_chat_message_service, retry_send_msg_service,
+    search_chat_record_service, send_call_control_msg_service, send_file_msg_service,
+    send_group_file_msg_service, send_group_image_msg_service, send_group_text_msg_service,
+    send_group_voice_msg_service, send_image_msg_service, send_self_text_msg_service,
+    send_text_msg_service, send_voice_msg_service, send_webrtc_signal_service,
+    update_group_last_read_msg_service,
 };
-use crate::service::user_service::get_user_info;
-use crate::vo::text_quic_msg::TextQuicMsgVo;
 use crate::GLOBAL_MSG_SEND_LOCK;
 
 /// 发送文本消息
@@ -41,6 +40,12 @@ pub async fn send_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<String, Strin
             Err("获取锁超时".to_string())
         }
     }
+}
+
+/// 自己给自己发文本消息（纯本地：不经过服务端，避免 self-echo 回推导致重复渲染）
+#[tauri::command]
+pub async fn send_self_text_msg(text_quic_msg: TextQuicMsgVo) -> Result<TextQuicMsgVo, String> {
+    send_self_text_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
 /// 发送 WebRTC 信令消息（独立通道，不走 send/ack 表）
@@ -91,6 +96,15 @@ pub async fn send_group_file_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), Str
     send_group_file_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
+/// 发送群聊语音消息（无锁机制）。`duration` 为录音时长(秒)。
+#[tauri::command]
+pub async fn send_group_voice_msg(
+    text_quic_msg: TextQuicMsgVo,
+    duration: i32,
+) -> Result<(), String> {
+    send_group_voice_msg_service(text_quic_msg, duration).await.map_err(|e| e.to_string())
+}
+
 // 发送图片数据
 #[tauri::command]
 pub async fn send_image_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
@@ -103,19 +117,16 @@ pub async fn send_file_msg(text_quic_msg: TextQuicMsgVo) -> Result<(), String> {
     send_file_msg_service(text_quic_msg).await.map_err(|e| e.to_string())
 }
 
+// 发送语音数据(单聊)。`duration` 为录音时长(秒)。
+#[tauri::command]
+pub async fn send_voice_msg(text_quic_msg: TextQuicMsgVo, duration: i32) -> Result<(), String> {
+    send_voice_msg_service(text_quic_msg, duration).await.map_err(|e| e.to_string())
+}
+
 /// 已读当前记录
 #[tauri::command]
 pub async fn mark_read(text_quic_msg_vec: Vec<String>) -> Result<(), String> {
-    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
-    let mut last_msg_vec: Vec<TextQuicMsgVo> = vec![];
-    for item in text_quic_msg_vec {
-        let text_quic_msg =
-            query_chat_record_by_id_from_db(&item, &me).await.map_err(|e| e.to_string())?;
-        last_msg_vec.push(text_quic_msg);
-    }
-
-    update_last_read_msg_from_db(last_msg_vec).await.map_err(|e| e.to_string())?;
-    Ok(())
+    mark_read_service(text_quic_msg_vec).await.map_err(|e| e.to_string())
 }
 
 /// 获取本地的聊天数据
@@ -146,6 +157,33 @@ pub async fn get_group_chat_record_from_store(
     get_group_chat_record_service(group_id, page).await.map_err(|e| e.to_string())
 }
 
+/// 多维度检索聊天记录(单聊/群聊通用): 日期区间、发送者、类型、关键词 + 分页。
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn search_chat_record(
+    conversation_id: String,
+    is_group: bool,
+    start_time: Option<i64>,
+    end_time: Option<i64>,
+    send_user: Option<String>,
+    text_types: Option<Vec<u16>>,
+    keyword: Option<String>,
+    page: Page,
+) -> Result<Vec<TextQuicMsgVo>, String> {
+    search_chat_record_service(
+        conversation_id,
+        is_group,
+        start_time,
+        end_time,
+        send_user,
+        text_types,
+        keyword,
+        page,
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
 /// 群消息已读
 #[tauri::command]
 pub async fn mark_group_read(
@@ -161,10 +199,7 @@ pub async fn mark_group_read(
 /// 获取某好友的待发送记录（0-排队中，1-发送中，2-发送失败）
 #[tauri::command]
 pub async fn get_pending_send_records(recv_user: String) -> Result<Vec<ChatRecordSend>, String> {
-    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
-    query_chat_record_send_by_user(&me, &recv_user, vec![0, 1, 2], true)
-        .await
-        .map_err(|e| e.to_string())
+    get_pending_send_records_service(recv_user).await.map_err(|e| e.to_string())
 }
 
 /// 手动重发失败消息（重置为排队并触发补发，加锁防并发）
@@ -212,8 +247,7 @@ pub async fn ignore_send_msg(send_id: String) -> Result<(), String> {
 /// 本机软删除单聊聊天记录（deleted 置 1，不通知服务端）
 #[tauri::command]
 pub async fn delete_chat_record(nano_id_list: Vec<String>) -> Result<(), String> {
-    let me = get_user_info("uuid").await.map_err(|e| e.to_string())?;
-    delete_chat_record_db(&nano_id_list, &me).await.map_err(|e| e.to_string())
+    delete_chat_record_service(nano_id_list).await.map_err(|e| e.to_string())
 }
 
 /// 本机软删除群聊聊天记录（deleted 置 1，不通知服务端）
@@ -222,10 +256,11 @@ pub async fn delete_group_chat_record(
     nano_id_list: Vec<String>,
     group_id: String,
 ) -> Result<(), String> {
-    delete_group_chat_record_db(&nano_id_list, &group_id).await.map_err(|e| e.to_string())
+    delete_group_chat_record_service(nano_id_list, group_id).await.map_err(|e| e.to_string())
 }
 
-/// 逐条转发消息到目标（好友或群），复用原始 biz_id，不重新上传
+/// 逐条转发消息到目标（好友或群）。
+/// 图片/文件/语音复用原文件，但会先请求服务端为目标重新签发 biz_id（不重新上传）。
 #[tauri::command]
 pub async fn forward_chat_messages(
     messages: Vec<TextQuicMsgVo>,

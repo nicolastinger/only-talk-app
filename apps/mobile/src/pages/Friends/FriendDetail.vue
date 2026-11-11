@@ -4,14 +4,22 @@ import { useRoute, useRouter } from "vue-router";
 import { showToast, showConfirmDialog, Empty } from "vant";
 import { invoke } from "@tauri-apps/api/core";
 import {
+  clearFriendChatBackground,
   get_friend_info,
   get_cached_user_info,
   delete_friend,
+  getFriendChatBackground,
+  importFriendChatBackground,
+  pickChatBackgroundImage,
   refresh_user_info,
+  resolveChatBackgroundUrl,
+  type FriendChatBackgroundVo,
 } from "@workspace/services";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useI18n } from "@/i18n";
 import { DEFAULT_AVATAR } from "@/stores/user";
+import { usePresenceStore } from "@/stores/presence";
+import PresenceTag from "@/components/PresenceTag.vue";
 import { calcAgeFromBirthday } from "@/utils/time";
 import type { FriendVo, UserInfo } from "@workspace/types";
 import { ReportTargetType } from "@workspace/types";
@@ -23,6 +31,9 @@ const router = useRouter();
 const { t } = useI18n();
 const friendId = route.params.friendId as string;
 const { getAvatarUrl } = useAvatar();
+const { presenceOf, loadFriendPresence } = usePresenceStore();
+// 好友手动状态(仅好友且有状态时展示)
+const presence = computed(() => presenceOf(friendId));
 
 interface FriendDetail {
   friendVo: FriendVo | null;
@@ -34,6 +45,57 @@ const loadError = ref(false);
 const avatarUrl = ref<string | null>(null);
 const showReport = ref(false);
 const showAvatarPreview = ref(false);
+// 好友专属聊天背景(仅客户端); null 表示使用全局背景
+const friendChatBg = ref<FriendChatBackgroundVo | null>(null);
+const bgUploading = ref(false);
+
+const friendBgUrl = computed(() =>
+  friendChatBg.value
+    ? resolveChatBackgroundUrl(friendChatBg.value.file_path)
+    : null
+);
+
+const loadFriendChatBg = async () => {
+  try {
+    friendChatBg.value = await getFriendChatBackground(friendId);
+  } catch {
+    friendChatBg.value = null;
+  }
+};
+
+const onPickChatBg = async () => {
+  const path = await pickChatBackgroundImage();
+  if (!path) return;
+  bgUploading.value = true;
+  try {
+    friendChatBg.value = await importFriendChatBackground(friendId, path);
+    showToast({
+      message: t("friendInfo.chatBackgroundApplied"),
+      icon: "success",
+    });
+  } catch (e) {
+    console.error("设置好友聊天背景失败:", e);
+    showToast({
+      message: t("friendInfo.chatBackgroundFailed"),
+      icon: "fail",
+    });
+  } finally {
+    bgUploading.value = false;
+  }
+};
+
+const onClearChatBg = async () => {
+  try {
+    await clearFriendChatBackground(friendId);
+    friendChatBg.value = null;
+  } catch (e) {
+    console.error("恢复全局聊天背景失败:", e);
+    showToast({
+      message: t("friendInfo.chatBackgroundFailed"),
+      icon: "fail",
+    });
+  }
+};
 
 /** 是否为自己的好友（非好友时只展示资料卡，不显示删除好友） */
 const isFriend = computed(() => !!detail.value.friendVo);
@@ -47,10 +109,14 @@ const loadDetail = async () => {
   try {
     try {
       userInfo = await get_cached_user_info(friendId);
-    } catch {}
+    } catch {
+      // 本地缓存未命中: 忽略, 下面还有远端接口兜底
+    }
     try {
       friendVo = (await get_friend_info(friendId)) as FriendVo | null;
-    } catch {}
+    } catch {
+      // 取好友资料失败: 忽略, 非好友或已删除时本就没有 friendVo
+    }
   } catch {
     loadError.value = true;
   }
@@ -140,7 +206,12 @@ const onSendMessage = async () => {
   router.push(`/chats/chat/${friendId}`);
 };
 const goBack = () => router.back();
-onMounted(loadDetail);
+onMounted(() => {
+  loadDetail();
+  loadFriendChatBg();
+  // 资料卡单独补充该用户状态(merge, 不影响列表里其它好友的状态)
+  loadFriendPresence([friendId], "merge");
+});
 </script>
 
 <template>
@@ -179,6 +250,9 @@ onMounted(loadDetail);
             {{ getDisplayName() }}
             <UserTypeTag :type="detail.userInfo?.user_type" />
           </h2>
+          <div v-if="presence" class="profile-presence">
+            <PresenceTag :presence="presence" size="default" />
+          </div>
           <p class="profile-account">@{{ getAccount() }}</p>
           <p v-if="getBio()" class="profile-bio">{{ getBio() }}</p>
         </div>
@@ -211,6 +285,47 @@ onMounted(loadDetail);
         <div class="info-item" v-if="detail.userInfo.address">
           <span class="info-label">{{ t("userInfo.address") }}</span
           ><span class="info-value">{{ detail.userInfo.address }}</span>
+        </div>
+      </div>
+
+      <div class="bg-section" v-if="isFriend">
+        <div class="bg-title">{{ t("friendInfo.chatBackground") }}</div>
+        <div class="bg-body">
+          <div
+            class="bg-preview"
+            :style="
+              friendBgUrl
+                ? { backgroundImage: `url('${friendBgUrl}')` }
+                : undefined
+            "
+          >
+            <svg v-if="!friendBgUrl" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+              />
+            </svg>
+          </div>
+          <div class="bg-actions">
+            <button
+              class="bg-btn primary"
+              :disabled="bgUploading"
+              @click="onPickChatBg"
+            >
+              {{
+                bgUploading
+                  ? t("friendInfo.chatBackgroundUploading")
+                  : t("friendInfo.chatBackgroundUpload")
+              }}
+            </button>
+            <button
+              v-if="friendBgUrl"
+              class="bg-btn"
+              @click="onClearChatBg"
+            >
+              {{ t("friendInfo.chatBackgroundReset") }}
+            </button>
+            <span class="bg-hint">{{ t("friendInfo.chatBackgroundHint") }}</span>
+          </div>
         </div>
       </div>
 
@@ -353,6 +468,11 @@ onMounted(loadDetail);
   color: var(--text-primary);
   margin: 0 0 4px;
 }
+.profile-presence {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
 .profile-account {
   font-size: 14px;
   color: var(--text-tertiary);
@@ -454,5 +574,94 @@ onMounted(loadDetail);
   color: var(--text-tertiary);
   font-size: 14px;
   cursor: pointer;
+}
+
+.bg-section {
+  margin: 0 16px 16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.bg-title {
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bg-body {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.bg-preview {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 108px;
+  height: 72px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  background-color: rgba(127, 127, 127, 8%);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border: 1px solid rgba(127, 127, 127, 16%);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 8%);
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.bg-actions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.bg-btn {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  transition: all var(--transition-fast);
+
+  &.primary {
+    font-weight: 600;
+    color: #fff;
+    background: var(--color-primary);
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(64, 150, 255, 28%);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.bg-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
 }
 </style>

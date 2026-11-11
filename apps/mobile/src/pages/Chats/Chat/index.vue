@@ -15,6 +15,8 @@ import { useMessageApi } from "@/hooks/useMessageApi";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useMyAvatar } from "@/hooks/useMyAvatar";
 import { useCallManager } from "@/webrtc/callManager";
+import { usePrivacyManager } from "@/privacy/manager";
+import { useChatBackgroundFor } from "@/stores/chatBackground";
 import { getMyUuid } from "@/utils/api";
 import { attachViewportHeight } from "@/utils/viewport";
 import { resolveContentToTempFile } from "@/utils/tempImage";
@@ -36,6 +38,7 @@ import {
   MSG_TYPE_IMAGE,
   MSG_TYPE_RECALL_FAILURE,
   MSG_TYPE_RECALL_SUCCESS,
+  MSG_TYPE_VOICE,
   RELOAD_ON_ACK_TYPES,
 } from "@/chat/messageTypes";
 import {
@@ -46,10 +49,13 @@ import {
 } from "@/chat/messageParse";
 import { loadImageUrl } from "@/chat/media";
 import { genNanoId } from "@/chat/id";
+import { collectCopyableText, copyTextToClipboard } from "@/chat/clipboard";
 import { useMessageSelection } from "@/chat/useMessageSelection";
+import type { VoiceRecordingResult } from "@/chat/useVoiceRecorder";
 import MessageList from "@/components/chat/MessageList.vue";
 import MessageInputBar from "@/components/chat/MessageInputBar.vue";
 import type { InputTool } from "@/components/chat/MessageInputBar.vue";
+import VoiceRecordOverlay from "@/components/chat/VoiceRecordOverlay.vue";
 import ImagePreviewer from "@/components/chat/ImagePreviewer.vue";
 import PendingSendBar from "@/components/chat/PendingSendBar.vue";
 import MessageSelectionBar from "@/components/chat/MessageSelectionBar.vue";
@@ -75,7 +81,21 @@ const friendInfo = reactive({
 });
 const containerRef = ref<HTMLElement | null>(null);
 const chatPageRef = ref<HTMLElement | null>(null);
+// 聊天背景(仅客户端): 好友专属背景优先, 未设置时回退全局背景
+const chatBackgroundUrl = useChatBackgroundFor(() => friendId);
+const chatBackgroundStyle = computed(() =>
+  chatBackgroundUrl.value
+    ? {
+        backgroundImage: `url("${chatBackgroundUrl.value}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }
+    : undefined
+);
 const meUuid = ref("");
+/** 是否停留在消息列表底部（决定软键盘弹起时是否自动贴底） */
+const isAtBottom = ref(true);
 
 let allowInfiniteScroll = false;
 
@@ -91,13 +111,20 @@ const allowImageAutoDownload = ref(false);
 /** 顶部全局上传进度条：是否有正在上传的消息 */
 const globalUploading = computed(() =>
   messages.value.some(
-    (m) => (m.sendingImage || m.sendingFile) && m.ack === false && !m.failed
+    (m) =>
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
+      m.ack === false &&
+      !m.failed
   )
 );
 const globalUploadPercent = computed(() => {
   let max = 0;
   for (const m of messages.value) {
-    if ((m.sendingImage || m.sendingFile) && m.ack === false && !m.failed) {
+    if (
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
+      m.ack === false &&
+      !m.failed
+    ) {
       max = Math.max(max, m.uploadProgress ?? 0);
     }
   }
@@ -107,7 +134,7 @@ const globalUploadPercent = computed(() => {
 const globalUploadIndeterminate = computed(() =>
   messages.value.some(
     (m) =>
-      (m.sendingImage || m.sendingFile) &&
+      (m.sendingImage || m.sendingFile || m.sendingVoice) &&
       m.ack === false &&
       !m.failed &&
       m.sendPhase !== "uploading"
@@ -252,6 +279,23 @@ const showForward = ref(false);
 const openForward = () => {
   if (selectedMessages.value.length === 0) return;
   showForward.value = true;
+};
+
+/** 多选复制: 仅复制文本消息(图片/文件/语音跳过), 没有文字时提示 */
+const copySelected = async () => {
+  const text = collectCopyableText(selectedMessages.value);
+  if (!text) {
+    showToast(t("chat.noCopyableText"));
+    return;
+  }
+  try {
+    await copyTextToClipboard(text);
+    showToast({ message: t("chat.copySuccess"), icon: "success" });
+    exitSelect();
+  } catch (e) {
+    console.error("复制消息失败:", e);
+    showToast({ message: t("chat.copyFailed"), icon: "fail" });
+  }
 };
 
 const onActionSelect = (action: { key?: string; name: string }) => {
@@ -462,8 +506,9 @@ const reloadFirstPage = () => {
 
 const onScroll = () => {
   const el = containerRef.value;
+  if (!el) return;
+  isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight <= 40;
   if (
-    !el ||
     !allowInfiniteScroll ||
     loading.value ||
     loadingMore.value ||
@@ -484,6 +529,11 @@ const scrollToBottom = (smooth: boolean) => {
     top: el.scrollHeight,
     behavior: smooth ? "smooth" : ("instant" as ScrollBehavior),
   });
+};
+
+/** 软键盘弹出/收起改变可视高度后：原本就在底部时保持贴底 */
+const pinToBottomOnViewportChange = () => {
+  if (isAtBottom.value) scrollToBottom(false);
 };
 
 const pushMessage = async (msg: TextQuicMsgVo) => {
@@ -538,6 +588,21 @@ const sendText = async () => {
   scrollToBottom(true);
   startAckTimer(textMsg.nano_id);
   try {
+    if (friendId === meUuid.value) {
+      // 自己给自己发消息：纯本地落库，不经过服务端，避免 self-echo 回推导致重复渲染
+      const stored = await invoke<TextQuicMsgVo>("send_self_text_msg", {
+        textQuicMsg: textMsg,
+      });
+      clearAckTimer(textMsg.nano_id);
+      const idx = messages.value.findIndex(
+        (m) => m.textMsg.nano_id === textMsg.nano_id
+      );
+      if (idx !== -1) {
+        messages.value[idx].textMsg = stored;
+        messages.value[idx].ack = true;
+      }
+      return;
+    }
     await invoke("send_text_msg", { textQuicMsg: textMsg });
   } catch (e) {
     console.error("发送失败:", e);
@@ -606,7 +671,6 @@ const selectAndSend = async (
     messages.value.push(ui);
     await nextTick();
     scrollToBottom(true);
-    startAckTimer(textMsg.nano_id);
 
     const patch = (p: Partial<UiChatMessage>) => {
       const i = messages.value.findIndex(
@@ -656,6 +720,8 @@ const selectAndSend = async (
 
     try {
       await invoke(command, { textQuicMsg: textMsg });
+      // 上传/发送完成后才开始等待服务端 ACK，避免上传耗时被误判为超时
+      startAckTimer(textMsg.nano_id);
     } catch (e) {
       console.error("发送媒体失败:", e);
       patch({
@@ -686,6 +752,72 @@ const sendImage = () =>
   selectAndSend("image", MSG_TYPE_IMAGE, "send_image_msg");
 const sendFile = () => selectAndSend("file", 3, "send_file_msg");
 
+/* ============ 语音消息 ============ */
+const showVoiceRecord = ref(false);
+const openVoiceRecord = () => {
+  showVoiceRecord.value = true;
+};
+
+/** 录音完成 → 先上屏(展示进度)再上传发送；成功后等待 ACK */
+const sendVoice = async (result: VoiceRecordingResult) => {
+  const textMsg: TextQuicMsgVo = {
+    nano_id: genNanoId(),
+    text_type: MSG_TYPE_VOICE,
+    raw: result.path,
+    recv_user: friendId,
+    send_user: "",
+    timestamp: Date.now(),
+  };
+  const ui: UiChatMessage = {
+    from: "mine",
+    textMsg,
+    ack: false,
+    failed: false,
+    showTime:
+      messages.value.length === 0 ||
+      needTimeDivider(
+        messages.value[messages.value.length - 1].textMsg.timestamp,
+        Date.now()
+      ),
+    senderUuid: meUuid.value,
+    uploadProgress: 0,
+    sendPhase: "reading",
+    sendingVoice: true,
+    voiceDuration: result.duration,
+  };
+  messages.value.push(ui);
+  await nextTick();
+  scrollToBottom(true);
+
+  const patch = (p: Partial<UiChatMessage>) => {
+    const i = messages.value.findIndex(
+      (m) => m.textMsg.nano_id === textMsg.nano_id
+    );
+    if (i !== -1) Object.assign(messages.value[i], p);
+  };
+
+  try {
+    await invoke("send_voice_msg", {
+      textQuicMsg: textMsg,
+      duration: result.duration,
+    });
+    patch({ sendingVoice: false });
+    startAckTimer(textMsg.nano_id);
+  } catch (e) {
+    console.error("发送语音失败:", e);
+    patch({
+      failed: true,
+      sendingVoice: false,
+      sendPhase: undefined,
+      uploadProgress: undefined,
+    });
+    const errText = typeof e === "string" ? e : (e as Error)?.message;
+    showToast({ message: errText || t("chat.voice.failed"), icon: "fail" });
+  } finally {
+    bumpPendingRefresh();
+  }
+};
+
 /** 失败消息重发：优先走 Rust 补发，若不存在发送记录则直接重发 */
 const handleRetry = async (msg: UiChatMessage) => {
   const idx = messages.value.findIndex(
@@ -701,9 +833,12 @@ const handleRetry = async (msg: UiChatMessage) => {
   if (msg.textMsg.text_type === MSG_TYPE_FILE && idx !== -1) {
     messages.value[idx].sendingFile = true;
   }
-  startAckTimer(msg.textMsg.nano_id);
+  if (msg.textMsg.text_type === MSG_TYPE_VOICE && idx !== -1) {
+    messages.value[idx].sendingVoice = true;
+  }
   try {
     await invoke("retry_send_msg", { sendId: msg.textMsg.nano_id });
+    startAckTimer(msg.textMsg.nano_id);
     bumpPendingRefresh();
     return;
   } catch {
@@ -716,8 +851,17 @@ const handleRetry = async (msg: UiChatMessage) => {
   };
   const command = commandMap[msg.textMsg.text_type];
   try {
-    if (command) await invoke(command, { textQuicMsg: msg.textMsg });
-    else throw new Error("不支持的类型");
+    if (msg.textMsg.text_type === MSG_TYPE_VOICE) {
+      await invoke("send_voice_msg", {
+        textQuicMsg: msg.textMsg,
+        duration: msg.voiceDuration || 0,
+      });
+    } else if (command) {
+      await invoke(command, { textQuicMsg: msg.textMsg });
+    } else {
+      throw new Error("不支持的类型");
+    }
+    startAckTimer(msg.textMsg.nano_id);
   } catch (e) {
     console.error("重发失败:", e);
     update(true, undefined);
@@ -812,7 +956,10 @@ onMounted(async () => {
     map: { current_session_friend: friendId },
   }).catch(() => {});
 
-  viewportCleanup = attachViewportHeight(() => chatPageRef.value);
+  viewportCleanup = attachViewportHeight(
+    () => chatPageRef.value,
+    pinToBottomOnViewportChange
+  );
   listenChatFileUploadProgress(applyUploadProgress)
     .then((fn) => {
       uploadUnlisten = fn;
@@ -832,6 +979,19 @@ onUnmounted(() => {
 });
 
 const goBack = () => router.back();
+
+/** 打开该会话的聊天记录（移动端独立页面） */
+const goHistory = () => {
+  router.push({
+    path: '/chats/history',
+    query: {
+      friendId,
+      title: isSelf.value
+        ? t('chats.selfChatName')
+        : friendInfo.name || friendId,
+    },
+  });
+};
 
 /* ============ 图片预览 ============ */
 const preview = ref<{ urls: string[]; index: number } | null>(null);
@@ -856,13 +1016,22 @@ const handlePreview = async (msg: UiChatMessage) => {
   }
 };
 
-/* ============ 通话 ============ */
+/* ============ 通话 / 隐私模式 ============ */
 const { startCall } = useCallManager();
+const { startPrivacyChat } = usePrivacyManager();
 const handleStartCall = async (media: "audio" | "video") => {
   await startCall(friendId, media);
 };
 
-const friendTools: InputTool[] = ["emoji", "image", "file", "audio", "video"];
+const friendTools: InputTool[] = [
+  "emoji",
+  "image",
+  "file",
+  "voice",
+  "audio",
+  "video",
+  "privacy",
+];
 const selfTools: InputTool[] = ["emoji", "image"];
 
 /** 点击消息头像：自己→我的资料，对方→好友资料卡 */
@@ -883,7 +1052,7 @@ const handleAvatarClick = ({
 </script>
 
 <template>
-  <div class="chat-page" ref="chatPageRef">
+  <div class="chat-page" ref="chatPageRef" :style="chatBackgroundStyle">
     <div class="header">
       <button class="back-btn" @click="goBack">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -905,6 +1074,17 @@ const handleAvatarClick = ({
         <UserTypeTag v-if="!isSelf" :type="friendInfo.user_type" />
       </div>
       <div class="header-actions">
+        <button
+          class="header-more"
+          :aria-label="t('chatHistory.title')"
+          @click="goHistory"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M13 3a9 9 0 1 0 8.94 10.06 1 1 0 0 0-1.99-.2A7 7 0 1 1 13 5a1 1 0 0 0 0-2zm-1 4a1 1 0 0 1 1 1v4.59l3.2 3.2a1 1 0 0 1-1.4 1.42l-3.5-3.5A1 1 0 0 1 11 12.7V8a1 1 0 0 1 1-1z"
+            />
+          </svg>
+        </button>
         <button
           v-if="!isSelf"
           class="header-more"
@@ -971,6 +1151,7 @@ const handleAvatarClick = ({
         :all-selected="allSelected"
         @cancel="exitSelect"
         @toggle-all="toggleAll"
+        @copy="copySelected"
         @forward="openForward"
         @delete="deleteSelected"
       />
@@ -990,8 +1171,12 @@ const handleAvatarClick = ({
         @send="sendText"
         @pick-image="sendImage"
         @pick-file="sendFile"
+        @record-voice="openVoiceRecord"
         @call="handleStartCall"
+        @privacy="startPrivacyChat(friendId)"
       />
+
+      <VoiceRecordOverlay v-model:show="showVoiceRecord" @send="sendVoice" />
     </template>
 
     <van-action-sheet
